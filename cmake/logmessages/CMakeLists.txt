@@ -11,9 +11,12 @@
 
 project(logmessages LANGUAGES CXX RC)
 
-if("${CMAKE_MC_COMPILER}" STREQUAL "" AND NOT "${CMAKE_RC_COMPILER}" STREQUAL "")
-    string(REGEX REPLACE "windres$" "windmc" CMAKE_MC_COMPILER ${CMAKE_RC_COMPILER})
-    string(REGEX REPLACE "rc.exe$" "mc.exe" CMAKE_MC_COMPILER ${CMAKE_MC_COMPILER})
+if("${CMAKE_MC_COMPILER}" STREQUAL "" OR "${CMAKE_MC_COMPILER}" STREQUAL "${CMAKE_RC_COMPILER}")
+    if(CMAKE_RC_COMPILER MATCHES "[Ww]indres$")
+        string(REGEX REPLACE "[Ww]indres$" "windmc" CMAKE_MC_COMPILER "${CMAKE_RC_COMPILER}")
+    elseif(CMAKE_RC_COMPILER MATCHES "[Rr][Cc](\\.exe)?$")
+        string(REGEX REPLACE "[Rr][Cc](\\.exe)?$" "mc\\1" CMAKE_MC_COMPILER "${CMAKE_RC_COMPILER}")
+    endif()
 endif()
 message(STATUS "Found resource compiler: ${CMAKE_RC_COMPILER}")
 message(STATUS "Found message compiler: ${CMAKE_MC_COMPILER}")
@@ -41,9 +44,15 @@ foreach(file ${${PROJECT_NAME}_MESSAGES})
     )
     target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 endforeach(file)
-target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/../addon/eventMessageLogger/messages.rc")
-set_source_files_properties(${CMAKE_SOURCE_DIR}/../addon/eventMessageLogger/messages.rc LANGUAGE RC)
-set_source_files_properties(${CMAKE_SOURCE_DIR}/../addon/eventMessageLogger/messages.rc OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/MSG00001.bin)
+# messages.rc names MSG00001.bin relative to itself. Generate a copy beside the
+# message-compiler output so the resource compiler can open that file.
+set(_logmessages_rc "${CMAKE_CURRENT_BINARY_DIR}/messages.rc")
+file(GENERATE OUTPUT "${_logmessages_rc}" CONTENT "LANGUAGE 0x9,0x1\n1 11 \"MSG00001.bin\"\n")
+target_sources(${PROJECT_NAME} PRIVATE "${_logmessages_rc}")
+set_source_files_properties("${_logmessages_rc}" PROPERTIES
+    LANGUAGE RC
+    GENERATED TRUE
+    OBJECT_DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/MSG00001.bin")
 target_compile_definitions(${PROJECT_NAME} PRIVATE WIN32;NDEBUG;_WINDOWS;_USRDLL;LOGMESSAGES_EXPORTS)
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE "CXX" )

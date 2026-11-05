@@ -573,7 +573,7 @@ private:
 		}
 	}
 
-	bool SetLastError(char *error, HRESULT hr = S_OK)
+	bool SetLastError(const char *error, HRESULT hr = S_OK)
 	{
 		if (hr != S_OK)
 		{
@@ -652,7 +652,7 @@ struct TLSPlugin : public IPlugin
 	}
 
 private:
-	static bool SetLastError(char *error)
+	static bool SetLastError(const char *error)
 	{
 		vnclog.Print(0, _T("TLSPlugin: %s\n"), error);
 		wchar_t werror[256];

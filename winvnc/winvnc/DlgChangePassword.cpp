@@ -54,7 +54,7 @@ DlgChangePassword::DlgChangePassword()
 }
 DlgChangePassword::~DlgChangePassword() {}
 
-int DlgChangePassword::ShowDlg(HWND parentWindow, char* title, int passwordSize)
+int DlgChangePassword::ShowDlg(HWND parentWindow, const char* title, int passwordSize)
 {
 	strcpy_s(this->title, title);
 	this->passwordSize = passwordSize;

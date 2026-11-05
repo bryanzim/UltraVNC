@@ -21,7 +21,7 @@ private:
 	char passwd[1024];
 public:
 	DlgChangePassword();
-	int ShowDlg(HWND parentWindow, char* title, int passwordSize);
+	int ShowDlg(HWND parentWindow, const char* title, int passwordSize);
 	~DlgChangePassword();
 	bool InitDialog(HWND hwnd);
 	void onOK(HWND hwnd);
