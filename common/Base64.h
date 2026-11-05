@@ -8,14 +8,15 @@
 //
 // Base64.h - small base64 helpers used by the SASL/SCRAM implementation.
 #pragma once
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
-#include <cstdint>
 
 namespace Base64
 {
-    std::string Encode(const void* data, size_t len);
-    std::string Encode(const std::vector<uint8_t>& data);
-    bool Decode(const char* s, size_t len, std::vector<uint8_t>& out);
-    bool Decode(const std::string& s, std::vector<uint8_t>& out);
+    std::string Encode(const void* data, std::size_t len);
+    std::string Encode(const std::vector<std::uint8_t>& data);
+    bool Decode(const char* s, std::size_t len, std::vector<std::uint8_t>& out);
+    bool Decode(const std::string& s, std::vector<std::uint8_t>& out);
 }

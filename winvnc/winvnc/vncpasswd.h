@@ -22,12 +22,18 @@ class vncPasswd;
 #define _WINVNC_VNCPASSWD
 
 #include "stdhdrs.h"
+
+#include <cstring>
+
 #ifdef _MSC_VER
 extern "C" {
 #include "vncauth.h"
 }
 #else
 #include "vncauth.h"
+
+#include <cstdlib>
+
 #endif
 
 // Helper to test whether an encrypted password buffer is empty/unset.
@@ -36,9 +42,12 @@ extern "C" {
 // C string.
 inline bool vncPasswdIsEmpty(const char encrypted[MAXPWLEN])
 {
-    for (int i = 0; i < MAXPWLEN; ++i) {
+    for (int i{ 0 }; i < MAXPWLEN; ++i)
+    {
         if (encrypted[i] != 0)
+        {
             return false;
+        }
     }
     return true;
 }
@@ -47,65 +56,60 @@ inline bool vncPasswdIsEmpty(const char encrypted[MAXPWLEN])
 class vncPasswd
 {
 public:
-
     // Password decryptor!
     class ToText
     {
     public:
-	inline ToText(const char encrypted[MAXPWLEN], bool secure)
-	{
-	    //vnclog.Print(LL_INTINFO, VNCLOG("PASSWD : ToText called\n"));
-		char* emptyPasswd = (char*)malloc(1);
-		emptyPasswd[0] = 0;
-	    plaintext = vncPasswdIsEmpty(encrypted)
-				? emptyPasswd
-				: vncDecryptPasswd((char*)encrypted, secure);
+        inline ToText(const char encrypted[MAXPWLEN], const bool secure)
+        {
+            //vnclog.Print(LL_INTINFO, VNCLOG("PASSWD : ToText called\n"));
+            char* emptyPasswd = (char*)std::malloc(1);
+            emptyPasswd[0U] = 0;
+            plaintext = vncPasswdIsEmpty(encrypted) ? emptyPasswd : vncDecryptPasswd((char*)encrypted, secure);
+        }
+        inline ~ToText()
+        {
+            if (plaintext != nullptr)
+            {
+                ::ZeroMemory(plaintext, std::strlen(plaintext));
+                std::free(plaintext);
+            }
+        }
+        inline operator const char*() const { return plaintext; };
 
-	}
-	inline ~ToText()
-	{
-	    if (plaintext != NULL)
-	    {
-		ZeroMemory(plaintext, strlen(plaintext));
-		free(plaintext);
-	    }
-	}
-	inline operator const char*() const {return plaintext;};
     private:
-	char *plaintext;
+        char* plaintext;
     };
 
     class FromText
     {
     public:
-	inline FromText(char *unencrypted, bool secure)
-	{
-	    vnclog.Print(LL_INTINFO, VNCLOG("PASSWD : FromText called\n"));
-	    vncEncryptPasswd(unencrypted, encrypted, secure);
-	    // ZeroMemory(unencrypted, strlen(unencrypted));
-	}
-	inline ~FromText()
-	{
-	}
-	inline operator const char*() const {return encrypted;};
+        inline FromText(char* const unencrypted, const bool secure)
+        {
+            vnclog.Print(LL_INTINFO, VNCLOG("PASSWD : FromText called\n"));
+            vncEncryptPasswd(unencrypted, encrypted, secure);
+            // ZeroMemory(unencrypted, strlen(unencrypted));
+        }
+        inline ~FromText() {}
+        inline operator const char*() const { return encrypted; };
+
     private:
-	char encrypted[MAXPWLEN];
+        char encrypted[MAXPWLEN];
     };
 
     class FromClear
     {
     public:
-	inline FromClear(bool secure)
-	{
-	    //vnclog.Print(LL_INTINFO, VNCLOG("PASSWD : FromClear called\n"));
-	    vncEncryptPasswd((char*)"", encrypted, secure);
-	}
-	inline ~FromClear()
-	{
-	}
-	inline operator const char*() const {return encrypted;};
+        inline explicit FromClear(const bool secure)
+        {
+            //vnclog.Print(LL_INTINFO, VNCLOG("PASSWD : FromClear called\n"));
+            vncEncryptPasswd((char*)"", encrypted, secure);
+        }
+        inline ~FromClear() {}
+        inline operator const char*() const { return encrypted; };
+
     private:
-	char encrypted[MAXPWLEN];
+        char encrypted[MAXPWLEN];
     };
 };
 

@@ -25,7 +25,9 @@ class vncSockConnect;
 
 // Includes
 #include "stdhdrs.h"
+
 #include "vsocket.h"
+
 #include <omnithread.h>
 
 class vncServer;
@@ -34,23 +36,23 @@ class vncServer;
 class vncSockConnect
 {
 public:
-	// Constructor/destructor
-	vncSockConnect();
-	virtual~vncSockConnect();
+    // Constructor/destructor
+    explicit vncSockConnect();
+    virtual ~vncSockConnect();
 
-	// Init
-	virtual VBool Init(vncServer *server, UINT port);
+    // Init
+    virtual VBool Init(vncServer* server, UINT port);
 
-	// Implementation
+    // Implementation
 protected:
-	// The listening socket
-	VSocket m_socket;
+    // The listening socket
+    VSocket m_socket;
 
-	// The port to listen on
-	UINT m_port;
+    // The port to listen on
+    UINT m_port;
 
-	// The in-coming accept thread
-	omni_thread *m_thread;
+    // The in-coming accept thread
+    omni_thread* m_thread;
 };
 
 #endif // _WINVNC_VNCSOCKCONNECT

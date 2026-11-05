@@ -27,14 +27,14 @@
 
 #pragma once
 #include <stdarg.h>
-
 // Log level constants (matching server)
-#define LL_INTERR   0   // Internal errors - always shown
-#define LL_INTWARN  8   // Internal warnings
-#define LL_INTINFO  9   // Internal info
-#define LL_SOCKINFO 10  // Socket info
 
-class Log  
+#define LL_INTERR 0    // Internal errors - always shown
+#define LL_INTWARN 8   // Internal warnings
+#define LL_INTINFO 9   // Internal info
+#define LL_SOCKINFO 10 // Socket info
+
+class Log
 {
 public:
     // Logging mode flags:
@@ -51,16 +51,20 @@ public:
     //               a filename must be specified here.
     //    append   - if logging to a file, whether or not to append to any
     //               existing log.
-	Log(int mode = ToDebug, int level = 1, LPTSTR filename = NULL, bool append = false);
+    explicit Log(int mode = ToDebug, int level = 1, LPTSTR filename = nullptr, bool append = false);
 
-    inline void Print(int level, LPCTSTR format, ...) {
-        if (level > m_level) return;
+    inline void Print(const int level, const LPCTSTR format, ...)
+    {
+        if (level > m_level)
+        {
+            return;
+        }
         va_list ap;
         va_start(ap, format);
         ReallyPrint(format, ap);
         va_end(ap);
     }
-    
+
     // Change the log level
     void SetLevel(int level);
 
@@ -71,7 +75,7 @@ public:
     // not already enabled.
     void SetFile(LPTSTR filename, bool append = false);
 
-	virtual ~Log();
+    virtual ~Log();
 
 private:
     void ReallyPrint(LPCTSTR format, va_list ap);

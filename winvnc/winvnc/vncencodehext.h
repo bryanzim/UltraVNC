@@ -23,38 +23,32 @@ class vncEncodeHexT;
 #pragma once
 
 #include "vncencoder.h"
-
 // Class definition
 
 class vncEncodeHexT : public vncEncoder
 {
-// Fields
+    // Fields
 public:
-
-// Methods
+    // Methods
 public:
-	// Create/Destroy methods
-	vncEncodeHexT();
-	~vncEncodeHexT();
+    // Create/Destroy methods
+    explicit vncEncodeHexT();
+    ~vncEncodeHexT();
 
-	virtual void Init();
+    virtual void Init();
 
-	virtual UINT RequiredBuffSize(UINT width, UINT height);
-	virtual UINT NumCodedRects(const rfb::Rect &rect);
+    virtual UINT RequiredBuffSize(UINT width, UINT height);
+    virtual UINT NumCodedRects(const rfb::Rect& rect);
 
-	virtual UINT EncodeRect(BYTE *source, BYTE *dest, const rfb::Rect &rect);
+    virtual UINT EncodeRect(BYTE* source, BYTE* dest, const rfb::Rect& rect);
 
 protected:
-	virtual UINT EncodeHextiles8(BYTE *source, BYTE *dest,
-		int x, int y, int w, int h);
-	virtual UINT EncodeHextiles16(BYTE *source, BYTE *dest,
-		int x, int y, int w, int h);
-	virtual UINT EncodeHextiles32(BYTE *source, BYTE *dest,
-		int x, int y, int w, int h);
+    virtual UINT EncodeHextiles8(BYTE* source, BYTE* dest, int x, int y, int w, int h);
+    virtual UINT EncodeHextiles16(BYTE* source, BYTE* dest, int x, int y, int w, int h);
+    virtual UINT EncodeHextiles32(BYTE* source, BYTE* dest, int x, int y, int w, int h);
 
-// Implementation
+    // Implementation
 protected:
 };
 
 #endif // _WINVNC_ENCODEHEXTILE
-

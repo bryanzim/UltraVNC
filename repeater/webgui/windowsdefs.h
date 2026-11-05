@@ -16,14 +16,15 @@
  */
 
 #ifndef _WINDOWDEFS_H_
-#define _WINDOWDEFS_H_    1
+#define _WINDOWDEFS_H_ 1
 
-#pragma warning(disable: 4115 )
-#pragma warning(disable: 4152 )
-#pragma warning(disable: 4054 )
-#pragma warning(disable: 4055 )
+#pragma warning(disable : 4115)
+#pragma warning(disable : 4152)
+#pragma warning(disable : 4054)
+#pragma warning(disable : 4055)
 
 #include <winsock.h>
+
 extern int WI_NOBLOCKSOCK(long sock);
 
 #ifdef errno
@@ -34,87 +35,85 @@ extern int WI_NOBLOCKSOCK(long sock);
 
 
 #ifndef EWOULDBLOCK
-#define EWOULDBLOCK             WSAEWOULDBLOCK
+#define EWOULDBLOCK WSAEWOULDBLOCK
 #endif
 #ifndef EINPROGRESS
-#define EINPROGRESS             WSAEINPROGRESS
+#define EINPROGRESS WSAEINPROGRESS
 #endif
 #ifndef EALREADY
-#define EALREADY                WSAEALREADY
+#define EALREADY WSAEALREADY
 #endif
 #ifndef ENOTSOCK
-#define ENOTSOCK                WSAENOTSOCK
+#define ENOTSOCK WSAENOTSOCK
 #endif
 #ifndef EDESTADDRREQ
-#define EDESTADDRREQ            WSAEDESTADDRREQ
+#define EDESTADDRREQ WSAEDESTADDRREQ
 #endif
 #ifndef EMSGSIZE
-#define EMSGSIZE                WSAEMSGSIZE
+#define EMSGSIZE WSAEMSGSIZE
 #endif
 #ifndef EPROTOTYPE
-#define EPROTOTYPE              WSAEPROTOTYPE
+#define EPROTOTYPE WSAEPROTOTYPE
 #endif
 #ifndef ENOPROTOOPT
-#define ENOPROTOOPT             WSAENOPROTOOPT
+#define ENOPROTOOPT WSAENOPROTOOPT
 #endif
 #ifndef EPROTONOSUPPORT
-#define EPROTONOSUPPORT         WSAEPROTONOSUPPORT
+#define EPROTONOSUPPORT WSAEPROTONOSUPPORT
 #endif
 #ifndef ESOCKTNOSUPPORT
-#define ESOCKTNOSUPPORT         WSAESOCKTNOSUPPORT
+#define ESOCKTNOSUPPORT WSAESOCKTNOSUPPORT
 #endif
 #ifndef EOPNOTSUPP
-#define EOPNOTSUPP              WSAEOPNOTSUPP
+#define EOPNOTSUPP WSAEOPNOTSUPP
 #endif
 #ifndef EPFNOSUPPORT
-#define EPFNOSUPPORT            WSAEPFNOSUPPORT
+#define EPFNOSUPPORT WSAEPFNOSUPPORT
 #endif
 #ifndef EAFNOSUPPORT
-#define EAFNOSUPPORT            WSAEAFNOSUPPORT
+#define EAFNOSUPPORT WSAEAFNOSUPPORT
 #endif
 #ifndef EADDRINUSE
-#define EADDRINUSE              WSAEADDRINUSE
+#define EADDRINUSE WSAEADDRINUSE
 #endif
 #ifndef EADDRNOTAVAIL
-#define EADDRNOTAVAIL           WSAEADDRNOTAVAIL
+#define EADDRNOTAVAIL WSAEADDRNOTAVAIL
 #endif
 #ifndef ENETDOWN
-#define ENETDOWN                WSAENETDOWN
+#define ENETDOWN WSAENETDOWN
 #endif
 #ifndef ENETUNREACH
-#define ENETUNREACH             WSAENETUNREACH
+#define ENETUNREACH WSAENETUNREACH
 #endif
 #ifndef ENETRESET
-#define ENETRESET               WSAENETRESET
+#define ENETRESET WSAENETRESET
 #endif
 #ifndef ECONNABORTED
-#define ECONNABORTED            WSAECONNABORTED
+#define ECONNABORTED WSAECONNABORTED
 #endif
 #ifndef ECONNRESET
-#define ECONNRESET              WSAECONNRESET
+#define ECONNRESET WSAECONNRESET
 #endif
 #ifndef ENOBUFS
-#define ENOBUFS                 WSAENOBUFS
+#define ENOBUFS WSAENOBUFS
 #endif
 #ifndef EISCONN
-#define EISCONN                 WSAEISCONN
+#define EISCONN WSAEISCONN
 #endif
 #ifndef ENOTCONN
-#define ENOTCONN                WSAENOTCONN
+#define ENOTCONN WSAENOTCONN
 #endif
 #ifndef ESHUTDOWN
-#define ESHUTDOWN               WSAESHUTDOWN
+#define ESHUTDOWN WSAESHUTDOWN
 #endif
 #ifndef ETOOMANYREFS
-#define ETOOMANYREFS            WSAETOOMANYREFS
+#define ETOOMANYREFS WSAETOOMANYREFS
 #endif
 #ifndef ETIMEDOUT
-#define ETIMEDOUT               WSAETIMEDOUT
+#define ETIMEDOUT WSAETIMEDOUT
 #endif
 #ifndef ECONNREFUSED
-#define ECONNREFUSED            WSAECONNREFUSED
+#define ECONNREFUSED WSAECONNREFUSED
 #endif
 
 #endif /* _WINDOWDEFS_H_ */
-
-

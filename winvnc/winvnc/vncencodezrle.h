@@ -15,26 +15,31 @@
 
 #include "vncencoder.h"
 
-namespace rdr { class ZlibOutStream; class MemOutStream; class ZstdOutStream; }
+namespace rdr
+{
+    class ZlibOutStream;
+    class MemOutStream;
+    class ZstdOutStream;
+}
 class vncEncodeZRLE : public vncEncoder
 {
 public:
-  vncEncodeZRLE();
-  ~vncEncodeZRLE();
+    explicit vncEncodeZRLE();
+    ~vncEncodeZRLE();
 
-  virtual void Init();
+    virtual void Init();
 
-  virtual UINT RequiredBuffSize(UINT width, UINT height);
+    virtual UINT RequiredBuffSize(UINT width, UINT height);
 
-  virtual UINT EncodeRect(BYTE *source, BYTE *dest, const rfb::Rect &rect);
+    virtual UINT EncodeRect(BYTE* source, BYTE* dest, const rfb::Rect& rect);
 
-  BOOL m_use_zywrle;
+    BOOL m_use_zywrle;
 
 private:
-  rdr::ZlibOutStream* zos;
-  rdr::ZstdOutStream* zstdos;
-  rdr::MemOutStream* mos;
-  void* beforeBuf;
+    rdr::ZlibOutStream* zos;
+    rdr::ZstdOutStream* zstdos;
+    rdr::MemOutStream* mos;
+    void* beforeBuf;
 };
 
 #endif

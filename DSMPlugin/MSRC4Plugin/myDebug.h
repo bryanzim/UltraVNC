@@ -14,9 +14,9 @@
 #define _MYDEBUG_H
 
 //Assert macro
-#define My_assert(e)	((e) ? (void)0 : Die(__FILE__, __LINE__, #e))
+#define My_assert(e) ((e) ? (void)0 : Die(__FILE__, __LINE__, #e))
 
 //Function to halt program execution
-void Die(const char *file,int line,const char *assertion);
+void Die(const char* file, int line, const char* assertion);
 
 #endif

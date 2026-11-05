@@ -38,11 +38,11 @@
 
 #include <windows.h>
 
-typedef void *HMEMORYMODULE;
+typedef void* HMEMORYMODULE;
 
-typedef void *HMEMORYRSRC;
+typedef void* HMEMORYRSRC;
 
-typedef void *HCUSTOMMODULE;
+typedef void* HCUSTOMMODULE;
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,9 +50,9 @@ extern "C" {
 
 typedef LPVOID (*CustomAllocFunc)(LPVOID, SIZE_T, DWORD, DWORD, void*);
 typedef BOOL (*CustomFreeFunc)(LPVOID, SIZE_T, DWORD, void*);
-typedef HCUSTOMMODULE (*CustomLoadLibraryFunc)(LPCSTR, void *);
-typedef FARPROC (*CustomGetProcAddressFunc)(HCUSTOMMODULE, LPCSTR, void *);
-typedef void (*CustomFreeLibraryFunc)(HCUSTOMMODULE, void *);
+typedef HCUSTOMMODULE (*CustomLoadLibraryFunc)(LPCSTR, void*);
+typedef FARPROC (*CustomGetProcAddressFunc)(HCUSTOMMODULE, LPCSTR, void*);
+typedef void (*CustomFreeLibraryFunc)(HCUSTOMMODULE, void*);
 
 /**
  * Load EXE/DLL from memory location with the given size.
@@ -60,7 +60,7 @@ typedef void (*CustomFreeLibraryFunc)(HCUSTOMMODULE, void *);
  * All dependencies are resolved using default LoadLibrary/GetProcAddress
  * calls through the Windows API.
  */
-HMEMORYMODULE MemoryLoadLibrary(const void *, size_t);
+HMEMORYMODULE MemoryLoadLibrary(const void*, size_t);
 
 /**
  * Load EXE/DLL from memory location with the given size using custom dependency
@@ -68,13 +68,8 @@ HMEMORYMODULE MemoryLoadLibrary(const void *, size_t);
  *
  * Dependencies will be resolved using passed callback methods.
  */
-HMEMORYMODULE MemoryLoadLibraryEx(const void *, size_t,
-    CustomAllocFunc,
-    CustomFreeFunc,
-    CustomLoadLibraryFunc,
-    CustomGetProcAddressFunc,
-    CustomFreeLibraryFunc,
-    void *);
+HMEMORYMODULE MemoryLoadLibraryEx(const void*, size_t, CustomAllocFunc, CustomFreeFunc, CustomLoadLibraryFunc,
+                                  CustomGetProcAddressFunc, CustomFreeLibraryFunc, void*);
 
 /**
  * Get address of exported method. Supports loading both by name and by
@@ -131,20 +126,20 @@ int MemoryLoadString(HMEMORYMODULE, UINT, LPTSTR, int);
 int MemoryLoadStringEx(HMEMORYMODULE, UINT, LPTSTR, int, WORD);
 
 /**
-* Default implementation of CustomAllocFunc that calls VirtualAlloc
-* internally to allocate memory for a library
-*
-* This is the default as used by MemoryLoadLibrary.
-*/
-LPVOID MemoryDefaultAlloc(LPVOID, SIZE_T, DWORD, DWORD, void *);
+ * Default implementation of CustomAllocFunc that calls VirtualAlloc
+ * internally to allocate memory for a library
+ *
+ * This is the default as used by MemoryLoadLibrary.
+ */
+LPVOID MemoryDefaultAlloc(LPVOID, SIZE_T, DWORD, DWORD, void*);
 
 /**
-* Default implementation of CustomFreeFunc that calls VirtualFree
-* internally to free the memory used by a library
-*
-* This is the default as used by MemoryLoadLibrary.
-*/
-BOOL MemoryDefaultFree(LPVOID, SIZE_T, DWORD, void *);
+ * Default implementation of CustomFreeFunc that calls VirtualFree
+ * internally to free the memory used by a library
+ *
+ * This is the default as used by MemoryLoadLibrary.
+ */
+BOOL MemoryDefaultFree(LPVOID, SIZE_T, DWORD, void*);
 
 /**
  * Default implementation of CustomLoadLibraryFunc that calls LoadLibraryA
@@ -152,7 +147,7 @@ BOOL MemoryDefaultFree(LPVOID, SIZE_T, DWORD, void *);
  *
  * This is the default as used by MemoryLoadLibrary.
  */
-HCUSTOMMODULE MemoryDefaultLoadLibrary(LPCSTR, void *);
+HCUSTOMMODULE MemoryDefaultLoadLibrary(LPCSTR, void*);
 
 /**
  * Default implementation of CustomGetProcAddressFunc that calls GetProcAddress
@@ -160,7 +155,7 @@ HCUSTOMMODULE MemoryDefaultLoadLibrary(LPCSTR, void *);
  *
  * This is the default as used by MemoryLoadLibrary.
  */
-FARPROC MemoryDefaultGetProcAddress(HCUSTOMMODULE, LPCSTR, void *);
+FARPROC MemoryDefaultGetProcAddress(HCUSTOMMODULE, LPCSTR, void*);
 
 /**
  * Default implementation of CustomFreeLibraryFunc that calls FreeLibrary
@@ -168,10 +163,10 @@ FARPROC MemoryDefaultGetProcAddress(HCUSTOMMODULE, LPCSTR, void *);
  *
  * This is the default as used by MemoryLoadLibrary.
  */
-void MemoryDefaultFreeLibrary(HCUSTOMMODULE, void *);
+void MemoryDefaultFreeLibrary(HCUSTOMMODULE, void*);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // __MEMORY_MODULE_HEADER
+#endif // __MEMORY_MODULE_HEADER

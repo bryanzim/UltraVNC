@@ -13,28 +13,29 @@
 #ifndef __RDR_MEMINSTREAM_H__
 #define __RDR_MEMINSTREAM_H__
 
-#include "InStream.h"
 #include "Exception.h"
+#include "InStream.h"
 
-namespace rdr {
+namespace rdr
+{
 
-  class MemInStream : public InStream {
+    class MemInStream : public InStream
+    {
 
-  public:
+    public:
+        MemInStream(const void* const data, const int len)
+        {
+            ptr = start = (const U8*)data;
+            end = start + len;
+        }
 
-    MemInStream(const void* data, int len) {
-      ptr = start = (const U8*)data;
-      end = start + len;
-    }
+        int pos() { return static_cast<int>((ptr - start)); }
+        void reposition(const int pos) { ptr = start + pos; }
 
-    int pos() { return (int)(ptr - start); }
-    void reposition(int pos) { ptr = start + pos; }
-
-  private:
-
-    int overrun(int itemSize, int nItems) { throw EndOfStream("overrun"); }
-    const U8* start;
-  };
+    private:
+        int overrun(const int itemSize, const int nItems) { throw EndOfStream("overrun"); }
+        const U8* start;
+    };
 
 }
 

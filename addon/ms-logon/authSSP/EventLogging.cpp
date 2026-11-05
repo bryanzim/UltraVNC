@@ -12,165 +12,158 @@
 
 #include "EventLogging.h"
 
+#include <array>
+#include <cstddef>
+#include <cstdio>
+#include <cstring>
 
 EventLogging::EventLogging()
 {
-	// returns a handle that links the source to the registry 
-	m_hEventLinker = RegisterEventSource(NULL,_T("UltraVNC"));
-
+    // returns a handle that links the source to the registry
+    m_hEventLinker = ::RegisterEventSource(nullptr, _T("UltraVNC"));
 }
 
 EventLogging::~EventLogging()
 {
-	// Releases the handle to the registry
-	DeregisterEventSource(m_hEventLinker);
+    // Releases the handle to the registry
+    ::DeregisterEventSource(m_hEventLinker);
 }
 
 
 
-void EventLogging::LogIt(WORD CategoryID, DWORD EventID, LPCTSTR *ArrayOfStrings,
-						 UINT NumOfArrayStr,LPVOID RawData,DWORD RawDataSize)
+void EventLogging::LogIt(const WORD CategoryID, const DWORD EventID, LPCTSTR* const ArrayOfStrings, const UINT NumOfArrayStr,
+                         const LPVOID RawData, const DWORD RawDataSize)
 {
 
-	// Writes data to the event log
-	ReportEvent(m_hEventLinker,EVENTLOG_INFORMATION_TYPE,CategoryID,
-		EventID,NULL,1,RawDataSize,ArrayOfStrings,RawData);	
-
+    // Writes data to the event log
+    ::ReportEvent(m_hEventLinker, EVENTLOG_INFORMATION_TYPE, CategoryID, EventID, nullptr, 1, RawDataSize, ArrayOfStrings, RawData);
 }
 
 
-void EventLogging::AddEventSourceToRegistry(LPCTSTR lpszSourceName)
+void EventLogging::AddEventSourceToRegistry(const LPCTSTR lpszSourceName)
 {
-    HKEY  hk;
+    HKEY hk;
     DWORD dwData;
-    TCHAR szBuf[MAX_PATH];
-    TCHAR szKey[255] =_T("SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\");
-    TCHAR szServicePath[MAX_PATH];
+    std::array<TCHAR, MAX_PATH> szBuf;
+    std::array<TCHAR, 255U> szKey{_T("SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\")};
+    std::array<TCHAR, MAX_PATH> szServicePath;
 
-    lstrcat(szKey, _T("UltraVNC"));
+    ::lstrcat(szKey.data(), _T("UltraVNC"));
 
-    if(RegCreateKey(HKEY_LOCAL_MACHINE, szKey, &hk) != ERROR_SUCCESS)
+    if (::RegCreateKey(HKEY_LOCAL_MACHINE, szKey.data(), &hk) != ERROR_SUCCESS)
     {
         return;
     }
 
-    if (GetModuleFileName(NULL, szServicePath, MAX_PATH))
-		{
-			TCHAR* p = _tcsrchr(szServicePath, '\\');
-			if (p == NULL) return;
-			*p = '\0';
-			_tcscat_s(szServicePath,_T("\\logmessages.dll"));
-		}
-    lstrcpy(szBuf, szServicePath);
+    if (::GetModuleFileName(nullptr, szServicePath.data(), szServicePath.size()))
+    {
+        TCHAR* p = ::_tcsrchr(szServicePath.data(), '\\');
+        if (p == nullptr)
+        {
+            return;
+        }
+        *p = '\0';
+        ::_tcscat_s(szServicePath.data(), szServicePath.size(), _T("\\logmessages.dll"));
+    }
+    ::lstrcpy(szBuf.data(), szServicePath.data());
 
     // Add the name to the EventMessageFile subkey.
-    if(RegSetValueEx(hk,
-                     _T("EventMessageFile"),
-                     0,
-                     REG_EXPAND_SZ,
-                     (LPBYTE) szBuf,
-                     (lstrlen(szBuf) + 1) * sizeof(TCHAR)) != ERROR_SUCCESS)
+    if (::RegSetValueEx(hk, _T("EventMessageFile"), 0, REG_EXPAND_SZ, (LPBYTE)szBuf.data(),
+                      (::lstrlen(szBuf.data()) + 1) * sizeof(TCHAR)) != ERROR_SUCCESS)
     {
-        RegCloseKey(hk);
+        ::RegCloseKey(hk);
         return;
     }
 
-    dwData = EVENTLOG_ERROR_TYPE | EVENTLOG_WARNING_TYPE |EVENTLOG_INFORMATION_TYPE;
-    if(RegSetValueEx(hk,
-                     _T("TypesSupported"),
-                     0,
-                     REG_DWORD,
-                     (LPBYTE)&dwData,
-                     sizeof(DWORD)) != ERROR_SUCCESS)
-    {
-        
-    } RegCloseKey(hk);
+    dwData = EVENTLOG_ERROR_TYPE | EVENTLOG_WARNING_TYPE | EVENTLOG_INFORMATION_TYPE;
+    if (::RegSetValueEx(hk, _T("TypesSupported"), 0, REG_DWORD, (LPBYTE)&dwData, sizeof(DWORD)) != ERROR_SUCCESS) {}
+    ::RegCloseKey(hk);
 }
 
-void LOGV2(TCHAR *szMslogonLog, long EventID, const TCHAR *format, ...) {
-    FILE *file;
-	LPCTSTR ps[3];
-	TCHAR textbuf[2 * MAXLEN] = _T("");
-	char texttowrite[2 * MAXLEN] = "";
-	TCHAR szTimestamp[MAXLEN] = _T("");
-	TCHAR szText[MAXLEN] = _T("");
-	SYSTEMTIME time;
+void LOGV2(TCHAR* const szMslogonLog, const long EventID, const TCHAR* const format, ...)
+{
+    FILE* file;
+    std::array<LPCTSTR, 3U> ps;
+    std::array<TCHAR, 2 * MAXLEN> textbuf{};
+    std::array<char, 2 * MAXLEN> texttowrite{};
+    std::array<TCHAR, MAXLEN> szTimestamp{};
+    std::array<TCHAR, MAXLEN> szText{};
+    SYSTEMTIME time;
 
-	va_list ap;
-	va_start(ap, format);
-	_vstprintf_s(szText, format, ap);
-	va_end(ap);
-	// Prepend timestamp to message
-	GetLocalTime(& time);
-	_stprintf_s(szTimestamp,_T("%.2d/%.2d/%d %.2d:%.2d:%.2d\t"), 
-		time.wDay, time.wMonth, time.wYear, time.wHour, time.wMinute, time.wSecond);
-	_tcscpy_s(textbuf,szTimestamp);
-	_tcscat_s(textbuf,szText);
-	ps[0] = textbuf;
+    va_list ap;
+    va_start(ap, format);
+    _vstprintf_s(szText.data(), szText.size(), format, ap);
+    va_end(ap);
+    // Prepend timestamp to message
+    ::GetLocalTime(&time);
+    ::_stprintf_s(szTimestamp.data(), szTimestamp.size(), _T("%.2d/%.2d/%d %.2d:%.2d:%.2d\t"), time.wDay, time.wMonth, time.wYear, time.wHour, time.wMinute, time.wSecond);
+    ::_tcscpy_s(textbuf.data(), textbuf.size(), szTimestamp.data());
+    ::_tcscat_s(textbuf.data(), textbuf.size(), szText.data());
+    ps[0U] = textbuf.data();
     EventLogging log;
-	log.AddEventSourceToRegistry(NULL);
-	log.LogIt(1,EventID, ps,1,NULL,0);
-	file = _tfopen(szMslogonLog, _T("a"));
-	if(file!=NULL) 
-	{
+    log.AddEventSourceToRegistry(nullptr);
+    log.LogIt(1, EventID, ps.data(), 1, nullptr, 0);
+    file = _tfopen(szMslogonLog, _T("a"));
+    if (file != nullptr)
+    {
 
-		// Write ANSI
+        // Write ANSI
 #if defined UNICODE || defined _UNICODE
-		size_t pnconv;
-		wcstombs_s(&pnconv, texttowrite, 512, textbuf, 2 * MAXLEN);
+        std::size_t pnconv;
+        ::wcstombs_s(&pnconv, texttowrite.data(), 512, textbuf.data(), textbuf.size());
 #else
-		strcpy(texttowrite, texttowrite);
+        std::strcpy(texttowrite.data(), texttowrite.data());
 #endif
-		fwrite(texttowrite, sizeof(char), strlen(texttowrite),file);
-		fclose(file);
-	}
+        std::fwrite(texttowrite.data(), sizeof(char), std::strlen(texttowrite.data()), file);
+        std::fclose(file);
+    }
 }
- 
-void LOG(long EventID, const TCHAR* format, ...) {
-	FILE* file;
-	TCHAR szMslogonLog[MAX_PATH];
-	LPCTSTR ps[3];
-	TCHAR textbuf[2 * MAXLEN] = _T("");
-	char texttowrite[2 * MAXLEN] = "";
-	TCHAR szTimestamp[MAXLEN] = _T("");
-	TCHAR szText[MAXLEN] = _T("");
-	SYSTEMTIME time;
 
-	va_list ap;
-	va_start(ap, format);
-	_vstprintf_s(szText, format, ap);
-	va_end(ap);
-	// Prepend timestamp to message
-	GetLocalTime(&time);
-	_stprintf_s(szTimestamp, _T("%.2d/%.2d/%d %.2d:%.2d:%.2d\t"),
-		time.wDay, time.wMonth, time.wYear, time.wHour, time.wMinute, time.wSecond);
-	_tcscpy_s(textbuf, szTimestamp);
-	_tcscat_s(textbuf, szText);
-	ps[0] = textbuf;
-	EventLogging log;
-	log.AddEventSourceToRegistry(NULL);
-	log.LogIt(1, EventID, ps, 1, NULL, 0);
-	if (GetModuleFileName(NULL, szMslogonLog, MAX_PATH))
-	{
-		TCHAR* p = _tcsrchr(szMslogonLog, '\\');
-		if (p != NULL)
-		{
-			*p = '\0';
-			_tcscat_s(szMslogonLog, _T("\\mslogon.log"));
-		}
-	}
-	file = _tfopen(szMslogonLog, _T("a"));
-	if (file != NULL)
-	{
+void LOG(const long EventID, const TCHAR* const format, ...)
+{
+    FILE* file;
+    std::array<TCHAR, MAX_PATH> szMslogonLog;
+    std::array<LPCTSTR, 3U> ps;
+    std::array<TCHAR, 2 * MAXLEN> textbuf{};
+    std::array<char, 2 * MAXLEN> texttowrite{};
+    std::array<TCHAR, MAXLEN> szTimestamp{};
+    std::array<TCHAR, MAXLEN> szText{};
+    SYSTEMTIME time;
 
-		// Write ANSI
+    va_list ap;
+    va_start(ap, format);
+    _vstprintf_s(szText.data(), szText.size(), format, ap);
+    va_end(ap);
+    // Prepend timestamp to message
+    ::GetLocalTime(&time);
+    ::_stprintf_s(szTimestamp.data(), szTimestamp.size(), _T("%.2d/%.2d/%d %.2d:%.2d:%.2d\t"), time.wDay, time.wMonth, time.wYear, time.wHour, time.wMinute, time.wSecond);
+    ::_tcscpy_s(textbuf.data(), textbuf.size(), szTimestamp.data());
+    ::_tcscat_s(textbuf.data(), textbuf.size(), szText.data());
+    ps[0U] = textbuf.data();
+    EventLogging log;
+    log.AddEventSourceToRegistry(nullptr);
+    log.LogIt(1, EventID, ps.data(), 1, nullptr, 0);
+    if (::GetModuleFileName(nullptr, szMslogonLog.data(), szMslogonLog.size()))
+    {
+        TCHAR* p = ::_tcsrchr(szMslogonLog.data(), '\\');
+        if (p != nullptr)
+        {
+            *p = '\0';
+            ::_tcscat_s(szMslogonLog.data(), szMslogonLog.size(), _T("\\mslogon.log"));
+        }
+    }
+    file = _tfopen(szMslogonLog.data(), _T("a"));
+    if (file != nullptr)
+    {
+
+        // Write ANSI
 #if defined UNICODE || defined _UNICODE
-		size_t pnconv;
-		wcstombs_s(&pnconv, texttowrite, 512, textbuf, 2 * MAXLEN);
+        std::size_t pnconv;
+        ::wcstombs_s(&pnconv, texttowrite.data(), 512, textbuf.data(), textbuf.size());
 #else
-		strcpy(texttowrite, texttowrite);
+        std::strcpy(texttowrite.data(), texttowrite.data());
 #endif
-		fwrite(texttowrite, sizeof(char), strlen(texttowrite), file);
-		fclose(file);
-	}
+        std::fwrite(texttowrite.data(), sizeof(char), std::strlen(texttowrite.data()), file);
+        std::fclose(file);
+    }
 }

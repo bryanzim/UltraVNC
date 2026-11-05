@@ -21,26 +21,26 @@ class vncAbout;
 
 // Includes
 #include "stdhdrs.h"
-
 // The vncAbout class itself
+
 class vncAbout
 {
 public:
-	// Constructor/destructor
-	vncAbout();
-	~vncAbout();
+    // Constructor/destructor
+    explicit vncAbout();
+    ~vncAbout();
 
-	// Initialisation
-	BOOL Init();
+    // Initialisation
+    BOOL Init();
 
-	// The dialog box window proc
-	static BOOL CALLBACK DialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    // The dialog box window proc
+    static BOOL CALLBACK DialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-	// General
-	void Show(BOOL show);
+    // General
+    void Show(BOOL show);
 
-	// Implementation
-	BOOL m_dlgvisible;
+    // Implementation
+    BOOL m_dlgvisible;
 };
 
 #endif // _WINVNC_VNCABOUT

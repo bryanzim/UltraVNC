@@ -10,38 +10,40 @@
 //
 
 
-/* 
+/*
  *  vncExportACL.h
  */
 
-#define _WIN32_WINNT	0x0500
-#define WINVER			0x0500
+#define _WIN32_WINNT 0x0500
+#define WINVER 0x0500
 
 #include <windows.h>
+
 #include <aclapi.h>
-#include <stdio.h>
-#include <string.h>
 #include <lm.h>
 
-#define MAXLEN 256
-#define lenof(a) (sizeof(a) / sizeof((a)[0]) )
+#include <stdio.h>
+#include <string.h>
 
-class vncExportACL{
+#define MAXLEN 256
+#define lenof(a) (sizeof(a) / sizeof((a)[0]))
+
+class vncExportACL
+{
 public:
-	// returns the address of a !!static!!, non-thread-local, buffer with
-	// the text representation of the SID that was passed in
-	const TCHAR *SidToText( PSID psid );
-	
-	// Translates a SID and terminates it with a linefeed. No provision is
-	// made to dump the SID in textual form if LookupAccountSid() fails.
-	void PrintSid( PSID psid );
-	
-	// Displays the index-th (0-based) ACE from ACL
-	void PrintAce(int index, PACL acl);
-	
-	// Dumps an entire ACL
-	void PrintAcl(PACL acl);
-	
-	bool GetACL(PACL *pACL);
-	
+    // returns the address of a !!static!!, non-thread-local, buffer with
+    // the text representation of the SID that was passed in
+    const TCHAR* SidToText(PSID psid);
+
+    // Translates a SID and terminates it with a linefeed. No provision is
+    // made to dump the SID in textual form if LookupAccountSid() fails.
+    void PrintSid(PSID psid);
+
+    // Displays the index-th (0-based) ACE from ACL
+    void PrintAce(int index, PACL acl);
+
+    // Dumps an entire ACL
+    void PrintAcl(PACL acl);
+
+    bool GetACL(PACL* pACL);
 };

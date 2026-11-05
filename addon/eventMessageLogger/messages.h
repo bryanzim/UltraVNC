@@ -1,12 +1,12 @@
- // This file is part of UltraVNC
- // https://github.com/ultravnc/UltraVNC
- // https://uvnc.com/
- //
- // SPDX-License-Identifier: GPL-3.0-or-later
- //
- // SPDX-FileCopyrightText: Copyright (C) 2002-2025 UltraVNC Team Members. All Rights Reserved.
- // SPDX-FileCopyrightText: Copyright (C) 1999-2002 Vdacc-VNC & eSVNC Projects. All Rights Reserved.
- //
+// This file is part of UltraVNC
+// https://github.com/ultravnc/UltraVNC
+// https://uvnc.com/
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// SPDX-FileCopyrightText: Copyright (C) 2002-2025 UltraVNC Team Members. All Rights Reserved.
+// SPDX-FileCopyrightText: Copyright (C) 1999-2002 Vdacc-VNC & eSVNC Projects. All Rights Reserved.
+//
 //
 //  Values are 32 bit values laid out as follows:
 //
@@ -48,28 +48,27 @@
 //
 // MessageText:
 //
-// 
+//
 // %1
 //
-#define MY_MSG1                          0x00640001L
+#define MY_MSG1 0x00640001L
 
 //
 // MessageId: MY_MSG2
 //
 // MessageText:
 //
-// 
+//
 // %1
 //
-#define MY_MSG2                          0x00640002L
+#define MY_MSG2 0x00640002L
 
 //
 // MessageId: MY_MSG3
 //
 // MessageText:
 //
-// 
+//
 // %1
 //
-#define MY_MSG3                          0x00640003L
-
+#define MY_MSG3 0x00640003L

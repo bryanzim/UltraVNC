@@ -14,6 +14,8 @@
  *  MSLogonACL.h
  */
 
-void usage_(const TCHAR *appname);
+#include <tchar.h>
+
+void usage_(const TCHAR* appname);
 int export_();
 int import_(bool append);

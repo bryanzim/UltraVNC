@@ -12,141 +12,150 @@
 
 #include "logging.h"
 
+#include <array>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+
 HANDLE hLogFile;
-long LOGIT = 0;	// Flag to turn on/off logging
-long DEBUGIT = 0;
-bool nameSet = false;
-char logFile[LOGNAME_SIZE];
+long LOGIT{ 0 }; // Flag to turn on/off logging
+long DEBUGIT{ 0 };
+bool nameSet{ false };
+std::array<char, LOGNAME_SIZE> logFile;
 
-void SetLogFile(const char * logname)
+void SetLogFile(const char* const logname) { std::strcpy(logFile.data(), logname); }
+
+int SetLogStatus(const char* const sLogit)
 {
-	strcpy(logFile,logname);
+    char* stop;
+    int logit{ 0 };
+    logit = std::strtol(sLogit, &stop, 10);
+
+    return logit;
 }
 
-int SetLogStatus(const char * sLogit)
+int SetLogging(const char* const logname, char* const sLogit)
 {
-	char *stop;
-	int logit = 0;
-	logit = strtol( sLogit, &stop, 10 );
 
-	return logit;
+    SetLogFile(logname);
+
+    return SetLogStatus(sLogit);
 }
 
-int SetLogging(const char * logname, char * sLogit)
+int SetLogging(const char* const logname)
 {
+    std::array<char, BUFFER_SIZE> dsmdebug;
 
-	SetLogFile(logname);
+    SetLogFile(logname);
 
-	return SetLogStatus(sLogit);
-}
+    GetEnvVar("dsmdebug", dsmdebug.data(), dsmdebug.size());
+    PrintLog((DEST, "dsmdebug = %s", dsmdebug.data()));
 
-int SetLogging(const char * logname)
-{
-	char dsmdebug[BUFFER_SIZE];
-
-	SetLogFile(logname);
-
-	GetEnvVar("dsmdebug", dsmdebug, BUFFER_SIZE);
-	PrintLog((DEST,"dsmdebug = %s",dsmdebug));
-
-	return SetLogStatus(dsmdebug);
+    return SetLogStatus(dsmdebug.data());
 }
 
 // Same as PrintIt, but checks a different variable
-void DebugIt(const char * sMsg)
+void DebugIt(const char* const sMsg)
 {
-	long saveIt = 0;
+    long saveIt{ 0 };
 
 
-	if (DEBUGIT)
-	{
-		saveIt = LOGIT;
+    if (DEBUGIT)
+    {
+        saveIt = LOGIT;
 
-		PrintIt(sMsg);
+        PrintIt(sMsg);
 
-		LOGIT = saveIt;
-	}
-
+        LOGIT = saveIt;
+    }
 }
 
 // Stupid error logging function. (Kinda nice actually!)
-void PrintIt(const char * sMsg) 
+void PrintIt(const char* const sMsg)
 {
-	char logname[LOGNAME_SIZE];
-	
-	if (LOGIT)
-	{
-		
-		DWORD dwLogBytes = 0;
-		long lLastError;
-		char tmpMsg[2048];
-		char dbuffer [10];
-		char tbuffer [10];
-		
-		// Kinda cool, get last error and write it out. Helps with the API stuff
-		lLastError = GetLastError();
-    
- //pgm 		_strdate( dbuffer );
- //pgm 		_strtime( tbuffer );
+    std::array<char, LOGNAME_SIZE> logname;
 
-		// Always append...
-		if (hLogFile == 0)
-		{
-			time_t ltime;
+    if (LOGIT)
+    {
 
-			if (strstr(logFile,".log")!=NULL)
-			{
-				strcpy(logname,logFile);
-				nameSet = true;
-			}
+        DWORD dwLogBytes{ 0U };
+        long lLastError;
+        std::array<char, 2048U> tmpMsg;
+        std::array<char, 10U> dbuffer;
+        std::array<char, 10U> tbuffer;
 
-			if (nameSet == false)
-			{
-				time( &ltime );
-				sprintf(logname,"%s%d.log",logFile,ltime);
-				nameSet = true;
-			}
+        // Kinda cool, get last error and write it out. Helps with the API stuff
+        lLastError = ::GetLastError();
 
-			hLogFile = CreateFile(logname, GENERIC_WRITE, FILE_SHARE_READ, 
-					NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-			
-			if (hLogFile == INVALID_HANDLE_VALUE)
-			{
-				time( &ltime );
-				ltime++;
-				sprintf(logname,"%s%d.log",logFile,ltime);
-				hLogFile = CreateFile(logname, GENERIC_WRITE, FILE_SHARE_READ, 
-					NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-			}
+        //pgm 		_strdate( dbuffer );
+        //pgm 		_strtime( tbuffer );
 
-			strcpy(logFile,logname);
-			if (APPEND)
-				SetFilePointer( hLogFile, 0, NULL, FILE_END );	// Append
-			else 
-				SetEndOfFile( hLogFile );	// Overwrite
-		}
+        // Always append...
+        if (hLogFile == 0)
+        {
+            time_t ltime;
 
-		if(_snprintf(tmpMsg, sizeof(tmpMsg),"%s %s : ",dbuffer, tbuffer)< 0)
-			PrintLog((DEST,"_snprintf failed - tmpMsg too small"));
+            if (strstr(logFile.data(), ".log") != nullptr)
+            {
+                std::strcpy(logname.data(), logFile.data());
+                nameSet = true;
+            }
 
-		WriteFile(hLogFile, tmpMsg, strlen(tmpMsg), &dwLogBytes, NULL); 
-		WriteFile(hLogFile, sMsg, strlen(sMsg), &dwLogBytes, NULL); 
-		
-		if (lLastError < 0)
-		{
-			if (_snprintf(tmpMsg, sizeof(tmpMsg)," - Last Error = %d : ",lLastError) < 0)
-				PrintLog((DEST,"_snprintf failed - tmpMsg too small"));
-			WriteFile(hLogFile,tmpMsg,strlen(tmpMsg), &dwLogBytes,NULL);
-		}
-		WriteFile(hLogFile, "\r\n", 2, &dwLogBytes, NULL); 
-		
-		SetLastError(0);
+            if (nameSet == false)
+            {
+                std::time(&ltime);
+                std::snprintf(logname.data(), logname.size(), "%s%d.log", logFile.data(), ltime);
+                nameSet = true;
+            }
 
-		// Cheap way to clean up...
-		if (strcmp(sMsg, "Shutting Down.") == 0)
-			CloseHandle(hLogFile);
-		
-	}
-	
+            hLogFile =
+                ::CreateFile(logname.data(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+            if (hLogFile == INVALID_HANDLE_VALUE)
+            {
+                std::time(&ltime);
+                ++ltime;
+                std::snprintf(logname.data(), logname.size(), "%s%d.log", logFile.data(), ltime);
+                hLogFile = ::CreateFile(logname.data(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL,
+                                      nullptr);
+            }
+
+            std::strcpy(logFile.data(), logname.data());
+            if (APPEND)
+            {
+                ::SetFilePointer(hLogFile, 0, nullptr, FILE_END);
+            } // Append
+            else
+            {
+                ::SetEndOfFile(hLogFile);
+            } // Overwrite
+        }
+
+        if (_snprintf(tmpMsg.data(), sizeof(tmpMsg), "%s %s : ", dbuffer.data(), tbuffer.data()) < 0)
+        {
+            PrintLog((DEST, "_snprintf failed - tmpMsg too small"));
+        }
+
+        ::WriteFile(hLogFile, tmpMsg.data(), std::strlen(tmpMsg.data()), &dwLogBytes, nullptr);
+        ::WriteFile(hLogFile, sMsg, std::strlen(sMsg), &dwLogBytes, nullptr);
+
+        if (lLastError < 0)
+        {
+            if (_snprintf(tmpMsg.data(), sizeof(tmpMsg), " - Last Error = %d : ", lLastError) < 0)
+            {
+                PrintLog((DEST, "_snprintf failed - tmpMsg too small"));
+            }
+            ::WriteFile(hLogFile, tmpMsg.data(), std::strlen(tmpMsg.data()), &dwLogBytes, nullptr);
+        }
+        ::WriteFile(hLogFile, "\r\n", 2, &dwLogBytes, nullptr);
+
+        SetLastError(0);
+
+        // Cheap way to clean up...
+        if (std::strcmp(sMsg, "Shutting Down.") == 0)
+        {
+            ::CloseHandle(hLogFile);
+        }
+    }
 }
-

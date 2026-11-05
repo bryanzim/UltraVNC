@@ -8,98 +8,110 @@
 //
 #include "SaslWire.h"
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <vector>
+
 namespace SaslWire
 {
-    bool WriteU8(ISaslTransport* ch, uint8_t v)
+    bool WriteU8(ISaslTransport* const ch, std::uint8_t v) { return ch->SendAll(&v, 1); }
+
+    bool WriteU32(ISaslTransport* const ch, const std::uint32_t v)
     {
-        return ch->SendAll(&v, 1);
+        std::array<std::uint8_t, 4U> b{ static_cast<std::uint8_t>((v >> 24)), static_cast<std::uint8_t>((v >> 16)),
+                                        static_cast<std::uint8_t>((v >> 8)), static_cast<std::uint8_t>(v) };
+        return ch->SendAll(b.data(), 4);
     }
 
-    bool WriteU32(ISaslTransport* ch, uint32_t v)
-    {
-        uint8_t b[4] = {(uint8_t)(v >> 24), (uint8_t)(v >> 16),
-                        (uint8_t)(v >> 8), (uint8_t)v};
-        return ch->SendAll(b, 4);
-    }
+    bool ReadU8(ISaslTransport* const ch, std::uint8_t& v) { return ch->RecvAll(&v, 1); }
 
-    bool ReadU8(ISaslTransport* ch, uint8_t& v)
+    bool ReadU32(ISaslTransport* const ch, std::uint32_t& v)
     {
-        return ch->RecvAll(&v, 1);
-    }
-
-    bool ReadU32(ISaslTransport* ch, uint32_t& v)
-    {
-        uint8_t b[4];
-        if (!ch->RecvAll(b, 4)) return false;
-        v = ((uint32_t)b[0] << 24) | ((uint32_t)b[1] << 16) |
-            ((uint32_t)b[2] << 8) | (uint32_t)b[3];
+        std::array<std::uint8_t, 4U> b;
+        if (!ch->RecvAll(b.data(), 4))
+        {
+            return false;
+        }
+        v = (static_cast<std::uint32_t>(b[0U]) << 24) | (static_cast<std::uint32_t>(b[1U]) << 16) |
+            (static_cast<std::uint32_t>(b[2U]) << 8) | static_cast<std::uint32_t>(b[3U]);
         return true;
     }
 
-    bool WriteString(ISaslTransport* ch, const char* s, size_t len)
-    {
-        return WriteU32(ch, (uint32_t)len) && (len == 0 || ch->SendAll(s, len));
-    }
+    bool WriteString(ISaslTransport* const ch, const char* const s, const std::size_t len)
+    { return WriteU32(ch, static_cast<std::uint32_t>(len)) && ((len == 0) || ch->SendAll(s, len)); }
 
-    bool WriteString(ISaslTransport* ch, const std::string& s)
-    {
-        return WriteString(ch, s.data(), s.size());
-    }
+    bool WriteString(ISaslTransport* const ch, const std::string& s) { return WriteString(ch, s.data(), s.size()); }
 
-    bool ReadString(ISaslTransport* ch, uint32_t maxLen, std::string& out)
+    bool ReadString(ISaslTransport* const ch, const std::uint32_t maxLen, std::string& out)
     {
-        uint32_t len;
-        if (!ReadU32(ch, len) || len > maxLen) return false;
+        std::uint32_t len;
+        if (!ReadU32(ch, len) || (len > maxLen))
+        {
+            return false;
+        }
         out.assign(len, '\0');
-        return len == 0 || ch->RecvAll(&out[0], len);
+        return (len == 0) || ch->RecvAll(&out[0U], len);
     }
 
-    bool WriteData(ISaslTransport* ch, const void* data, size_t len)
+    bool WriteData(ISaslTransport* ch, const void* const data, const std::size_t len)
     {
         if (len == 0)
-            return WriteU32(ch, 0);          // NULL data
-        uint8_t nul = 0;
-        return WriteU32(ch, (uint32_t)len + 1) &&
-               ch->SendAll(data, len) &&
-               ch->SendAll(&nul, 1);
+        {
+            return WriteU32(ch, 0);
+        } // NULL data
+        std::uint8_t nul{ 0U };
+        return WriteU32(ch, static_cast<std::uint32_t>(len) + 1) && ch->SendAll(data, len) && ch->SendAll(&nul, 1);
     }
 
-    bool WriteData(ISaslTransport* ch, const std::string& s)
-    {
-        return WriteData(ch, s.data(), s.size());
-    }
+    bool WriteData(ISaslTransport* const ch, const std::string& s) { return WriteData(ch, s.data(), s.size()); }
 
-    bool ReadData(ISaslTransport* ch, std::vector<uint8_t>& out, bool& isNull)
+    bool ReadData(ISaslTransport* const ch, std::vector<std::uint8_t>& out, bool& isNull)
     {
-        uint32_t len;
-        if (!ReadU32(ch, len) || len > kMaxSaslData) return false;
+        std::uint32_t len;
+        if (!ReadU32(ch, len) || (len > kMaxSaslData))
+        {
+            return false;
+        }
         isNull = (len == 0);
         out.clear();
-        if (isNull) return true;
+        if (isNull)
+        {
+            return true;
+        }
         out.resize(len);
-        if (!ch->RecvAll(out.data(), len)) { out.clear(); return false; }
-        if (out.back() != 0) { out.clear(); return false; }  // QEMU requires NUL pad
+        if (!ch->RecvAll(out.data(), len))
+        {
+            out.clear();
+            return false;
+        }
+        if (out.back() != 0)
+        {
+            out.clear();
+            return false;
+        } // QEMU requires NUL pad
         out.pop_back();
         return true;
     }
 
-    bool ReadDataString(ISaslTransport* ch, std::string& out, bool& isNull)
+    bool ReadDataString(ISaslTransport* const ch, std::string& out, bool& isNull)
     {
-        std::vector<uint8_t> buf;
-        if (!ReadData(ch, buf, isNull)) return false;
+        std::vector<std::uint8_t> buf;
+        if (!ReadData(ch, buf, isNull))
+        {
+            return false;
+        }
         out.assign((const char*)buf.data(), buf.size());
         return true;
     }
 
-    bool WriteStep(ISaslTransport* ch, const void* data, size_t len, bool complete)
-    {
-        return WriteData(ch, data, len) && WriteU8(ch, complete ? 1 : 0);
-    }
+    bool WriteStep(ISaslTransport* const ch, const void* const data, const std::size_t len, const bool complete)
+    { return WriteData(ch, data, len) && WriteU8(ch, complete ? 1 : 0); }
 
-    bool ReadStep(ISaslTransport* ch, std::vector<uint8_t>& out, bool& isNull, bool& complete)
+    bool ReadStep(ISaslTransport* const ch, std::vector<std::uint8_t>& out, bool& isNull, bool& complete)
     {
-        uint8_t c;
-        return ReadData(ch, out, isNull) && ReadU8(ch, c) &&
-               (complete = (c != 0), true);
+        std::uint8_t c;
+        return ReadData(ch, out, isNull) && ReadU8(ch, c) && (complete = (c != 0), true);
     }
 }

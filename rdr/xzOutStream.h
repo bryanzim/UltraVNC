@@ -23,46 +23,49 @@
 #define LZMA_API_STATIC
 #ifndef _VS2008
 #include <stdint.h>
+
 #endif
 #ifdef _XZ
 #ifdef _VCPKG
-#include  <lzma.h>
+#include <lzma.h>
+
 #else
 #include "../xz/src/liblzma/api/lzma.h"
+
 #endif
 #endif
 
-namespace rdr {
+namespace rdr
+{
 
-  class xzOutStream : public OutStream {
+    class xzOutStream : public OutStream
+    {
 
-  public:
+    public:
+        // adzm - 2010-07 - Custom compression level
+        explicit xzOutStream(OutStream* os = 0, int bufSize = 0);
+        virtual ~xzOutStream();
 
-    // adzm - 2010-07 - Custom compression level
-    xzOutStream(OutStream* os=0, int bufSize=0);
-    virtual ~xzOutStream();
+        void SetCompressLevel(int compression);
 
-	void SetCompressLevel(int compression);
+        void setUnderlying(OutStream* os);
+        void flush();
+        [[nodiscard]] int length();
 
-    void setUnderlying(OutStream* os);
-    void flush();
-    int length();
+    private:
+        void ensure_stream_codec();
 
-  private:
+        int overrun(int itemSize, int nItems);
 
-    void ensure_stream_codec();
-
-    int overrun(int itemSize, int nItems);
-
-    OutStream* underlying;
-    int bufSize;
-    int offset;
+        OutStream* underlying;
+        int bufSize;
+        int offset;
 #ifdef _XZ
-	lzma_stream* ls;
-	lzma_options_lzma ls_options;
+        lzma_stream* ls;
+        lzma_options_lzma ls_options;
 #endif
-    U8* start;
-  };
+        U8* start;
+    };
 
 } // end of namespace rdr
 

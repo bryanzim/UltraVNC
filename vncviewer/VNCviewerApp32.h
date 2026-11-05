@@ -7,24 +7,25 @@
 // SPDX-FileCopyrightText: Copyright (C) 2002-2025 UltraVNC Team Members. All Rights Reserved.
 // SPDX-FileCopyrightText: Copyright (C) 1999-2002 Vdacc-VNC & eSVNC Projects. All Rights Reserved.
 //
- 
 
-#include "VNCviewerApp.h"
+
 #include "Daemon.h"
+#include "VNCviewerApp.h"
 
-class VNCviewerApp32 : public VNCviewerApp {
+class VNCviewerApp32 : public VNCviewerApp
+{
 public:
-	VNCviewerApp32(HINSTANCE hInstance, LPTSTR szCmdLine);
+    VNCviewerApp32(HINSTANCE hInstance, LPTSTR szCmdLine);
 
-	void NewConnection(bool Is_Listening);
-	void NewConnection(bool Is_Listening,TCHAR *host, int port);
-	void NewConnection(bool Is_Listening,SOCKET sock);
-	void NewConnection(bool Is_Listening,TCHAR *configFile);
+    void NewConnection(bool Is_Listening);
+    void NewConnection(bool Is_Listening, TCHAR* host, int port);
+    void NewConnection(bool Is_Listening, SOCKET sock);
+    void NewConnection(bool Is_Listening, TCHAR* configFile);
 
-	~VNCviewerApp32();
+    ~VNCviewerApp32();
+
 private:
-	// Set up registry for program's sounds
-	//void RegisterSounds();
-	Daemon  *m_pdaemon;
+    // Set up registry for program's sounds
+    //void RegisterSounds();
+    Daemon* m_pdaemon;
 };
-

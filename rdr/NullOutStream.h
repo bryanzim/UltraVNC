@@ -15,21 +15,23 @@
 
 #include "OutStream.h"
 
-namespace rdr {
+namespace rdr
+{
 
-  class NullOutStream : public OutStream {
+    class NullOutStream : public OutStream
+    {
 
-  public:
-    NullOutStream();
-    virtual ~NullOutStream();
-    int length();
-    void writeBytes(const void* data, int length);
+    public:
+        explicit NullOutStream();
+        virtual ~NullOutStream();
+        [[nodiscard]] int length();
+        void writeBytes(const void* data, int length);
 
-  private:
-    int overrun(int itemSize, int nItems);
-    int offset;
-    U8* start;
-  };
+    private:
+        int overrun(int itemSize, int nItems);
+        int offset;
+        U8* start;
+    };
 
 }
 

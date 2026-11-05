@@ -29,40 +29,37 @@
 #error "It is included as part of translate.c"
 #endif
 
-#define IN_T CONCAT2E(CARD,INVNC)
-#define OUT_T CONCAT2E(CARD,OUTVNC)
-#define rfbTranslateWithSingleTableINVNCtoOUTVNC \
-				CONCAT4E(rfbTranslateWithSingleTable,INVNC,to,OUTVNC)
-#define rfbTranslateWithRGBTablesINVNCtoOUTVNC \
-				CONCAT4E(rfbTranslateWithRGBTables,INVNC,to,OUTVNC)
+#define IN_T CONCAT2E(CARD, INVNC)
+#define OUT_T CONCAT2E(CARD, OUTVNC)
+#define rfbTranslateWithSingleTableINVNCtoOUTVNC CONCAT4E(rfbTranslateWithSingleTable, INVNC, to, OUTVNC)
+#define rfbTranslateWithRGBTablesINVNCtoOUTVNC CONCAT4E(rfbTranslateWithRGBTables, INVNC, to, OUTVNC)
 
 /*
  * rfbTranslateWithSingleTableINVNCtoOUTVNC translates a rectangle of pixel data
  * using a single lookup table.
  */
 
-static void
-rfbTranslateWithSingleTableINVNCtoOUTVNC (char *table, rfbPixelFormat *in,
-				    rfbPixelFormat *out,
-				    char *iptr, char *optr,
-				    int bytesBetweenInputLines,
-				    int width, int height)
+static void rfbTranslateWithSingleTableINVNCtoOUTVNC(char* const table, rfbPixelFormat* const in, rfbPixelFormat* const out,
+                                                     char* const iptr, char* const optr, const int bytesBetweenInputLines,
+                                                     const int width, int height)
 {
-    IN_T *ip = (IN_T *)iptr;
-    OUT_T *op = (OUT_T *)optr;
-    int ipextra = bytesBetweenInputLines / sizeof(IN_T) - width;
-    OUT_T *opLineEnd;
-    OUT_T *t = (OUT_T *)table;
+    IN_T* ip = (IN_T*)iptr;
+    OUT_T* op = (OUT_T*)optr;
+    const int ipextra = bytesBetweenInputLines / sizeof(IN_T) - width;
+    OUT_T* opLineEnd;
+    OUT_T* t = (OUT_T*)table;
 
-    while (height > 0) {
-	opLineEnd = op + width;
+    while (height > 0)
+    {
+        opLineEnd = op + width;
 
-	while (op < opLineEnd) {
-	    *(op++) = t[*(ip++)];
-	}
+        while (op < opLineEnd)
+        {
+            *(op++) = t[*(ip++)];
+        }
 
-	ip += ipextra;
-	height--;
+        ip += ipextra;
+        --height;
     }
 }
 
@@ -72,32 +69,30 @@ rfbTranslateWithSingleTableINVNCtoOUTVNC (char *table, rfbPixelFormat *in,
  * using three separate lookup tables for the red, green and blue values.
  */
 
-static void
-rfbTranslateWithRGBTablesINVNCtoOUTVNC (char *table, rfbPixelFormat *in,
-				  rfbPixelFormat *out,
-				  char *iptr, char *optr,
-				  int bytesBetweenInputLines,
-				  int width, int height)
+static void rfbTranslateWithRGBTablesINVNCtoOUTVNC(char* const table, rfbPixelFormat* in, rfbPixelFormat* const out,
+                                                   char* const iptr, char* const optr, const int bytesBetweenInputLines,
+                                                   const int width, int height)
 {
-    IN_T *ip = (IN_T *)iptr;
-    OUT_T *op = (OUT_T *)optr;
-    int ipextra = bytesBetweenInputLines / sizeof(IN_T) - width;
-    OUT_T *opLineEnd;
-    OUT_T *redTable = (OUT_T *)table;
-    OUT_T *greenTable = redTable + in->redMax + 1;
-    OUT_T *blueTable = greenTable + in->greenMax + 1;
+    IN_T* ip = (IN_T*)iptr;
+    OUT_T* op = (OUT_T*)optr;
+    const int ipextra = bytesBetweenInputLines / sizeof(IN_T) - width;
+    OUT_T* opLineEnd;
+    OUT_T* redTable = (OUT_T*)table;
+    OUT_T* greenTable = redTable + in->redMax + 1;
+    OUT_T* blueTable = greenTable + in->greenMax + 1;
 
-    while (height > 0) {
-	opLineEnd = op + width;
+    while (height > 0)
+    {
+        opLineEnd = op + width;
 
-	while (op < opLineEnd) {
-	    *(op++) = (redTable[(*ip >> in->redShift) & in->redMax] |
-		       greenTable[(*ip >> in->greenShift) & in->greenMax] |
-		       blueTable[(*ip >> in->blueShift) & in->blueMax]);
-	    ip++;
-	}
-	ip += ipextra;
-	height--;
+        while (op < opLineEnd)
+        {
+            *(op++) = (redTable[(*ip >> in->redShift) & in->redMax] | greenTable[(*ip >> in->greenShift) & in->greenMax] |
+                       blueTable[(*ip >> in->blueShift) & in->blueMax]);
+            ++ip;
+        }
+        ip += ipextra;
+        --height;
     }
 }
 

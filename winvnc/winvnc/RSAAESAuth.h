@@ -22,14 +22,16 @@
 // is left installed on the socket for the whole session via TLSCallbacks;
 // for RA2ne it is removed after the credential exchange.
 
+#include "vsocket.h"
+
+#include <ncrypt.h>
+#include <wincrypt.h>
+
+#include <array>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
-#include <wincrypt.h>
-#include <ncrypt.h>
-
-#include "vsocket.h"
 
 class SchannelTLS;
 struct EAXStream;
@@ -45,8 +47,7 @@ public:
     // allEncrypted: true for RA2, false for RA2ne.
     // requireUser: send secTypeRA2UserPass instead of secTypeRA2Pass.
     // On success outUsername/outPassword hold the client credentials.
-    bool Authenticate(DWORD keySize, bool allEncrypted, bool requireUser,
-                      std::string& outUsername, std::string& outPassword,
+    bool Authenticate(DWORD keySize, bool allEncrypted, bool requireUser, std::string& outUsername, std::string& outPassword,
                       std::string& outFailureMessage);
 
 private:
@@ -67,13 +68,13 @@ private:
     bool Fail(const char* msg, DWORD err);
 
     VSocket* m_socket;
-    DWORD m_keySize;              // 128 or 256
+    DWORD m_keySize; // 128 or 256
     bool m_allEncrypted;
     bool m_requireUser;
     std::string m_lastError;
 
-    SchannelTLS* m_tlsLoader;     // owned; cert loading only
-    PCCERT_CONTEXT m_certCtx;     // borrowed from m_tlsLoader
+    SchannelTLS* m_tlsLoader; // owned; cert loading only
+    PCCERT_CONTEXT m_certCtx; // borrowed from m_tlsLoader
     NCRYPT_KEY_HANDLE m_hServerKey;
     HCRYPTPROV_OR_NCRYPT_KEY_HANDLE m_hCertKey;
     DWORD m_certKeySpec;
@@ -84,16 +85,16 @@ private:
 
     DWORD m_serverKeyBits;
     DWORD m_serverKeyBytes;
-    std::vector<BYTE> m_serverN;  // big-endian wire form
-    std::vector<BYTE> m_serverE;  // big-endian wire form
+    std::vector<BYTE> m_serverN; // big-endian wire form
+    std::vector<BYTE> m_serverE; // big-endian wire form
     DWORD m_clientKeyBits;
     DWORD m_clientKeyBytes;
     std::vector<BYTE> m_clientN;
     std::vector<BYTE> m_clientE;
-    BYTE m_serverRandom[32];
-    BYTE m_clientRandom[32];
+    std::array<BYTE, 32U> m_serverRandom;
+    std::array<BYTE, 32U> m_clientRandom;
 
-    EAXStream* m_eax;             // owned EAX framing layer
+    EAXStream* m_eax; // owned EAX framing layer
     std::unique_ptr<VSocket::TLSCallbacks> m_callbacks;
     bool m_eaxInstalled;
 };

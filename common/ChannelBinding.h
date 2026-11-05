@@ -21,7 +21,9 @@
 // and ambiguous about which certificate it hashes server-side).
 #pragma once
 #include <windows.h>
+
 #include <wincrypt.h>
+
 #include <vector>
 
 namespace ChannelBinding

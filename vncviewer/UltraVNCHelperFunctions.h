@@ -10,43 +10,55 @@
 
 
 #include "stdhdrs.h"
-#include <commctrl.h>
+
 #include "./res/resource.h"
 
+#include <commctrl.h>
+
+#include <array>
+
 #if defined _M_IX86
-#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#pragma comment(                                                                                                                   \
+    linker,                                                                                                                        \
+    "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #elif defined _M_IA64
-#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#pragma comment(                                                                                                                   \
+    linker,                                                                                                                        \
+    "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #elif defined _M_X64
-#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#pragma comment(                                                                                                                   \
+    linker,                                                                                                                        \
+    "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #else
-#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#pragma comment(                                                                                                                   \
+    linker,                                                                                                                        \
+    "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #endif
 #ifndef UltraVNCHelperFunctions_H__
 #define UltraVNCHelperFunctions_H__
 #pragma once
 
-extern wchar_t str50275[128];
-extern wchar_t str50276[128];
-extern wchar_t str50277[128];
-extern wchar_t str50278[128];
-extern wchar_t str50279[128];
-extern wchar_t str50280[128];
-extern wchar_t str50281[128];
-extern wchar_t str50282[128];
-extern wchar_t str50283[128];
-extern wchar_t str50284[128];
-extern wchar_t str50285[128];
-extern wchar_t str50286[128];
-extern wchar_t str50287[128];
-extern wchar_t str50288[128];
-extern wchar_t str50289[128];
-extern wchar_t str50290[128];
-extern wchar_t str50293[128];
-extern wchar_t str50294[128];
-extern wchar_t str50295[128];
-extern wchar_t str50296[128];
-extern wchar_t str50297[128];
+extern std::array<wchar_t, 128U> str50275;
+extern std::array<wchar_t, 128U> str50276;
+extern std::array<wchar_t, 128U> str50277;
+extern std::array<wchar_t, 128U> str50278;
+extern std::array<wchar_t, 128U> str50279;
+extern std::array<wchar_t, 128U> str50280;
+extern std::array<wchar_t, 128U> str50281;
+extern std::array<wchar_t, 128U> str50282;
+extern std::array<wchar_t, 128U> str50283;
+extern std::array<wchar_t, 128U> str50284;
+extern std::array<wchar_t, 128U> str50285;
+extern std::array<wchar_t, 128U> str50286;
+extern std::array<wchar_t, 128U> str50287;
+extern std::array<wchar_t, 128U> str50288;
+extern std::array<wchar_t, 128U> str50289;
+extern std::array<wchar_t, 128U> str50290;
+extern std::array<wchar_t, 128U> str50293;
+extern std::array<wchar_t, 128U> str50294;
+extern std::array<wchar_t, 128U> str50295;
+extern std::array<wchar_t, 128U> str50296;
+extern std::array<wchar_t, 128U> str50297;
 
 void loadStrings(HINSTANCE m_hInstResDLL);
 char* GetVersionFromResource(char* version);

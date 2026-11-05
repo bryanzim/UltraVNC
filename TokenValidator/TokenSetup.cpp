@@ -21,64 +21,74 @@
 // It also emits an otpauth:// provisioning URI and a QR-code BMP image that
 // can be scanned by Microsoft Authenticator, Google Authenticator, Authy, etc.
 
-#include "TokenCore.h"
 #include "../common/ScramSha256.h"
+#include "TokenCore.h"
 
 #include <windows.h>
-#include <stdio.h>
-#include <string.h>
-#include <string>
-#include <vector>
-#include <algorithm>
+
 #include <conio.h>
+
+#include <algorithm>
+#include <array>
+#include <cctype>
+#include <cstdio>
+#include <cstring>
+#include <stdio.h>
+#include <string>
+#include <string.h>
+#include <vector>
 
 static bool SetStoragePathsFromExeDir()
 {
-    char exePath[MAX_PATH] = {};
-    if (!GetModuleFileNameA(NULL, exePath, MAX_PATH))
+    std::array<char, MAX_PATH> exePath{};
+    if (!::GetModuleFileNameA(nullptr, exePath.data(), exePath.size()))
+    {
         return false;
+    }
 
-    char* lastSlash = strrchr(exePath, '\\');
+    char* lastSlash = std::strrchr(exePath.data(), '\\');
     if (!lastSlash)
+    {
         return false;
+    }
 
     // Prefer the matching TokenValidator DLL next to us so the DLL and this
     // tool share the same INI fallback.
-    char baseName[MAX_PATH] = {};
-    strncpy_s(baseName, sizeof(baseName), exePath, lastSlash - exePath + 1);
+    std::array<char, MAX_PATH> baseName{};
+    ::strncpy_s(baseName.data(), sizeof(baseName), exePath.data(), lastSlash - exePath.data() + 1);
 
     for (const char* dllName : { "TokenValidator.dll", "TokenValidator32.dll" })
     {
-        char candidate[MAX_PATH] = {};
-        sprintf_s(candidate, "%s%s", baseName, dllName);
-        if (GetFileAttributesA(candidate) != INVALID_FILE_ATTRIBUTES)
+        std::array<char, MAX_PATH> candidate{};
+        ::sprintf_s(candidate.data(), candidate.size(), "%s%s", baseName.data(), dllName);
+        if (::GetFileAttributesA(candidate.data()) != INVALID_FILE_ATTRIBUTES)
         {
-            TokenCore::SetSecretStorePathsFromDllPath(candidate);
+            TokenCore::SetSecretStorePathsFromDllPath(candidate.data());
             return true;
         }
     }
 
     // No DLL found: use the INI next to this executable.
-    TokenCore::SetSecretStorePathsFromDllPath(exePath);
+    TokenCore::SetSecretStorePathsFromDllPath(exePath.data());
     return true;
 }
 
-int main(int argc, char* argv[])
+int main(const int argc, char* argv[])
 {
     if (argc < 2)
     {
-        fprintf(stderr, "Usage: %s <username> [base32-secret]\n", argv[0]);
-        fprintf(stderr, "       %s -password <username> [password]   (provision SCRAM-SHA-256)\n", argv[0]);
-        fprintf(stderr, "       %s list                                  (list users + credential types)\n", argv[0]);
-        fprintf(stderr, "       %s delete <username>                   (remove all credentials)\n", argv[0]);
-        fprintf(stderr, "If the base32 secret is omitted, a random 160-bit secret is generated.\n");
+        std::fprintf(stderr, "Usage: %s <username> [base32-secret]\n", argv[0U]);
+        std::fprintf(stderr, "       %s -password <username> [password]   (provision SCRAM-SHA-256)\n", argv[0U]);
+        std::fprintf(stderr, "       %s list                                  (list users + credential types)\n", argv[0U]);
+        std::fprintf(stderr, "       %s delete <username>                   (remove all credentials)\n", argv[0U]);
+        std::fprintf(stderr, "If the base32 secret is omitted, a random 160-bit secret is generated.\n");
         return 1;
     }
 
     SetStoragePathsFromExeDir();
 
     // ---------------- list all users and their credential types ----------------
-    if (strcmp(argv[1], "list") == 0)
+    if (std::strcmp(argv[1U], "list") == 0)
     {
         std::vector<std::string> totp = TokenCore::ListTotpUsers();
         std::vector<std::string> scram = TokenCore::ListProtectedKeys("SCRAM");
@@ -86,101 +96,125 @@ int main(int argc, char* argv[])
 
         std::vector<std::string> all = totp;
         for (const auto& u : scram)
-            if (std::find(all.begin(), all.end(), u) == all.end()) all.push_back(u);
+        {
+            if (std::find(all.begin(), all.end(), u) == all.end())
+            {
+                all.push_back(u);
+            }
+        }
         for (const auto& u : sess)
-            if (std::find(all.begin(), all.end(), u) == all.end()) all.push_back(u);
+        {
+            if (std::find(all.begin(), all.end(), u) == all.end())
+            {
+                all.push_back(u);
+            }
+        }
         std::sort(all.begin(), all.end());
 
         if (all.empty())
-            printf("No users provisioned.\n");
+        {
+            std::printf("No users provisioned.\n");
+        }
         for (const auto& u : all)
         {
             std::string factors;
-            if (std::find(totp.begin(), totp.end(), u) != totp.end()) factors += " TOTP";
-            if (std::find(scram.begin(), scram.end(), u) != scram.end()) factors += " SCRAM";
-            if (std::find(sess.begin(), sess.end(), u) != sess.end()) factors += " SESSION(pending)";
-            printf("%-24s %s\n", u.c_str(), factors.c_str());
+            if (std::find(totp.begin(), totp.end(), u) != totp.end())
+            {
+                factors += " TOTP";
+            }
+            if (std::find(scram.begin(), scram.end(), u) != scram.end())
+            {
+                factors += " SCRAM";
+            }
+            if (std::find(sess.begin(), sess.end(), u) != sess.end())
+            {
+                factors += " SESSION(pending)";
+            }
+            std::printf("%-24s %s\n", u.c_str(), factors.c_str());
         }
-        printf("INI: %s\n", TokenCore::GetSecretStoreIniPath().c_str());
+        std::printf("INI: %s\n", TokenCore::GetSecretStoreIniPath().c_str());
         return 0;
     }
 
     // ---------------- delete a user across all credential types ----------------
-    if (strcmp(argv[1], "delete") == 0)
+    if (std::strcmp(argv[1U], "delete") == 0)
     {
         if (argc < 3)
         {
-            fprintf(stderr, "Usage: %s delete <username>\n", argv[0]);
+            std::fprintf(stderr, "Usage: %s delete <username>\n", argv[0U]);
             return 1;
         }
-        const char* user = argv[2];
+        const char* user = argv[2U];
         TokenCore::DeleteTotpSecret(user);
         TokenCore::DeleteProtectedValue("SCRAM", user);
         TokenCore::DeleteProtectedValue("SessionTokens", user);
         TokenCore::DeleteProtectedValue("TotpLastStep", user);
-        printf("Removed TOTP, SCRAM and session credentials for '%s'\n", user);
+        std::printf("Removed TOTP, SCRAM and session credentials for '%s'\n", user);
         return 0;
     }
 
     // ---------------- SCRAM-SHA-256 password provisioning ----------------
-    if (strcmp(argv[1], "-password") == 0)
+    if (std::strcmp(argv[1U], "-password") == 0)
     {
         if (argc < 3)
         {
-            fprintf(stderr, "Usage: %s -password <username> [password]\n", argv[0]);
+            std::fprintf(stderr, "Usage: %s -password <username> [password]\n", argv[0U]);
             return 1;
         }
-        const char* user = argv[2];
+        const char* user = argv[2U];
         std::string password;
         if (argc >= 4)
         {
-            password = argv[3];
+            password = argv[3U];
         }
         else
         {
             // Read without echo.
-            fprintf(stdout, "Password for %s: ", user);
-            fflush(stdout);
+            std::fprintf(stdout, "Password for %s: ", user);
+            std::fflush(stdout);
             int c;
-            while ((c = _getch()) != '\r' && c != '\n' && c != EOF)
-                password.push_back((char)c);
-            fprintf(stdout, "\n");
+            while (((c = _getch()) != '\r') && (c != '\n') && (c != EOF))
+            {
+                password.push_back(static_cast<char>(c));
+            }
+            std::fprintf(stdout, "\n");
         }
         if (password.empty())
         {
-            fprintf(stderr, "Empty password\n");
+            std::fprintf(stderr, "Empty password\n");
             return 1;
         }
         ScramSha256::Verifier v;
         if (!ScramSha256::MakeVerifier(password, v))
         {
-            fprintf(stderr, "Failed to derive SCRAM verifier\n");
+            std::fprintf(stderr, "Failed to derive SCRAM verifier\n");
             return 1;
         }
         if (!TokenCore::WriteProtectedValue("SCRAM", user, ScramSha256::VerifierToString(v)))
         {
-            fprintf(stderr, "Failed to store SCRAM verifier\n");
+            std::fprintf(stderr, "Failed to store SCRAM verifier\n");
             return 1;
         }
-        printf("SCRAM-SHA-256 verifier stored for user '%s' (%u iterations)\n",
-               user, (unsigned)v.iterations);
-        printf("INI: %s\n", TokenCore::GetSecretStoreIniPath().c_str());
+        std::printf("SCRAM-SHA-256 verifier stored for user '%s' (%u iterations)\n", user, static_cast<unsigned>(v.iterations));
+        std::printf("INI: %s\n", TokenCore::GetSecretStoreIniPath().c_str());
         return 0;
     }
 
 
-    const char* user = argv[1];
+    const char* user = argv[1U];
     std::string secretBase32;
 
     if (argc >= 3)
     {
-        secretBase32 = argv[2];
+        secretBase32 = argv[2U];
         std::string cleaned;
         for (char c : secretBase32)
         {
-            if (c == ' ' || c == '-')
+            if ((c == ' ') || (c == '-'))
+            {
                 continue;
-            cleaned.push_back(static_cast<char>(toupper(static_cast<unsigned char>(c))));
+            }
+            cleaned.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(c))));
         }
         secretBase32 = cleaned;
     }
@@ -188,51 +222,55 @@ int main(int argc, char* argv[])
     {
         if (!TokenCore::GenerateRandomBase32Secret(secretBase32))
         {
-            fprintf(stderr, "Failed to generate random secret\n");
+            std::fprintf(stderr, "Failed to generate random secret\n");
             return 1;
         }
     }
 
     if (!TokenCore::ValidateBase32(secretBase32))
     {
-        fprintf(stderr, "Invalid base32 secret (length must be a multiple of 8, A-Z2-7)\n");
+        std::fprintf(stderr, "Invalid base32 secret (length must be a multiple of 8, A-Z2-7)\n");
         return 1;
     }
 
     if (!TokenCore::WriteTotpSecret(user, secretBase32))
     {
-        fprintf(stderr, "Warning: failed to store secret (Credential Manager or INI fallback)\n");
+        std::fprintf(stderr, "Warning: failed to store secret (Credential Manager or INI fallback)\n");
     }
 
     std::string uri = TokenCore::BuildOtpAuthUri(user, secretBase32);
 
     // Write QR image next to this executable.
-    char bmpPath[MAX_PATH] = {};
-    if (GetModuleFileNameA(NULL, bmpPath, MAX_PATH))
+    std::array<char, MAX_PATH> bmpPath{};
+    if (::GetModuleFileNameA(nullptr, bmpPath.data(), bmpPath.size()))
     {
-        char* dot = strrchr(bmpPath, '.');
+        char* dot = std::strrchr(bmpPath.data(), '.');
         if (dot)
         {
-            char suffix[256] = {};
-            sprintf_s(suffix, "_%s_totp.bmp", user);
-            strcpy_s(dot, MAX_PATH - (dot - bmpPath), suffix);
+            std::array<char, 256U> suffix{};
+            ::sprintf_s(suffix.data(), suffix.size(), "_%s_totp.bmp", user);
+            ::strcpy_s(dot, MAX_PATH - (dot - bmpPath.data()), suffix.data());
         }
     }
-    if (!bmpPath[0])
-        sprintf_s(bmpPath, "%s_totp.bmp", user);
-
-    if (!TokenCore::WriteQrBmpToFile(uri, bmpPath, 6, 4))
+    if (!bmpPath[0U])
     {
-        fprintf(stderr, "Warning: failed to write QR code image\n");
-        bmpPath[0] = '\0';
+        ::sprintf_s(bmpPath.data(), bmpPath.size(), "%s_totp.bmp", user);
     }
 
-    printf("User: %s\n", user);
-    printf("Base32 secret: %s\n", secretBase32.c_str());
-    printf("Provisioning URI: %s\n", uri.c_str());
-    if (bmpPath[0])
-        printf("QR code image: %s\n", bmpPath);
-    printf("Credential Manager target: UltraVNC_TOTP_%s\n", user);
-    printf("INI fallback: %s\n", TokenCore::GetSecretStoreIniPath().c_str());
+    if (!TokenCore::WriteQrBmpToFile(uri, bmpPath.data(), 6, 4))
+    {
+        std::fprintf(stderr, "Warning: failed to write QR code image\n");
+        bmpPath[0U] = '\0';
+    }
+
+    std::printf("User: %s\n", user);
+    std::printf("Base32 secret: %s\n", secretBase32.c_str());
+    std::printf("Provisioning URI: %s\n", uri.c_str());
+    if (bmpPath[0U])
+    {
+        std::printf("QR code image: %s\n", bmpPath.data());
+    }
+    std::printf("Credential Manager target: UltraVNC_TOTP_%s\n", user);
+    std::printf("INI fallback: %s\n", TokenCore::GetSecretStoreIniPath().c_str());
     return 0;
 }

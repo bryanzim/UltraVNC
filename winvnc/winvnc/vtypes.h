@@ -25,38 +25,58 @@
 ////////////////////////////
 // Fixed size (derived from rfb.h)
 
-typedef unsigned int VCard32;
-typedef unsigned short VCard16;
-typedef unsigned char VCard8;
-typedef int VInt32;
-typedef short VInt16;
-typedef char VInt8;
+using VCard32 = unsigned int;
+using VCard16 = unsigned short;
+using VCard8 = unsigned char;
+using VInt32 = int;
+using VInt16 = short;
+using VInt8 = char;
 
 ////////////////////////////
 // Variable size
 //		These will always be at least as big as the largest
 //		fixed-size data-type
 
-typedef VCard32 VCard;
-typedef VInt32 VInt;
+using VCard = VCard32;
+using VInt = VInt32;
 
 ////////////////////////////
 // Useful functions on integers
 
-static inline VInt Max(VInt x, VInt y) {if (x>y) return x; else return y;}
-static inline VInt Min(VInt x, VInt y) {if (x<y) return x; else return y;}
+static inline VInt Max(const VInt x, const VInt y)
+{
+    if (x > y)
+    {
+        return x;
+    }
+    else
+    {
+        return y;
+    }
+}
+static inline VInt Min(const VInt x, const VInt y)
+{
+    if (x < y)
+    {
+        return x;
+    }
+    else
+    {
+        return y;
+    }
+}
 
 ////////////////////////////
 // Boolean
 
-typedef int VBool;
+using VBool = int;
 const VBool VTrue = -1;
 const VBool VFalse = 0;
 
 ////////////////////////////
 // Others
 
-typedef char VChar;
+using VChar = char;
 #if (!defined(NULL))
 #define NULL 0
 #endif
@@ -66,11 +86,6 @@ typedef char VChar;
 
 // #include "rfbgui/VPoint.h"
 // #include "rfbgui/VRect.h"
-typedef VChar * VString;
+using VString = VChar*;
 
 #endif // _ATT_VTYPES_DEFINED
-
-
-
-
-

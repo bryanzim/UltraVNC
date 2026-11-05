@@ -24,31 +24,31 @@
 
 struct z_stream_s;
 
-namespace rdr {
+namespace rdr
+{
 
-  class ZlibInStream : public InStream {
+    class ZlibInStream : public InStream
+    {
 
-  public:
+    public:
+        explicit ZlibInStream(int bufSize = 0);
+        virtual ~ZlibInStream();
 
-    ZlibInStream(int bufSize=0);
-    virtual ~ZlibInStream();
+        void setUnderlying(InStream* is, int bytesIn);
+        void reset();
+        int pos();
 
-    void setUnderlying(InStream* is, int bytesIn);
-    void reset();
-    int pos();
+    private:
+        int overrun(int itemSize, int nItems);
+        void decompress();
 
-  private:
-
-    int overrun(int itemSize, int nItems);
-    void decompress();
-
-    InStream* underlying;
-    int bufSize;
-    int offset;
-    z_stream_s* zs;
-    int bytesIn;
-    U8* start;
-  };
+        InStream* underlying;
+        int bufSize;
+        int offset;
+        z_stream_s* zs;
+        int bytesIn;
+        U8* start;
+    };
 
 } // end of namespace rdr
 

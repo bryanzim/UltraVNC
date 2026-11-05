@@ -16,10 +16,11 @@
 
 #include "rfb.h"
 
-class vncKeymap {
+class vncKeymap
+{
 public:
-  static void keyEvent(CARD32 keysym, bool down,bool jap, bool unicode);
-  static void ClearShiftKeys();
+    static void keyEvent(CARD32 keysym, bool down, bool jap, bool unicode);
+    static void ClearShiftKeys();
 };
 
 

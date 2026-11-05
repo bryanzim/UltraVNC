@@ -9,14 +9,16 @@
 #ifndef _MINIZIPNG_H
 #define _MINIZIPNG_H
 
-#include <windows.h>
+#include <winsock2.h>
 
+#include <windows.h>
 // Unicode-aware zip/unzip wrapper using minizip-ng
 // Compatible interface with ZipUnZip32 but supports Unicode paths
+
 class CMiniZipNG
 {
 public:
-    CMiniZipNG();
+    explicit CMiniZipNG();
     ~CMiniZipNG();
 
     // Zip a directory (Unicode paths supported)
@@ -47,7 +49,7 @@ public:
 private:
     bool ZipDirectoryRecursive(void* zip_writer, LPCWSTR szBasePath, LPCWSTR szRelPath);
     bool AddFileToZip(void* zip_writer, LPCWSTR szFilePath, LPCWSTR szZipPath);
-    
+
     volatile bool m_fAbortRequested;
 };
 

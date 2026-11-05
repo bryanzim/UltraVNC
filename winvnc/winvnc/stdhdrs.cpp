@@ -12,6 +12,6 @@
 
 
 #include "stdhdrs.h"
-
 // Create the main log object
+
 VNCLog vnclog;

@@ -1,3 +1,5 @@
+#include <array>
+#include <cstdlib>
 // This file is part of UltraVNC
 // https://github.com/ultravnc/UltraVNC
 // https://uvnc.com/
@@ -27,89 +29,94 @@
 #error "It is included as part of translate.c"
 #endif
 
-#define OUT_T CONCAT2E(CARD,OUTVNC)
-#define SwapOUTVNC(x) CONCAT2E(Swap,OUTVNC) (x)
-#define rfbInitColourMapSingleTableOUTVNC \
-				CONCAT2E(rfbInitColourMapSingleTable,OUTVNC)
+#define OUT_T CONCAT2E(CARD, OUTVNC)
+#define SwapOUTVNC(x) CONCAT2E(Swap, OUTVNC)(x)
+#define rfbInitColourMapSingleTableOUTVNC CONCAT2E(rfbInitColourMapSingleTable, OUTVNC)
 
 // THIS CODE HAS BEEN MODIFIED FROM THE ORIGINAL UNIX SOURCE
 // TO WORK FOR ULTRAVNC SERVER. THE PALETTE SHOULD REALLY BE RETRIEVED
 // FROM THE VNCDESKTOP OBJECT, RATHER THAN FROM THE OS DIRECTLY
 
-static void
-rfbInitColourMapSingleTableOUTVNC (char **table,
-								rfbPixelFormat *in,
-								rfbPixelFormat *out)
+static void rfbInitColourMapSingleTableOUTVNC(char** table, rfbPixelFormat* const in, rfbPixelFormat* const out)
 {
-	vnclog.Print(LL_ALL, VNCLOG("rfbInitColourMapSingleTable called\n"));
+    vnclog.Print(LL_ALL, VNCLOG("rfbInitColourMapSingleTable called\n"));
 
-	// ALLOCATE SPACE FOR COLOUR TABLE
+    // ALLOCATE SPACE FOR COLOUR TABLE
 
-    unsigned int nEntries = 1 << in->bitsPerPixel;
+    unsigned int nEntries = 1U << in->bitsPerPixel;
 
-	// Allocate the table
-    if (*table) free(*table);
-    *table = (char *)malloc(nEntries * sizeof(OUT_T));
-	if (*table == NULL)
-	{
-		vnclog.Print(LL_INTERR, VNCLOG("failed to allocate translation table\n"));
-		return;
-	}
+    // Allocate the table
+    if (*table)
+    {
+        std::free(*table);
+    }
+    *table = (char*)std::malloc(nEntries * sizeof(OUT_T));
+    if (*table == nullptr)
+    {
+        vnclog.Print(LL_INTERR, VNCLOG("failed to allocate translation table\n"));
+        return;
+    }
 
-	// Obtain the system palette
-	bool create_dc = false;
-	HDC hDC = GetDcMirror();
-	if (hDC == NULL)
-	{
-		vnclog.Print(LL_ALL, VNCLOG("Using video Palette\n"));
-		hDC = GetDC(NULL);
-	}
-	else
-	{
-		vnclog.Print(LL_ALL, VNCLOG("Using mirror video Palette\n"));
-		create_dc = true;
-	}
+    // Obtain the system palette
+    bool create_dc{ false };
+    HDC hDC = GetDcMirror();
+    if (hDC == nullptr)
+    {
+        vnclog.Print(LL_ALL, VNCLOG("Using video Palette\n"));
+        hDC = ::GetDC(nullptr);
+    }
+    else
+    {
+        vnclog.Print(LL_ALL, VNCLOG("Using mirror video Palette\n"));
+        create_dc = true;
+    }
 
-	PALETTEENTRY palette[256];
-  UINT entries = ::GetSystemPaletteEntries(hDC,	0, 256, palette);
-	vnclog.Print(LL_INTINFO, VNCLOG("got %u palette entries\n"), GetLastError());
-	if (create_dc) DeleteDC(hDC);
-	else ReleaseDC(NULL, hDC);
+    std::array<PALETTEENTRY, 256U> palette;
+    UINT entries = ::GetSystemPaletteEntries(hDC, 0, 256, palette.data());
+    vnclog.Print(LL_INTINFO, VNCLOG("got %u palette entries\n"), ::GetLastError());
+    if (create_dc)
+    {
+        ::DeleteDC(hDC);
+    }
+    else
+    {
+        ::ReleaseDC(nullptr, hDC);
+    }
 
-  // - Set the rest of the palette to something nasty but usable
-  unsigned int i;
-  for (i=entries;i<256;i++) {
-    palette[i].peRed = i % 2 ? 255 : 0;
-    palette[i].peGreen = i/2 % 2 ? 255 : 0;
-    palette[i].peBlue = i/4 % 2 ? 255 : 0;
-  }
+    // - Set the rest of the palette to something nasty but usable
+    unsigned int i;
+    for (i = entries; i < 256; ++i)
+    {
+        palette[i].peRed = i % 2 ? 255 : 0;
+        palette[i].peGreen = i / 2 % 2 ? 255 : 0;
+        palette[i].peBlue = i / 4 % 2 ? 255 : 0;
+    }
 
-	// COLOUR TRANSLATION
+    // COLOUR TRANSLATION
 
-	// We now have the colour table intact. Map it into a translation table
-  int r, g, b;
-  OUT_T *t = (OUT_T *)*table;
+    // We now have the colour table intact. Map it into a translation table
+    int r, g, b;
+    OUT_T* t = (OUT_T*)*table;
 
-  for (i = 0; i < nEntries; i++)
-	{
-		// Split down the RGB data
-		r = palette[i].peRed;
-		g = palette[i].peGreen;
-		b = palette[i].peBlue;
+    for (i = 0; i < nEntries; ++i)
+    {
+        // Split down the RGB data
+        r = palette[i].peRed;
+        g = palette[i].peGreen;
+        b = palette[i].peBlue;
 
-		// Now translate it
-		t[i] = ((((r * out->redMax + 127) / 255) << out->redShift) |
-			(((g * out->greenMax + 127) / 255) << out->greenShift) |
-			(((b * out->blueMax + 127) / 255) << out->blueShift));
+        // Now translate it
+        t[i] = ((((r * out->redMax + 127) / 255) << out->redShift) | (((g * out->greenMax + 127) / 255) << out->greenShift) |
+                (((b * out->blueMax + 127) / 255) << out->blueShift));
 #if (OUTVNC != 8)
-		if (out->bigEndian != in->bigEndian)
-		{
-			t[i] = SwapOUTVNC(t[i]);
-		}
+        if (out->bigEndian != in->bigEndian)
+        {
+            t[i] = SwapOUTVNC(t[i]);
+        }
 #endif
-	}
+    }
 
-	vnclog.Print(LL_ALL, VNCLOG("rfbInitColourMapSingleTable done\n"));
+    vnclog.Print(LL_ALL, VNCLOG("rfbInitColourMapSingleTable done\n"));
 }
 
 #undef OUT_T

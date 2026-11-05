@@ -34,53 +34,54 @@
 #ifndef __RFB_DH_H__
 #define __RFB_DH_H__
 #include <winsock2.h>
+
 #include <windows.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #define DH_MAX_BITS 31
 #define DH_RANGE 100
 
-#define DH_CLEAN_ALL_MEMORY				1
-#define DH_CLEAN_ALL_MEMORY_EXCEPT_KEY		2
+#define DH_CLEAN_ALL_MEMORY 1
+#define DH_CLEAN_ALL_MEMORY_EXCEPT_KEY 2
 
-#define DH_MOD	1
-#define DH_GEN	2
-#define DH_PRIV	3
-#define DH_PUB	4
-#define DH_KEY	5
+#define DH_MOD 1
+#define DH_GEN 2
+#define DH_PRIV 3
+#define DH_PUB 4
+#define DH_KEY 5
 
 class DH
 {
 public:
-	DH();
-	DH(unsigned __int64 generator, unsigned __int64 modulus);
-	~DH();
+    explicit DH();
+    DH(unsigned __int64 generator, unsigned __int64 modulus);
+    ~DH();
 
-	void createKeys();
-	unsigned __int64 createInterKey();
-	unsigned __int64 createEncryptionKey(unsigned __int64 interKey);
-	
-	unsigned __int64 getValue(DWORD flags = DH_KEY);
+    void createKeys();
+    unsigned __int64 createInterKey();
+    unsigned __int64 createEncryptionKey(unsigned __int64 interKey);
+
+    unsigned __int64 getValue(DWORD flags = DH_KEY);
 
 private:
-	unsigned __int64 XpowYmodN(unsigned __int64 x, unsigned __int64 y, unsigned __int64 N);
-	unsigned __int64 generatePrime();
-	unsigned __int64 tryToGeneratePrime(unsigned __int64 start);
-	bool millerRabin (unsigned __int64 n, unsigned int trials);
-	void cleanMem(DWORD flags=DH_CLEAN_ALL_MEMORY);
+    unsigned __int64 XpowYmodN(unsigned __int64 x, unsigned __int64 y, unsigned __int64 N);
+    unsigned __int64 generatePrime();
+    unsigned __int64 tryToGeneratePrime(unsigned __int64 start);
+    bool millerRabin(unsigned __int64 n, unsigned int trials);
+    void cleanMem(DWORD flags = DH_CLEAN_ALL_MEMORY);
 
 
-	unsigned __int64 gen;
-	unsigned __int64 mod;
-	unsigned __int64 priv;
-	unsigned __int64 pub;
-	unsigned __int64 key;
-	unsigned __int64 maxNum;
-
+    unsigned __int64 gen;
+    unsigned __int64 mod;
+    unsigned __int64 priv;
+    unsigned __int64 pub;
+    unsigned __int64 key;
+    unsigned __int64 maxNum;
 };
 
 int bits(__int64 number);

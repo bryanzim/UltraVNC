@@ -11,13 +11,17 @@
 
 
 #include "myDebug.h"
-#include "stdio.h"
-#include  <stdlib.h>
+
 #include "logging.h"
 
-void Die(const char *file,int line,const char *assertion)
+#include <cstdio>
+#include <cstdlib>
+#include <stdio.h>
+#include <stdlib.h>
+
+void Die(const char* const file, const int line, const char* const assertion)
 {
-	fprintf(stderr, "%s(%d): Internal error, assertion failed: %s\n", file,line,assertion);
-	PrintLog((DEST,"Die() Called - %s(%d): Internal error, assertion failed: %s\n", file,line,assertion));
-	abort();
+    std::fprintf(stderr, "%s(%d): Internal error, assertion failed: %s\n", file, line, assertion);
+    PrintLog((DEST, "Die() Called - %s(%d): Internal error, assertion failed: %s\n", file, line, assertion));
+    std::abort();
 }

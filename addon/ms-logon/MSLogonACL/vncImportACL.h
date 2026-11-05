@@ -11,68 +11,73 @@
 
 
 /*
- * vncImportACL.h: 
+ * vncImportACL.h:
  */
-#define _WIN32_WINNT	0x0500	//??
-#define WINVER		0x0500	//??
+#define _WIN32_WINNT 0x0500 //??
+#define WINVER 0x0500       //??
 
 #include <windows.h>
+
 #include <aclapi.h>
-#include <stdio.h>
-#include <string.h>
 #include <lm.h>
 
+#include <cstddef>
+#include <stdio.h>
+#include <string.h>
+
 #define MAXLEN 256
-#define lenof(a) (sizeof(a) / sizeof((a)[0]) )
+#define lenof(a) (sizeof(a) / sizeof((a)[0]))
 
 
-#define ViewOnly	1
-#define Interact	2
+#define ViewOnly 1
+#define Interact 2
 #define ALL_RIGHTS (ViewOnly | Interact)
 
-class vncImportACL {
+class vncImportACL
+{
 private:
-	enum ACE_TYPE {
-		ACCESS_ALLOWED,
-			ACCESS_DENIED
-	};
-	
-	typedef struct _ACE_DATA {
-		ACE_TYPE type;
-		DWORD mask;
-		PSID pSID;
-		struct _ACE_DATA *next;
-	} ACE_DATA;
+    enum ACE_TYPE
+    {
+        ACCESS_ALLOWED,
+        ACCESS_DENIED
+    };
 
-	ACE_DATA *lastAllowACE;
-	ACE_DATA *lastDenyACE;
+    typedef struct _ACE_DATA
+    {
+        ACE_TYPE type;
+        DWORD mask;
+        PSID pSID;
+        struct _ACE_DATA* next;
+    } ACE_DATA;
 
-public:	
-	vncImportACL();
-	~vncImportACL();
+    ACE_DATA* lastAllowACE;
+    ACE_DATA* lastDenyACE;
 
-	void GetOldACL();
-	void ReadAce(int index, PACL pACL);
-	PSID CopySID(PSID pSID);
-	int ScanInput();
-	bool FillAceData(const TCHAR *accesstype, 
-		DWORD accessmask, 
-		const TCHAR *domainaccount);
-	PSID GetSID(const TCHAR *domainaccount);
-	PACL BuildACL(void);
-	bool SetACL(PACL pACL);
-	const TCHAR * SplitString(const TCHAR *input, TCHAR separator, TCHAR *head);
-	TCHAR *AddComputername(const TCHAR *user);
-	TCHAR *AddDomainname(const TCHAR *user);
+public:
+    explicit vncImportACL();
+    ~vncImportACL();
+
+    void GetOldACL();
+    void ReadAce(int index, PACL pACL);
+    PSID CopySID(PSID pSID);
+    int ScanInput();
+    bool FillAceData(const TCHAR* accesstype, DWORD accessmask, const TCHAR* domainaccount);
+    PSID GetSID(const TCHAR* domainaccount);
+    PACL BuildACL(void);
+    bool SetACL(PACL pACL);
+    const TCHAR* SplitString(const TCHAR* input, TCHAR separator, TCHAR* head);
+    TCHAR* AddComputername(const TCHAR* user);
+    TCHAR* AddDomainname(const TCHAR* user);
 };
 
-struct vncScanInput{
-	bool isEmptyLine(TCHAR *line);
-	void RemoveComment(TCHAR *line);
-	void RemoveNewline(TCHAR *line);
-	int GetQuoteLength(const TCHAR *line);
-    size_t GetWordLength(const TCHAR *line);
-	bool GetLine(TCHAR *line);
-	bool Tokenize(const TCHAR *line, TCHAR **tokens);
-	int AddToken(TCHAR **token, int tokenCount, const TCHAR **line, int len);
+struct vncScanInput
+{
+    bool isEmptyLine(TCHAR* line);
+    void RemoveComment(TCHAR* line);
+    void RemoveNewline(TCHAR* line);
+    int GetQuoteLength(const TCHAR* line);
+    std::size_t GetWordLength(const TCHAR* line);
+    bool GetLine(TCHAR* line);
+    bool Tokenize(const TCHAR* line, TCHAR** tokens);
+    int AddToken(TCHAR** token, int tokenCount, const TCHAR** line, int len);
 };

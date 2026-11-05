@@ -19,57 +19,62 @@
 
 #include "OutStream.h"
 
-namespace rdr {
+#include <cstring>
 
-  class MemOutStream : public OutStream {
+namespace rdr
+{
 
-  public:
+    class MemOutStream : public OutStream
+    {
 
-    MemOutStream(int len=1024) {
-      start = ptr = new U8[len];
-      end = start + len;
-    }
+    public:
+        explicit MemOutStream(const int len = 1024)
+        {
+            start = ptr = new U8[len];
+            end = start + len;
+        }
 
-    virtual ~MemOutStream() {
-      delete [] start;
-    }
+        virtual ~MemOutStream() { delete[] start; }
 
-    void writeBytes(const void* data, int length) {
-      check(length);
-      memcpy(ptr, data, length);
-      ptr += length;
-    }
+        void writeBytes(const void* const data, const int length)
+        {
+            check(length);
+            std::memcpy(ptr, data, length);
+            ptr += length;
+        }
 
-    int length() { return (int)(ptr - start); }
-    void clear() { ptr = start; };
-    void reposition(int pos) { ptr = start + pos; }
+        [[nodiscard]] int length() { return static_cast<int>((ptr - start)); }
+        void clear() { ptr = start; };
+        void reposition(const int pos) { ptr = start + pos; }
 
-    // data() returns a pointer to the buffer.
+        // data() returns a pointer to the buffer.
 
-    const void* data() { return (const void*)start; }
+        const void* data() { return (const void*)start; }
 
-  private:
+    private:
+        // overrun() either doubles the buffer or adds enough space for nItems of
+        // size itemSize bytes.
 
-    // overrun() either doubles the buffer or adds enough space for nItems of
-    // size itemSize bytes.
+        int overrun(const int itemSize, const int nItems)
+        {
+            int len = static_cast<int>((ptr - start + itemSize * nItems));
+            if (len < (end - start) * 2)
+            {
+                len = static_cast<int>(((end - start) * 2));
+            }
 
-    int overrun(int itemSize, int nItems) {
-      int len = (int)(ptr - start + itemSize * nItems);
-      if (len < (end - start) * 2)
-        len = (int)((end - start) * 2);
+            U8* newStart = new U8[len];
+            std::memcpy(newStart, start, ptr - start);
+            ptr = newStart + (ptr - start);
+            delete[] start;
+            start = newStart;
+            end = newStart + len;
 
-      U8* newStart = new U8[len];
-      memcpy(newStart, start, ptr - start);
-      ptr = newStart + (ptr - start);
-      delete [] start;
-      start = newStart;
-      end = newStart + len;
+            return nItems;
+        }
 
-      return nItems;
-    }
-
-    U8* start;
-  };
+        U8* start;
+    };
 
 }
 

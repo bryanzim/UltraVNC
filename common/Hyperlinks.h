@@ -17,5 +17,7 @@
 // http://www.awesoftware.com
 //
 
+#include <windows.h>
+
 BOOL ConvertStaticToHyperlink(HWND hwndCtl);
 BOOL ConvertStaticToHyperlink(HWND hwndParent, UINT uiCtlId);

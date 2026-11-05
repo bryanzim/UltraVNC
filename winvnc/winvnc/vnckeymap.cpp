@@ -17,9 +17,14 @@
 // virtual keycodes. Now it actually does the local-end simulation of
 // key presses, to keep this messy code on one place!
 #pragma warning(disable : 4786)
-#include <stdlib.h>
 #include "vnckeymap.h"
+
 #include <rdr/types.h>
+
+#include <array>
+#include <cstring>
+#include <stdlib.h>
+
 #define XK_MISCELLANY
 #define XK_LATIN1
 #define XK_CURRENCY
@@ -31,305 +36,498 @@
 //	[v1.0.2-jp1 fix] IOport's patch (Define XK_KATAKANA)
 #define XK_KATAKANA
 
-#include "keysymdef.h"
-#include "uvncUiAccess.h"
 #include "cadthread.h"
+#include "keysymdef.h"
+#include "SettingsManager.h"
+#include "uvncUiAccess.h"
+
 //	[v1.0.2-jp1 fix] IOport's patch (Include "ime.h" for IME control)
 #include <ime.h>
+
 #include <map>
 #include <vector>
-#include "SettingsManager.h"
-
 // Mapping of X keysyms to windows VK codes. Ordering here is the same as
 // keysymdef.h to make checking easier
-rdr::U32 keysymDead=0;
 
-struct keymap_t {
-  rdr::U32 keysym;
-  rdr::U8 vk;
-  bool extended;
+rdr::U32 keysymDead = 0;
+
+struct keymap_t
+{
+    rdr::U32 keysym;
+    rdr::U8 vk;
+    bool extended;
 };
 
 std::vector<unsigned char> deadChars;
 
 static keymap_t keymap[] = {
 
-  // TTY functions
+    // TTY functions
 
-  { XK_BackSpace,        VK_BACK, 0 },
-  { XK_Tab,              VK_TAB, 0 },
-  { XK_Clear,            VK_CLEAR, 0 },
-  { XK_Return,           VK_RETURN, 0 },
-  { XK_Pause,            VK_PAUSE, 0 },
-  { XK_Escape,           VK_ESCAPE, 0 },
-  { XK_Delete,           VK_DELETE, 1 },
+    { XK_BackSpace, VK_BACK, 0 },
+    { XK_Tab, VK_TAB, 0 },
+    { XK_Clear, VK_CLEAR, 0 },
+    { XK_Return, VK_RETURN, 0 },
+    { XK_Pause, VK_PAUSE, 0 },
+    { XK_Escape, VK_ESCAPE, 0 },
+    { XK_Delete, VK_DELETE, 1 },
 
-  // Japanese stuff - almost certainly wrong...
-  //	[v1.0.2-jp1 fix] IOport's patch (Correct definition of Japanese key)
-  //{ XK_Kanji,            VK_KANJI, 0 },
-  //{ XK_Kana_Shift,       VK_KANA, 0 },
-  // Japanese key
-  { XK_Kanji,            VK_KANJI, 0 },				/* 0x19: Kanji, Kanji convert */
-  { XK_Muhenkan,         VK_NONCONVERT, 0 },		/* 0x1d: Cancel Conversion */
-  { XK_Romaji,           VK_DBE_ROMAN, 0 },			/* 0xf5: to Romaji */
-  { XK_Hiragana,         VK_DBE_HIRAGANA, 0 },		/* 0xf2: to Hiragana */
-  { XK_Katakana,         VK_DBE_KATAKANA, 0 },		/* 0xf1: to Katakana */
-  { XK_Zenkaku,          VK_DBE_SBCSCHAR, 0 },		/* 0xf3: to Zenkaku */
-  { XK_Hankaku,          VK_DBE_DBCSCHAR, 0 },		/* 0xf4: to Hankaku */
-  { XK_Eisu_toggle,      VK_DBE_ALPHANUMERIC, 0 },	/* 0xf0: Alphanumeric toggle */
-  { XK_Mae_Koho,         VK_CONVERT, 0 },			/* 0x1c: Previous Candidate */
+    // Japanese stuff - almost certainly wrong...
+    //	[v1.0.2-jp1 fix] IOport's patch (Correct definition of Japanese key)
+    //{ XK_Kanji,            VK_KANJI, 0 },
+    //{ XK_Kana_Shift,       VK_KANA, 0 },
+    // Japanese key
+    { XK_Kanji, VK_KANJI, 0 },                  /* 0x19: Kanji, Kanji convert */
+    { XK_Muhenkan, VK_NONCONVERT, 0 },          /* 0x1d: Cancel Conversion */
+    { XK_Romaji, VK_DBE_ROMAN, 0 },             /* 0xf5: to Romaji */
+    { XK_Hiragana, VK_DBE_HIRAGANA, 0 },        /* 0xf2: to Hiragana */
+    { XK_Katakana, VK_DBE_KATAKANA, 0 },        /* 0xf1: to Katakana */
+    { XK_Zenkaku, VK_DBE_SBCSCHAR, 0 },         /* 0xf3: to Zenkaku */
+    { XK_Hankaku, VK_DBE_DBCSCHAR, 0 },         /* 0xf4: to Hankaku */
+    { XK_Eisu_toggle, VK_DBE_ALPHANUMERIC, 0 }, /* 0xf0: Alphanumeric toggle */
+    { XK_Mae_Koho, VK_CONVERT, 0 },             /* 0x1c: Previous Candidate */
 
-  // Cursor control & motion
+    // Cursor control & motion
 
-  { XK_Home,             VK_HOME, 1 },
-  { XK_Left,             VK_LEFT, 1 },
-  { XK_Up,               VK_UP, 1 },
-  { XK_Right,            VK_RIGHT, 1 },
-  { XK_Down,             VK_DOWN, 1 },
-  { XK_Page_Up,          VK_PRIOR, 1 },
-  { XK_Page_Down,        VK_NEXT, 1 },
-  { XK_End,              VK_END, 1 },
+    { XK_Home, VK_HOME, 1 },
+    { XK_Left, VK_LEFT, 1 },
+    { XK_Up, VK_UP, 1 },
+    { XK_Right, VK_RIGHT, 1 },
+    { XK_Down, VK_DOWN, 1 },
+    { XK_Page_Up, VK_PRIOR, 1 },
+    { XK_Page_Down, VK_NEXT, 1 },
+    { XK_End, VK_END, 1 },
 
-  // Misc functions
+    // Misc functions
 
-  { XK_Select,           VK_SELECT, 0 },
-  { XK_Print,            VK_SNAPSHOT, 0 },
-  { XK_Execute,          VK_EXECUTE, 0 },
-  { XK_Insert,           VK_INSERT, 1 },
-  { XK_Help,             VK_HELP, 0 },
-  { XK_Break,            VK_CANCEL, 1 },
+    { XK_Select, VK_SELECT, 0 },
+    { XK_Print, VK_SNAPSHOT, 0 },
+    { XK_Execute, VK_EXECUTE, 0 },
+    { XK_Insert, VK_INSERT, 1 },
+    { XK_Help, VK_HELP, 0 },
+    { XK_Break, VK_CANCEL, 1 },
 
-  // Keypad Functions, keypad numbers
+    // Keypad Functions, keypad numbers
 
-  { XK_KP_Space,         VK_SPACE, 0 },
-  { XK_KP_Tab,           VK_TAB, 0 },
-  { XK_KP_Enter,         VK_RETURN, 1 },
-  { XK_KP_F1,            VK_F1, 0 },
-  { XK_KP_F2,            VK_F2, 0 },
-  { XK_KP_F3,            VK_F3, 0 },
-  { XK_KP_F4,            VK_F4, 0 },
-  { XK_KP_Home,          VK_HOME, 0 },
-  { XK_KP_Left,          VK_LEFT, 0 },
-  { XK_KP_Up,            VK_UP, 0 },
-  { XK_KP_Right,         VK_RIGHT, 0 },
-  { XK_KP_Down,          VK_DOWN, 0 },
-  { XK_KP_End,           VK_END, 0 },
-  { XK_KP_Page_Up,       VK_PRIOR, 0 },
-  { XK_KP_Page_Down,     VK_NEXT, 0 },
-  { XK_KP_Begin,         VK_CLEAR, 0 },
-  { XK_KP_Insert,        VK_INSERT, 0 },
-  { XK_KP_Delete,        VK_DELETE, 0 },
-  // XXX XK_KP_Equal should map in the same way as ascii '='
-  { XK_KP_Multiply,      VK_MULTIPLY, 0 },
-  { XK_KP_Add,           VK_ADD, 0 },
-  { XK_KP_Separator,     VK_SEPARATOR, 0 },
-  { XK_KP_Subtract,      VK_SUBTRACT, 0 },
-  { XK_KP_Decimal,       VK_DECIMAL, 0 },
-  { XK_KP_Divide,        VK_DIVIDE, 1 },
+    { XK_KP_Space, VK_SPACE, 0 },
+    { XK_KP_Tab, VK_TAB, 0 },
+    { XK_KP_Enter, VK_RETURN, 1 },
+    { XK_KP_F1, VK_F1, 0 },
+    { XK_KP_F2, VK_F2, 0 },
+    { XK_KP_F3, VK_F3, 0 },
+    { XK_KP_F4, VK_F4, 0 },
+    { XK_KP_Home, VK_HOME, 0 },
+    { XK_KP_Left, VK_LEFT, 0 },
+    { XK_KP_Up, VK_UP, 0 },
+    { XK_KP_Right, VK_RIGHT, 0 },
+    { XK_KP_Down, VK_DOWN, 0 },
+    { XK_KP_End, VK_END, 0 },
+    { XK_KP_Page_Up, VK_PRIOR, 0 },
+    { XK_KP_Page_Down, VK_NEXT, 0 },
+    { XK_KP_Begin, VK_CLEAR, 0 },
+    { XK_KP_Insert, VK_INSERT, 0 },
+    { XK_KP_Delete, VK_DELETE, 0 },
+    // XXX XK_KP_Equal should map in the same way as ascii '='
+    { XK_KP_Multiply, VK_MULTIPLY, 0 },
+    { XK_KP_Add, VK_ADD, 0 },
+    { XK_KP_Separator, VK_SEPARATOR, 0 },
+    { XK_KP_Subtract, VK_SUBTRACT, 0 },
+    { XK_KP_Decimal, VK_DECIMAL, 0 },
+    { XK_KP_Divide, VK_DIVIDE, 1 },
 
-  { XK_KP_0,             VK_NUMPAD0, 0 },
-  { XK_KP_1,             VK_NUMPAD1, 0 },
-  { XK_KP_2,             VK_NUMPAD2, 0 },
-  { XK_KP_3,             VK_NUMPAD3, 0 },
-  { XK_KP_4,             VK_NUMPAD4, 0 },
-  { XK_KP_5,             VK_NUMPAD5, 0 },
-  { XK_KP_6,             VK_NUMPAD6, 0 },
-  { XK_KP_7,             VK_NUMPAD7, 0 },
-  { XK_KP_8,             VK_NUMPAD8, 0 },
-  { XK_KP_9,             VK_NUMPAD9, 0 },
+    { XK_KP_0, VK_NUMPAD0, 0 },
+    { XK_KP_1, VK_NUMPAD1, 0 },
+    { XK_KP_2, VK_NUMPAD2, 0 },
+    { XK_KP_3, VK_NUMPAD3, 0 },
+    { XK_KP_4, VK_NUMPAD4, 0 },
+    { XK_KP_5, VK_NUMPAD5, 0 },
+    { XK_KP_6, VK_NUMPAD6, 0 },
+    { XK_KP_7, VK_NUMPAD7, 0 },
+    { XK_KP_8, VK_NUMPAD8, 0 },
+    { XK_KP_9, VK_NUMPAD9, 0 },
 
-  // Auxilliary Functions
+    // Auxilliary Functions
 
-  { XK_F1,               VK_F1, 0 },
-  { XK_F2,               VK_F2, 0 },
-  { XK_F3,               VK_F3, 0 },
-  { XK_F4,               VK_F4, 0 },
-  { XK_F5,               VK_F5, 0 },
-  { XK_F6,               VK_F6, 0 },
-  { XK_F7,               VK_F7, 0 },
-  { XK_F8,               VK_F8, 0 },
-  { XK_F9,               VK_F9, 0 },
-  { XK_F10,              VK_F10, 0 },
-  { XK_F11,              VK_F11, 0 },
-  { XK_F12,              VK_F12, 0 },
-  { XK_F13,              VK_F13, 0 },
-  { XK_F14,              VK_F14, 0 },
-  { XK_F15,              VK_F15, 0 },
-  { XK_F16,              VK_F16, 0 },
-  { XK_F17,              VK_F17, 0 },
-  { XK_F18,              VK_F18, 0 },
-  { XK_F19,              VK_F19, 0 },
-  { XK_F20,              VK_F20, 0 },
-  { XK_F21,              VK_F21, 0 },
-  { XK_F22,              VK_F22, 0 },
-  { XK_F23,              VK_F23, 0 },
-  { XK_F24,              VK_F24, 0 },
+    { XK_F1, VK_F1, 0 },
+    { XK_F2, VK_F2, 0 },
+    { XK_F3, VK_F3, 0 },
+    { XK_F4, VK_F4, 0 },
+    { XK_F5, VK_F5, 0 },
+    { XK_F6, VK_F6, 0 },
+    { XK_F7, VK_F7, 0 },
+    { XK_F8, VK_F8, 0 },
+    { XK_F9, VK_F9, 0 },
+    { XK_F10, VK_F10, 0 },
+    { XK_F11, VK_F11, 0 },
+    { XK_F12, VK_F12, 0 },
+    { XK_F13, VK_F13, 0 },
+    { XK_F14, VK_F14, 0 },
+    { XK_F15, VK_F15, 0 },
+    { XK_F16, VK_F16, 0 },
+    { XK_F17, VK_F17, 0 },
+    { XK_F18, VK_F18, 0 },
+    { XK_F19, VK_F19, 0 },
+    { XK_F20, VK_F20, 0 },
+    { XK_F21, VK_F21, 0 },
+    { XK_F22, VK_F22, 0 },
+    { XK_F23, VK_F23, 0 },
+    { XK_F24, VK_F24, 0 },
 
     // Modifiers
-    
-  { XK_Shift_L,          VK_SHIFT, 0 },
-  { XK_Shift_R,          VK_RSHIFT, 0 },
-  { XK_Control_L,        VK_CONTROL, 0 },
-  { XK_Control_R,        VK_CONTROL, 1 },
-  { XK_Alt_L,            VK_MENU, 0 },
-  { XK_Alt_R,            VK_RMENU, 1 },
 
-// Left & Right Windows keys & Windows Menu Key
+    { XK_Shift_L, VK_SHIFT, 0 },
+    { XK_Shift_R, VK_RSHIFT, 0 },
+    { XK_Control_L, VK_CONTROL, 0 },
+    { XK_Control_R, VK_CONTROL, 1 },
+    { XK_Alt_L, VK_MENU, 0 },
+    { XK_Alt_R, VK_RMENU, 1 },
 
-  { XK_Super_L,			VK_LWIN, 0 }, 
-  { XK_Super_R,			VK_RWIN, 0 }, 
-  { XK_Menu,			VK_APPS, 0 }, 
+    // Left & Right Windows keys & Windows Menu Key
 
-  // Adding Hangul Key
-  { XK_Hangul,			VK_HANGEUL, 0 },
+    { XK_Super_L, VK_LWIN, 0 },
+    { XK_Super_R, VK_RWIN, 0 },
+    { XK_Menu, VK_APPS, 0 },
+
+    // Adding Hangul Key
+    { XK_Hangul, VK_HANGEUL, 0 },
 };
 
-struct latin1ToDeadChars_t {
-  rdr::U8 latin1Char;
-  rdr::U8 deadChar;
-  rdr::U8 baseChar;
-  int a,b,c;
+struct latin1ToDeadChars_t
+{
+    rdr::U8 latin1Char;
+    rdr::U8 deadChar;
+    rdr::U8 baseChar;
+    int a, b, c;
 };
 
 latin1ToDeadChars_t latin1ToDeadChars[] = {
 
-  { XK_Agrave, XK_grave, XK_A },
-  { XK_Egrave, XK_grave, XK_E },
-  { XK_Igrave, XK_grave, XK_I },
-  { XK_Ograve, XK_grave, XK_O },
-  { XK_Ugrave, XK_grave, XK_U },
-  { XK_agrave, XK_grave, XK_a },
-  { XK_egrave, XK_grave, XK_e },
-  { XK_igrave, XK_grave, XK_i },
-  { XK_ograve, XK_grave, XK_o},
-  { XK_ugrave, XK_grave, XK_u },
+    { XK_Agrave, XK_grave, XK_A },
+    { XK_Egrave, XK_grave, XK_E },
+    { XK_Igrave, XK_grave, XK_I },
+    { XK_Ograve, XK_grave, XK_O },
+    { XK_Ugrave, XK_grave, XK_U },
+    { XK_agrave, XK_grave, XK_a },
+    { XK_egrave, XK_grave, XK_e },
+    { XK_igrave, XK_grave, XK_i },
+    { XK_ograve, XK_grave, XK_o },
+    { XK_ugrave, XK_grave, XK_u },
 
-  { XK_Aacute, XK_acute, XK_A },
-  { XK_Eacute, XK_acute, XK_E },
-  { XK_Iacute, XK_acute, XK_I },
-  { XK_Oacute, XK_acute, XK_O },
-  { XK_Uacute, XK_acute, XK_U },
-  { XK_Yacute, XK_acute, XK_Y },
-  { XK_aacute, XK_acute, XK_a },
-  { XK_eacute, XK_acute, XK_e },
-  { XK_iacute, XK_acute, XK_i },
-  { XK_oacute, XK_acute, XK_o},
-  { XK_uacute, XK_acute, XK_u },
-  { XK_yacute, XK_acute, XK_y },
+    { XK_Aacute, XK_acute, XK_A },
+    { XK_Eacute, XK_acute, XK_E },
+    { XK_Iacute, XK_acute, XK_I },
+    { XK_Oacute, XK_acute, XK_O },
+    { XK_Uacute, XK_acute, XK_U },
+    { XK_Yacute, XK_acute, XK_Y },
+    { XK_aacute, XK_acute, XK_a },
+    { XK_eacute, XK_acute, XK_e },
+    { XK_iacute, XK_acute, XK_i },
+    { XK_oacute, XK_acute, XK_o },
+    { XK_uacute, XK_acute, XK_u },
+    { XK_yacute, XK_acute, XK_y },
 
-  { XK_Acircumflex, XK_asciicircum, XK_A },
-  { XK_Ecircumflex, XK_asciicircum, XK_E },
-  { XK_Icircumflex, XK_asciicircum, XK_I },
-  { XK_Ocircumflex, XK_asciicircum, XK_O },
-  { XK_Ucircumflex, XK_asciicircum, XK_U },
-  { XK_acircumflex, XK_asciicircum, XK_a },
-  { XK_ecircumflex, XK_asciicircum, XK_e },
-  { XK_icircumflex, XK_asciicircum, XK_i },
-  { XK_ocircumflex, XK_asciicircum, XK_o},
-  { XK_ucircumflex, XK_asciicircum, XK_u },
+    { XK_Acircumflex, XK_asciicircum, XK_A },
+    { XK_Ecircumflex, XK_asciicircum, XK_E },
+    { XK_Icircumflex, XK_asciicircum, XK_I },
+    { XK_Ocircumflex, XK_asciicircum, XK_O },
+    { XK_Ucircumflex, XK_asciicircum, XK_U },
+    { XK_acircumflex, XK_asciicircum, XK_a },
+    { XK_ecircumflex, XK_asciicircum, XK_e },
+    { XK_icircumflex, XK_asciicircum, XK_i },
+    { XK_ocircumflex, XK_asciicircum, XK_o },
+    { XK_ucircumflex, XK_asciicircum, XK_u },
 
-  { XK_Adiaeresis, XK_diaeresis, XK_A },
-  { XK_Ediaeresis, XK_diaeresis, XK_E },
-  { XK_Idiaeresis, XK_diaeresis, XK_I },
-  { XK_Odiaeresis, XK_diaeresis, XK_O },
-  { XK_Udiaeresis, XK_diaeresis, XK_U },
-  { XK_adiaeresis, XK_diaeresis, XK_a },
-  { XK_ediaeresis, XK_diaeresis, XK_e },
-  { XK_idiaeresis, XK_diaeresis, XK_i },
-  { XK_odiaeresis, XK_diaeresis, XK_o},
-  { XK_udiaeresis, XK_diaeresis, XK_u },
-  { XK_ydiaeresis, XK_diaeresis, XK_y },
+    { XK_Adiaeresis, XK_diaeresis, XK_A },
+    { XK_Ediaeresis, XK_diaeresis, XK_E },
+    { XK_Idiaeresis, XK_diaeresis, XK_I },
+    { XK_Odiaeresis, XK_diaeresis, XK_O },
+    { XK_Udiaeresis, XK_diaeresis, XK_U },
+    { XK_adiaeresis, XK_diaeresis, XK_a },
+    { XK_ediaeresis, XK_diaeresis, XK_e },
+    { XK_idiaeresis, XK_diaeresis, XK_i },
+    { XK_odiaeresis, XK_diaeresis, XK_o },
+    { XK_udiaeresis, XK_diaeresis, XK_u },
+    { XK_ydiaeresis, XK_diaeresis, XK_y },
 
-  { XK_Aring, XK_degree, XK_A },
-  { XK_aring, XK_degree, XK_a },
+    { XK_Aring, XK_degree, XK_A },
+    { XK_aring, XK_degree, XK_a },
 
-  { XK_Ccedilla, XK_cedilla, XK_C },
-  { XK_ccedilla, XK_cedilla, XK_c },
+    { XK_Ccedilla, XK_cedilla, XK_C },
+    { XK_ccedilla, XK_cedilla, XK_c },
 
-  { XK_Atilde, XK_asciitilde, XK_A },
-  { XK_Ntilde, XK_asciitilde, XK_N },
-  { XK_Otilde, XK_asciitilde, XK_O },
-  { XK_atilde, XK_asciitilde, XK_a },
-  { XK_ntilde, XK_asciitilde, XK_n },
-  { XK_otilde, XK_asciitilde, XK_o },
+    { XK_Atilde, XK_asciitilde, XK_A },
+    { XK_Ntilde, XK_asciitilde, XK_N },
+    { XK_Otilde, XK_asciitilde, XK_O },
+    { XK_atilde, XK_asciitilde, XK_a },
+    { XK_ntilde, XK_asciitilde, XK_n },
+    { XK_otilde, XK_asciitilde, XK_o },
 };
 
-rdr::U8 latin1DeadChars[] = {
-  XK_grave, XK_acute, XK_asciicircum, XK_diaeresis, XK_degree, XK_cedilla,
-  XK_asciitilde
-};
+rdr::U8 latin1DeadChars[] = { XK_grave, XK_acute, XK_asciicircum, XK_diaeresis, XK_degree, XK_cedilla, XK_asciitilde };
 
 #define NoSymbol 0xfff
-rdr::U16 ascii_to_x[256] = {
-	NoSymbol,	NoSymbol,	NoSymbol,	XK_KP_Enter,
-	NoSymbol,	NoSymbol,	NoSymbol,	NoSymbol,
-	XK_Delete,	XK_Tab,		XK_Linefeed,	NoSymbol,
-	NoSymbol,	XK_Return,	NoSymbol,	NoSymbol,
-	NoSymbol,	NoSymbol,	NoSymbol,	NoSymbol,
-	NoSymbol,	NoSymbol,	NoSymbol,	NoSymbol,
-	NoSymbol,	NoSymbol,	NoSymbol,	XK_Escape,
-	NoSymbol,	NoSymbol,	NoSymbol,	NoSymbol,
-	XK_space,	XK_exclam,	XK_quotedbl,	XK_numbersign,
-	XK_dollar,	XK_percent,	XK_ampersand,	XK_apostrophe,
-	XK_parenleft,	XK_parenright,	XK_asterisk,	XK_plus,
-	XK_comma,	XK_minus,	XK_period,	XK_slash,
-	XK_0,		XK_1,		XK_2,		XK_3,
-	XK_4,		XK_5,		XK_6,		XK_7,
-	XK_8,		XK_9,		XK_colon,	XK_semicolon,
-	XK_less,	XK_equal,	XK_greater,	XK_question,
-	XK_at,		XK_A,		XK_B,		XK_C,
-	XK_D,		XK_E,		XK_F,		XK_G,
-	XK_H,		XK_I,		XK_J,		XK_K,
-	XK_L,		XK_M,		XK_N,		XK_O,
-	XK_P,		XK_Q,		XK_R,		XK_S,
-	XK_T,		XK_U,		XK_V,		XK_W,
-	XK_X,		XK_Y,		XK_Z,		XK_bracketleft,
-	XK_backslash,	XK_bracketright,XK_asciicircum,	XK_underscore,
-	XK_grave,	XK_a,		XK_b,		XK_c,
-	XK_d,		XK_e,		XK_f,		XK_g,
-	XK_h,		XK_i,		XK_j,		XK_k,
-	XK_l,		XK_m,		XK_n,		XK_o,
-	XK_p,		XK_q,		XK_r,		XK_s,
-	XK_t,		XK_u,		XK_v,		XK_w,
-	XK_x,		XK_y,		XK_z,		XK_braceleft,
-	XK_bar,		XK_braceright,	XK_asciitilde,	XK_BackSpace,
-// 128
-	XK_Ccedilla,	XK_udiaeresis,	XK_eacute,	XK_acircumflex,
-	XK_adiaeresis,	XK_agrave,	XK_aring,	XK_ccedilla,
-	XK_ecircumflex,	XK_ediaeresis,	XK_egrave,	XK_idiaeresis,
-	XK_icircumflex,	XK_igrave,	XK_Adiaeresis,	XK_Aring,
-	XK_Eacute,	XK_ae,		XK_AE,		XK_ocircumflex,
-	XK_odiaeresis,	XK_ograve,	XK_ntilde,	XK_ugrave,
-	XK_ydiaeresis,	XK_Odiaeresis,	XK_Udiaeresis,	XK_cent,
-	XK_sterling,	XK_yen,		XK_paragraph,	XK_section,
-// 160
-	XK_aacute,	XK_degree,	XK_cent,	XK_sterling,
-	XK_ntilde,	XK_Ntilde,	XK_paragraph,	XK_Greek_BETA,
-	XK_questiondown,XK_hyphen,	XK_notsign,	XK_onehalf,
-	XK_onequarter,	XK_exclamdown,	XK_guillemotleft,XK_guillemotright,
-	NoSymbol,	NoSymbol,	NoSymbol,	NoSymbol,
-	NoSymbol,	NoSymbol,	NoSymbol,	NoSymbol,
-	NoSymbol,	NoSymbol,	NoSymbol,	NoSymbol,
-	NoSymbol,	NoSymbol,	NoSymbol,	NoSymbol,
-// 192
-	XK_questiondown,XK_exclamdown,	NoSymbol,	NoSymbol,
-	NoSymbol,	NoSymbol,	NoSymbol,	NoSymbol,
-	NoSymbol,	NoSymbol,	NoSymbol,	XK_Agrave,
-	NoSymbol,	NoSymbol,	XK_AE,		XK_ae,
-	NoSymbol,	NoSymbol,	NoSymbol,	NoSymbol,
-	NoSymbol,	NoSymbol,	NoSymbol,	NoSymbol,
-	NoSymbol,	NoSymbol,	NoSymbol,	NoSymbol,
-	NoSymbol,	NoSymbol,	NoSymbol,	NoSymbol,
-// 224
-	XK_Greek_alpha,	XK_ssharp,	XK_Greek_GAMMA,	XK_Greek_pi,
-	XK_Greek_SIGMA,	XK_Greek_sigma,	XK_mu,	        XK_Greek_tau,
-	XK_Greek_PHI,	XK_Greek_THETA,	XK_Greek_OMEGA,	XK_Greek_delta,
-	XK_infinity,	XK_Ooblique,	XK_Greek_epsilon, XK_intersection,
-	XK_identical,	XK_plusminus,	XK_greaterthanequal, XK_lessthanequal,
-	XK_topintegral,	XK_botintegral,	XK_division,	XK_similarequal,
-	XK_degree,	NoSymbol,	NoSymbol,	XK_radical,
-	XK_Greek_eta,	XK_twosuperior,	XK_periodcentered, NoSymbol,
-  };
+rdr::U16 ascii_to_x[256U] = {
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    XK_KP_Enter,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    XK_Delete,
+    XK_Tab,
+    XK_Linefeed,
+    NoSymbol,
+    NoSymbol,
+    XK_Return,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    XK_Escape,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    XK_space,
+    XK_exclam,
+    XK_quotedbl,
+    XK_numbersign,
+    XK_dollar,
+    XK_percent,
+    XK_ampersand,
+    XK_apostrophe,
+    XK_parenleft,
+    XK_parenright,
+    XK_asterisk,
+    XK_plus,
+    XK_comma,
+    XK_minus,
+    XK_period,
+    XK_slash,
+    XK_0,
+    XK_1,
+    XK_2,
+    XK_3,
+    XK_4,
+    XK_5,
+    XK_6,
+    XK_7,
+    XK_8,
+    XK_9,
+    XK_colon,
+    XK_semicolon,
+    XK_less,
+    XK_equal,
+    XK_greater,
+    XK_question,
+    XK_at,
+    XK_A,
+    XK_B,
+    XK_C,
+    XK_D,
+    XK_E,
+    XK_F,
+    XK_G,
+    XK_H,
+    XK_I,
+    XK_J,
+    XK_K,
+    XK_L,
+    XK_M,
+    XK_N,
+    XK_O,
+    XK_P,
+    XK_Q,
+    XK_R,
+    XK_S,
+    XK_T,
+    XK_U,
+    XK_V,
+    XK_W,
+    XK_X,
+    XK_Y,
+    XK_Z,
+    XK_bracketleft,
+    XK_backslash,
+    XK_bracketright,
+    XK_asciicircum,
+    XK_underscore,
+    XK_grave,
+    XK_a,
+    XK_b,
+    XK_c,
+    XK_d,
+    XK_e,
+    XK_f,
+    XK_g,
+    XK_h,
+    XK_i,
+    XK_j,
+    XK_k,
+    XK_l,
+    XK_m,
+    XK_n,
+    XK_o,
+    XK_p,
+    XK_q,
+    XK_r,
+    XK_s,
+    XK_t,
+    XK_u,
+    XK_v,
+    XK_w,
+    XK_x,
+    XK_y,
+    XK_z,
+    XK_braceleft,
+    XK_bar,
+    XK_braceright,
+    XK_asciitilde,
+    XK_BackSpace,
+    // 128
+    XK_Ccedilla,
+    XK_udiaeresis,
+    XK_eacute,
+    XK_acircumflex,
+    XK_adiaeresis,
+    XK_agrave,
+    XK_aring,
+    XK_ccedilla,
+    XK_ecircumflex,
+    XK_ediaeresis,
+    XK_egrave,
+    XK_idiaeresis,
+    XK_icircumflex,
+    XK_igrave,
+    XK_Adiaeresis,
+    XK_Aring,
+    XK_Eacute,
+    XK_ae,
+    XK_AE,
+    XK_ocircumflex,
+    XK_odiaeresis,
+    XK_ograve,
+    XK_ntilde,
+    XK_ugrave,
+    XK_ydiaeresis,
+    XK_Odiaeresis,
+    XK_Udiaeresis,
+    XK_cent,
+    XK_sterling,
+    XK_yen,
+    XK_paragraph,
+    XK_section,
+    // 160
+    XK_aacute,
+    XK_degree,
+    XK_cent,
+    XK_sterling,
+    XK_ntilde,
+    XK_Ntilde,
+    XK_paragraph,
+    XK_Greek_BETA,
+    XK_questiondown,
+    XK_hyphen,
+    XK_notsign,
+    XK_onehalf,
+    XK_onequarter,
+    XK_exclamdown,
+    XK_guillemotleft,
+    XK_guillemotright,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    // 192
+    XK_questiondown,
+    XK_exclamdown,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    XK_Agrave,
+    NoSymbol,
+    NoSymbol,
+    XK_AE,
+    XK_ae,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    NoSymbol,
+    // 224
+    XK_Greek_alpha,
+    XK_ssharp,
+    XK_Greek_GAMMA,
+    XK_Greek_pi,
+    XK_Greek_SIGMA,
+    XK_Greek_sigma,
+    XK_mu,
+    XK_Greek_tau,
+    XK_Greek_PHI,
+    XK_Greek_THETA,
+    XK_Greek_OMEGA,
+    XK_Greek_delta,
+    XK_infinity,
+    XK_Ooblique,
+    XK_Greek_epsilon,
+    XK_intersection,
+    XK_identical,
+    XK_plusminus,
+    XK_greaterthanequal,
+    XK_lessthanequal,
+    XK_topintegral,
+    XK_botintegral,
+    XK_division,
+    XK_similarequal,
+    XK_degree,
+    NoSymbol,
+    NoSymbol,
+    XK_radical,
+    XK_Greek_eta,
+    XK_twosuperior,
+    XK_periodcentered,
+    NoSymbol,
+};
 
 
 
@@ -337,9 +535,7 @@ rdr::U16 ascii_to_x[256] = {
 // doKeyboardEvent wraps the system keybd_event function and attempts to find
 // the appropriate scancode corresponding to the supplied virtual keycode.
 
-inline void doKeyboardEvent(BYTE vkCode, DWORD flags) {
-  keybd_uni_event(vkCode, MapVirtualKey(vkCode, 0), flags, 0);
-}
+inline void doKeyboardEvent(const BYTE vkCode, const DWORD flags) { keybd_uni_event(vkCode, ::MapVirtualKey(vkCode, 0), flags, 0); }
 
 // KeyStateModifier is a class which helps simplify generating a "fake" press
 // or release of shift, ctrl, alt, etc. An instance of the class is created
@@ -348,64 +544,81 @@ inline void doKeyboardEvent(BYTE vkCode, DWORD flags) {
 // right state. The destructor of the class automatically reverts to the
 // previous state.
 
-class KeyStateModifier {
+class KeyStateModifier
+{
 public:
-  KeyStateModifier(int vkCode_, int flags_=0)
-    : vkCode(vkCode_), flags(flags_), pressed(false), released(false)
-  {}
-  void press() {
-    if (!(GetAsyncKeyState(vkCode) & 0x8000)) {
-      doKeyboardEvent(vkCode, flags);
-      vnclog.Print(LL_INTINFO, "fake %d down\n", vkCode);
-      pressed = true;
+    explicit KeyStateModifier(int vkCode_, int flags_ = 0) : vkCode(vkCode_), flags(flags_), pressed{ false }, released{ false } {}
+    void press()
+    {
+        if (!(::GetAsyncKeyState(vkCode) & 0x8000))
+        {
+            doKeyboardEvent(vkCode, flags);
+            vnclog.Print(LL_INTINFO, "fake %d down\n", vkCode);
+            pressed = true;
+        }
     }
-  }
-  void release() {
-    if (GetAsyncKeyState(vkCode) & 0x8000) {
-      doKeyboardEvent(vkCode, flags | KEYEVENTF_KEYUP);
-      vnclog.Print(LL_INTINFO, "fake %d up\n", vkCode);
-      released = true;
+    void release()
+    {
+        if (::GetAsyncKeyState(vkCode) & 0x8000)
+        {
+            doKeyboardEvent(vkCode, flags | KEYEVENTF_KEYUP);
+            vnclog.Print(LL_INTINFO, "fake %d up\n", vkCode);
+            released = true;
+        }
     }
-  }
-  ~KeyStateModifier() {
-    if (pressed) {
-      doKeyboardEvent(vkCode, flags | KEYEVENTF_KEYUP);
-      vnclog.Print(LL_INTINFO, "fake %d up\n", vkCode);
-    } else if (released) {
-      doKeyboardEvent(vkCode, flags);
-      vnclog.Print(LL_INTINFO, "fake %d down\n", vkCode);
+    ~KeyStateModifier()
+    {
+        if (pressed)
+        {
+            doKeyboardEvent(vkCode, flags | KEYEVENTF_KEYUP);
+            vnclog.Print(LL_INTINFO, "fake %d up\n", vkCode);
+        }
+        else if (released)
+        {
+            doKeyboardEvent(vkCode, flags);
+            vnclog.Print(LL_INTINFO, "fake %d down\n", vkCode);
+        }
     }
-  }
-  int vkCode;
-  int flags;
-  bool pressed;
-  bool released;
+    int vkCode;
+    int flags;
+    bool pressed;
+    bool released;
 };
 
 // Keymapper - a single instance of this class is used to generate Windows key
 // events.
-void doKeyEventWithModifiers(BYTE vkCode, BYTE modifierState, bool down)
+void doKeyEventWithModifiers(const BYTE vkCode, const BYTE modifierState, const bool down)
 {
-  KeyStateModifier ctrl(VK_CONTROL);
-  KeyStateModifier alt(VK_MENU);
-  KeyStateModifier shift(VK_SHIFT);
+    KeyStateModifier ctrl(VK_CONTROL);
+    KeyStateModifier alt(VK_MENU);
+    KeyStateModifier shift(VK_SHIFT);
 
-  if (down) {
-    if (modifierState & 2) ctrl.press();
-    if (modifierState & 4) alt.press();
-    if (modifierState & 1) {
-      shift.press(); 
-    } else {
-      shift.release();
+    if (down)
+    {
+        if (modifierState & 2)
+        {
+            ctrl.press();
+        }
+        if (modifierState & 4)
+        {
+            alt.press();
+        }
+        if (modifierState & 1)
+        {
+            shift.press();
+        }
+        else
+        {
+            shift.release();
+        }
     }
-  }
-  doKeyboardEvent(vkCode, down ? 0 : KEYEVENTF_KEYUP);
+    doKeyboardEvent(vkCode, down ? 0 : KEYEVENTF_KEYUP);
 }
 
 // X11 keysym to Unicode conversion tables
 // Identical to viewer KeyMap.h - sourced from X.Org/XFree86 keysym tables
 static unsigned short const ks_to_ucs_1a1_1ff[] = {
-            0x0104, 0x02d8, 0x0141, 0x0000, 0x013d, 0x015a, 0x0000, /* 0x01a1-0x01a7 */
+    0x0104, 0x02d8, 0x0141, 0x0000, 0x013d, 0x015a, 0x0000,         /* 0x01a1-0x01a7 */
     0x0000, 0x0160, 0x015e, 0x0164, 0x0179, 0x0000, 0x017d, 0x017b, /* 0x01a8-0x01af */
     0x0000, 0x0105, 0x02db, 0x0142, 0x0000, 0x013e, 0x015b, 0x02c7, /* 0x01b0-0x01b7 */
     0x0000, 0x0161, 0x015f, 0x0165, 0x017a, 0x02dd, 0x017e, 0x017c, /* 0x01b8-0x01bf */
@@ -419,7 +632,7 @@ static unsigned short const ks_to_ucs_1a1_1ff[] = {
     0x0159, 0x016f, 0x0000, 0x0171, 0x0000, 0x0000, 0x0163, 0x02d9  /* 0x01f8-0x01ff */
 };
 static unsigned short const ks_to_ucs_2a1_2fe[] = {
-            0x0126, 0x0000, 0x0000, 0x0000, 0x0000, 0x0124, 0x0000, /* 0x02a1-0x02a7 */
+    0x0126, 0x0000, 0x0000, 0x0000, 0x0000, 0x0124, 0x0000,         /* 0x02a1-0x02a7 */
     0x0000, 0x0130, 0x0000, 0x011e, 0x0134, 0x0000, 0x0000, 0x0000, /* 0x02a8-0x02af */
     0x0000, 0x0127, 0x0000, 0x0000, 0x0000, 0x0000, 0x0125, 0x0000, /* 0x02b0-0x02b7 */
     0x0000, 0x0131, 0x0000, 0x011f, 0x0135, 0x0000, 0x0000, 0x0000, /* 0x02b8-0x02bf */
@@ -433,7 +646,7 @@ static unsigned short const ks_to_ucs_2a1_2fe[] = {
     0x011d, 0x0000, 0x0000, 0x0000, 0x0000, 0x016d, 0x015d          /* 0x02f8-0x02fe */
 };
 static unsigned short const ks_to_ucs_3a2_3fe[] = {
-                    0x0138, 0x0156, 0x0000, 0x0128, 0x013b, 0x0000, /* 0x03a2-0x03a7 */
+    0x0138, 0x0156, 0x0000, 0x0128, 0x013b, 0x0000,                 /* 0x03a2-0x03a7 */
     0x0000, 0x0000, 0x0112, 0x0122, 0x0166, 0x0000, 0x0000, 0x0000, /* 0x03a8-0x03af */
     0x0000, 0x0000, 0x0000, 0x0157, 0x0000, 0x0129, 0x013c, 0x0000, /* 0x03b0-0x03b7 */
     0x0000, 0x0000, 0x0113, 0x0123, 0x0167, 0x014a, 0x0000, 0x014b, /* 0x03b8-0x03bf */
@@ -447,7 +660,7 @@ static unsigned short const ks_to_ucs_3a2_3fe[] = {
     0x0000, 0x0173, 0x0000, 0x0000, 0x0000, 0x0169, 0x016b          /* 0x03f8-0x03fe */
 };
 static unsigned short const ks_to_ucs_4a1_4df[] = {
-            0x3002, 0x3008, 0x3009, 0x3001, 0x30fb, 0x30f2, 0x30a1, /* 0x04a1-0x04a7 */
+    0x3002, 0x3008, 0x3009, 0x3001, 0x30fb, 0x30f2, 0x30a1,         /* 0x04a1-0x04a7 */
     0x30a3, 0x30a5, 0x30a7, 0x30a9, 0x30e3, 0x30e5, 0x30e7, 0x30c3, /* 0x04a8-0x04af */
     0x30fc, 0x30a2, 0x30a4, 0x30a6, 0x30a8, 0x30aa, 0x30ab, 0x30ad, /* 0x04b0-0x04b7 */
     0x30af, 0x30b1, 0x30b3, 0x30b5, 0x30b7, 0x30b9, 0x30bb, 0x30bd, /* 0x04b8-0x04bf */
@@ -491,7 +704,7 @@ static unsigned short const ks_to_ucs_680_6ff[] = {
     0x042c, 0x042b, 0x0417, 0x0428, 0x042d, 0x0429, 0x0427, 0x042a  /* 0x06f8-0x06ff */
 };
 static unsigned short const ks_to_ucs_7a1_7f9[] = {
-            0x0386, 0x0388, 0x0389, 0x038a, 0x03aa, 0x0000, 0x038c, /* 0x07a1-0x07a7 */
+    0x0386, 0x0388, 0x0389, 0x038a, 0x03aa, 0x0000, 0x038c,         /* 0x07a1-0x07a7 */
     0x038e, 0x03ab, 0x0000, 0x038f, 0x0000, 0x0000, 0x0385, 0x2015, /* 0x07a8-0x07af */
     0x0000, 0x03ac, 0x03ad, 0x03ae, 0x03af, 0x03ca, 0x0390, 0x03cc, /* 0x07b0-0x07b7 */
     0x03cd, 0x03cb, 0x03b0, 0x03ce, 0x0000, 0x0000, 0x0000, 0x0000, /* 0x07b8-0x07bf */
@@ -502,10 +715,10 @@ static unsigned short const ks_to_ucs_7a1_7f9[] = {
     0x0000, 0x03b1, 0x03b2, 0x03b3, 0x03b4, 0x03b5, 0x03b6, 0x03b7, /* 0x07e0-0x07e7 */
     0x03b8, 0x03b9, 0x03ba, 0x03bb, 0x03bc, 0x03bd, 0x03be, 0x03bf, /* 0x07e8-0x07ef */
     0x03c0, 0x03c1, 0x03c3, 0x03c2, 0x03c4, 0x03c5, 0x03c6, 0x03c7, /* 0x07f0-0x07f7 */
-    0x03c8, 0x03c9                                                   /* 0x07f8-0x07f9 */
+    0x03c8, 0x03c9                                                  /* 0x07f8-0x07f9 */
 };
 static unsigned short const ks_to_ucs_8a4_8fe[] = {
-                                    0x2320, 0x2321, 0x0000, 0x231c, /* 0x08a4-0x08a7 */
+    0x2320, 0x2321, 0x0000, 0x231c,                                 /* 0x08a4-0x08a7 */
     0x231d, 0x231e, 0x231f, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, /* 0x08a8-0x08af */
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, /* 0x08b0-0x08b7 */
     0x0000, 0x0000, 0x0000, 0x0000, 0x2264, 0x2260, 0x2265, 0x222b, /* 0x08b8-0x08bf */
@@ -519,14 +732,14 @@ static unsigned short const ks_to_ucs_8a4_8fe[] = {
     0x0000, 0x0000, 0x0000, 0x2190, 0x2191, 0x2192, 0x2193          /* 0x08f8-0x08fe */
 };
 static unsigned short const ks_to_ucs_9df_9f8[] = {
-                                                            0x2422, /* 0x09df       */
+    0x2422,                                                         /* 0x09df       */
     0x2666, 0x25a6, 0x2409, 0x240c, 0x240d, 0x240a, 0x0000, 0x0000, /* 0x09e0-0x09e7 */
     0x240a, 0x240b, 0x2518, 0x2510, 0x250c, 0x2514, 0x253c, 0x2500, /* 0x09e8-0x09ef */
     0x0000, 0x0000, 0x0000, 0x0000, 0x251c, 0x2524, 0x2534, 0x252c, /* 0x09f0-0x09f7 */
-    0x2502                                                           /* 0x09f8       */
+    0x2502                                                          /* 0x09f8       */
 };
 static unsigned short const ks_to_ucs_aa1_afe[] = {
-            0x2003, 0x2002, 0x2004, 0x2005, 0x2007, 0x2008, 0x2009, /* 0x0aa1-0x0aa7 */
+    0x2003, 0x2002, 0x2004, 0x2005, 0x2007, 0x2008, 0x2009,         /* 0x0aa1-0x0aa7 */
     0x200a, 0x2014, 0x2013, 0x0000, 0x0000, 0x0000, 0x2026, 0x2025, /* 0x0aa8-0x0aaf */
     0x2153, 0x2154, 0x2155, 0x2156, 0x2157, 0x2158, 0x2159, 0x215a, /* 0x0ab0-0x0ab7 */
     0x2105, 0x0000, 0x0000, 0x2012, 0x2039, 0x2024, 0x203a, 0x0000, /* 0x0ab8-0x0abf */
@@ -540,14 +753,14 @@ static unsigned short const ks_to_ucs_aa1_afe[] = {
     0x2640, 0x2121, 0x2315, 0x2117, 0x2038, 0x201a, 0x201e          /* 0x0af8-0x0afe */
 };
 static unsigned short const ks_to_ucs_cdf_cfa[] = {
-                                                            0x2017, /* 0x0cdf       */
+    0x2017,                                                         /* 0x0cdf       */
     0x05d0, 0x05d1, 0x05d2, 0x05d3, 0x05d4, 0x05d5, 0x05d6, 0x05d7, /* 0x0ce0-0x0ce7 */
     0x05d8, 0x05d9, 0x05da, 0x05db, 0x05dc, 0x05dd, 0x05de, 0x05df, /* 0x0ce8-0x0cef */
     0x05e0, 0x05e1, 0x05e2, 0x05e3, 0x05e4, 0x05e5, 0x05e6, 0x05e7, /* 0x0cf0-0x0cf7 */
-    0x05e8, 0x05e9, 0x05ea                                           /* 0x0cf8-0x0cfa */
+    0x05e8, 0x05e9, 0x05ea                                          /* 0x0cf8-0x0cfa */
 };
 static unsigned short const ks_to_ucs_da1_df9[] = {
-            0x0e01, 0x0e02, 0x0e03, 0x0e04, 0x0e05, 0x0e06, 0x0e07, /* 0x0da1-0x0da7 */
+    0x0e01, 0x0e02, 0x0e03, 0x0e04, 0x0e05, 0x0e06, 0x0e07,         /* 0x0da1-0x0da7 */
     0x0e08, 0x0e09, 0x0e0a, 0x0e0b, 0x0e0c, 0x0e0d, 0x0e0e, 0x0e0f, /* 0x0da8-0x0daf */
     0x0e10, 0x0e11, 0x0e12, 0x0e13, 0x0e14, 0x0e15, 0x0e16, 0x0e17, /* 0x0db0-0x0db7 */
     0x0e18, 0x0e19, 0x0e1a, 0x0e1b, 0x0e1c, 0x0e1d, 0x0e1e, 0x0e1f, /* 0x0db8-0x0dbf */
@@ -558,7 +771,7 @@ static unsigned short const ks_to_ucs_da1_df9[] = {
     0x0e40, 0x0e41, 0x0e42, 0x0e43, 0x0e44, 0x0e45, 0x0e46, 0x0e47, /* 0x0de0-0x0de7 */
     0x0e48, 0x0e49, 0x0e4a, 0x0e4b, 0x0e4c, 0x0e4d, 0x0000, 0x0000, /* 0x0de8-0x0def */
     0x0e50, 0x0e51, 0x0e52, 0x0e53, 0x0e54, 0x0e55, 0x0e56, 0x0e57, /* 0x0df0-0x0df7 */
-    0x0e58, 0x0e59                                                   /* 0x0df8-0x0df9 */
+    0x0e58, 0x0e59                                                  /* 0x0df8-0x0df9 */
 };
 static unsigned short const ks_to_ucs_ea0_eff[] = {
     0x0000, 0x1101, 0x1101, 0x11aa, 0x1102, 0x11ac, 0x11ad, 0x1103, /* 0x0ea0-0x0ea7 */
@@ -575,7 +788,7 @@ static unsigned short const ks_to_ucs_ea0_eff[] = {
     0x11eb, 0x0000, 0x11f9, 0x0000, 0x0000, 0x0000, 0x0000, 0x20a9  /* 0x0ef8-0x0eff */
 };
 static unsigned short const ks_to_ucs_12a1_12fe[] = {
-            0x1e02, 0x1e03, 0x0000, 0x0000, 0x0000, 0x1e0a, 0x0000, /* 0x12a1-0x12a7 */
+    0x1e02, 0x1e03, 0x0000, 0x0000, 0x0000, 0x1e0a, 0x0000,         /* 0x12a1-0x12a7 */
     0x1e80, 0x0000, 0x1e82, 0x1e0b, 0x1ef2, 0x0000, 0x0000, 0x0000, /* 0x12a8-0x12af */
     0x1e1e, 0x1e1f, 0x0000, 0x0000, 0x1e40, 0x1e41, 0x0000, 0x1e56, /* 0x12b0-0x12b7 */
     0x1e81, 0x1e57, 0x1e83, 0x1e60, 0x1ef3, 0x1e84, 0x1e85, 0x1e61, /* 0x12b8-0x12bf */
@@ -589,10 +802,10 @@ static unsigned short const ks_to_ucs_12a1_12fe[] = {
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0177          /* 0x12f8-0x12fe */
 };
 static unsigned short const ks_to_ucs_13bc_13be[] = {
-    0x0152, 0x0153, 0x0178                                           /* 0x13bc-0x13be */
+    0x0152, 0x0153, 0x0178 /* 0x13bc-0x13be */
 };
 static unsigned short const ks_to_ucs_14a1_14ff[] = {
-            0x2741, 0x00a7, 0x0589, 0x0029, 0x0028, 0x00bb, 0x00ab, /* 0x14a1-0x14a7 */
+    0x2741, 0x00a7, 0x0589, 0x0029, 0x0028, 0x00bb, 0x00ab,         /* 0x14a1-0x14a7 */
     0x2014, 0x002e, 0x055d, 0x002c, 0x2013, 0x058a, 0x2026, 0x055c, /* 0x14a8-0x14af */
     0x055b, 0x055e, 0x0531, 0x0561, 0x0532, 0x0562, 0x0533, 0x0563, /* 0x14b0-0x14b7 */
     0x0534, 0x0564, 0x0535, 0x0565, 0x0536, 0x0566, 0x0537, 0x0567, /* 0x14b8-0x14bf */
@@ -626,7 +839,7 @@ static unsigned short const ks_to_ucs_16a0_16f6[] = {
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0259          /* 0x16f0-0x16f6 */
 };
 static unsigned short const ks_to_ucs_1e9f_1eff[] = {
-                                                            0x0303, /* 0x1e9f       */
+    0x0303,                                                         /* 0x1e9f       */
     0x1ea0, 0x1ea1, 0x1ea2, 0x1ea3, 0x1ea4, 0x1ea5, 0x1ea6, 0x1ea7, /* 0x1ea0-0x1ea7 */
     0x1ea8, 0x1ea9, 0x1eaa, 0x1eab, 0x1eac, 0x1ead, 0x1eae, 0x1eaf, /* 0x1ea8-0x1eaf */
     0x1eb0, 0x1eb1, 0x1eb2, 0x1eb3, 0x1eb4, 0x1eb5, 0x1eb6, 0x1eb7, /* 0x1eb0-0x1eb7 */
@@ -642,7 +855,7 @@ static unsigned short const ks_to_ucs_1e9f_1eff[] = {
 };
 static unsigned short const ks_to_ucs_20a0_20ac[] = {
     0x20a0, 0x20a1, 0x20a2, 0x20a3, 0x20a4, 0x20a5, 0x20a6, 0x20a7, /* 0x20a0-0x20a7 */
-    0x20a8, 0x20a9, 0x20aa, 0x20ab, 0x20ac                           /* 0x20a8-0x20ac */
+    0x20a8, 0x20a9, 0x20aa, 0x20ab, 0x20ac                          /* 0x20a8-0x20ac */
 };
 
 // Convert an X11 keysym to its Unicode codepoint.
@@ -651,460 +864,646 @@ static unsigned short const ks_to_ucs_20a0_20ac[] = {
 // non-Latin script ranges via the tables above.
 static WORD keysymToUnicode(rdr::U32 keysym)
 {
-    if (keysym & 0x01000000)           return (WORD)(keysym & 0x00FFFFFF);
-    if (keysym >= 0x0020 && keysym <= 0x00ff) return (WORD)keysym;
-    if (keysym >= 0x01a1 && keysym <= 0x01ff) return ks_to_ucs_1a1_1ff[keysym - 0x01a1];
-    if (keysym >= 0x02a1 && keysym <= 0x02fe) return ks_to_ucs_2a1_2fe[keysym - 0x02a1];
-    if (keysym >= 0x03a2 && keysym <= 0x03fe) return ks_to_ucs_3a2_3fe[keysym - 0x03a2];
-    if (keysym >= 0x04a1 && keysym <= 0x04df) return ks_to_ucs_4a1_4df[keysym - 0x04a1];
-    if (keysym >= 0x0590 && keysym <= 0x05fe) return ks_to_ucs_590_5fe[keysym - 0x0590];
-    if (keysym >= 0x0680 && keysym <= 0x06ff) return ks_to_ucs_680_6ff[keysym - 0x0680];
-    if (keysym >= 0x07a1 && keysym <= 0x07f9) return ks_to_ucs_7a1_7f9[keysym - 0x07a1];
-    if (keysym >= 0x08a4 && keysym <= 0x08fe) return ks_to_ucs_8a4_8fe[keysym - 0x08a4];
-    if (keysym >= 0x09df && keysym <= 0x09f8) return ks_to_ucs_9df_9f8[keysym - 0x09df];
-    if (keysym >= 0x0aa1 && keysym <= 0x0afe) return ks_to_ucs_aa1_afe[keysym - 0x0aa1];
-    if (keysym >= 0x0cdf && keysym <= 0x0cfa) return ks_to_ucs_cdf_cfa[keysym - 0x0cdf];
-    if (keysym >= 0x0da1 && keysym <= 0x0df9) return ks_to_ucs_da1_df9[keysym - 0x0da1];
-    if (keysym >= 0x0ea0 && keysym <= 0x0eff) return ks_to_ucs_ea0_eff[keysym - 0x0ea0];
-    if (keysym >= 0x12a1 && keysym <= 0x12fe) return ks_to_ucs_12a1_12fe[keysym - 0x12a1];
-    if (keysym >= 0x13bc && keysym <= 0x13be) return ks_to_ucs_13bc_13be[keysym - 0x13bc];
-    if (keysym >= 0x14a1 && keysym <= 0x14ff) return ks_to_ucs_14a1_14ff[keysym - 0x14a1];
-    if (keysym >= 0x15d0 && keysym <= 0x15f6) return ks_to_ucs_15d0_15f6[keysym - 0x15d0];
-    if (keysym >= 0x16a0 && keysym <= 0x16f6) return ks_to_ucs_16a0_16f6[keysym - 0x16a0];
-    if (keysym >= 0x1e9f && keysym <= 0x1eff) return ks_to_ucs_1e9f_1eff[keysym - 0x1e9f];
-    if (keysym >= 0x20a0 && keysym <= 0x20ac) return ks_to_ucs_20a0_20ac[keysym - 0x20a0];
+    if (keysym & 0x01000000)
+    {
+        return static_cast<WORD>((keysym & 0x00FFFFFF));
+    }
+    if ((keysym >= 0x0020) && (keysym <= 0x00ff))
+    {
+        return static_cast<WORD>(keysym);
+    }
+    if ((keysym >= 0x01a1) && (keysym <= 0x01ff))
+    {
+        return ks_to_ucs_1a1_1ff[keysym - 0x01a1];
+    }
+    if ((keysym >= 0x02a1) && (keysym <= 0x02fe))
+    {
+        return ks_to_ucs_2a1_2fe[keysym - 0x02a1];
+    }
+    if ((keysym >= 0x03a2) && (keysym <= 0x03fe))
+    {
+        return ks_to_ucs_3a2_3fe[keysym - 0x03a2];
+    }
+    if ((keysym >= 0x04a1) && (keysym <= 0x04df))
+    {
+        return ks_to_ucs_4a1_4df[keysym - 0x04a1];
+    }
+    if ((keysym >= 0x0590) && (keysym <= 0x05fe))
+    {
+        return ks_to_ucs_590_5fe[keysym - 0x0590];
+    }
+    if ((keysym >= 0x0680) && (keysym <= 0x06ff))
+    {
+        return ks_to_ucs_680_6ff[keysym - 0x0680];
+    }
+    if ((keysym >= 0x07a1) && (keysym <= 0x07f9))
+    {
+        return ks_to_ucs_7a1_7f9[keysym - 0x07a1];
+    }
+    if ((keysym >= 0x08a4) && (keysym <= 0x08fe))
+    {
+        return ks_to_ucs_8a4_8fe[keysym - 0x08a4];
+    }
+    if ((keysym >= 0x09df) && (keysym <= 0x09f8))
+    {
+        return ks_to_ucs_9df_9f8[keysym - 0x09df];
+    }
+    if ((keysym >= 0x0aa1) && (keysym <= 0x0afe))
+    {
+        return ks_to_ucs_aa1_afe[keysym - 0x0aa1];
+    }
+    if ((keysym >= 0x0cdf) && (keysym <= 0x0cfa))
+    {
+        return ks_to_ucs_cdf_cfa[keysym - 0x0cdf];
+    }
+    if ((keysym >= 0x0da1) && (keysym <= 0x0df9))
+    {
+        return ks_to_ucs_da1_df9[keysym - 0x0da1];
+    }
+    if ((keysym >= 0x0ea0) && (keysym <= 0x0eff))
+    {
+        return ks_to_ucs_ea0_eff[keysym - 0x0ea0];
+    }
+    if ((keysym >= 0x12a1) && (keysym <= 0x12fe))
+    {
+        return ks_to_ucs_12a1_12fe[keysym - 0x12a1];
+    }
+    if ((keysym >= 0x13bc) && (keysym <= 0x13be))
+    {
+        return ks_to_ucs_13bc_13be[keysym - 0x13bc];
+    }
+    if ((keysym >= 0x14a1) && (keysym <= 0x14ff))
+    {
+        return ks_to_ucs_14a1_14ff[keysym - 0x14a1];
+    }
+    if ((keysym >= 0x15d0) && (keysym <= 0x15f6))
+    {
+        return ks_to_ucs_15d0_15f6[keysym - 0x15d0];
+    }
+    if ((keysym >= 0x16a0) && (keysym <= 0x16f6))
+    {
+        return ks_to_ucs_16a0_16f6[keysym - 0x16a0];
+    }
+    if ((keysym >= 0x1e9f) && (keysym <= 0x1eff))
+    {
+        return ks_to_ucs_1e9f_1eff[keysym - 0x1e9f];
+    }
+    if ((keysym >= 0x20a0) && (keysym <= 0x20ac))
+    {
+        return ks_to_ucs_20a0_20ac[keysym - 0x20a0];
+    }
     return 0;
 }
 
-class Keymapper {
+class Keymapper
+{
 
 public:
-  Keymapper()
-  {
-    for (int i = 0; i < sizeof(keymap) / sizeof(keymap_t); i++) {
-      vkMap[keymap[i].keysym] = keymap[i].vk;
-      extendedMap[keymap[i].keysym] = keymap[i].extended;
-    }
-
-	// Find dead characters for the current keyboard layout
-  // XXX how could we handle the keyboard layout changing?
-  BYTE keystate[256];
-  memset(keystate, 0, 256);
-  for (int j = 0; j < sizeof(latin1DeadChars); j++) {
-    SHORT s = VkKeyScan(latin1DeadChars[j]);
-    if (s != -1) {
-      BYTE vkCode = LOBYTE(s);
-      BYTE modifierState = HIBYTE(s);
-      keystate[VK_SHIFT] = (modifierState & 1) ? 0x80 : 0;
-      keystate[VK_CONTROL] = (modifierState & 2) ? 0x80 : 0;
-      keystate[VK_MENU] = (modifierState & 4) ? 0x80 : 0;
-      rdr::U8 chars[2];
-      int nchars = ToAscii(vkCode, 0, keystate, (WORD*)&chars, 0);
-      if (nchars < 0) {
-        vnclog.Print(LL_INTWARN, "Found dead key 0x%x '%c'",
-                   latin1DeadChars[j], latin1DeadChars[j]);
-        deadChars.push_back(latin1DeadChars[j]);
-        ToAscii(vkCode, 0, keystate, (WORD*)&chars, 0);
-      }
-    }
-  }
-
-  }
-
-
-  
-
-  
-
-
-
-
-  void keyEvent(rdr::U32 keysym, bool down, bool jap, bool unicode)
-  {
-	  vnclog.Print(LL_INTWARN, " keysym 0x%x",keysym);
-	if (keysym>=XK_dead_grave && keysym <=XK_dead_belowdot)// && down)
-	{
-		keysymDead=keysym;
-		vnclog.Print(LL_INTWARN, " ************** DEAD KEY");
-		//we have a dead key
-		//Record dead key
-		return;
-	}
-
-    if ((keysym >= 32 && keysym <= 126) ||
-        (keysym >= 160 && keysym <= 255))
+    explicit Keymapper()
     {
-	if (keysymDead!=0 && down)
-	{
-		vnclog.Print(LL_INTWARN, " Compose dead 0x%x 0x%x",keysymDead,keysym);
-		switch (keysymDead)
-		{
-		case XK_dead_grave:
-			switch(keysym)
-			{
-			case XK_A: keysym=XK_Agrave;break;
-			case XK_E: keysym=XK_Egrave;break;
-			case XK_I: keysym=XK_Igrave;break;
-			case XK_O: keysym=XK_Ograve;break;
-			case XK_U: keysym=XK_Ugrave;break;
-			case XK_a: keysym=XK_agrave;break;
-			case XK_e: keysym=XK_egrave;break;
-			case XK_i: keysym=XK_igrave;break;
-			case XK_o: keysym=XK_ograve;break;
-			case XK_u: keysym=XK_ugrave;break;
-			}
-		case XK_dead_acute:
-			switch(keysym)
-			{
-			case XK_A: keysym=XK_Aacute;break;
-			case XK_E: keysym=XK_Eacute;break;
-			case XK_I: keysym=XK_Iacute;break;
-			case XK_O: keysym=XK_Oacute;break;
-			case XK_U: keysym=XK_Uacute;break;
-			case XK_a: keysym=XK_aacute;break;
-			case XK_e: keysym=XK_eacute;break;
-			case XK_i: keysym=XK_iacute;break;
-			case XK_o: keysym=XK_oacute;break;
-			case XK_u: keysym=XK_uacute;break;
-			case XK_y: keysym=XK_yacute;break;
-			case XK_Y: keysym=XK_Yacute;break;
+        for (int i{ 0 }; i < sizeof(keymap) / sizeof(keymap_t); ++i)
+        {
+            vkMap[keymap[i].keysym] = keymap[i].vk;
+            extendedMap[keymap[i].keysym] = keymap[i].extended;
+        }
 
-			}
-		case XK_dead_circumflex:
-			switch(keysym)
-			{
-			case XK_A: keysym=XK_Acircumflex;break;
-			case XK_E: keysym=XK_Ecircumflex;break;
-			case XK_I: keysym=XK_Icircumflex;break;
-			case XK_O: keysym=XK_Ocircumflex;break;
-			case XK_U: keysym=XK_Ucircumflex;break;
-			case XK_a: keysym=XK_acircumflex;break;
-			case XK_e: keysym=XK_ecircumflex;break;
-			case XK_i: keysym=XK_icircumflex;break;
-			case XK_o: keysym=XK_ocircumflex;break;
-			case XK_u: keysym=XK_ucircumflex;break;
-			}
-		case XK_dead_tilde:
-			switch(keysym)
-			{
-			case XK_A : keysym=XK_Ntilde;break;
-			case XK_O : keysym=XK_Otilde;break;
-			case XK_a : keysym=XK_atilde;break;
-			case XK_n : keysym=XK_ntilde;break;
-			case XK_o : keysym=XK_otilde;break;
-			}
+        // Find dead characters for the current keyboard layout
+        // XXX how could we handle the keyboard layout changing?
+        std::array<BYTE, 256U> keystate;
+        std::memset(keystate.data(), 0, 256);
+        for (int j{ 0 }; j < sizeof(latin1DeadChars); ++j)
+        {
+            SHORT s = ::VkKeyScan(latin1DeadChars[j]);
+            if (s != -1)
+            {
+                BYTE vkCode = LOBYTE(s);
+                const BYTE modifierState = HIBYTE(s);
+                keystate[VK_SHIFT] = (modifierState & 1) ? 0x80 : 0;
+                keystate[VK_CONTROL] = (modifierState & 2) ? 0x80 : 0;
+                keystate[VK_MENU] = (modifierState & 4) ? 0x80 : 0;
+                std::array<rdr::U8, 2U> chars;
+                int nchars = ::ToAscii(vkCode, 0, keystate.data(), (WORD*)chars.data(), 0);
+                if (nchars < 0)
+                {
+                    vnclog.Print(LL_INTWARN, "Found dead key 0x%x '%c'", latin1DeadChars[j], latin1DeadChars[j]);
+                    deadChars.push_back(latin1DeadChars[j]);
+                    ::ToAscii(vkCode, 0, keystate.data(), (WORD*)chars.data(), 0);
+                }
+            }
+        }
+    }
 
-		case XK_dead_diaeresis:
-			switch(keysym)
-			{
-			case XK_A: keysym=XK_Adiaeresis;break;
-			case XK_E: keysym=XK_Ediaeresis;break;
-			case XK_I: keysym=XK_Idiaeresis;break;
-			case XK_O: keysym=XK_Odiaeresis;break;
-			case XK_U: keysym=XK_Udiaeresis;break;
-			case XK_a: keysym=XK_adiaeresis;break;
-			case XK_e: keysym=XK_ediaeresis;break;
-			case XK_i: keysym=XK_idiaeresis;break;
-			case XK_o: keysym=XK_odiaeresis;break;
-			case XK_u: keysym=XK_udiaeresis;break;
-			case XK_y: keysym=XK_ydiaeresis;break;
 
-			}
-		case XK_dead_cedilla:
-			switch(keysym)
-			{
-			case XK_C: keysym=XK_Ccedilla;break;
-			case XK_c: keysym=XK_ccedilla;break;
-			}
-		}
-		keysymDead=0;
-		vnclog.Print(LL_INTWARN, " Composed 0x%x",keysym);
 
-	}
-      // ordinary Latin-1 character
 
-      SHORT s = VkKeyScan(keysym);
 
-      //	[v1.0.2-jp1 fix] yak!'s patch
-	  // This break Other keyboards, we need an easy way of fixing this
-	  if (jap)
-	  {
-		  if (keysym==XK_kana_WO) {
-			s = 0x0130;
-		  } else if (keysym==XK_backslash) {
-			s = 0x00e2;
-		  } else if (keysym==XK_yen) {
-			s = 0x00dc;
-		  }
-	  }
 
-	  vnclog.Print(LL_INTWARN, " SHORT s %i",s);
 
-	 if (s == -1)
-	 {
-		 
-      if (down) {
-		  vnclog.Print(LL_INTWARN, "down");
-        // not a single keypress - try synthesizing dead chars.
-			{
-			  vnclog.Print(LL_INTWARN, " Found key");
-			  //Lookup ascii representation
-			  int ascii=0;
+
+
+    void keyEvent(rdr::U32 keysym, bool down, const bool jap, const bool unicode)
+    {
+        vnclog.Print(LL_INTWARN, " keysym 0x%x", keysym);
+        if ((keysym >= XK_dead_grave) && (keysym <= XK_dead_belowdot)) // && down)
+        {
+            keysymDead = keysym;
+            vnclog.Print(LL_INTWARN, " ************** DEAD KEY");
+            //we have a dead key
+            //Record dead key
+            return;
+        }
+
+        if (((keysym >= 32) && (keysym <= 126)) || ((keysym >= 160) && (keysym <= 255)))
+        {
+            if ((keysymDead != 0) && down)
+            {
+                vnclog.Print(LL_INTWARN, " Compose dead 0x%x 0x%x", keysymDead, keysym);
+                switch (keysymDead)
+                {
+                case XK_dead_grave:
+                    switch (keysym)
+                    {
+                    case XK_A:
+                        keysym = XK_Agrave;
+                        break;
+                    case XK_E:
+                        keysym = XK_Egrave;
+                        break;
+                    case XK_I:
+                        keysym = XK_Igrave;
+                        break;
+                    case XK_O:
+                        keysym = XK_Ograve;
+                        break;
+                    case XK_U:
+                        keysym = XK_Ugrave;
+                        break;
+                    case XK_a:
+                        keysym = XK_agrave;
+                        break;
+                    case XK_e:
+                        keysym = XK_egrave;
+                        break;
+                    case XK_i:
+                        keysym = XK_igrave;
+                        break;
+                    case XK_o:
+                        keysym = XK_ograve;
+                        break;
+                    case XK_u:
+                        keysym = XK_ugrave;
+                        break;
+                    }
+                case XK_dead_acute:
+                    switch (keysym)
+                    {
+                    case XK_A:
+                        keysym = XK_Aacute;
+                        break;
+                    case XK_E:
+                        keysym = XK_Eacute;
+                        break;
+                    case XK_I:
+                        keysym = XK_Iacute;
+                        break;
+                    case XK_O:
+                        keysym = XK_Oacute;
+                        break;
+                    case XK_U:
+                        keysym = XK_Uacute;
+                        break;
+                    case XK_a:
+                        keysym = XK_aacute;
+                        break;
+                    case XK_e:
+                        keysym = XK_eacute;
+                        break;
+                    case XK_i:
+                        keysym = XK_iacute;
+                        break;
+                    case XK_o:
+                        keysym = XK_oacute;
+                        break;
+                    case XK_u:
+                        keysym = XK_uacute;
+                        break;
+                    case XK_y:
+                        keysym = XK_yacute;
+                        break;
+                    case XK_Y:
+                        keysym = XK_Yacute;
+                        break;
+                    }
+                case XK_dead_circumflex:
+                    switch (keysym)
+                    {
+                    case XK_A:
+                        keysym = XK_Acircumflex;
+                        break;
+                    case XK_E:
+                        keysym = XK_Ecircumflex;
+                        break;
+                    case XK_I:
+                        keysym = XK_Icircumflex;
+                        break;
+                    case XK_O:
+                        keysym = XK_Ocircumflex;
+                        break;
+                    case XK_U:
+                        keysym = XK_Ucircumflex;
+                        break;
+                    case XK_a:
+                        keysym = XK_acircumflex;
+                        break;
+                    case XK_e:
+                        keysym = XK_ecircumflex;
+                        break;
+                    case XK_i:
+                        keysym = XK_icircumflex;
+                        break;
+                    case XK_o:
+                        keysym = XK_ocircumflex;
+                        break;
+                    case XK_u:
+                        keysym = XK_ucircumflex;
+                        break;
+                    }
+                case XK_dead_tilde:
+                    switch (keysym)
+                    {
+                    case XK_A:
+                        keysym = XK_Ntilde;
+                        break;
+                    case XK_O:
+                        keysym = XK_Otilde;
+                        break;
+                    case XK_a:
+                        keysym = XK_atilde;
+                        break;
+                    case XK_n:
+                        keysym = XK_ntilde;
+                        break;
+                    case XK_o:
+                        keysym = XK_otilde;
+                        break;
+                    }
+
+                case XK_dead_diaeresis:
+                    switch (keysym)
+                    {
+                    case XK_A:
+                        keysym = XK_Adiaeresis;
+                        break;
+                    case XK_E:
+                        keysym = XK_Ediaeresis;
+                        break;
+                    case XK_I:
+                        keysym = XK_Idiaeresis;
+                        break;
+                    case XK_O:
+                        keysym = XK_Odiaeresis;
+                        break;
+                    case XK_U:
+                        keysym = XK_Udiaeresis;
+                        break;
+                    case XK_a:
+                        keysym = XK_adiaeresis;
+                        break;
+                    case XK_e:
+                        keysym = XK_ediaeresis;
+                        break;
+                    case XK_i:
+                        keysym = XK_idiaeresis;
+                        break;
+                    case XK_o:
+                        keysym = XK_odiaeresis;
+                        break;
+                    case XK_u:
+                        keysym = XK_udiaeresis;
+                        break;
+                    case XK_y:
+                        keysym = XK_ydiaeresis;
+                        break;
+                    }
+                case XK_dead_cedilla:
+                    switch (keysym)
+                    {
+                    case XK_C:
+                        keysym = XK_Ccedilla;
+                        break;
+                    case XK_c:
+                        keysym = XK_ccedilla;
+                        break;
+                    }
+                }
+                keysymDead = 0;
+                vnclog.Print(LL_INTWARN, " Composed 0x%x", keysym);
+            }
+            // ordinary Latin-1 character
+
+            SHORT s = ::VkKeyScan(keysym);
+
+            //	[v1.0.2-jp1 fix] yak!'s patch
+            // This break Other keyboards, we need an easy way of fixing this
+            if (jap)
+            {
+                if (keysym == XK_kana_WO)
+                {
+                    s = 0x0130;
+                }
+                else if (keysym == XK_backslash)
+                {
+                    s = 0x00e2;
+                }
+                else if (keysym == XK_yen)
+                {
+                    s = 0x00dc;
+                }
+            }
+
+            vnclog.Print(LL_INTWARN, " SHORT s %i", s);
+
+            if (s == -1)
+            {
+
+                if (down)
+                {
+                    vnclog.Print(LL_INTWARN, "down");
+                    // not a single keypress - try synthesizing dead chars.
+                    {
+                        vnclog.Print(LL_INTWARN, " Found key");
+                        //Lookup ascii representation
+                        int ascii{ 0 };
 #if 0
               // 11 Dec 2008 jdp disabled since the viewer is sending unicode now
-			  for (ascii=0;ascii<256;ascii++)
+			  for (ascii=0;ascii<256;++ascii)
 			  {
-				  if (keysym==ascii_to_x[ascii]) break;
+				  if (keysym==ascii_to_x[ascii])
+				  {
+				      break;
+				  }
 			  }
 #endif
-              ascii = keysym;
-			  if (ascii <= 255)
-			  {
+                        ascii = keysym;
+                        if (ascii <= 255)
+                        {
 
-			  rdr::U8 a0=ascii/100;
-			  ascii=ascii%100;
-			  rdr::U8 a1=ascii/10;
-			  ascii=ascii%10;
-			  rdr::U8 a2=ascii;
+                            rdr::U8 a0 = ascii / 100;
+                            ascii = ascii % 100;
+                            rdr::U8 a1 = ascii / 10;
+                            ascii = ascii % 10;
+                            rdr::U8 a2 = ascii;
 
-              KeyStateModifier shift(VK_SHIFT);
-              KeyStateModifier lshift(VK_LSHIFT);
-              KeyStateModifier rshift(VK_RSHIFT);
+                            KeyStateModifier shift(VK_SHIFT);
+                            KeyStateModifier lshift(VK_LSHIFT);
+                            KeyStateModifier rshift(VK_RSHIFT);
 
-              lshift.release();
-              rshift.release();			  
+                            lshift.release();
+                            rshift.release();
 
-              vnclog.Print(LL_INTWARN, " Simulating ALT+%d%d%d\n", a0, a1 ,a2);
+                            vnclog.Print(LL_INTWARN, " Simulating ALT+%d%d%d\n", a0, a1, a2);
 
-			  keybd_uni_event(VK_MENU,MapVirtualKey( VK_MENU, 0 ), 0 ,0);
-              /**
-                Pressing the Alt+NNN combinations without leading zero (for example, Alt+20, Alt+130, Alt+221) 
-                will insert characters from the Extended ASCII (or MS DOS ASCII, or OEM) table. The character 
-                glyphs contained by this table depend on the language of Windows. See the table below for the 
-                list of characters that can be inserted through the Alt+NNN combinations (without leading zero)
-                in English Windows.
+                            keybd_uni_event(VK_MENU, ::MapVirtualKey(VK_MENU, 0), 0, 0);
+                            /**
+                              Pressing the Alt+NNN combinations without leading zero (for example, Alt+20, Alt+130, Alt+221)
+                              will insert characters from the Extended ASCII (or MS DOS ASCII, or OEM) table. The character
+                              glyphs contained by this table depend on the language of Windows. See the table below for the
+                              list of characters that can be inserted through the Alt+NNN combinations (without leading zero)
+                              in English Windows.
 
-                Pressing the Alt+0NNN combinations will insert the ANSI characters corresponding to the activate 
-                keyboard layout. Please see Windows Character Map utility (charmap.exe) for the possible Alt+0NNN
-                combinations.
+                              Pressing the Alt+0NNN combinations will insert the ANSI characters corresponding to the activate
+                              keyboard layout. Please see Windows Character Map utility (charmap.exe) for the possible Alt+0NNN
+                              combinations.
 
-                Finally, the Alt+00NNN combinations (two leading zeros) will insert Unicode characters. The Unicode 
-                codes of characters are displayed in Charmap.
+                              Finally, the Alt+00NNN combinations (two leading zeros) will insert Unicode characters. The Unicode
+                              codes of characters are displayed in Charmap.
 
-              **/
-              // jdp 11 December 2008 - Need the leading 0! 
-			  keybd_uni_event(VK_NUMPAD0,    MapVirtualKey(VK_NUMPAD0,    0), 0, 0);
-			  keybd_uni_event(VK_NUMPAD0,    MapVirtualKey(VK_NUMPAD0,    0),KEYEVENTF_KEYUP,0);
-			  keybd_uni_event(VK_NUMPAD0+a0, MapVirtualKey(VK_NUMPAD0+a0, 0), 0, 0);
-			  keybd_uni_event(VK_NUMPAD0+a0, MapVirtualKey(VK_NUMPAD0+a0, 0),KEYEVENTF_KEYUP,0);
-			  keybd_uni_event(VK_NUMPAD0+a1, MapVirtualKey(VK_NUMPAD0+a1, 0),0,0);
-			  keybd_uni_event(VK_NUMPAD0+a1, MapVirtualKey(VK_NUMPAD0+a1, 0),KEYEVENTF_KEYUP, 0);
-			  keybd_uni_event(VK_NUMPAD0+a2, MapVirtualKey(VK_NUMPAD0+a2, 0) ,0, 0);
-			  keybd_uni_event(VK_NUMPAD0+a2, MapVirtualKey(VK_NUMPAD0+a2, 0),KEYEVENTF_KEYUP, 0);
-			  keybd_uni_event(VK_MENU, MapVirtualKey( VK_MENU, 0 ),KEYEVENTF_KEYUP, 0);
-			  return;
-			  }
+                            **/
+                            // jdp 11 December 2008 - Need the leading 0!
+                            keybd_uni_event(VK_NUMPAD0, ::MapVirtualKey(VK_NUMPAD0, 0), 0, 0);
+                            keybd_uni_event(VK_NUMPAD0, ::MapVirtualKey(VK_NUMPAD0, 0), KEYEVENTF_KEYUP, 0);
+                            keybd_uni_event(VK_NUMPAD0 + a0, ::MapVirtualKey(VK_NUMPAD0 + a0, 0), 0, 0);
+                            keybd_uni_event(VK_NUMPAD0 + a0, ::MapVirtualKey(VK_NUMPAD0 + a0, 0), KEYEVENTF_KEYUP, 0);
+                            keybd_uni_event(VK_NUMPAD0 + a1, ::MapVirtualKey(VK_NUMPAD0 + a1, 0), 0, 0);
+                            keybd_uni_event(VK_NUMPAD0 + a1, ::MapVirtualKey(VK_NUMPAD0 + a1, 0), KEYEVENTF_KEYUP, 0);
+                            keybd_uni_event(VK_NUMPAD0 + a2, ::MapVirtualKey(VK_NUMPAD0 + a2, 0), 0, 0);
+                            keybd_uni_event(VK_NUMPAD0 + a2, ::MapVirtualKey(VK_NUMPAD0 + a2, 0), KEYEVENTF_KEYUP, 0);
+                            keybd_uni_event(VK_MENU, ::MapVirtualKey(VK_MENU, 0), KEYEVENTF_KEYUP, 0);
+                            return;
+                        }
+                    }
+                    vnclog.Print(LL_INTWARN, "ignoring unrecognised Latin-1 keysym 0x%x", keysym);
+                }
+                return;
+            }
+
+            BYTE vkCode = LOBYTE(s);
+
+            // 18 March 2008 jdp
+            // Correct the keymask shift state to cope with the capslock state
+            BOOL capslockOn = (::GetKeyState(VK_CAPITAL) & 1) != 0;
+
+            BYTE modifierState = HIBYTE(s);
+            modifierState = capslockOn ? modifierState ^ 1 : modifierState;
+            KeyStateModifier ctrl(VK_CONTROL);
+            KeyStateModifier alt(VK_MENU);
+            KeyStateModifier shift(VK_SHIFT);
+            KeyStateModifier lshift(VK_LSHIFT);
+            KeyStateModifier rshift(VK_RSHIFT);
+
+            if (down)
+            {
+                if (modifierState & 2)
+                {
+                    ctrl.press();
+                }
+                if (modifierState & 4)
+                {
+                    alt.press();
+                }
+                if (modifierState & 1)
+                {
+                    shift.press();
+                }
+                else
+                {
+                    // [v1.0.2-jp1 fix] Even if "SHIFT + SPACE" are pressed, "SHIFT" is valid
+                    if (vkCode == 0x20) {}
+                    else
+                    {
+                        lshift.release();
+                        rshift.release();
+                    }
+                }
+            }
+
+            vnclog.Print(LL_INTINFO, "latin-1 key: keysym %d(0x%x) vkCode 0x%x down %d capslockOn %d\n", keysym, keysym, vkCode,
+                         down, capslockOn);
+
+            doKeyboardEvent(vkCode, down ? 0 : KEYEVENTF_KEYUP);
         }
-        vnclog.Print(LL_INTWARN, "ignoring unrecognised Latin-1 keysym 0x%x",keysym);
-      }
-      return;
+        else
+        {
+
+            // see if it's a recognised keyboard key, otherwise ignore it
+
+            if (vkMap.find(keysym) == vkMap.end())
+            {
+                if (unicode)
+                {
+                    if (keysym == 65509)
+                    {
+                        return;
+                    }
+
+                    WORD unicodeChar = keysymToUnicode(keysym);
+                    vnclog.Print(LL_INTWARN, " Unicode path: keysym 0x%x -> unicodeChar 0x%x (%d)\n", keysym, unicodeChar,
+                                 unicodeChar);
+                    if (unicodeChar == 0)
+                    {
+                        vnclog.Print(LL_INTWARN, "Unhandled keysym 0x%x\n", keysym);
+                        return;
+                    }
+
+                    std::array<INPUT, 1U> inputs;
+                    if (down)
+                    {
+                        inputs[0U].type = INPUT_KEYBOARD;
+                        inputs[0U].ki.wVk = 0;
+                        inputs[0U].ki.wScan = unicodeChar;
+                        inputs[0U].ki.time = 0;
+                        inputs[0U].ki.dwExtraInfo = 0;
+                        inputs[0U].ki.dwFlags = KEYEVENTF_UNICODE;
+                        ::SendInput(1, inputs.data(), sizeof(INPUT));
+                    }
+                    else
+                    {
+                        inputs[0U].type = INPUT_KEYBOARD;
+                        inputs[0U].ki.wVk = 0;
+                        inputs[0U].ki.wScan = unicodeChar;
+                        inputs[0U].ki.time = 0;
+                        inputs[0U].ki.dwExtraInfo = 0;
+                        inputs[0U].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+                        ::SendInput(1, inputs.data(), sizeof(INPUT));
+                    }
+                }
+                return;
+            }
+            BYTE vkCode = vkMap[keysym];
+            DWORD flags{ 0U };
+            if (extendedMap[keysym])
+            {
+                flags |= KEYEVENTF_EXTENDEDKEY;
+            }
+            if (!down)
+            {
+                flags |= KEYEVENTF_KEYUP;
+            }
+
+            //      vnclog.Print(LL_INTINFO,
+            //                "keyboard key: keysym %d(0x%x) vkCode 0x%x ext %d down %d\n",
+            //               keysym, keysym, vkCode, extendedMap[keysym], down);
+
+            if (down && (vkCode == VK_DELETE) && ((::GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0) &&
+                ((::GetAsyncKeyState(VK_MENU) & 0x8000) != 0))
+            {
+                vnclog.Print(LL_INTINFO, "CAD\n");
+                // If running under Windows Vista and started from Session0 in Application mode
+                if (settings->RunningFromExternalService())
+                {
+                    vnclog.Print(LL_INTINFO, "Windows Vista and runnning as system -> CAD\n");
+
+                    // Try to run the special Windows Vista cad.exe file...
+                    HANDLE ThreadHandle2;
+                    DWORD dwTId;
+                    ThreadHandle2 = ::CreateThread(nullptr, 0, vncCad::Cadthread, nullptr, 0, &dwTId);
+                    ::CloseHandle(ThreadHandle2);
+                }
+                else
+                {
+                    vnclog.Print(LL_INTINFO, "Windows Vista and runnning as user -> Taskmgr\n");
+                    ::WinExec("taskmgr.exe", SW_SHOWNORMAL);
+                }
+
+                return;
+            }
+            else if (down && (vkCode == VK_HANGEUL))
+            {
+                HWND hWnd = ::GetForegroundWindow();
+
+                HWND hIME_Main = ::ImmGetDefaultIMEWnd(hWnd);
+                LRESULT MainStatus = ::SendMessage(hIME_Main, WM_IME_CONTROL, 5, 0);
+
+                HWND hChildWnd = ::GetWindow(hWnd, GW_CHILD);
+                long childCount{ 0L };
+
+                while (::IsWindow(hChildWnd))
+                {
+                    HWND hIME = ::ImmGetDefaultIMEWnd(hChildWnd);
+                    if (MainStatus == 1)
+                    {
+                        ::SendMessage(hIME, WM_IME_CONTROL, 2, 0);
+                        ::SendMessage(hIME, WM_IME_CONTROL, 1, 0);
+                        ::SendMessage(hIME, WM_IME_CONTROL, 3, 0);
+                        ::SendMessage(hIME, WM_IME_CONTROL, 4, 0);
+                        ::SendMessage(hIME, WM_IME_CONTROL, 6, 0);
+                    }
+                    else if (MainStatus == 0)
+                    {
+                        ::SendMessage(hIME, WM_IME_CONTROL, 2, 1);
+                        ::SendMessage(hIME, WM_IME_CONTROL, 1, 1);
+                        ::SendMessage(hIME, WM_IME_CONTROL, 3, 1);
+                        ::SendMessage(hIME, WM_IME_CONTROL, 4, 1);
+                        ::SendMessage(hIME, WM_IME_CONTROL, 6, 1);
+                    }
+
+                    ++childCount;
+                    hChildWnd = ::GetWindow(hChildWnd, GW_HWNDNEXT);
+                }
+                return;
+            }
+            doKeyboardEvent(vkCode, flags);
+        }
     }
-
-      BYTE vkCode = LOBYTE(s);
-
-      // 18 March 2008 jdp
-      // Correct the keymask shift state to cope with the capslock state
-      BOOL capslockOn = (GetKeyState(VK_CAPITAL) & 1) != 0;
-
-      BYTE modifierState = HIBYTE(s);
-      modifierState = capslockOn ? modifierState ^ 1 : modifierState;
-      KeyStateModifier ctrl(VK_CONTROL);
-      KeyStateModifier alt(VK_MENU);
-      KeyStateModifier shift(VK_SHIFT);
-      KeyStateModifier lshift(VK_LSHIFT);
-      KeyStateModifier rshift(VK_RSHIFT);
-
-	  if (down) {
-		  if (modifierState & 2) ctrl.press();
-		  if (modifierState & 4) alt.press();
-		  if (modifierState & 1) {
-			  shift.press();
-		  }
-		  else {
-			  // [v1.0.2-jp1 fix] Even if "SHIFT + SPACE" are pressed, "SHIFT" is valid
-			  if (vkCode == 0x20) {
-			  }
-			  else {
-				  lshift.release();
-				  rshift.release();
-			  }
-		  }
-	  } 
-
-      vnclog.Print(LL_INTINFO,
-                   "latin-1 key: keysym %d(0x%x) vkCode 0x%x down %d capslockOn %d\n",
-                   keysym, keysym, vkCode, down, capslockOn);
-
-      doKeyboardEvent(vkCode, down ? 0 : KEYEVENTF_KEYUP);
-
-    } else {
-
-      // see if it's a recognised keyboard key, otherwise ignore it
-
-    if (vkMap.find(keysym) == vkMap.end()) {
-		if (unicode) {
-			if (keysym == 65509)
-				return;
-			
-			WORD unicodeChar = keysymToUnicode(keysym);
-			vnclog.Print(LL_INTWARN, " Unicode path: keysym 0x%x -> unicodeChar 0x%x (%d)\n", keysym, unicodeChar, unicodeChar);
-			if (unicodeChar == 0) {
-				vnclog.Print(LL_INTWARN, "Unhandled keysym 0x%x\n", keysym);
-				return;
-			}
-			
-			INPUT inputs[1];
-			if (down) {
-				inputs[0].type= INPUT_KEYBOARD;
-				inputs[0].ki.wVk = 0;
-				inputs[0].ki.wScan = unicodeChar;
-				inputs[0].ki.time = 0;
-				inputs[0].ki.dwExtraInfo = NULL;
-				inputs[0].ki.dwFlags = KEYEVENTF_UNICODE;
-				SendInput(1, inputs, sizeof(INPUT));
-			} else {
-				inputs[0].type= INPUT_KEYBOARD;
-				inputs[0].ki.wVk = 0;
-				inputs[0].ki.wScan = unicodeChar;
-				inputs[0].ki.time = 0;
-				inputs[0].ki.dwExtraInfo = NULL;
-				inputs[0].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
-				SendInput(1, inputs, sizeof(INPUT));
-			}
-		}
-        return;
-      }
-      BYTE vkCode = vkMap[keysym];
-      DWORD flags = 0;
-      if (extendedMap[keysym]) flags |= KEYEVENTF_EXTENDEDKEY;
-      if (!down) flags |= KEYEVENTF_KEYUP;
-
-//      vnclog.Print(LL_INTINFO,
-  //                "keyboard key: keysym %d(0x%x) vkCode 0x%x ext %d down %d\n",
-    //               keysym, keysym, vkCode, extendedMap[keysym], down);
-
-      if (down && (vkCode == VK_DELETE) &&
-          ((GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0) &&
-          ((GetAsyncKeyState(VK_MENU) & 0x8000) != 0))
-      {
-		vnclog.Print(LL_INTINFO,
-                 "CAD\n");
-		// If running under Windows Vista and started from Session0 in Application mode
-		if (settings->RunningFromExternalService())
-		{
-			      vnclog.Print(LL_INTINFO,
-                 "Windows Vista and runnning as system -> CAD\n");
-
-				// Try to run the special Windows Vista cad.exe file...
-				HANDLE ThreadHandle2;
-				DWORD dwTId;
-				ThreadHandle2 = CreateThread(NULL, 0, vncCad::Cadthread, NULL, 0, &dwTId);
-				CloseHandle(ThreadHandle2);
-		}
-		else
-		{
-			vnclog.Print(LL_INTINFO,
-                 "Windows Vista and runnning as user -> Taskmgr\n");
-			WinExec("taskmgr.exe", SW_SHOWNORMAL);
-		}		
-
-        return;
-      }
-	  else if (down && (vkCode == VK_HANGEUL))
-	  {
-		  HWND hWnd = GetForegroundWindow();
-		  
-		  HWND hIME_Main = ImmGetDefaultIMEWnd(hWnd);
-		  LRESULT MainStatus = ::SendMessage(hIME_Main, WM_IME_CONTROL, 5, 0);
-		  
-		  HWND hChildWnd = GetWindow(hWnd, GW_CHILD);
-		  long childCount = 0L;
-
-		  while (IsWindow(hChildWnd))
-		  {
-			  HWND hIME = ImmGetDefaultIMEWnd(hChildWnd);
-			  if (MainStatus == 1)
-			  {
-				  ::SendMessage(hIME, WM_IME_CONTROL, 2, 0);
-				  ::SendMessage(hIME, WM_IME_CONTROL, 1, 0);
-				  ::SendMessage(hIME, WM_IME_CONTROL, 3, 0);
-				  ::SendMessage(hIME, WM_IME_CONTROL, 4, 0);
-				  ::SendMessage(hIME, WM_IME_CONTROL, 6, 0);
-			  }
-			  else if (MainStatus == 0)
-			  {
-				  ::SendMessage(hIME, WM_IME_CONTROL, 2, 1);
-				  ::SendMessage(hIME, WM_IME_CONTROL, 1, 1);
-				  ::SendMessage(hIME, WM_IME_CONTROL, 3, 1);
-				  ::SendMessage(hIME, WM_IME_CONTROL, 4, 1);
-				  ::SendMessage(hIME, WM_IME_CONTROL, 6, 1);
-			  }
-
-			  childCount++;
-			  hChildWnd = GetWindow(hChildWnd, GW_HWNDNEXT);
-		  }
-		  return;
-	  }
-      doKeyboardEvent(vkCode, flags);
-    }
-  }
 
 private:
-  std::map<rdr::U32,rdr::U8> vkMap;
-  std::map<rdr::U32,bool> extendedMap;
+    std::map<rdr::U32, rdr::U8> vkMap;
+    std::map<rdr::U32, bool> extendedMap;
 } key_mapper;
 
-void vncKeymap::keyEvent(CARD32 keysym, bool down,bool jap, bool unicode)
+void vncKeymap::keyEvent(const CARD32 keysym, const bool down, const bool jap, const bool unicode)
+{ key_mapper.keyEvent(keysym, down, jap, unicode); }
+
+
+
+void SetShiftState(const BYTE key, BOOL down)
 {
-  key_mapper.keyEvent(keysym, down,jap, unicode);
+    BOOL keystate = (::GetAsyncKeyState(key) & 0x8000) != 0;
+
+    // This routine sets the specified key to the desired value (up or down)
+    if ((keystate && down) || ((!keystate) && (!down)))
+    {
+        return;
+    }
+
+    vnclog.Print(LL_INTINFO, VNCLOG("setshiftstate %d - (%s->%s)\n"), key, keystate ? "down" : "up", down ? "down" : "up");
+
+    // Now send a key event to set the key to the new value
+    doKeyboardEvent(key, down ? 0 : KEYEVENTF_KEYUP);
+    keystate = (::GetAsyncKeyState(key) & 0x8000) != 0;
+
+    vnclog.Print(LL_INTINFO, VNCLOG("new state %d (%s)\n"), key, keystate ? "down" : "up");
 }
 
-
-
-void
-SetShiftState(BYTE key, BOOL down)
+void vncKeymap::ClearShiftKeys()
 {
-	BOOL keystate = (GetAsyncKeyState(key) & 0x8000) != 0;
-
-	// This routine sets the specified key to the desired value (up or down)
-	if ((keystate && down) || ((!keystate) && (!down)))
-		return;
-
-	vnclog.Print(LL_INTINFO,
-		VNCLOG("setshiftstate %d - (%s->%s)\n"),
-		key, keystate ? "down" : "up",
-		down ? "down" : "up");
-
-	// Now send a key event to set the key to the new value
-	doKeyboardEvent(key, down ? 0 : KEYEVENTF_KEYUP);
-	keystate = (GetAsyncKeyState(key) & 0x8000) != 0;
-
-	vnclog.Print(LL_INTINFO,
-		VNCLOG("new state %d (%s)\n"),
-		key, keystate ? "down" : "up");
-}
-
-void
-vncKeymap::ClearShiftKeys()
-{
-	// On NT, clear both sets of keys
-	// LEFT
-	SetShiftState(VK_LSHIFT, FALSE);
-	SetShiftState(VK_LCONTROL, FALSE);
-	SetShiftState(VK_LMENU, FALSE);
-	// RIGHT
-	SetShiftState(VK_RSHIFT, FALSE);
-	SetShiftState(VK_RCONTROL, FALSE);
-	SetShiftState(VK_RMENU, FALSE);
-
+    // On NT, clear both sets of keys
+    // LEFT
+    SetShiftState(VK_LSHIFT, FALSE);
+    SetShiftState(VK_LCONTROL, FALSE);
+    SetShiftState(VK_LMENU, FALSE);
+    // RIGHT
+    SetShiftState(VK_RSHIFT, FALSE);
+    SetShiftState(VK_RCONTROL, FALSE);
+    SetShiftState(VK_RMENU, FALSE);
 }

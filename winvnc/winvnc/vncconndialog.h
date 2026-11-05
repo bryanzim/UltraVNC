@@ -18,42 +18,36 @@ class vncConnDialog;
 #pragma once
 
 #include "vncserver.h"
-
 // Outgoing connection dialog. This allows people running UltraVNC Servers on
 // Win32 platforms to _push_ their displays out to other people's screens
 // rather than having to _pull_ them across.
 
-class vncConnDialog  
+class vncConnDialog
 {
 public:
+    // Create an outgoing-connection dialog
+    explicit vncConnDialog(vncServer* server);
 
-	// Create an outgoing-connection dialog
-	vncConnDialog(vncServer *server);
+    // Destructor
+    virtual ~vncConnDialog();
 
-	// Destructor
-	virtual ~vncConnDialog();
+    // Once a dialog object is created, either delete it again, or
+    // call DoDialog. DoDialog will run the object and delete it when done
+    //adzm 2009-06-20 - Return the result
+    INT_PTR DoDialog(bool rep = false);
 
-	// Once a dialog object is created, either delete it again, or
-	// call DoDialog. DoDialog will run the object and delete it when done
-	//adzm 2009-06-20 - Return the result
-	INT_PTR DoDialog(bool rep = false);
-
-	// Internal stuffs
+    // Internal stuffs
 private:
+    // Routine to call when a dialog event occurs
+    static BOOL CALLBACK vncConnDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-	// Routine to call when a dialog event occurs
-	static BOOL CALLBACK vncConnDlgProc(HWND hwndDlg,
-										UINT uMsg, 
-										WPARAM wParam,
-										LPARAM lParam);
+    // Pointer back to the server object
+    vncServer* m_server;
 
-	// Pointer back to the server object
-	vncServer *m_server;
-
-	//adzm 2009-06-20
-	HICON m_hicon;
-	HFONT m_hfont;
-	bool m_repeater;
+    //adzm 2009-06-20
+    HICON m_hicon;
+    HFONT m_hfont;
+    bool m_repeater;
 };
 
 #endif

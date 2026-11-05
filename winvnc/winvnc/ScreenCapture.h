@@ -11,8 +11,12 @@
 
 #pragma once
 #include <winsock2.h>
+
 #include <windows.h>
-#include "common/VersionHelpers.h"
+
+#include <common/VersionHelpers.h>
+
+#include <array>
 
 #define MAXCHANGES_BUF 2000
 #define OSWIN10 10
@@ -35,48 +39,47 @@ VERSIONHELPERAPI IsWindows10OrGreater();
 
 typedef struct _CHANGES_RECORD
 {
-	ULONG type;  //screen_to_screen, blit, newcache,oldcache
-	RECT rect;
-	POINT point;
-}CHANGES_RECORD;
-typedef CHANGES_RECORD *PCHANGES_RECORD;
+    ULONG type; //screen_to_screen, blit, newcache,oldcache
+    RECT rect;
+    POINT point;
+} CHANGES_RECORD;
+using PCHANGES_RECORD = CHANGES_RECORD*;
 typedef struct _CHANGES_BUF
 {
-	ULONG counter;
-	CHANGES_RECORD pointrect[MAXCHANGES_BUF];
-}CHANGES_BUF;
-typedef CHANGES_BUF *PCHANGES_BUF;
+    ULONG counter;
+    std::array<CHANGES_RECORD, MAXCHANGES_BUF> pointrect;
+} CHANGES_BUF;
+using PCHANGES_BUF = CHANGES_BUF*;
 
 
 class ScreenCapture
 {
 public:
-	ScreenCapture();
-	virtual ~ScreenCapture() { ; }
-	PCHAR getFramebuffer() { return pFramebuffer; }
-	PCHANGES_BUF getChangeBuffer() { return pChangebuf; }
-	int getPreviousCounter() { return oldAantal; }
-	void setPreviousCounter(int oldAantal) { this->oldAantal = oldAantal; }
-	void setBlocked(bool blocked) { this->blocked = blocked; }
-	bool getBlocked() { return blocked; }
+    explicit ScreenCapture();
+    virtual ~ScreenCapture() { ; }
+    PCHAR getFramebuffer() { return pFramebuffer; }
+    PCHANGES_BUF getChangeBuffer() { return pChangebuf; }
+    int getPreviousCounter() { return oldAantal; }
+    void setPreviousCounter(const int oldAantal) { this->oldAantal = oldAantal; }
+    void setBlocked(const bool blocked) { this->blocked = blocked; }
+    bool getBlocked() { return blocked; }
 
-	virtual void videoDriver_start(int x, int y, int w, int h, bool onlyVirtual, int maxFPS) = 0;
-	virtual void videoDriver_Stop() = 0;
-	virtual bool hardwareCursor() = 0;
-	virtual bool noHardwareCursor() = 0;
-	virtual void Lock() = 0;
-	virtual void Unlock() = 0;
-	virtual HANDLE getHScreenEvent() = 0;
-	virtual HANDLE getHPointerEvent() = 0;
+    virtual void videoDriver_start(int x, int y, int w, int h, bool onlyVirtual, int maxFPS) = 0;
+    virtual void videoDriver_Stop() = 0;
+    virtual bool hardwareCursor() = 0;
+    virtual bool noHardwareCursor() = 0;
+    virtual void Lock() = 0;
+    virtual void Unlock() = 0;
+    virtual HANDLE getHScreenEvent() = 0;
+    virtual HANDLE getHPointerEvent() = 0;
 
 protected:
-	int osVersion();
-	int osVer;
-	PCHAR pSharedMemory;
-	PCHAR pFramebuffer;
-	PCHANGES_BUF pChangebuf;
-	ULONG oldAantal;
-	bool blocked;
-	bool init;	
+    int osVersion();
+    int osVer;
+    PCHAR pSharedMemory;
+    PCHAR pFramebuffer;
+    PCHANGES_BUF pChangebuf;
+    ULONG oldAantal;
+    bool blocked;
+    bool init;
 };
-

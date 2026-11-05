@@ -16,12 +16,12 @@
 class AccelKeys
 {
 public:
-	HWND   m_hWnd;
-	HACCEL m_hAccelTable;
-	AccelKeys();
-	bool TranslateAccelKeys(MSG *pmsg);
-	void SetWindowHandle(HWND hWnd) { m_hWnd = hWnd; }
-	virtual ~AccelKeys();	
+    HWND m_hWnd;
+    HACCEL m_hAccelTable;
+    explicit AccelKeys();
+    bool TranslateAccelKeys(MSG* pmsg);
+    void SetWindowHandle(HWND hWnd) { m_hWnd = hWnd; }
+    virtual ~AccelKeys();
 };
 
-#endif 
+#endif

@@ -7,7 +7,7 @@
 // SPDX-FileCopyrightText: Copyright (C) 2002-2025 UltraVNC Team Members. All Rights Reserved.
 // SPDX-FileCopyrightText: Copyright (C) 1999-2002 Vdacc-VNC & eSVNC Projects. All Rights Reserved.
 //
- 
+
 
 #ifndef VNCVIEWERAPP_H__
 #define VNCVIEWERAPP_H__
@@ -24,28 +24,29 @@ class VNCviewerApp;
 
 class ClientConnection;
 
-class VNCviewerApp {
+class VNCviewerApp
+{
 public:
-	VNCviewerApp(HINSTANCE hInstance, LPTSTR szCmdLine);
+    VNCviewerApp(HINSTANCE hInstance, LPTSTR szCmdLine);
 
-	virtual void NewConnection(bool Is_Listening) = 0;
-	virtual void NewConnection(bool Is_Listening,TCHAR *host, int port) = 0;
-	virtual void NewConnection(bool Is_Listening,SOCKET sock) = 0;
-		
-	~VNCviewerApp();
+    virtual void NewConnection(bool Is_Listening) = 0;
+    virtual void NewConnection(bool Is_Listening, TCHAR* host, int port) = 0;
+    virtual void NewConnection(bool Is_Listening, SOCKET sock) = 0;
 
-	// This should be used by Connections to register and deregister 
-	// themselves. When the last connection is deregistered, the app
-	// will close unless in listening mode.
-	void RegisterConnection(ClientConnection *pConn);
-	void DeregisterConnection(ClientConnection *pConn);
-	
-	VNCOptions m_options;
-	HINSTANCE  m_instance;
+    ~VNCviewerApp();
+
+    // This should be used by Connections to register and deregister
+    // themselves. When the last connection is deregistered, the app
+    // will close unless in listening mode.
+    void RegisterConnection(ClientConnection* pConn);
+    void DeregisterConnection(ClientConnection* pConn);
+
+    VNCOptions m_options;
+    HINSTANCE m_instance;
 
 private:
-	ClientConnection *m_clilist[MAX_CONNECTIONS];
-	omni_mutex m_clilistMutex;
+    ClientConnection* m_clilist[MAX_CONNECTIONS];
+    omni_mutex m_clilistMutex;
 };
 
 #endif

@@ -26,38 +26,40 @@
 #include <stdint.h>
 
 #ifdef _VCPKG
-#include  <lzma.h>
+#include <lzma.h>
+
 #else
 #include "../xz/src/liblzma/api/lzma.h"
+
 #endif
 
-namespace rdr {
+namespace rdr
+{
 
-  class xzInStream : public InStream {
+    class xzInStream : public InStream
+    {
 
-  public:
+    public:
+        explicit xzInStream(int bufSize = 0);
+        virtual ~xzInStream();
 
-    xzInStream(int bufSize=0);
-    virtual ~xzInStream();
+        void setUnderlying(InStream* is, int bytesIn);
+        void reset();
+        int pos();
 
-    void setUnderlying(InStream* is, int bytesIn);
-    void reset();
-    int pos();
+    private:
+        void ensure_stream_codec();
 
-  private:
+        int overrun(int itemSize, int nItems);
+        void decompress();
 
-    void ensure_stream_codec();
-
-    int overrun(int itemSize, int nItems);
-    void decompress();
-
-    InStream* underlying;
-    int bufSize;
-    int offset;
-    lzma_stream* ls;
-    int bytesIn;
-    U8* start;
-  };
+        InStream* underlying;
+        int bufSize;
+        int offset;
+        lzma_stream* ls;
+        int bytesIn;
+        U8* start;
+    };
 
 } // end of namespace rdr
 

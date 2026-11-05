@@ -12,60 +12,62 @@
 
 #include "EnvReg.h"
 
+#include <cstring>
 // Ugly function to pull environment variables out of the registry.
 // SERVICES can't access user or system environment variables directly. (?)
-BOOL GetEnvironmentVariableFromRegistry(LPTSTR lpName, LPTSTR buffer, DWORD nSize)
+
+BOOL GetEnvironmentVariableFromRegistry(const LPTSTR lpName, const LPTSTR buffer, const DWORD nSize)
 {
-	// Specific to %ProgramFiles%
-	TCHAR * PROGRAM_FILES = _T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion");
+    // Specific to %ProgramFiles%
+    TCHAR* PROGRAM_FILES = _T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion");
 
-	// System environment
-	TCHAR * SYSTEM_ENV = _T("SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment");
-	// User environment
-	TCHAR * USER_ENV = _T("Environment");
+    // System environment
+    TCHAR* SYSTEM_ENV = _T("SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment");
+    // User environment
+    TCHAR* USER_ENV = _T("Environment");
 
-	// Registry handler class
-	REGISTRY *regClass;
+    // Registry handler class
+    REGISTRY* regClass;
 
-	buffer[0] = '\0';
+    buffer[0U] = '\0';
 
-	// %ProgramFiles% variable (Special case)
-	if (_tcsicmp(lpName,PROGRAMFILES) == 0)
-	{
+    // %ProgramFiles% variable (Special case)
+    if (::_tcsicmp(lpName, PROGRAMFILES) == 0)
+    {
 
-		regClass = new REGISTRY( HKEY_LOCAL_MACHINE, PROGRAM_FILES, false);
-		regClass->ReadItem(buffer, nSize, PROGRAMFILESDIR, NULL);
-		delete regClass;
+        regClass = new REGISTRY(HKEY_LOCAL_MACHINE, PROGRAM_FILES, false);
+        regClass->ReadItem(buffer, nSize, PROGRAMFILESDIR, nullptr);
+        delete regClass;
 
-		if (strlen(buffer) == 0)
-			return false;
+        if (std::strlen(buffer) == 0)
+        {
+            return false;
+        }
+    }
+    else
+    {
 
-	}
-	else
-	{
+        // Try the USER env first
+        regClass = new REGISTRY(HKEY_CURRENT_USER, USER_ENV, false);
+        regClass->ReadItem(buffer, nSize, lpName, nullptr);
+        delete regClass;
 
-		// Try the USER env first
-		regClass = new REGISTRY( HKEY_CURRENT_USER, USER_ENV, false);
-		regClass->ReadItem(buffer, nSize, lpName, NULL);
-		delete regClass;
+        if (std::strlen(buffer) == 0)
+        {
 
-		if (strlen(buffer)== 0)
-		{
+            // Try the SYSTEM env
+            buffer[0U] = '\0';
 
-			// Try the SYSTEM env
-			buffer[0] = '\0';
+            regClass = new REGISTRY(HKEY_LOCAL_MACHINE, SYSTEM_ENV, false);
+            regClass->ReadItem(buffer, nSize, lpName, nullptr);
+            delete regClass;
 
-			regClass = new REGISTRY( HKEY_LOCAL_MACHINE, SYSTEM_ENV, false);
-			regClass->ReadItem(buffer, nSize, lpName, NULL);
-			delete regClass;
+            if (std::strlen(buffer) == 0)
+            {
+                return false;
+            }
+        }
+    }
 
-			if (strlen(buffer)== 0)
-				return false;
-		}
-
-	}
-
-	return true;
+    return true;
 }
-
-

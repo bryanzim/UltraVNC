@@ -11,7 +11,7 @@
 
 /*
  * mainwindows Qt Headers vncviewerqt.h from vncviewer.h
-*/
+ */
 
 
 #ifndef VNCVIEWERQT_H
@@ -20,8 +20,9 @@
 #include <QMainWindow>
 
 QT_BEGIN_NAMESPACE
-namespace Ui {
-class VNCViewerQt;
+namespace Ui
+{
+    class VNCViewerQt;
 }
 QT_END_NAMESPACE
 
@@ -30,19 +31,19 @@ class VNCViewerQt : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit VNCViewerQt(QWidget *parent = nullptr);
+    explicit VNCViewerQt(QWidget* parent = nullptr);
     ~VNCViewerQt();
 
 private:
-    Ui::VNCViewerQt *ui;
+    Ui::VNCViewerQt* ui;
 };
 #endif // VNCVIEWERQT_H
 
 /*
-*
-* Original code NotQt below
-*
-*/
+ *
+ * Original code NotQt below
+ *
+ */
 // #ifndef VNCVIEWER_H__
 // #define VNCVIEWER_H__
 
@@ -89,4 +90,3 @@ private:
 // // and the selectable aspect ratio dialogs under WinCE (PalmPC vs HPC).
 // #define DIALOG_MAKEINTRESOURCE MAKEINTRESOURCE
 // #endif
-

@@ -17,56 +17,66 @@
 // until UltraVNC Server quits.
 
 #include "stdhdrs.h"
-#include "omnithread.h"
 
 #include "vnctimedmsgbox.h"
 
+#include "omnithread.h"
+
+#include <cstdlib>
 // The message-box delay
-const UINT TIMED_MSGBOX_DELAY = 1000;
+
+const UINT TIMED_MSGBOX_DELAY{ 1000U };
 
 // The vncTimedMsgBoxThread class
 
 class vncTimedMsgBoxThread : public omni_thread
 {
 public:
-	vncTimedMsgBoxThread(const char *caption, const char *title, UINT type)
-	{
-		m_type = type;
-		m_caption = _strdup(caption);
-		m_title = _strdup(title);
-	};
-	virtual ~vncTimedMsgBoxThread()
-	{
-		if (m_caption != NULL)
-			free(m_caption);
-		if (m_title != NULL)
-			free(m_title);
-	};
-	virtual void run(void *)
-	{
-		// Create the desired dialog box
-		if (m_caption == NULL)
-			return;
-		MessageBoxSecure(NULL, m_caption, m_title, m_type | MB_OK|MB_SETFOREGROUND|MB_SERVICE_NOTIFICATION);
-	};
-	char *m_caption;
-	char *m_title;
-	UINT m_type;
+    vncTimedMsgBoxThread(const char* caption, const char* title, UINT type)
+    {
+        m_type = type;
+        m_caption = _strdup(caption);
+        m_title = _strdup(title);
+    };
+    virtual ~vncTimedMsgBoxThread()
+    {
+        if (m_caption != nullptr)
+        {
+            std::free(m_caption);
+        }
+        if (m_title != nullptr)
+        {
+            std::free(m_title);
+        }
+    };
+    virtual void run(void*)
+    {
+        // Create the desired dialog box
+        if (m_caption == nullptr)
+        {
+            return;
+        }
+        MessageBoxSecure(nullptr, m_caption, m_title, m_type | MB_OK | MB_SETFOREGROUND | MB_SERVICE_NOTIFICATION);
+    };
+    char* m_caption;
+    char* m_title;
+    UINT m_type;
 };
 
 // The main vncTimedMsgBox class
 
-void
-vncTimedMsgBox::Do(const char *caption, const char *title, UINT type)
+void vncTimedMsgBox::Do(const char* const caption, const char* const title, const UINT type)
 {
-	// Create the thread object
-	vncTimedMsgBoxThread *thread = new vncTimedMsgBoxThread(caption, title, type);
-	if (thread == NULL)
-		return;
+    // Create the thread object
+    vncTimedMsgBoxThread* thread = new vncTimedMsgBoxThread(caption, title, type);
+    if (thread == nullptr)
+    {
+        return;
+    }
 
-	// Start the thread object
-	thread->start();
+    // Start the thread object
+    thread->start();
 
-	// And wait a few seconds
-	Sleep(TIMED_MSGBOX_DELAY);
+    // And wait a few seconds
+    ::Sleep(TIMED_MSGBOX_DELAY);
 }

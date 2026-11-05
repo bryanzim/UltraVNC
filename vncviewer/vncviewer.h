@@ -7,39 +7,39 @@
 // SPDX-FileCopyrightText: Copyright (C) 2002-2025 UltraVNC Team Members. All Rights Reserved.
 // SPDX-FileCopyrightText: Copyright (C) 1999-2002 Vdacc-VNC & eSVNC Projects. All Rights Reserved.
 //
- 
+
 
 #ifndef VNCVIEWER_H__
 #define VNCVIEWER_H__
 
 #pragma once
 
+#include "AccelKeys.h"
+#include "Log.h"
 #include "res/resource.h"
 #include "VNCviewerApp.h"
-#include "Log.h"
-#include "AccelKeys.h"
 
-#define WM_SOCKEVENT WM_APP+1
-#define WM_TRAYNOTIFY WM_SOCKEVENT+1
+#define WM_SOCKEVENT WM_APP + 1
+#define WM_TRAYNOTIFY WM_SOCKEVENT + 1
 //adzm 2010-09
-#define WM_REQUESTUPDATE WM_TRAYNOTIFY+1
-	// WM_REQUESTUPDATE (wParam, lParam)
-	// wParam: 
-	//		0x00000000 = Full Framebuffer Update Request
-	//		0x00000001 = Incremental Framebuffer Update Request
-	//		0xFFFFFFFF = 'Appropriate' Framebuffer Update Request
+#define WM_REQUESTUPDATE WM_TRAYNOTIFY + 1
+// WM_REQUESTUPDATE (wParam, lParam)
+// wParam:
+//		0x00000000 = Full Framebuffer Update Request
+//		0x00000001 = Incremental Framebuffer Update Request
+//		0xFFFFFFFF = 'Appropriate' Framebuffer Update Request
 //adzm 2010-09
-#define WM_UPDATEREMOTECLIPBOARDCAPS WM_REQUESTUPDATE+1
-#define WM_UPDATEREMOTECLIPBOARD WM_REQUESTUPDATE+2
-#define WM_NOTIFYPLUGINSTREAMING WM_REQUESTUPDATE+3
+#define WM_UPDATEREMOTECLIPBOARDCAPS WM_REQUESTUPDATE + 1
+#define WM_UPDATEREMOTECLIPBOARD WM_REQUESTUPDATE + 2
+#define WM_NOTIFYPLUGINSTREAMING WM_REQUESTUPDATE + 3
 //adzm 2010-09
-#define WM_SENDKEEPALIVE WM_NOTIFYPLUGINSTREAMING+1
-#define WM_SOCKEVENT6 WM_SENDKEEPALIVE+1
-#define WM_SOCKEVENT4 WM_SENDKEEPALIVE+2
-#define WM_HIGHRESOLUTIONWHEEL WM_SENDKEEPALIVE+3
+#define WM_SENDKEEPALIVE WM_NOTIFYPLUGINSTREAMING + 1
+#define WM_SOCKEVENT6 WM_SENDKEEPALIVE + 1
+#define WM_SOCKEVENT4 WM_SENDKEEPALIVE + 2
+#define WM_HIGHRESOLUTIONWHEEL WM_SENDKEEPALIVE + 3
 
 // The Application
-extern VNCviewerApp *pApp;
+extern VNCviewerApp* pApp;
 
 // Global logger - may be used by anything
 extern Log vnclog;
@@ -50,7 +50,7 @@ void CentreWindow(HWND hwnd);
 
 // Convert "host:display" into host and port
 // Returns true if valid.
-bool ParseDisplay(LPTSTR display, LPTSTR phost, int hostlen, int *port);
+bool ParseDisplay(LPTSTR display, LPTSTR phost, int hostlen, int* port);
 
 // Reload language DLL and all strings
 void ReloadLanguage(const wchar_t* langCode);

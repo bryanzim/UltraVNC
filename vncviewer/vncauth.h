@@ -9,7 +9,7 @@
 //
 
 
-/* 
+/*
  * vncauth.h - describes the functions provided by the vncauth library.
  */
 
@@ -17,11 +17,10 @@
 #define CHALLENGESIZE 16
 #define CHALLENGESIZEMS 64
 
-void vncEncryptBytes(unsigned char *bytes, char *passwd);
-void vncEncryptPasswd(unsigned char *encryptedPasswd, char *passwd);
-void vncEncryptPasswdMs(unsigned char *encryptedPasswd, char *passwd);
-char *vncDecryptPasswd(const unsigned char *encryptedPasswd);
-char *vncDecryptPasswdMs(const unsigned char *encryptedPasswd);
+void vncEncryptBytes(unsigned char* bytes, char* passwd);
+void vncEncryptPasswd(unsigned char* encryptedPasswd, char* passwd);
+void vncEncryptPasswdMs(unsigned char* encryptedPasswd, char* passwd);
+char* vncDecryptPasswd(const unsigned char* encryptedPasswd);
+char* vncDecryptPasswdMs(const unsigned char* encryptedPasswd);
 // marscha@2006
-void vncEncryptBytes2(unsigned char *bytes, const int length, unsigned char *key);
-
+void vncEncryptBytes2(unsigned char* bytes, const int length, unsigned char* key);

@@ -16,14 +16,15 @@
 // Enable the modern SCH_CREDENTIALS/TLS_PARAMETERS/CRYPTO_SETTINGS
 // definitions in schannel.h (available since Windows 10 1809 / Server 2019).
 #define SCHANNEL_USE_BLACKLISTS
-#include <wincrypt.h>
-#include <security.h>
-#include <winternl.h>   // UNICODE_STRING, required by CRYPTO_SETTINGS
-#include <schannel.h>
 #include <ncrypt.h>
-#include <vector>
+#include <winternl.h> // UNICODE_STRING, required by CRYPTO_SETTINGS
+#include <schannel.h>
+#include <security.h>
+#include <wincrypt.h>
 
+#include <vector>
 // Forward declaration
+
 class VSocket;
 
 //
@@ -39,7 +40,7 @@ class VSocket;
 class SchannelTLS
 {
 public:
-    SchannelTLS();
+    explicit SchannelTLS();
     ~SchannelTLS();
 
     // Load an existing certificate from the Windows cert store by thumbprint.
@@ -52,7 +53,7 @@ public:
     // or containerName uses the legacy noVNC defaults (CN=UltraVNC-WebViewer).
     // keyBits selects the RSA key size for a newly generated key (2048, 3072
     // or 4096; other values fall back to 3072).
-    bool EnsureSelfSignedCert(const char* subjectName, const char* containerName, char* outThumbprint, DWORD keyBits = 3072);
+    bool EnsureSelfSignedCert(const char* subjectName, const char* containerName, char* outThumbprint, DWORD keyBits = 3072U);
 
     // Perform the server-side TLS handshake on an already-accepted socket.
     // Returns true on success, false on failure (socket should be closed).
@@ -86,26 +87,26 @@ private:
     bool RawRecv(VSocket* sock, BYTE* data, DWORD len, DWORD* received);
 
     // Token exchange during handshake
-    bool HandshakeLoop(VSocket* sock, bool firstCall, SecBuffer* pExtraData,
-                       const BYTE* initialData = nullptr, DWORD initialLen = 0);
+    bool HandshakeLoop(VSocket* sock, bool firstCall, SecBuffer* pExtraData, const BYTE* initialData = nullptr,
+                       DWORD initialLen = 0U);
 
-    PCCERT_CONTEXT          m_certCtx;
-    CredHandle              m_credHandle;
-    bool                    m_credValid;
-    CtxtHandle              m_ctxHandle;
-    bool                    m_ctxValid;
-    bool                    m_ready;
+    PCCERT_CONTEXT m_certCtx;
+    CredHandle m_credHandle;
+    bool m_credValid;
+    CtxtHandle m_ctxHandle;
+    bool m_ctxValid;
+    bool m_ready;
 
     SecPkgContext_StreamSizes m_streamSizes;
 
     // Undecrypted bytes waiting to be processed
-    std::vector<BYTE>       m_rawBuf;
+    std::vector<BYTE> m_rawBuf;
     // Decrypted plaintext buffered for Recv()
-    std::vector<BYTE>       m_plainBuf;
+    std::vector<BYTE> m_plainBuf;
 
     // SChannel contexts are not safe for concurrent use: the update thread
     // calls EncryptMessage (Send) while the read thread calls DecryptMessage
     // (Recv). Serialize the crypto calls; raw socket I/O stays unlocked so a
     // blocking recv() does not stall sends.
-    CRITICAL_SECTION        m_csCrypto;
+    CRITICAL_SECTION m_csCrypto;
 };

@@ -9,170 +9,185 @@
 //
 
 
-#include <winsock2.h>
-#include <windows.h>
-#include <tchar.h>
-#include <crtdbg.h>
-
 #include "IPC.h"
+
+#include <winsock2.h>
+
+#include <windows.h>
+
+#include <crtdbg.h>
+#include <tchar.h>
 
 const static LPCTSTR g_szIPCSharedMMF = _T("{34F673E0-878F-11D5-B98A-00B0D07B8C7C}");
 const static LPCTSTR g_szIPCSharedMMFBitmap = _T("{34F673E0-878F-11D5-B98A-57B0D07B8C7C}");
-int oldcounter=0;
+int oldcounter{ 0 };
 //***********************************************
-CIPC::CIPC() 
+CIPC::CIPC()
 {
-	m_hFileMap=NULL;
-	m_hFileMapBitmap=NULL;
-	pBitmap=NULL;
-	plist=NULL;
-	m_FileView=0;
-	m_FileViewBitmap=0;
-	CreateIPCMMF();
-	OpenIPCMMF();
+    m_hFileMap = nullptr;
+    m_hFileMapBitmap = nullptr;
+    pBitmap = nullptr;
+    plist = nullptr;
+    m_FileView = 0;
+    m_FileViewBitmap = 0;
+    CreateIPCMMF();
+    OpenIPCMMF();
 }
 
 //***********************************************
 CIPC::~CIPC()
 {
-	CloseIPCMMF();
-	CloseIPCMMFBitmap();
+    CloseIPCMMF();
+    CloseIPCMMFBitmap();
 }
 //***********************************************
 bool CIPC::CreateIPCMMF(void)
 {
-	bool bCreated = false;
-	int listsize=sizeof(mystruct);
-	try
-	{
-		if(m_hFileMap != NULL)
-			return false;	// Already created
-		
-		// Create an in-memory 4KB memory mapped file to share data
-		m_hFileMap = CreateFileMapping(INVALID_HANDLE_VALUE,
-			NULL,
-			PAGE_READWRITE,
-			0,
-			listsize,
-			g_szIPCSharedMMF);
-		if(m_hFileMap != NULL)
-			bCreated = true;
-	}
-	catch(...) {}
+    bool bCreated{ false };
+    int listsize = sizeof(mystruct);
+    try
+    {
+        if (m_hFileMap != nullptr)
+        {
+            return false;
+        } // Already created
 
-	return bCreated;
+        // Create an in-memory 4KB memory mapped file to share data
+        m_hFileMap = ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, listsize, g_szIPCSharedMMF);
+        if (m_hFileMap != nullptr)
+        {
+            bCreated = true;
+        }
+    }
+    catch (...)
+    {
+    }
+
+    return bCreated;
 }
 //***********************************************
-bool CIPC::CreateIPCMMFBitmap(int size)
+bool CIPC::CreateIPCMMFBitmap(const int size)
 {
-	bool bCreatedBitmap = false;
+    bool bCreatedBitmap{ false };
 
-	try
-	{
-		if(m_hFileMapBitmap != NULL)
-			return false;	// Already created
+    try
+    {
+        if (m_hFileMapBitmap != nullptr)
+        {
+            return false;
+        } // Already created
 
-		// Create an in-memory 4KB memory mapped file to share data
-		m_hFileMapBitmap = CreateFileMapping(INVALID_HANDLE_VALUE,
-			NULL,
-			PAGE_READWRITE,
-			0,
-			size,
-			g_szIPCSharedMMFBitmap);
-		if(m_hFileMapBitmap != NULL)
-			bCreatedBitmap = true;
-	}
-	catch(...) {}
+        // Create an in-memory 4KB memory mapped file to share data
+        m_hFileMapBitmap = ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, size, g_szIPCSharedMMFBitmap);
+        if (m_hFileMapBitmap != nullptr)
+        {
+            bCreatedBitmap = true;
+        }
+    }
+    catch (...)
+    {
+    }
 
-	return bCreatedBitmap;
+    return bCreatedBitmap;
 }
 
 //***********************************************
 bool CIPC::OpenIPCMMF(void)
 {
-	bool bOpened = false;
+    bool bOpened{ false };
 
-	try
-	{
-		if(m_hFileMap == NULL)
-		{
+    try
+    {
+        if (m_hFileMap == nullptr)
+        {
 
-		m_hFileMap = OpenFileMapping(FILE_MAP_READ | FILE_MAP_WRITE,
-			FALSE,
-			g_szIPCSharedMMF);
-		}
+            m_hFileMap = ::OpenFileMapping(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, g_szIPCSharedMMF);
+        }
 
-		if(m_hFileMap != NULL)
-		{
-			bOpened = true;
-			m_FileView = MapViewOfFile(m_hFileMap,
-			FILE_MAP_READ | FILE_MAP_WRITE,
-			0, 0, 0);
-			if (m_FileView==0) bOpened = false;
-			plist=(mystruct*) m_FileView;
+        if (m_hFileMap != nullptr)
+        {
+            bOpened = true;
+            m_FileView = ::MapViewOfFile(m_hFileMap, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
+            if (m_FileView == 0)
+            {
+                bOpened = false;
+            }
+            plist = (mystruct*)m_FileView;
+        }
+    }
+    catch (...)
+    {
+    }
 
-		}
-	}
-	catch(...) {}
-
-	return bOpened;
+    return bOpened;
 }
 //***********************************************
 bool CIPC::OpenIPCMMFBitmap(void)
 {
-	bool bOpenedBitmap = false;
+    bool bOpenedBitmap{ false };
 
-	try
-	{
-		if(m_hFileMapBitmap == NULL)
-		{
+    try
+    {
+        if (m_hFileMapBitmap == nullptr)
+        {
 
-		m_hFileMapBitmap = OpenFileMapping(FILE_MAP_READ | FILE_MAP_WRITE,
-			FALSE,
-			g_szIPCSharedMMFBitmap);
-		}
+            m_hFileMapBitmap = ::OpenFileMapping(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, g_szIPCSharedMMFBitmap);
+        }
 
-		if(m_hFileMapBitmap != NULL)
-		{
-			bOpenedBitmap = true;
-			m_FileViewBitmap = MapViewOfFile(m_hFileMapBitmap,
-			FILE_MAP_READ | FILE_MAP_WRITE,
-			0, 0, 0);
-			if (m_FileViewBitmap==0) bOpenedBitmap = false;
-			pBitmap=(byte*) m_FileViewBitmap;
+        if (m_hFileMapBitmap != nullptr)
+        {
+            bOpenedBitmap = true;
+            m_FileViewBitmap = ::MapViewOfFile(m_hFileMapBitmap, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
+            if (m_FileViewBitmap == 0)
+            {
+                bOpenedBitmap = false;
+            }
+            pBitmap = (byte*)m_FileViewBitmap;
+        }
+    }
+    catch (...)
+    {
+    }
 
-		}
-	}
-	catch(...) {}
-
-	return bOpenedBitmap;
+    return bOpenedBitmap;
 }
 //***********************************************
 void CIPC::CloseIPCMMF(void)
 {
-	try
-	{
-		if (m_FileView) UnmapViewOfFile(m_FileView);
-		if(m_hFileMap != NULL)
-			CloseHandle(m_hFileMap), m_hFileMap = NULL;
-	}
-	catch(...) {}
+    try
+    {
+        if (m_FileView)
+        {
+            ::UnmapViewOfFile(m_FileView);
+        }
+        if (m_hFileMap != nullptr)
+        {
+            ::CloseHandle(m_hFileMap), m_hFileMap = nullptr;
+        }
+    }
+    catch (...)
+    {
+    }
 }
 //***********************************************
 void CIPC::CloseIPCMMFBitmap(void)
 {
-	try
-	{
-		if (m_FileViewBitmap) UnmapViewOfFile((LPVOID)m_FileViewBitmap);
-			m_FileViewBitmap=NULL;
-		if(m_hFileMapBitmap != NULL)
-			CloseHandle(m_hFileMapBitmap);
-		m_hFileMapBitmap = NULL;
-	}
-	catch(...) {}
+    try
+    {
+        if (m_FileViewBitmap)
+        {
+            ::UnmapViewOfFile((LPVOID)m_FileViewBitmap);
+        }
+        m_FileViewBitmap = nullptr;
+        if (m_hFileMapBitmap != nullptr)
+        {
+            ::CloseHandle(m_hFileMapBitmap);
+        }
+        m_hFileMapBitmap = nullptr;
+    }
+    catch (...)
+    {
+    }
 }
-mystruct* CIPC::listall()
-{
-	return plist;
-}
+mystruct* CIPC::listall() { return plist; }
 //***********************************************

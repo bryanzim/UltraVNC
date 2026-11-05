@@ -10,6 +10,9 @@
 
 
 #include <windows.h>
+
+#include <array>
+
 #if (!defined(_WINVNC_INIFILE))
 #define _WINVNC_INIFILE
 
@@ -17,28 +20,28 @@
 
 class IniFile
 {
-// Fields
+    // Fields
 public:
-	char myInifile[MAX_PATH];
+    std::array<char, MAX_PATH> myInifile;
 
-// Methods
+    // Methods
 public:
-	// Make the desktop thread & window proc friends
+    // Make the desktop thread & window proc friends
 
-	IniFile();
-	~IniFile();
-	bool WriteString(char *key1, char *key2,char *value);
-	bool WritePassword(char *value);
-	bool WritePassword2(char *value); //PGM
-	bool WriteInt(char *key1, char *key2,int value);
-	int ReadInt(char *key1, char *key2,int Defaultvalue);
-	void ReadString(char *key1, char *key2,char *value,int valuesize);
-	bool ReadPassword(char *value,int valuesize);
-	bool ReadPassword2(char *value,int valuesize); //PGM
-	void IniFileSetSecure();
-	//void IniFileSetTemp();
-	void IniFileSetTemp(char *lpCmdLine);
-	void copy_to_secure();
+    explicit IniFile();
+    ~IniFile();
+    bool WriteString(const char* key1, const char* key2, const char* value);
+    bool WritePassword(char* value);
+    bool WritePassword2(char* value); //PGM
+    bool WriteInt(const char* key1, const char* key2, int value);
+    int ReadInt(const char* key1, const char* key2, int Defaultvalue);
+    void ReadString(const char* key1, const char* key2, char* value, int valuesize);
+    bool ReadPassword(char* value, int valuesize);
+    bool ReadPassword2(char* value, int valuesize); //PGM
+    void IniFileSetSecure();
+    //void IniFileSetTemp();
+    void IniFileSetTemp(const char* lpCmdLine);
+    void copy_to_secure();
 
     bool IsWritable();
 

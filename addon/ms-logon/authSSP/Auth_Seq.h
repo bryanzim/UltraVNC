@@ -10,24 +10,25 @@
 //
 
 
-typedef struct _AUTH_SEQ {
-   BOOL fInitialized;
-   BOOL fHaveCredHandle;
-   BOOL fHaveCtxtHandle;
-   CredHandle hcred;
-   struct _SecHandle hctxt;
+typedef struct _AUTH_SEQ
+{
+    BOOL fInitialized;
+    BOOL fHaveCredHandle;
+    BOOL fHaveCtxtHandle;
+    CredHandle hcred;
+    struct _SecHandle hctxt;
 } AUTH_SEQ, *PAUTH_SEQ;
 
-typedef struct _Fn {
-ACCEPT_SECURITY_CONTEXT_FN       _AcceptSecurityContext;
-ACQUIRE_CREDENTIALS_HANDLE_FN    _AcquireCredentialsHandle;
-COMPLETE_AUTH_TOKEN_FN           _CompleteAuthToken;
-INITIALIZE_SECURITY_CONTEXT_FN   _InitializeSecurityContext;
-DELETE_SECURITY_CONTEXT_FN       _DeleteSecurityContext;
-FREE_CONTEXT_BUFFER_FN           _FreeContextBuffer;
-FREE_CREDENTIALS_HANDLE_FN       _FreeCredentialsHandle;
-QUERY_SECURITY_PACKAGE_INFO_FN   _QuerySecurityPackageInfo;
-IMPERSONATE_SECURITY_CONTEXT_FN  _ImpersonateSecurityContext;
-REVERT_SECURITY_CONTEXT_FN       _RevertSecurityContext;
+typedef struct _Fn
+{
+    ACCEPT_SECURITY_CONTEXT_FN _AcceptSecurityContext;
+    ACQUIRE_CREDENTIALS_HANDLE_FN _AcquireCredentialsHandle;
+    COMPLETE_AUTH_TOKEN_FN _CompleteAuthToken;
+    INITIALIZE_SECURITY_CONTEXT_FN _InitializeSecurityContext;
+    DELETE_SECURITY_CONTEXT_FN _DeleteSecurityContext;
+    FREE_CONTEXT_BUFFER_FN _FreeContextBuffer;
+    FREE_CREDENTIALS_HANDLE_FN _FreeCredentialsHandle;
+    QUERY_SECURITY_PACKAGE_INFO_FN _QuerySecurityPackageInfo;
+    IMPERSONATE_SECURITY_CONTEXT_FN _ImpersonateSecurityContext;
+    REVERT_SECURITY_CONTEXT_FN _RevertSecurityContext;
 } Fn;
-

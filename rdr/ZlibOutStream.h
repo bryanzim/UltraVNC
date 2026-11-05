@@ -22,30 +22,30 @@
 
 struct z_stream_s;
 
-namespace rdr {
+namespace rdr
+{
 
-  class ZlibOutStream : public OutStream {
+    class ZlibOutStream : public OutStream
+    {
 
-  public:
+    public:
+        // adzm - 2010-07 - Custom compression level
+        explicit ZlibOutStream(OutStream* os = 0, int bufSize = 0, int compressionLevel = -1); // Z_DEFAULT_COMPRESSION
+        virtual ~ZlibOutStream();
 
-    // adzm - 2010-07 - Custom compression level
-    ZlibOutStream(OutStream* os=0, int bufSize=0, int compressionLevel=-1); // Z_DEFAULT_COMPRESSION
-    virtual ~ZlibOutStream();
+        void setUnderlying(OutStream* os);
+        void flush();
+        [[nodiscard]] int length();
 
-    void setUnderlying(OutStream* os);
-    void flush();
-    int length();
+    private:
+        int overrun(int itemSize, int nItems);
 
-  private:
-
-    int overrun(int itemSize, int nItems);
-
-    OutStream* underlying;
-    int bufSize;
-    int offset;
-    z_stream_s* zs;
-    U8* start;
-  };
+        OutStream* underlying;
+        int bufSize;
+        int offset;
+        z_stream_s* zs;
+        U8* start;
+    };
 
 } // end of namespace rdr
 

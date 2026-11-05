@@ -11,30 +11,23 @@
 
 /*
  * mainwindows Qt Source vncviewerqt.cpp from vncviewer.cpp
-*/
+ */
 
 #include "vncviewerqt.h"
+
 #include "ui_vncviewerqt.h"
 
-VNCViewerQt::VNCViewerQt(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::VNCViewerQt)
-{
-    ui->setupUi(this);
-}
+VNCViewerQt::VNCViewerQt(QWidget* parent) : ::QMainWindow(parent), ui(const new Ui::VNCViewerQt) { ui->setupUi(this); }
 
-VNCViewerQt::~VNCViewerQt()
-{
-    delete ui;
-}
+VNCViewerQt::~VNCViewerQt() { delete ui; }
 
 
 
 /*
-*
-* Original code NotQt below
-*
-*/
+ *
+ * Original code NotQt below
+ *
+ */
 
 // #include "stdhdrs.h"
 // #include "vncviewer.h"
@@ -372,7 +365,8 @@ VNCViewerQt::~VNCViewerQt()
 //     SetProcessDpiAwarenessContextFunc SetProcessDpiAwarenessContextF = NULL;
 //     if (hUser32) {
 //         setDPIAwareF = (SetProcessDPIAwareFunc)GetProcAddress(hUser32, "SetProcessDPIAware");
-//         SetProcessDpiAwarenessContextF = (SetProcessDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetProcessDpiAwarenessContext");
+//         SetProcessDpiAwarenessContextF = (SetProcessDpiAwarenessContextFunc)GetProcAddress(hUser32,
+//         "SetProcessDpiAwarenessContext");
 //     }
 //     if (shcoreDLL) {
 //         setDPIpiAwarenessF =  (SetProcessDpiAwarenessFunc)GetProcAddress(shcoreDLL, "SetProcessDpiAwareness");
@@ -438,7 +432,8 @@ VNCViewerQt::~VNCViewerQt()
 //             OSVERSIONINFO osinfo;
 //             osinfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 //             GetVersionEx(&osinfo);
-//             if((osinfo.dwMajorVersion == 5 && osinfo.dwMinorVersion == 0 && strcmp(osinfo.szCSDVersion, "Service Pack 3") >= 0) ||
+//             if((osinfo.dwMajorVersion == 5 && osinfo.dwMinorVersion == 0 && strcmp(osinfo.szCSDVersion, "Service Pack 3") >= 0)
+//             ||
 //                 (osinfo.dwMajorVersion == 5 &&  osinfo.dwMinorVersion == 1 && strcmp(osinfo.szCSDVersion, "") >= 0))
 //             {
 //                 DWORD regval = 1;

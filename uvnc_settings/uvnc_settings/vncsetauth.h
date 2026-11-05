@@ -14,6 +14,10 @@
 
 // Object implementing the About dialog for UltraVNC Server.
 #include "inifile.h"
+
+#include <array>
+#include <cstring>
+
 #define MAXPATH 256
 class vncSetAuth;
 
@@ -24,50 +28,50 @@ class vncSetAuth;
 class vncSetAuth
 {
 public:
-	// Constructor/destructor
-	vncSetAuth();
-	~vncSetAuth();
-	BOOL Init();
+    // Constructor/destructor
+    explicit vncSetAuth();
+    ~vncSetAuth();
+    BOOL Init();
 
-	// The dialog box window proc
-	static BOOL CALLBACK DialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    // The dialog box window proc
+    static BOOL CALLBACK DialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-	// General
-	void Show(BOOL show);
-	void SetTemp(char *TempFile){strcpy(m_Tempfile,TempFile);};
-	char m_Tempfile[MAXPATH];
+    // General
+    void Show(BOOL show);
+    void SetTemp(char* const TempFile) { std::strcpy(m_Tempfile.data(), TempFile); };
+    std::array<char, MAXPATH> m_Tempfile;
 
-	// Implementation
-	BOOL m_dlgvisible;
+    // Implementation
+    BOOL m_dlgvisible;
 
-	LONG LoadInt_(LPCSTR valname, LONG defval);
-	TCHAR * LoadString_(LPCSTR keyname);
-	void SaveInt_(LPCSTR valname, LONG val);
-	void SaveString_(LPCSTR valname, TCHAR *buffer);
-	void savegroup1(TCHAR *value);
-	TCHAR* Readgroup1();
-	void savegroup2(TCHAR *value);
-	TCHAR* Readgroup2();
-	void savegroup3(TCHAR *value);
-	TCHAR* Readgroup3();
-	LONG Readlocdom1(LONG returnvalue);
-	void savelocdom1(LONG value);
-	LONG Readlocdom2(LONG returnvalue);
-	void savelocdom2(LONG value);
-	LONG Readlocdom3(LONG returnvalue);
-	void savelocdom3(LONG value);
+    LONG LoadInt_(LPCSTR valname, LONG defval);
+    TCHAR* LoadString_(LPCSTR keyname);
+    void SaveInt_(LPCSTR valname, LONG val);
+    void SaveString_(LPCSTR valname, TCHAR* buffer);
+    void savegroup1(TCHAR* value);
+    TCHAR* Readgroup1();
+    void savegroup2(TCHAR* value);
+    TCHAR* Readgroup2();
+    void savegroup3(TCHAR* value);
+    TCHAR* Readgroup3();
+    LONG Readlocdom1(LONG returnvalue);
+    void savelocdom1(LONG value);
+    LONG Readlocdom2(LONG returnvalue);
+    void savelocdom2(LONG value);
+    LONG Readlocdom3(LONG returnvalue);
+    void savelocdom3(LONG value);
 
-	char *group1;
-	char *group2;
-	char *group3;
-	long locdom1;
-	long locdom2;
-	long locdom3;
-	char pszgroup1[256];
-	char pszgroup2[256];
-	char pszgroup3[256];
+    char* group1;
+    char* group2;
+    char* group3;
+    long locdom1;
+    long locdom2;
+    long locdom3;
+    std::array<char, 256U> pszgroup1;
+    std::array<char, 256U> pszgroup2;
+    std::array<char, 256U> pszgroup3;
 
-	IniFile myIniFile;
+    IniFile myIniFile;
 };
 
 #endif // _WINVNC_VNCPROPERTIES

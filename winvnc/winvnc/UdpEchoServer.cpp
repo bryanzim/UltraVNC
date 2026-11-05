@@ -10,27 +10,33 @@
 
 
 #include "UdpEchoServer.h"
+
 #include <WinSock2.h>
+
+#include <array>
+#include <cstring>
 #include <thread>
 
 std::atomic<bool> g_stopServer(false);
 
-void StartEchoServer(int port)
+void StartEchoServer(const int port)
 {
     std::thread serverThread(UdpEchoServer, port); // Pass port number as argument
-    serverThread.detach(); // Wait for the server thread to finish
+    serverThread.detach();                         // Wait for the server thread to finish
 }
 void UdpEchoServer(int port)
 {
     WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+    if (::WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+    {
         return;
     }
 
     // Create a UDP socket
     SOCKET serverSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (serverSocket == INVALID_SOCKET) {
-        WSACleanup();
+    if (serverSocket == INVALID_SOCKET)
+    {
+        ::WSACleanup();
         return;
     }
 
@@ -38,34 +44,41 @@ void UdpEchoServer(int port)
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = htonl(INADDR_ANY); // Listen on any interface
-    serverAddr.sin_port = htons(port); // Use port 12345
-    if (bind(serverSocket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR) {
+    serverAddr.sin_port = htons(port);              // Use port 12345
+    if (bind(serverSocket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR)
+    {
         closesocket(serverSocket);
-        WSACleanup();
+        ::WSACleanup();
         return;
     }
 
-    while (true) {
+    while (true)
+    {
         // Receive data from client
-        char buffer[1024];
+        std::array<char, 1024U> buffer;
         sockaddr_in clientAddr;
         int clientAddrSize = sizeof(clientAddr);
-        int bytesReceived = recvfrom(serverSocket, buffer, sizeof(buffer) -1, 0, reinterpret_cast<sockaddr*>(&clientAddr), &clientAddrSize);
-        if (bytesReceived == SOCKET_ERROR) {
+        int bytesReceived =
+            recvfrom(serverSocket, buffer.data(), sizeof(buffer) - 1, 0, reinterpret_cast<sockaddr*>(&clientAddr), &clientAddrSize);
+        if (bytesReceived == SOCKET_ERROR)
+        {
             continue; // Continue to next iteration
         }
-        
-        char realvnc[5];
-        realvnc[0] = 38;
-        realvnc[1] = -85;
-        realvnc[2] = 38;
-        realvnc[3] = -85;
-        realvnc[4] = 0;
+
+        std::array<char, 5U> realvnc;
+        realvnc[0U] = 38;
+        realvnc[1U] = -85;
+        realvnc[2U] = 38;
+        realvnc[3U] = -85;
+        realvnc[4U] = 0;
         // Print received message
         buffer[bytesReceived] = '\0'; // Null-terminate the received data
         // Echo the message back to the client
-        if (strcmp(buffer, realvnc) != 0) {
-            if (sendto(serverSocket, buffer, bytesReceived, 0, reinterpret_cast<sockaddr*>(&clientAddr), clientAddrSize) == SOCKET_ERROR) {
+        if (std::strcmp(buffer.data(), realvnc.data()) != 0)
+        {
+            if (sendto(serverSocket, buffer.data(), bytesReceived, 0, reinterpret_cast<sockaddr*>(&clientAddr), clientAddrSize) ==
+                SOCKET_ERROR)
+            {
                 continue; // Continue to next iteration
             }
         }
@@ -73,6 +86,5 @@ void UdpEchoServer(int port)
 
     // Cleanup
     closesocket(serverSocket);
-    WSACleanup();
-
+    ::WSACleanup();
 }

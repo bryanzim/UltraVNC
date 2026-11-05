@@ -18,130 +18,173 @@
 #ifndef __RDR_OUTSTREAM_H__
 #define __RDR_OUTSTREAM_H__
 
-#pragma once 
+#pragma once
 
 #include "types.h"
+
+#include <cstring>
 #include <string.h> // for memcpy
 
-namespace rdr {
+namespace rdr
+{
 
-  class OutStream {
-
-  protected:
-
-    OutStream() {}
-
-  public:
-
-    virtual ~OutStream() {}
-
-    // check() ensures there is buffer space for at least one item of size
-    // itemSize bytes. Returns the number of items which fit (up to a maximum
-    // of nItems).
-
-    inline int check(int itemSize, int nItems=1)
+    class OutStream
     {
-      if (ptr + itemSize * nItems > end) {
-        if (ptr + itemSize > end)
-          return overrun(itemSize, nItems);
 
-        nItems = (int)((end - ptr) / itemSize);
-      }
-      return nItems;
-    }
+    protected:
+        explicit OutStream() {}
 
-    // writeU/SN() methods write unsigned and signed N-bit integers.
+    public:
+        virtual ~OutStream() {}
 
-    inline void writeU8( U8  u) { check(1); *ptr++ = u; }
-    inline void writeU16(U16 u) { check(2); *ptr++ = u >> 8; *ptr++ = (U8)u; }
-    inline void writeU32(U32 u) { check(4); *ptr++ = u >> 24; *ptr++ = u >> 16;
-                                            *ptr++ = u >> 8; *ptr++ = u; }
+        // check() ensures there is buffer space for at least one item of size
+        // itemSize bytes. Returns the number of items which fit (up to a maximum
+        // of nItems).
 
-    inline void writeS8( S8  s) { writeU8((U8)s); }
-    inline void writeS16(S16 s) { writeU16((U16)s); }
-    inline void writeS32(S32 s) { writeU32((U32)s); }
+        inline int check(const int itemSize, int nItems = 1)
+        {
+            if (ptr + itemSize * nItems > end)
+            {
+                if (ptr + itemSize > end)
+                {
+                    return overrun(itemSize, nItems);
+                }
 
-    // writeString() writes a string - a U32 length followed by the data. The
-    // given string should be null-terminated (but the terminating null is not
-    // written to the stream).
+                nItems = static_cast<int>(((end - ptr) / itemSize));
+            }
+            return nItems;
+        }
 
-    inline void writeString(const char* str) {
-      U32 len = (U32)strlen(str);
-      writeU32(len);
-      writeBytes(str, len);
-    }
+        // writeU/SN() methods write unsigned and signed N-bit integers.
 
-    inline void pad(int bytes) {
-      while (bytes-- > 0) writeU8(0);
-    }
+        inline void writeU8(const U8 u)
+        {
+            check(1);
+            *ptr++ = u;
+        }
+        inline void writeU16(const U16 u)
+        {
+            check(2);
+            *ptr++ = u >> 8;
+            *ptr++ = (U8)u;
+        }
+        inline void writeU32(const U32 u)
+        {
+            check(4);
+            *ptr++ = u >> 24;
+            *ptr++ = u >> 16;
+            *ptr++ = u >> 8;
+            *ptr++ = u;
+        }
 
-    inline void skip(int bytes) {
-      while (bytes > 0) {
-        int n = check(1, bytes);
-        ptr += n;
-        bytes -= n;
-      }
-    }
+        inline void writeS8(const S8 s) { writeU8((U8)s); }
+        inline void writeS16(const S16 s) { writeU16((U16)s); }
+        inline void writeS32(const S32 s) { writeU32((U32)s); }
 
-    // writeBytes() writes an exact number of bytes.
+        // writeString() writes a string - a U32 length followed by the data. The
+        // given string should be null-terminated (but the terminating null is not
+        // written to the stream).
 
-    virtual void writeBytes(const void* data, int length) {
-      const U8* dataPtr = (const U8*)data;
-      const U8* dataEnd = dataPtr + length;
-      while (dataPtr < dataEnd) {
-        int n = check(1, (int)(dataEnd - dataPtr));
-        memcpy(ptr, dataPtr, n);
-        ptr += n;
-        dataPtr += n;
-      }
-    }
+        inline void writeString(const char* const str)
+        {
+            U32 len = (U32)std::strlen(str);
+            writeU32(len);
+            writeBytes(str, len);
+        }
 
-    // writeOpaqueN() writes a quantity without byte-swapping.
+        inline void pad(int bytes)
+        {
+            while (bytes-- > 0)
+            {
+                writeU8(0);
+            }
+        }
 
-    inline void writeOpaque8( U8  u) { writeU8(u); }
-    inline void writeOpaque16(U16 u) { check(2); *ptr++ = ((U8*)&u)[0];
-                                       *ptr++ = ((U8*)&u)[1]; }
-    inline void writeOpaque32(U32 u) { check(4); *ptr++ = ((U8*)&u)[0];
-                                       *ptr++ = ((U8*)&u)[1];
-                                       *ptr++ = ((U8*)&u)[2];
-                                       *ptr++ = ((U8*)&u)[3]; }
-    inline void writeOpaque24A(U32 u) { check(3); *ptr++ = ((U8*)&u)[0];
-                                        *ptr++ = ((U8*)&u)[1];
-                                        *ptr++ = ((U8*)&u)[2]; }
-    inline void writeOpaque24B(U32 u) { check(3); *ptr++ = ((U8*)&u)[1];
-                                        *ptr++ = ((U8*)&u)[2];
-                                        *ptr++ = ((U8*)&u)[3]; }
+        inline void skip(int bytes)
+        {
+            while (bytes > 0)
+            {
+                int n = check(1, bytes);
+                ptr += n;
+                bytes -= n;
+            }
+        }
 
-    // length() returns the length of the stream.
+        // writeBytes() writes an exact number of bytes.
 
-    virtual int length() = 0;
+        virtual void writeBytes(const void* const data, const int length)
+        {
+            const U8* dataPtr = (const U8*)data;
+            const U8* dataEnd = dataPtr + length;
+            while (dataPtr < dataEnd)
+            {
+                int n = check(1, static_cast<int>((dataEnd - dataPtr)));
+                std::memcpy(ptr, dataPtr, n);
+                ptr += n;
+                dataPtr += n;
+            }
+        }
 
-    // flush() requests that the stream be flushed.
+        // writeOpaqueN() writes a quantity without byte-swapping.
 
-    virtual void flush() {}
+        inline void writeOpaque8(const U8 u) { writeU8(u); }
+        inline void writeOpaque16(U16 u)
+        {
+            check(2);
+            *ptr++ = ((U8*)&u)[0U];
+            *ptr++ = ((U8*)&u)[1U];
+        }
+        inline void writeOpaque32(U32 u)
+        {
+            check(4);
+            *ptr++ = ((U8*)&u)[0U];
+            *ptr++ = ((U8*)&u)[1U];
+            *ptr++ = ((U8*)&u)[2U];
+            *ptr++ = ((U8*)&u)[3U];
+        }
+        inline void writeOpaque24A(U32 u)
+        {
+            check(3);
+            *ptr++ = ((U8*)&u)[0U];
+            *ptr++ = ((U8*)&u)[1U];
+            *ptr++ = ((U8*)&u)[2U];
+        }
+        inline void writeOpaque24B(U32 u)
+        {
+            check(3);
+            *ptr++ = ((U8*)&u)[1U];
+            *ptr++ = ((U8*)&u)[2U];
+            *ptr++ = ((U8*)&u)[3U];
+        }
 
-    // getptr(), getend() and setptr() are "dirty" methods which allow you to
-    // manipulate the buffer directly. This is useful for a stream which is a
-    // wrapper around an underlying stream.
+        // length() returns the length of the stream.
 
-    inline U8* getptr() { return ptr; }
-    inline U8* getend() { return end; }
-    inline void setptr(U8* p) { ptr = p; }
+        virtual int length() = 0;
 
-  private:
+        // flush() requests that the stream be flushed.
 
-    // overrun() is implemented by a derived class to cope with buffer overrun.
-    // It ensures there are at least itemSize bytes of buffer space. Returns
-    // the number of items which fit (up to a maximum of nItems). itemSize is
-    // supposed to be "small" (a few bytes).
+        virtual void flush() {}
 
-    virtual int overrun(int itemSize, int nItems) = 0;
+        // getptr(), getend() and setptr() are "dirty" methods which allow you to
+        // manipulate the buffer directly. This is useful for a stream which is a
+        // wrapper around an underlying stream.
 
-  protected:
+        inline U8* getptr() { return ptr; }
+        inline U8* getend() { return end; }
+        inline void setptr(U8* const p) { ptr = p; }
 
-    U8* ptr;
-    U8* end;
-  };
+    private:
+        // overrun() is implemented by a derived class to cope with buffer overrun.
+        // It ensures there are at least itemSize bytes of buffer space. Returns
+        // the number of items which fit (up to a maximum of nItems). itemSize is
+        // supposed to be "small" (a few bytes).
+
+        virtual int overrun(int itemSize, int nItems) = 0;
+
+    protected:
+        U8* ptr;
+        U8* end;
+    };
 
 }
 

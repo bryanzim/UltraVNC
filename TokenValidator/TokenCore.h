@@ -15,53 +15,48 @@
 #pragma once
 
 #include <windows.h>
+
+#include <cstddef>
 #include <string>
 #include <vector>
 
-namespace TokenCore {
+namespace TokenCore
+{
 
-// ---------------------------------------------------------------------------
-// Secret generation and base32 helpers
-// ---------------------------------------------------------------------------
-bool GenerateRandomBase32Secret(std::string& out, size_t bits = 160);
-bool ValidateBase32(const std::string& s);
-bool Base32Decode(const std::string& in, std::vector<BYTE>& out);
+    // ---------------------------------------------------------------------------
+    // Secret generation and base32 helpers
+    // ---------------------------------------------------------------------------
+    bool GenerateRandomBase32Secret(std::string& out, std::size_t bits = 160U);
+    bool ValidateBase32(const std::string& s);
+    bool Base32Decode(const std::string& in, std::vector<BYTE>& out);
 
-// ---------------------------------------------------------------------------
-// Secret storage - Credential Manager (preferred) + DPAPI-encrypted INI
-// ---------------------------------------------------------------------------
-bool SetSecretStorePathsFromDllPath(const char* dllPath);
-bool SetSecretStorePathsFromModuleHandle(HMODULE hModule);
-std::string GetSecretStoreIniPath();
+    // ---------------------------------------------------------------------------
+    // Secret storage - Credential Manager (preferred) + DPAPI-encrypted INI
+    // ---------------------------------------------------------------------------
+    bool SetSecretStorePathsFromDllPath(const char* dllPath);
+    bool SetSecretStorePathsFromModuleHandle(HMODULE hModule);
+    std::string GetSecretStoreIniPath();
 
-bool ReadTotpSecret(const std::string& user, std::string& secretOut);
-bool WriteTotpSecret(const std::string& user, const std::string& secret);
-bool DeleteTotpSecret(const std::string& user);
-std::vector<std::string> ListTotpUsers();
-// List key names stored in a DPAPI-protected INI section (e.g. "SCRAM").
-std::vector<std::string> ListProtectedKeys(const char* section);
-bool ReadProtectedValue(const char* section, const std::string& key, std::string& valueOut);
-bool WriteProtectedValue(const char* section, const std::string& key, const std::string& value);
-bool DeleteProtectedValue(const char* section, const std::string& key);
+    bool ReadTotpSecret(const std::string& user, std::string& secretOut);
+    bool WriteTotpSecret(const std::string& user, const std::string& secret);
+    bool DeleteTotpSecret(const std::string& user);
+    std::vector<std::string> ListTotpUsers();
+    // List key names stored in a DPAPI-protected INI section (e.g. "SCRAM").
+    std::vector<std::string> ListProtectedKeys(const char* section);
+    bool ReadProtectedValue(const char* section, const std::string& key, std::string& valueOut);
+    bool WriteProtectedValue(const char* section, const std::string& key, const std::string& value);
+    bool DeleteProtectedValue(const char* section, const std::string& key);
 
-// ---------------------------------------------------------------------------
-// TOTP URI and QR output
-// ---------------------------------------------------------------------------
-std::string BuildOtpAuthUri(const std::string& user,
-                            const std::string& secret,
-                            const std::string& issuer = "UltraVNC");
+    // ---------------------------------------------------------------------------
+    // TOTP URI and QR output
+    // ---------------------------------------------------------------------------
+    std::string BuildOtpAuthUri(const std::string& user, const std::string& secret, const std::string& issuer = "UltraVNC");
 
-// Write a 24-bit monochrome BMP to a file.
-bool WriteQrBmpToFile(const std::string& text,
-                       const std::string& filename,
-                       int moduleScale = 6,
-                       int quietModules = 4);
+    // Write a 24-bit monochrome BMP to a file.
+    bool WriteQrBmpToFile(const std::string& text, const std::string& filename, int moduleScale = 6, int quietModules = 4);
 
-// Render a QR code as an in-memory HBITMAP suitable for a SS_BITMAP control.
-// The caller owns the returned bitmap and must call DeleteObject().
-HBITMAP RenderQrBitmap(HWND hwndReference,
-                        const std::string& text,
-                        int moduleScale = 6,
-                        int quietModules = 4);
+    // Render a QR code as an in-memory HBITMAP suitable for a SS_BITMAP control.
+    // The caller owns the returned bitmap and must call DeleteObject().
+    HBITMAP RenderQrBitmap(HWND hwndReference, const std::string& text, int moduleScale = 6, int quietModules = 4);
 
 } // namespace TokenCore

@@ -1,0 +1,88 @@
+# Visual Studio generated .clang-format file
+
+# The style options in this file are a best effort attempt to replicate the
+# current IDE formatting configuration from Tools > Options. The following
+# style options, however, should be verified:
+# AfterClass, AfterControlStatement, AfterEnum, AfterFunction, AfterNamespace, 
+# AfterStruct, AfterUnion
+
+AccessModifierOffset: -4
+AlignAfterOpenBracket: Align
+AlignArrayOfStructures: None
+AlignOperands: true
+AllowShortBlocksOnASingleLine: true
+AllowShortCompoundRequirementOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: All
+BasedOnStyle: LLVM
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: true
+  AfterEnum: true
+  AfterFunction: true 
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
+  BeforeElse: true
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+BreakBeforeBraces: Custom
+ColumnLimit: 132
+Cpp11BracedListStyle: false
+FixNamespaceComments: false
+IndentCaseLabels: false
+IndentPPDirectives: None
+IndentWidth: 4
+MaxEmptyLinesToKeep: 10
+NamespaceIndentation: All
+PointerAlignment: Left
+# Include order is grouped by the style pass. clang-format must not sort again:
+# stdhdrs.h and stdafx.h set the Windows version macros and include winsock2.h
+# before windows.h, so those preambles stay ahead of the other groups.
+SortIncludes: Never
+IncludeBlocks: Preserve
+IncludeCategories:
+  # C and C++ standard headers. First match wins, so this stays ahead of the angle-bracket catch-all.
+  - Regex: '^<(algorithm|any|array|atomic|barrier|bit|bitset|charconv|chrono|codecvt|compare|complex|concepts|condition_variable|coroutine|debugging|deque|exception|execution|expected|filesystem|flat_map|flat_set|format|forward_list|fstream|functional|future|generator|hazard_pointer|initializer_list|inplace_vector|iomanip|ios|iosfwd|iostream|istream|iterator|latch|limits|linalg|list|locale|map|mdspan|memory|memory_resource|mutex|new|numbers|numeric|optional|ostream|print|queue|random|ranges|ratio|rcu|regex|scoped_allocator|semaphore|set|shared_mutex|source_location|span|spanstream|sstream|stack|stacktrace|stdexcept|stdfloat|stop_token|streambuf|string|string_view|strstream|syncstream|system_error|text_encoding|thread|tuple|type_traits|typeindex|typeinfo|unordered_map|unordered_set|utility|valarray|variant|vector|version|assert\.h|complex\.h|ctype\.h|errno\.h|fenv\.h|float\.h|inttypes\.h|iso646\.h|limits\.h|locale\.h|math\.h|setjmp\.h|signal\.h|stdalign\.h|stdarg\.h|stdatomic\.h|stdbool\.h|stdckdint\.h|stddef\.h|stdint\.h|stdio\.h|stdlib\.h|stdnoreturn\.h|string\.h|tgmath\.h|threads\.h|time\.h|uchar\.h|wchar\.h|wctype\.h|cctype|cerrno|cfenv|cfloat|cinttypes|climits|clocale|cmath|csetjmp|csignal|cstdalign|cstdarg|cstdbool|cstddef|cstdint|cstdio|cstdlib|cstring|ctgmath|ctime|cuchar|cwchar|cwctype|memory\.h|conio\.h|crtdbg\.h|intrin\.h|malloc\.h|mbstring\.h|direct\.h|io\.h|process\.h)>$'
+    Priority: 6
+    CaseSensitive: true
+  # Sockets before Windows.h. Including Windows.h first pulls in the older winsock.h.
+  - Regex: '^<([Ww]in[Ss]ock2\.h|[Ww]in[Ss]ock\.h|[Ww][Ss]2tcpip\.h|[Mm]stcpip\.h|[Mm]swsock\.h)>$'
+    Priority: -2
+    CaseSensitive: true
+  # Windows.h after the socket headers and before every other Windows header. Same-priority lexicographic order would put wincrypt.h and lm.h first.
+  - Regex: '^<[Ww]indows\.h>$'
+    Priority: -1
+    CaseSensitive: true
+  # Other OS headers.
+  - Regex: '^<(accctrl\.h|aclapi\.h|aclui\.h|activeds\.h|atlbase\.h|bcrypt\.h|comdef\.h|commctrl\.h|commdlg\.h|comutil\.h|cryptuiapi\.h|d3d9\.h|dbghelp\.h|dpapi\.h|dsgetdc\.h|errhandlingapi\.h|fcntl\.h|fileapi\.h|gdiplus\.h|handleapi\.h|ime\.h|in6addr\.h|iphlpapi\.h|issperr\.h|lm\.h|lmaccess\.h|lmalert\.h|lmat\.h|lmcons\.h|mmsystem\.h|natupnp\.h|ncrypt\.h|netcon\.h|netdb\.h|netfw\.h|newdev\.h|objbase\.h|processthreadsapi\.h|psapi\.h|pthread\.h|schannel\.h|sddl\.h|sdkddkver\.h|security\.h|shellapi\.h|shlguid\.h|shlobj\.h|shlwapi\.h|specstrings\.h|sspi\.h|strsafe\.h|swdevice\.h|synchapi\.h|sysinfoapi\.h|tchar\.h|timeapi\.h|timezoneapi\.h|tlhelp32\.h|unistd\.h|userenv\.h|versionhelpers\.h|vfw\.h|winbase\.h|wincred\.h|wincrypt\.h|windowsx\.h|wininet\.h|winioctl\.h|winnt\.h|winreg\.h|winsvc\.h|winternl\.h|winuser\.h|wingdi\.h|ws2ipdef\.h|wtsapi32\.h|arpa/.+|linux/.+|net/.+|netinet/.+|sys/.+)>$'
+    Priority: 5
+    CaseSensitive: false
+  # External libraries.
+  - Regex: '^<'
+    Priority: 2
+    CaseSensitive: true
+  # Windows preamble. stdhdrs.h defines the version macros and includes winsock2 before windows.h, so it has to be the first include.
+  - Regex: '^"[^"]*stdhdrs\.h"$'
+    Priority: -3
+    CaseSensitive: true
+  # Other project headers. The associated header is category 0 and stays first.
+  - Regex: '^"'
+    Priority: 1
+    CaseSensitive: true
+SortUsingDeclarations: false
+SpaceAfterCStyleCast: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+# Column rulers and banner comments are written as //text. Do not insert a space that pushes them past ColumnLimit.
+SpacesInLineCommentPrefix:
+  Minimum: 0
+  Maximum: -1
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+TabWidth: 4
+UseTab: false

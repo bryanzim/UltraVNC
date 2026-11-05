@@ -11,33 +11,36 @@
 
 #pragma once
 #ifdef SC_20
-	#include "stdhdrs.h"
-	#include "CommCtrl.h"
+#include "stdhdrs.h"
+
+#include <CommCtrl.h>
+
+#include <array>
 
 namespace ScSelect
 {
-	extern wchar_t	Balloon1Title[150];
-	extern wchar_t	Balloon2Title[150];
-	extern wchar_t	Balloon1A[150];
-	extern wchar_t	Balloon1B[150];
-	extern wchar_t	Balloon1C[150];
-	extern wchar_t	Balloon2A[150];
-	extern wchar_t	Balloon2B[150];
-	extern wchar_t	Balloon2C[150];
-	extern LONG old_pref;
-	extern bool g_dis_uac;
-	extern bool	g_wallpaper_enabled;
-	extern char	idStr[15];
-	int toUnicode(wchar_t* buffer, const char* str);
-	void Disbale_UAC_for_admin_run_elevated();
-	void Disbale_UAC_for_admin();
-	void Restore_UAC_for_admin_elevated();
-	void Restore_UAC_for_admin(int i);
-	HBITMAP DoGetBkGndBitmap(IN CONST UINT uBmpResId);
-	HBITMAP DoGetBkGndBitmap3(IN CONST UINT uBmpResId);
-	BOOL DoSDKEraseBkGnd(IN CONST HDC hDC, IN CONST COLORREF crBkGndFill);
-	BOOL CALLBACK DialogProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
-	char *InitSC(HINSTANCE hInstance, PSTR szCmdLine);
-	void ExpandBox(HWND hDlg, bool fExpand);
+    extern std::array<wchar_t, 150U> Balloon1Title;
+    extern std::array<wchar_t, 150U> Balloon2Title;
+    extern std::array<wchar_t, 150U> Balloon1A;
+    extern std::array<wchar_t, 150U> Balloon1B;
+    extern std::array<wchar_t, 150U> Balloon1C;
+    extern std::array<wchar_t, 150U> Balloon2A;
+    extern std::array<wchar_t, 150U> Balloon2B;
+    extern std::array<wchar_t, 150U> Balloon2C;
+    extern LONG old_pref;
+    extern bool g_dis_uac;
+    extern bool g_wallpaper_enabled;
+    extern std::array<char, 15U> idStr;
+    int toUnicode(wchar_t* buffer, const char* str);
+    void Disbale_UAC_for_admin_run_elevated();
+    void Disbale_UAC_for_admin();
+    void Restore_UAC_for_admin_elevated();
+    void Restore_UAC_for_admin(int i);
+    HBITMAP DoGetBkGndBitmap(IN CONST UINT uBmpResId);
+    HBITMAP DoGetBkGndBitmap3(IN CONST UINT uBmpResId);
+    BOOL DoSDKEraseBkGnd(IN CONST HDC hDC, IN CONST COLORREF crBkGndFill);
+    BOOL CALLBACK DialogProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
+    char* InitSC(HINSTANCE hInstance, PSTR szCmdLine);
+    void ExpandBox(HWND hDlg, bool fExpand);
 };
 #endif // SC_20

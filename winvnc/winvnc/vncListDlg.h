@@ -15,22 +15,22 @@ class vncListDlg;
 #define _WINVNC_VNCLISTDLG
 
 #include "stdhdrs.h"
-#include "vncserver.h"
 
+#include "vncserver.h"
 
 class vncListDlg
 {
 public:
-	// Constructor / destructor
-	vncListDlg();
-	~vncListDlg();
+    // Constructor / destructor
+    explicit vncListDlg();
+    ~vncListDlg();
 
-	BOOL Init(vncServer* pServer);
-	static BOOL CALLBACK DialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-	void Display();
+    BOOL Init(vncServer* pServer);
+    static BOOL CALLBACK DialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+    void Display();
 
-	vncServer* m_pServer;
-	BOOL m_dlgvisible;	
+    vncServer* m_pServer;
+    BOOL m_dlgvisible;
 };
 
 #endif

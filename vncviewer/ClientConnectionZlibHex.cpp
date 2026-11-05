@@ -14,241 +14,271 @@
 // The bits of the ClientConnection object to do with Hextile.
 
 #include "stdhdrs.h"
-#include "vncviewer.h"
+
 #include "ClientConnection.h"
-
 #include "lzo/minilzo.h"
+#include "vncviewer.h"
 
-bool ClientConnection::zlibDecompress(unsigned char *from_buf, unsigned char *to_buf, unsigned int count, unsigned int size, UltraVncZ * ultravncZ, bool zstd, unsigned int *pProduced)
+#include <array>
+#include <cstring>
+
+bool ClientConnection::zlibDecompress(unsigned char* const from_buf, unsigned char* const to_buf, unsigned int count,
+                                      const unsigned int size, UltraVncZ* const ultravncZ, const bool zstd, unsigned int* pProduced)
 {
-	int inflateResult;
-	unsigned int avail_out = size;
-	inflateResult = ultravncZ->decompress(count, avail_out, from_buf, to_buf, zstd);
-	if ( inflateResult < 0 ) {
-		vnclog.Print(0, _T("zlib inflate error: %d\n"), inflateResult);
-		return false;
-	}
-	if (pProduced)
-		*pProduced = size - avail_out;
+    int inflateResult;
+    unsigned int avail_out = size;
+    inflateResult = ultravncZ->decompress(count, avail_out, from_buf, to_buf, zstd);
+    if (inflateResult < 0)
+    {
+        vnclog.Print(0, _T("zlib inflate error: %d\n"), inflateResult);
+        return false;
+    }
+    if (pProduced)
+    {
+        *pProduced = size - avail_out;
+    }
 
-	return true;
+    return true;
 }
 
-void ClientConnection::ReadZlibHexRect(rfbFramebufferUpdateRectHeader *pfburh, bool zstd)
+void ClientConnection::ReadZlibHexRect(rfbFramebufferUpdateRectHeader* const pfburh, const bool zstd)
 {
-	switch (m_myFormat.bitsPerPixel) {
-	case 8:
-		HandleZlibHexEncoding8(pfburh->r.x, pfburh->r.y, pfburh->r.w, pfburh->r.h, zstd);
-		break;
-	case 16:
-		HandleZlibHexEncoding16(pfburh->r.x, pfburh->r.y, pfburh->r.w, pfburh->r.h, zstd);
-		break;
-	case 32:
-		HandleZlibHexEncoding32(pfburh->r.x, pfburh->r.y, pfburh->r.w, pfburh->r.h, zstd);
-		break;
-	}
+    switch (m_myFormat.bitsPerPixel)
+    {
+    case 8:
+        HandleZlibHexEncoding8(pfburh->r.x, pfburh->r.y, pfburh->r.w, pfburh->r.h, zstd);
+        break;
+    case 16:
+        HandleZlibHexEncoding16(pfburh->r.x, pfburh->r.y, pfburh->r.w, pfburh->r.h, zstd);
+        break;
+    case 32:
+        HandleZlibHexEncoding32(pfburh->r.x, pfburh->r.y, pfburh->r.w, pfburh->r.h, zstd);
+        break;
+    }
 }
 
-BYTE pfgcolor[4];
-BYTE pbgcolor[4];
+std::array<BYTE, 4U> pfgcolor;
+std::array<BYTE, 4U> pbgcolor;
 
-#define DEFINE_HEXTILE(bpp)														\
-void ClientConnection::HandleZlibHexEncoding##bpp(int rx, int ry, int rw, int rh, bool zstd)		\
-{																				\
-    int x, y, w, h;																\
-    CARD8 subencoding;															\
-    CARD16 nCompData;															\
-																				\
-    CheckBufferSize((( 16 * 16 + 2 ) * bpp / 8 ) + 20 );											\
-    CheckZlibBufferSize((( 16 * 16 + 2 ) * bpp / 8 ) + 20 );										\
-																				\
-    for (y = ry; y < ry+rh; y += 16) {											\
-		omni_mutex_lock l(m_bitmapdcMutex);										\
-		for (x = rx; x < rx+rw; x += 16) {										\
-            w = h = 16;															\
-            if (rx+rw - x < 16)													\
-                w = rx+rw - x;													\
-            if (ry+rh - y < 16)													\
-                h = ry+rh - y;													\
-																				\
-            ReadExact((char *)&subencoding, 1);									\
-																				\
-            if (subencoding & rfbHextileRaw) {									\
-				if (getBufferSize() < w * h * (bpp / 8) && w > 0 && h > 0) { 	\
-					assert(true);												\
-					return;														\
-				}																\
-                ReadExact(m_netbuf, w * h * (bpp / 8));							\
-                SETPIXELS(m_netbuf, bpp, x,y,w,h)								\
-                continue;														\
-            }																	\
-																				\
-            if (subencoding & rfbHextileZlibRaw) {								\
-                ReadExact((char *)&nCompData, 2);								\
-                nCompData = Swap16IfLE(nCompData);								\
-				CheckBufferSize(nCompData);										\
-                ReadExact(m_netbuf, nCompData);									\
-		        if (zlibDecompress((unsigned char *)m_netbuf, m_zlibbuf, nCompData, ((w*h+2)*(bpp/8)), ultraVncZRaw, zstd)) {  \
-                    SETPIXELS(m_zlibbuf, bpp, x,y,w,h);							\
-				}																\
-                continue;														\
-            }																	\
-																				\
-            if (subencoding & rfbHextileZlibHex) {								\
-                ReadExact((char *)&nCompData, 2);								\
-                nCompData = Swap16IfLE(nCompData);								\
-				CheckBufferSize(nCompData);										\
-                ReadExact(m_netbuf, nCompData);									\
-				unsigned int nDecompBytes = 0;									\
-		        if (zlibDecompress((unsigned char *)m_netbuf, m_zlibbuf, nCompData, ((w*h+2)*(bpp/8)+20), ultraVncZEncoded, zstd, &nDecompBytes)) {  \
-                    HandleZlibHexSubencodingBuf##bpp(x, y, w, h, subencoding, m_zlibbuf, nDecompBytes);			\
-				}																\
-                continue;														\
-            }																	\
-			else {																\
-				HandleZlibHexSubencodingStream##bpp(x, y, w, h, subencoding);	\
-			}																	\
-																				\
-        }																		\
-    }																			\
-																				\
-}																				\
-																				\
-void ClientConnection::HandleZlibHexSubencodingStream##bpp(int x, int y, int w, int h, int subencoding)		\
-{																				\
-    CARD##bpp bg, fg;															\
-    int i;																			\
-    CARD8 *ptr;																	\
-    int sx, sy, sw, sh;															\
-    CARD8 nSubrects;															\
-																				\
-	if (subencoding & rfbHextileBackgroundSpecified) {							\
-		ReadExact((char *)&bg, (bpp/8));										\
-		memcpy(pbgcolor,&bg,bpp/8);												\
-	}																			\
-	FillSolidRect_ultra(x,y,w,h, m_myFormat.bitsPerPixel,(BYTE*)pbgcolor);\
-																				\
-	if (subencoding & rfbHextileForegroundSpecified)  {							\
-		ReadExact((char *)&fg, (bpp/8));										\
-		memcpy(pfgcolor,&fg,bpp/8);												\
-	}																			\
-																				\
-	if (!(subencoding & rfbHextileAnySubrects)) {								\
-		return;																	\
-	}																			\
-																				\
-	ReadExact( (char *)&nSubrects, 1);											\
-																				\
-	ptr = (CARD8 *)m_netbuf;													\
-																				\
-	if (subencoding & rfbHextileSubrectsColoured) {								\
-																				\
-		if (getBufferSize() < (UINT)(nSubrects * (2 + (bpp / 8))))				\
-			CheckBufferSize(nSubrects * (2 + (bpp / 8)));						\
-		ptr = (CARD8 *)m_netbuf;												\
-		ReadExact( m_netbuf, nSubrects * (2 + (bpp / 8)));						\
-																				\
-		for (i = 0; i < (int)nSubrects; i++) {								\
-			memcpy(pfgcolor,ptr,bpp/8);											\
-			ptr += (bpp/8);														\
-			sx = *ptr >> 4;														\
-			sy = *ptr++ & 0x0f;													\
-			sw = (*ptr >> 4) + 1;												\
-			sh = (*ptr++ & 0x0f) + 1;											\
-			FillSolidRect_ultra(x+sx, y+sy, sw, sh, m_myFormat.bitsPerPixel,(BYTE*)pfgcolor);\
-		}																		\
-																				\
-	} else {																	\
-		if (getBufferSize() < (UINT)(nSubrects * 2))							\
-			CheckBufferSize(nSubrects * 2);										\
-		ptr = (CARD8 *)m_netbuf;												\
-		ReadExact(m_netbuf, nSubrects * 2);										\
-																				\
-		for (i = 0; i < (int)nSubrects; i++) {								\
-			sx = *ptr >> 4;														\
-			sy = *ptr++ & 0x0f;													\
-			sw = (*ptr >> 4) + 1;												\
-			sh = (*ptr++ & 0x0f) + 1;											\
-			FillSolidRect_ultra(x+sx, y+sy, sw, sh, m_myFormat.bitsPerPixel,(BYTE*)pfgcolor);\
-		}																		\
-	}																			\
-}																				\
-																				\
-																				\
-void ClientConnection::HandleZlibHexSubencodingBuf##bpp(int x, int y, int w, int h, int subencoding, unsigned char *buffer, unsigned int bufLen)		\
-{																				\
-	CARD##bpp bg, fg;															\
-	int i;																			\
-	CARD8 *ptr;																	\
-	int sx, sy, sw, sh;															\
-	CARD8 nSubrects;															\
-	unsigned int bufIndex = 0;													\
-																				\
-	if (subencoding & rfbHextileBackgroundSpecified) {							\
-		if (bufLen - bufIndex < (unsigned int)(bpp/8))							\
-			return;																\
-		bg = *((CARD##bpp *)(buffer + bufIndex));								\
-		bufIndex += (bpp/8);													\
-		/* ReadExact((char *)&bg, (bpp/8)); */									\
-		memcpy(pbgcolor,&bg,bpp/8);												\
-	}																			\
-	FillSolidRect_ultra(x,y,w,h, m_myFormat.bitsPerPixel,(BYTE*)pbgcolor);\
-																				\
-	if (subencoding & rfbHextileForegroundSpecified)  {							\
-		if (bufLen - bufIndex < (unsigned int)(bpp/8))							\
-			return;																\
-		fg = *((CARD##bpp *)(buffer + bufIndex));								\
-		bufIndex += (bpp/8);													\
-		/* ReadExact((char *)&fg, (bpp/8)); */									\
-		memcpy(pfgcolor,&fg,bpp/8);												\
-	}																			\
-																				\
-	if (!(subencoding & rfbHextileAnySubrects)) {								\
-		return;																	\
-	}																			\
-																				\
-	if (bufLen - bufIndex < 1u)													\
-		return;																	\
-	nSubrects = *((CARD8 *)(buffer + bufIndex));									\
-	bufIndex += 1;																\
-	/* ReadExact( (char *)&nSubrects, 1); */									\
-																				\
-	ptr = (CARD8 *)(buffer + bufIndex);											\
-																				\
-	if (subencoding & rfbHextileSubrectsColoured) {								\
-																				\
-		/* ReadExact( m_netbuf, nSubrects * (2 + (bpp / 8))); */				\
-		if (bufLen - bufIndex < (unsigned int)nSubrects * (2 + (bpp / 8)))		\
-			return;																\
-																				\
-		for (i = 0; i < (int)nSubrects; i++) {								\
-			memcpy(pfgcolor,ptr,bpp/8);											\
-			ptr += (bpp/8);														\
-			sx = *ptr >> 4;														\
-			sy = *ptr++ & 0x0f;													\
-			sw = (*ptr >> 4) + 1;												\
-			sh = (*ptr++ & 0x0f) + 1;											\
-			FillSolidRect_ultra(x+sx, y+sy, sw, sh, m_myFormat.bitsPerPixel,(BYTE*)pfgcolor);\
-		}																		\
-																				\
-	} else {																	\
-		/* ReadExact(m_netbuf, nSubrects * 2); */								\
-		if (bufLen - bufIndex < (unsigned int)nSubrects * 2)					\
-			return;																\
-																				\
-		for (i = 0; i < (int)nSubrects; i++) {								\
-			sx = *ptr >> 4;														\
-			sy = *ptr++ & 0x0f;													\
-			sw = (*ptr >> 4) + 1;												\
-			sh = (*ptr++ & 0x0f) + 1;											\
-			FillSolidRect_ultra(x+sx, y+sy, sw, sh, m_myFormat.bitsPerPixel,(BYTE*)pfgcolor);\
-		}																		\
-	}																			\
-}
+#define DEFINE_HEXTILE(bpp)                                                                                                        \
+    void ClientConnection::HandleZlibHexEncoding##bpp(int rx, int ry, int rw, int rh, bool zstd)                                   \
+    {                                                                                                                              \
+        int x, y, w, h;                                                                                                            \
+        CARD8 subencoding;                                                                                                         \
+        CARD16 nCompData;                                                                                                          \
+                                                                                                                                   \
+        CheckBufferSize(((16 * 16 + 2) * bpp / 8) + 20);                                                                           \
+        CheckZlibBufferSize(((16 * 16 + 2) * bpp / 8) + 20);                                                                       \
+                                                                                                                                   \
+        for (y = ry; y < ry + rh; y += 16)                                                                                         \
+        {                                                                                                                          \
+            omni_mutex_lock l(m_bitmapdcMutex);                                                                                    \
+            for (x = rx; x < rx + rw; x += 16)                                                                                     \
+            {                                                                                                                      \
+                w = h = 16;                                                                                                        \
+                if (rx + rw - x < 16)                                                                                              \
+                    w = rx + rw - x;                                                                                               \
+                if (ry + rh - y < 16)                                                                                              \
+                    h = ry + rh - y;                                                                                               \
+                                                                                                                                   \
+                ReadExact((char*)&subencoding, 1);                                                                                 \
+                                                                                                                                   \
+                if (subencoding & rfbHextileRaw)                                                                                   \
+                {                                                                                                                  \
+                    if ((getBufferSize() < w * h * (bpp / 8)) && (w > 0) && (h > 0))                                               \
+                    {                                                                                                              \
+                        assert(true);                                                                                              \
+                        return;                                                                                                    \
+                    }                                                                                                              \
+                    ReadExact(m_netbuf, w * h * (bpp / 8));                                                                        \
+                    SETPIXELS(m_netbuf, bpp, x, y, w, h)                                                                           \
+                    continue;                                                                                                      \
+                }                                                                                                                  \
+                                                                                                                                   \
+                if (subencoding & rfbHextileZlibRaw)                                                                               \
+                {                                                                                                                  \
+                    ReadExact((char*)&nCompData, 2);                                                                               \
+                    nCompData = Swap16IfLE(nCompData);                                                                             \
+                    CheckBufferSize(nCompData);                                                                                    \
+                    ReadExact(m_netbuf, nCompData);                                                                                \
+                    if (zlibDecompress((unsigned char*)m_netbuf, m_zlibbuf, nCompData, ((w * h + 2) * (bpp / 8)), ultraVncZRaw,    \
+                                       zstd))                                                                                      \
+                    {                                                                                                              \
+                        SETPIXELS(m_zlibbuf, bpp, x, y, w, h);                                                                     \
+                    }                                                                                                              \
+                    continue;                                                                                                      \
+                }                                                                                                                  \
+                                                                                                                                   \
+                if (subencoding & rfbHextileZlibHex)                                                                               \
+                {                                                                                                                  \
+                    ReadExact((char*)&nCompData, 2);                                                                               \
+                    nCompData = Swap16IfLE(nCompData);                                                                             \
+                    CheckBufferSize(nCompData);                                                                                    \
+                    ReadExact(m_netbuf, nCompData);                                                                                \
+                    unsigned int nDecompBytes{ 0U };                                                                               \
+                    if (zlibDecompress((unsigned char*)m_netbuf, m_zlibbuf, nCompData, ((w * h + 2) * (bpp / 8) + 20),             \
+                                       ultraVncZEncoded, zstd, &nDecompBytes))                                                     \
+                    {                                                                                                              \
+                        HandleZlibHexSubencodingBuf##bpp(x, y, w, h, subencoding, m_zlibbuf, nDecompBytes);                        \
+                    }                                                                                                              \
+                    continue;                                                                                                      \
+                }                                                                                                                  \
+                else                                                                                                               \
+                {                                                                                                                  \
+                    HandleZlibHexSubencodingStream##bpp(x, y, w, h, subencoding);                                                  \
+                }                                                                                                                  \
+            }                                                                                                                      \
+        }                                                                                                                          \
+    }                                                                                                                              \
+                                                                                                                                   \
+    void ClientConnection::HandleZlibHexSubencodingStream##bpp(int x, int y, int w, int h, int subencoding)                        \
+    {                                                                                                                              \
+        CARD##bpp bg, fg;                                                                                                          \
+        int i;                                                                                                                     \
+        CARD8* ptr;                                                                                                                \
+        int sx, sy, sw, sh;                                                                                                        \
+        CARD8 nSubrects;                                                                                                           \
+                                                                                                                                   \
+        if (subencoding & rfbHextileBackgroundSpecified)                                                                           \
+        {                                                                                                                          \
+            ReadExact((char*)&bg, (bpp / 8));                                                                                      \
+            std::memcpy(pbgcolor.data(), &bg, bpp / 8);                                                                                   \
+        }                                                                                                                          \
+        FillSolidRect_ultra(x, y, w, h, m_myFormat.bitsPerPixel, (BYTE*)pbgcolor.data());                                                 \
+                                                                                                                                   \
+        if (subencoding & rfbHextileForegroundSpecified)                                                                           \
+        {                                                                                                                          \
+            ReadExact((char*)&fg, (bpp / 8));                                                                                      \
+            std::memcpy(pfgcolor.data(), &fg, bpp / 8);                                                                                   \
+        }                                                                                                                          \
+                                                                                                                                   \
+        if (!(subencoding & rfbHextileAnySubrects))                                                                                \
+        {                                                                                                                          \
+            return;                                                                                                                \
+        }                                                                                                                          \
+                                                                                                                                   \
+        ReadExact((char*)&nSubrects, 1);                                                                                           \
+                                                                                                                                   \
+        ptr = (CARD8*)m_netbuf;                                                                                                    \
+                                                                                                                                   \
+        if (subencoding & rfbHextileSubrectsColoured)                                                                              \
+        {                                                                                                                          \
+                                                                                                                                   \
+            if (getBufferSize() < static_cast<UINT>((nSubrects * (2 + (bpp / 8)))))                                                \
+                CheckBufferSize(nSubrects * (2 + (bpp / 8)));                                                                      \
+            ptr = (CARD8*)m_netbuf;                                                                                                \
+            ReadExact(m_netbuf, nSubrects * (2 + (bpp / 8)));                                                                      \
+                                                                                                                                   \
+            for (i = 0; i < static_cast<int>(nSubrects); ++i)                                                                      \
+            {                                                                                                                      \
+                std::memcpy(pfgcolor.data(), ptr, bpp / 8);                                                                               \
+                ptr += (bpp / 8);                                                                                                  \
+                sx = *ptr >> 4;                                                                                                    \
+                sy = *ptr++ & 0x0f;                                                                                                \
+                sw = (*ptr >> 4) + 1;                                                                                              \
+                sh = (*ptr++ & 0x0f) + 1;                                                                                          \
+                FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, (BYTE*)pfgcolor.data());                             \
+            }                                                                                                                      \
+        }                                                                                                                          \
+        else                                                                                                                       \
+        {                                                                                                                          \
+            if (getBufferSize() < static_cast<UINT>((nSubrects * 2)))                                                              \
+                CheckBufferSize(nSubrects * 2);                                                                                    \
+            ptr = (CARD8*)m_netbuf;                                                                                                \
+            ReadExact(m_netbuf, nSubrects * 2);                                                                                    \
+                                                                                                                                   \
+            for (i = 0; i < static_cast<int>(nSubrects); ++i)                                                                      \
+            {                                                                                                                      \
+                sx = *ptr >> 4;                                                                                                    \
+                sy = *ptr++ & 0x0f;                                                                                                \
+                sw = (*ptr >> 4) + 1;                                                                                              \
+                sh = (*ptr++ & 0x0f) + 1;                                                                                          \
+                FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, (BYTE*)pfgcolor.data());                             \
+            }                                                                                                                      \
+        }                                                                                                                          \
+    }                                                                                                                              \
+                                                                                                                                   \
+                                                                                                                                   \
+    void ClientConnection::HandleZlibHexSubencodingBuf##bpp(int x, int y, int w, int h, int subencoding, unsigned char* buffer,    \
+                                                            unsigned int bufLen)                                                   \
+    {                                                                                                                              \
+        CARD##bpp bg, fg;                                                                                                          \
+        int i;                                                                                                                     \
+        CARD8* ptr;                                                                                                                \
+        int sx, sy, sw, sh;                                                                                                        \
+        CARD8 nSubrects;                                                                                                           \
+        unsigned int bufIndex{ 0U };                                                                                               \
+                                                                                                                                   \
+        if (subencoding & rfbHextileBackgroundSpecified)                                                                           \
+        {                                                                                                                          \
+            if (bufLen - bufIndex < static_cast<unsigned int>((bpp / 8)))                                                          \
+                return;                                                                                                            \
+            bg = *((CARD##bpp*)(buffer + bufIndex));                                                                               \
+            bufIndex += (bpp / 8);                                                                                                 \
+            /* ReadExact((char *)&bg, (bpp/8)); */                                                                                 \
+            std::memcpy(pbgcolor.data(), &bg, bpp / 8);                                                                                   \
+        }                                                                                                                          \
+        FillSolidRect_ultra(x, y, w, h, m_myFormat.bitsPerPixel, (BYTE*)pbgcolor.data());                                                 \
+                                                                                                                                   \
+        if (subencoding & rfbHextileForegroundSpecified)                                                                           \
+        {                                                                                                                          \
+            if (bufLen - bufIndex < static_cast<unsigned int>((bpp / 8)))                                                          \
+                return;                                                                                                            \
+            fg = *((CARD##bpp*)(buffer + bufIndex));                                                                               \
+            bufIndex += (bpp / 8);                                                                                                 \
+            /* ReadExact((char *)&fg, (bpp/8)); */                                                                                 \
+            std::memcpy(pfgcolor.data(), &fg, bpp / 8);                                                                                   \
+        }                                                                                                                          \
+                                                                                                                                   \
+        if (!(subencoding & rfbHextileAnySubrects))                                                                                \
+        {                                                                                                                          \
+            return;                                                                                                                \
+        }                                                                                                                          \
+                                                                                                                                   \
+        if (bufLen - bufIndex < 1u)                                                                                                \
+            return;                                                                                                                \
+        nSubrects = *((CARD8*)(buffer + bufIndex));                                                                                \
+        bufIndex += 1;                                                                                                             \
+        /* ReadExact( (char *)&nSubrects, 1); */                                                                                   \
+                                                                                                                                   \
+        ptr = (CARD8*)(buffer + bufIndex);                                                                                         \
+                                                                                                                                   \
+        if (subencoding & rfbHextileSubrectsColoured)                                                                              \
+        {                                                                                                                          \
+                                                                                                                                   \
+            /* ReadExact( m_netbuf, nSubrects * (2 + (bpp / 8))); */                                                               \
+            if (bufLen - bufIndex < static_cast<unsigned int>(nSubrects) * (2 + (bpp / 8)))                                        \
+                return;                                                                                                            \
+                                                                                                                                   \
+            for (i = 0; i < static_cast<int>(nSubrects); ++i)                                                                      \
+            {                                                                                                                      \
+                std::memcpy(pfgcolor.data(), ptr, bpp / 8);                                                                               \
+                ptr += (bpp / 8);                                                                                                  \
+                sx = *ptr >> 4;                                                                                                    \
+                sy = *ptr++ & 0x0f;                                                                                                \
+                sw = (*ptr >> 4) + 1;                                                                                              \
+                sh = (*ptr++ & 0x0f) + 1;                                                                                          \
+                FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, (BYTE*)pfgcolor.data());                             \
+            }                                                                                                                      \
+        }                                                                                                                          \
+        else                                                                                                                       \
+        {                                                                                                                          \
+            /* ReadExact(m_netbuf, nSubrects * 2); */                                                                              \
+            if (bufLen - bufIndex < static_cast<unsigned int>(nSubrects) * 2)                                                      \
+                return;                                                                                                            \
+                                                                                                                                   \
+            for (i = 0; i < static_cast<int>(nSubrects); ++i)                                                                      \
+            {                                                                                                                      \
+                sx = *ptr >> 4;                                                                                                    \
+                sy = *ptr++ & 0x0f;                                                                                                \
+                sw = (*ptr >> 4) + 1;                                                                                              \
+                sh = (*ptr++ & 0x0f) + 1;                                                                                          \
+                FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, (BYTE*)pfgcolor.data());                             \
+            }                                                                                                                      \
+        }                                                                                                                          \
+    }
 
 
 DEFINE_HEXTILE(8)
 DEFINE_HEXTILE(16)
 DEFINE_HEXTILE(32)
-
-

@@ -20,26 +20,27 @@
 #include "OutStream.h
 #include "Exception.h"
 
-namespace rdr {
+namespace rdr
+{
 
-  class FixedMemOutStream : public OutStream {
+    class FixedMemOutStream : public OutStream
+    {
 
-  public:
+    public:
+        FixedMemOutStream(void* const buf, const int len)
+        {
+            ptr = start = (U8*)buf;
+            end = start + len;
+        }
 
-    FixedMemOutStream(void* buf, int len) {
-      ptr = start = (U8*)buf;
-      end = start + len;
-    }
+        [[nodiscard]] constexpr int length() noexcept { return ptr - start; }
+        void reposition(const int pos) { ptr = start + pos; }
+        const void* data() { return (const void*)start; }
 
-    int length() { return ptr - start; }
-    void reposition(int pos) { ptr = start + pos; }
-    const void* data() { return (const void*)start; }
-
-  private:
-
-    int overrun(int itemSize, int nItems) { throw EndOfStream("overrun"); }
-    U8* start;
-  };
+    private:
+        int overrun(const int itemSize, const int nItems) { throw EndOfStream("overrun"); }
+        U8* start;
+    };
 
 }
 

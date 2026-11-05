@@ -24,7 +24,6 @@
 #define _VNCHOOKS_DLL_
 
 #include <windows.h>
-
 /////////////////////////////////////////////////////////////////////////////
 // Define the import/export tags
 
@@ -35,26 +34,20 @@
 //
 // Functions used by WinVNC
 
-#define VNC_HOOKS_CATCHES_ALL 0x1					// Doesn't miss updates
-#define VNC_HOOKS_CATCHES_MIN 0x2					// Reports minimal updates
+#define VNC_HOOKS_CATCHES_ALL 0x1 // Doesn't miss updates
+#define VNC_HOOKS_CATCHES_MIN 0x2 // Reports minimal updates
 
-extern "C"
-{
-	// DLL functions:
-	DllExport DWORD HooksType();                    // Find out whether hooks are reliable/hints
-	DllExport BOOL SetHooks(
-		DWORD thread_id,
-		UINT UpdateMsg,
-		UINT CopyMsg,
-		UINT MouseMsg,
-		BOOL ddihook
-		);											// Set the hook
-	DllExport BOOL UnSetHooks(DWORD thread_id);		// Remove it
+extern "C" {
+// DLL functions:
+DllExport DWORD HooksType(); // Find out whether hooks are reliable/hints
+DllExport BOOL SetHooks(DWORD thread_id, UINT UpdateMsg, UINT CopyMsg, UINT MouseMsg,
+                        BOOL ddihook);      // Set the hook
+DllExport BOOL UnSetHooks(DWORD thread_id); // Remove it
 
-	DllExport BOOL SetKeyboardFilterHook(BOOL activate);
-													// Control keyboard filtering
-	DllExport BOOL SetMouseFilterHook(BOOL activate);
-													// Control mouse filtering
+DllExport BOOL SetKeyboardFilterHook(BOOL activate);
+// Control keyboard filtering
+DllExport BOOL SetMouseFilterHook(BOOL activate);
+// Control mouse filtering
 }
 
 #endif // !defined(_VNCHOOKS_DLL_)

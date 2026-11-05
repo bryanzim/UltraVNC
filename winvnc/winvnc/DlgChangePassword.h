@@ -15,16 +15,16 @@
 class DlgChangePassword
 {
 private:
-	HWND DlgChangePasswordHwnd = NULL;
-	char title[1024]{};
-	int passwordSize;
-	char passwd[1024];
-public:
-	DlgChangePassword();
-	int ShowDlg(HWND parentWindow, const char* title, int passwordSize);
-	~DlgChangePassword();
-	bool InitDialog(HWND hwnd);
-	void onOK(HWND hwnd);
-	char* getPassword();
-};
+    HWND DlgChangePasswordHwnd = nullptr;
+    char title[1024U]{};
+    int passwordSize;
+    char passwd[1024U];
 
+public:
+    explicit DlgChangePassword();
+    int ShowDlg(HWND parentWindow, const char* title, int passwordSize);
+    ~DlgChangePassword();
+    bool InitDialog(HWND hwnd);
+    void onOK(HWND hwnd);
+    char* getPassword();
+};

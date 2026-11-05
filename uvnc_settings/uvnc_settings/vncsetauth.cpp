@@ -15,156 +15,142 @@
 
 // Implementation of the About dialog!
 #include "stdafx.h"
+
 #include "vncsetauth.h"
+
 #include "resource.h"
+
+#include <cstring>
+
 #define MAXSTRING 254
 extern HINSTANCE hInst;
 
 
 
 
-LONG
-vncSetAuth::LoadInt_(LPCSTR valname, LONG defval)
+LONG vncSetAuth::LoadInt_(const LPCSTR valname, const LONG defval)
 {
-	{
-		return myIniFile.ReadInt("admin_auth", (char *)valname, defval);
-	}
+    {
+        return myIniFile.ReadInt("admin_auth", (char*)valname, defval);
+    }
 }
 
-TCHAR *
-vncSetAuth::LoadString_(LPCSTR keyname)
+TCHAR* vncSetAuth::LoadString_(const LPCSTR keyname)
 {
-	{
-		TCHAR *authhosts=new char[150];
-		myIniFile.ReadString("admin_auth", (char *)keyname,authhosts,150);
-		return (TCHAR *)authhosts;
-	}
+    {
+        TCHAR* authhosts = new char[150U];
+        myIniFile.ReadString("admin_auth", (char*)keyname, authhosts, 150);
+        return (TCHAR*)authhosts;
+    }
 }
 
-void
-vncSetAuth::SaveInt_(LPCSTR valname, LONG val)
+void vncSetAuth::SaveInt_(const LPCSTR valname, const LONG val)
 {
-	{
-		myIniFile.WriteInt("admin_auth", (char *)valname, val);
-	}
+    {
+        myIniFile.WriteInt("admin_auth", (char*)valname, val);
+    }
 }
 
-void
-vncSetAuth::SaveString_(LPCSTR valname, TCHAR *buffer)
+void vncSetAuth::SaveString_(const LPCSTR valname, TCHAR* const buffer)
 {
-	{
-		myIniFile.WriteString("admin_auth", (char *)valname,buffer);
-	}
+    {
+        myIniFile.WriteString("admin_auth", (char*)valname, buffer);
+    }
 }
 
-void
-vncSetAuth::savegroup1(TCHAR *value)
+void vncSetAuth::savegroup1(TCHAR* const value)
 {
-	{
-		SaveString_("group1", value);
-	}
+    {
+        SaveString_("group1", value);
+    }
 }
-TCHAR*
-vncSetAuth::Readgroup1()
+TCHAR* vncSetAuth::Readgroup1()
 {
-	{
-		TCHAR *value=NULL;
-		value=LoadString_("group1");
-		return value;
-	}
+    {
+        TCHAR* value = nullptr;
+        value = LoadString_("group1");
+        return value;
+    }
 }
 
-void
-vncSetAuth::savegroup2(TCHAR *value)
+void vncSetAuth::savegroup2(TCHAR* const value)
 {
-	{
-		SaveString_("group2", value);
-	}
+    {
+        SaveString_("group2", value);
+    }
 }
-TCHAR*
-vncSetAuth::Readgroup2()
+TCHAR* vncSetAuth::Readgroup2()
 {
-	{
-		TCHAR *value=NULL;
-		value=LoadString_("group2");
-		return value;
-	}
+    {
+        TCHAR* value = nullptr;
+        value = LoadString_("group2");
+        return value;
+    }
 }
 
-void
-vncSetAuth::savegroup3(TCHAR *value)
+void vncSetAuth::savegroup3(TCHAR* const value)
 {
-	{
-		SaveString_("group3", value);
-	}
+    {
+        SaveString_("group3", value);
+    }
 }
-TCHAR*
-vncSetAuth::Readgroup3()
+TCHAR* vncSetAuth::Readgroup3()
 {
-	{
-		TCHAR *value=NULL;
-		value=LoadString_("group3");
-		return value;
-	}
+    {
+        TCHAR* value = nullptr;
+        value = LoadString_("group3");
+        return value;
+    }
 }
 
-LONG
-vncSetAuth::Readlocdom1(LONG returnvalue)
+LONG vncSetAuth::Readlocdom1(LONG returnvalue)
 {
 
-	{
-		returnvalue=LoadInt_("locdom1",returnvalue);
-		return returnvalue;
-	}
+    {
+        returnvalue = LoadInt_("locdom1", returnvalue);
+        return returnvalue;
+    }
 }
 
-void
-vncSetAuth::savelocdom1(LONG value)
+void vncSetAuth::savelocdom1(const LONG value)
 {
 
-	{
-		SaveInt_("locdom1", value);
-	}
-
+    {
+        SaveInt_("locdom1", value);
+    }
 }
 
-LONG
-vncSetAuth::Readlocdom2(LONG returnvalue)
+LONG vncSetAuth::Readlocdom2(LONG returnvalue)
 {
 
-	{
-		returnvalue=LoadInt_("locdom2",returnvalue);
-		return returnvalue;
-	}
+    {
+        returnvalue = LoadInt_("locdom2", returnvalue);
+        return returnvalue;
+    }
 }
 
-void
-vncSetAuth::savelocdom2(LONG value)
+void vncSetAuth::savelocdom2(const LONG value)
 {
 
-	{
-		SaveInt_("locdom2", value);
-	}
-
+    {
+        SaveInt_("locdom2", value);
+    }
 }
 
-LONG
-vncSetAuth::Readlocdom3(LONG returnvalue)
+LONG vncSetAuth::Readlocdom3(LONG returnvalue)
 {
 
-	{
-		returnvalue=LoadInt_("locdom3",returnvalue);
-		return returnvalue;
-	}
+    {
+        returnvalue = LoadInt_("locdom3", returnvalue);
+        return returnvalue;
+    }
 }
 
-void
-vncSetAuth::savelocdom3(LONG value)
+void vncSetAuth::savelocdom3(const LONG value)
 {
-	{
-		SaveInt_("locdom3", value);
-	}
-
+    {
+        SaveInt_("locdom3", value);
+    }
 }
 
 ///////////////////////////////////////////////////////////
@@ -174,214 +160,260 @@ vncSetAuth::savelocdom3(LONG value)
 // Constructor/destructor
 vncSetAuth::vncSetAuth()
 {
-	m_dlgvisible = FALSE;
-	locdom1=0;
-	locdom2=0;
-	locdom3=0;
-	group1=Readgroup1();
-	group2=Readgroup2();
-	group3=Readgroup3();
-	locdom1=Readlocdom1(locdom1);
-	locdom2=Readlocdom2(locdom2);
-	locdom3=Readlocdom3(locdom3);
-	if (group1){strcpy(pszgroup1,group1);delete [] group1;}
-	else strcpy(pszgroup1,"");
-	if (group2){strcpy(pszgroup2,group2);delete [] group2;}
-	else strcpy(pszgroup2,"");
-	if (group3){strcpy(pszgroup3,group3);delete [] group3;}
-	else strcpy(pszgroup3,"");
+    m_dlgvisible = FALSE;
+    locdom1 = 0;
+    locdom2 = 0;
+    locdom3 = 0;
+    group1 = Readgroup1();
+    group2 = Readgroup2();
+    group3 = Readgroup3();
+    locdom1 = Readlocdom1(locdom1);
+    locdom2 = Readlocdom2(locdom2);
+    locdom3 = Readlocdom3(locdom3);
+    if (group1)
+    {
+        std::strcpy(pszgroup1.data(), group1);
+        delete[] group1;
+    }
+    else
+    {
+        std::strcpy(pszgroup1.data(), "");
+    }
+    if (group2)
+    {
+        std::strcpy(pszgroup2.data(), group2);
+        delete[] group2;
+    }
+    else
+    {
+        std::strcpy(pszgroup2.data(), "");
+    }
+    if (group3)
+    {
+        std::strcpy(pszgroup3.data(), group3);
+        delete[] group3;
+    }
+    else
+    {
+        std::strcpy(pszgroup3.data(), "");
+    }
 }
 
-vncSetAuth::~vncSetAuth()
-{
-}
+vncSetAuth::~vncSetAuth() {}
 
 // Initialisation
-BOOL
-vncSetAuth::Init()
+BOOL vncSetAuth::Init()
 {
-	m_dlgvisible = FALSE;
-	locdom1=0;
-	locdom2=0;
-	locdom3=0;
-	group1=Readgroup1();
-	group2=Readgroup2();
-	group3=Readgroup3();
-	locdom1=Readlocdom1(locdom1);
-	locdom2=Readlocdom2(locdom2);
-	locdom3=Readlocdom3(locdom3);
-	if (group1){strcpy(pszgroup1,group1);delete group1;}
-	else strcpy(pszgroup1,"");
-	if (group2){strcpy(pszgroup2,group2);delete group2;}
-	else strcpy(pszgroup2,"");
-	if (group3){strcpy(pszgroup3,group3);delete group3;}
-	else strcpy(pszgroup3,"");
-	return TRUE;
+    m_dlgvisible = FALSE;
+    locdom1 = 0;
+    locdom2 = 0;
+    locdom3 = 0;
+    group1 = Readgroup1();
+    group2 = Readgroup2();
+    group3 = Readgroup3();
+    locdom1 = Readlocdom1(locdom1);
+    locdom2 = Readlocdom2(locdom2);
+    locdom3 = Readlocdom3(locdom3);
+    if (group1)
+    {
+        std::strcpy(pszgroup1.data(), group1);
+        delete group1;
+    }
+    else
+    {
+        std::strcpy(pszgroup1.data(), "");
+    }
+    if (group2)
+    {
+        std::strcpy(pszgroup2.data(), group2);
+        delete group2;
+    }
+    else
+    {
+        std::strcpy(pszgroup2.data(), "");
+    }
+    if (group3)
+    {
+        std::strcpy(pszgroup3.data(), group3);
+        delete group3;
+    }
+    else
+    {
+        std::strcpy(pszgroup3.data(), "");
+    }
+    return TRUE;
 }
 
 // Dialog box handling functions
-void
-vncSetAuth::Show(BOOL show)
+void vncSetAuth::Show(const BOOL show)
 {
-	if (show)
-	{
-		if (!m_dlgvisible)
-		{
-			// [v1.0.2-jp1 fix] Load resouce from dll
-			//DialogBoxParam(hAppInstance,
-			DialogBoxParam(hInst,
-				MAKEINTRESOURCE(IDD_MSLOGON), 
-				NULL,
-				(DLGPROC) DialogProc,
-				(LPARAM) this);
-		}
-	}
+    if (show)
+    {
+        if (!m_dlgvisible)
+        {
+            // [v1.0.2-jp1 fix] Load resouce from dll
+            //DialogBoxParam(hAppInstance,
+            ::DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_MSLOGON), nullptr, (DLGPROC)DialogProc, (LPARAM)this);
+        }
+    }
 }
 
-BOOL CALLBACK
-vncSetAuth::DialogProc(HWND hwnd,
-					 UINT uMsg,
-					 WPARAM wParam,
-					 LPARAM lParam )
+BOOL CALLBACK vncSetAuth::DialogProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
-	// We use the dialog-box's USERDATA to store a _this pointer
-	// This is set only once WM_INITDIALOG has been recieved, though!
+    // We use the dialog-box's USERDATA to store a _this pointer
+    // This is set only once WM_INITDIALOG has been recieved, though!
 #ifndef _X64
-	vncSetAuth *_this = (vncSetAuth *) GetWindowLong(hwnd, GWL_USERDATA);
+    vncSetAuth* _this = (vncSetAuth*)::GetWindowLong(hwnd, GWL_USERDATA);
 #else
-	vncSetAuth *_this = (vncSetAuth *) GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    vncSetAuth* _this = (vncSetAuth*)::GetWindowLongPtr(hwnd, GWLP_USERDATA);
 #endif
 
-	switch (uMsg)
-	{
+    switch (uMsg)
+    {
 
-	case WM_INITDIALOG:
-		{
-			// Retrieve the Dialog box parameter and use it as a pointer
-			// to the calling vncProperties object
-			#ifndef _X64
-				SetWindowLong(hwnd, GWL_USERDATA, lParam);
-			#else
-				SetWindowLongPtr(hwnd, GWLP_USERDATA, lParam);
-			#endif
+    case WM_INITDIALOG: {
+// Retrieve the Dialog box parameter and use it as a pointer
+// to the calling vncProperties object
+#ifndef _X64
+        ::SetWindowLong(hwnd, GWL_USERDATA, lParam);
+#else
+        ::SetWindowLongPtr(hwnd, GWLP_USERDATA, lParam);
+#endif
 
-			_this = (vncSetAuth *) lParam;
-			SetDlgItemText(hwnd, IDC_GROUP1, _this->pszgroup1);
-			SetDlgItemText(hwnd, IDC_GROUP2, _this->pszgroup2);
-			SetDlgItemText(hwnd, IDC_GROUP3, _this->pszgroup3);
-			if (_this->locdom1==1 || _this->locdom1==3)
-			{
-				HWND hG1l = GetDlgItem(hwnd, IDC_CHECKG1L);
-				SendMessage(hG1l,BM_SETCHECK,true,0);
-			}
-			else
-			{
-				HWND hG1l = GetDlgItem(hwnd, IDC_CHECKG1L);
-				SendMessage(hG1l,BM_SETCHECK,false,0);
-			}
-			if (_this->locdom1==2 || _this->locdom1==3)
-			{
-				HWND hG1l = GetDlgItem(hwnd, IDC_CHECKG1D);
-				SendMessage(hG1l,BM_SETCHECK,true,0);
-			}
-			else
-			{
-				HWND hG1l = GetDlgItem(hwnd, IDC_CHECKG1D);
-				SendMessage(hG1l,BM_SETCHECK,false,0);
-			}
-			if (_this->locdom2==1 || _this->locdom2==3)
-			{
-				HWND hG1l = GetDlgItem(hwnd, IDC_CHECKG2L);
-				SendMessage(hG1l,BM_SETCHECK,true,0);
-			}
-			else
-			{
-				HWND hG1l = GetDlgItem(hwnd, IDC_CHECKG2L);
-				SendMessage(hG1l,BM_SETCHECK,false,0);
-			}
-			if (_this->locdom2==2 || _this->locdom2==3)
-			{
-				HWND hG1l = GetDlgItem(hwnd, IDC_CHECKG2D);
-				SendMessage(hG1l,BM_SETCHECK,true,0);
-			}
-			else
-			{
-				HWND hG1l = GetDlgItem(hwnd, IDC_CHECKG2D);
-				SendMessage(hG1l,BM_SETCHECK,false,0);
-			}
-			if (_this->locdom3==1 || _this->locdom3==3)
-			{
-				HWND hG1l = GetDlgItem(hwnd, IDC_CHECKG3L);
-				SendMessage(hG1l,BM_SETCHECK,true,0);
-			}
-			else
-			{
-				HWND hG1l = GetDlgItem(hwnd, IDC_CHECKG3L);
-				SendMessage(hG1l,BM_SETCHECK,false,0);
-			}
-			if (_this->locdom3==2 || _this->locdom3==3)
-			{
-				HWND hG1l = GetDlgItem(hwnd, IDC_CHECKG3D);
-				SendMessage(hG1l,BM_SETCHECK,true,0);
-			}
-			else
-			{
-				HWND hG1l = GetDlgItem(hwnd, IDC_CHECKG3D);
-				SendMessage(hG1l,BM_SETCHECK,false,0);
-			}
-			
-			// Show the dialog
-			SetForegroundWindow(hwnd);
+        _this = (vncSetAuth*)lParam;
+        ::SetDlgItemText(hwnd, IDC_GROUP1, _this->pszgroup1.data());
+        ::SetDlgItemText(hwnd, IDC_GROUP2, _this->pszgroup2.data());
+        ::SetDlgItemText(hwnd, IDC_GROUP3, _this->pszgroup3.data());
+        if ((_this->locdom1 == 1) || (_this->locdom1 == 3))
+        {
+            HWND hG1l = ::GetDlgItem(hwnd, IDC_CHECKG1L);
+            ::SendMessage(hG1l, BM_SETCHECK, true, 0);
+        }
+        else
+        {
+            HWND hG1l = ::GetDlgItem(hwnd, IDC_CHECKG1L);
+            ::SendMessage(hG1l, BM_SETCHECK, false, 0);
+        }
+        if ((_this->locdom1 == 2) || (_this->locdom1 == 3))
+        {
+            HWND hG1l = ::GetDlgItem(hwnd, IDC_CHECKG1D);
+            ::SendMessage(hG1l, BM_SETCHECK, true, 0);
+        }
+        else
+        {
+            HWND hG1l = ::GetDlgItem(hwnd, IDC_CHECKG1D);
+            ::SendMessage(hG1l, BM_SETCHECK, false, 0);
+        }
+        if ((_this->locdom2 == 1) || (_this->locdom2 == 3))
+        {
+            HWND hG1l = ::GetDlgItem(hwnd, IDC_CHECKG2L);
+            ::SendMessage(hG1l, BM_SETCHECK, true, 0);
+        }
+        else
+        {
+            HWND hG1l = ::GetDlgItem(hwnd, IDC_CHECKG2L);
+            ::SendMessage(hG1l, BM_SETCHECK, false, 0);
+        }
+        if ((_this->locdom2 == 2) || (_this->locdom2 == 3))
+        {
+            HWND hG1l = ::GetDlgItem(hwnd, IDC_CHECKG2D);
+            ::SendMessage(hG1l, BM_SETCHECK, true, 0);
+        }
+        else
+        {
+            HWND hG1l = ::GetDlgItem(hwnd, IDC_CHECKG2D);
+            ::SendMessage(hG1l, BM_SETCHECK, false, 0);
+        }
+        if ((_this->locdom3 == 1) || (_this->locdom3 == 3))
+        {
+            HWND hG1l = ::GetDlgItem(hwnd, IDC_CHECKG3L);
+            ::SendMessage(hG1l, BM_SETCHECK, true, 0);
+        }
+        else
+        {
+            HWND hG1l = ::GetDlgItem(hwnd, IDC_CHECKG3L);
+            ::SendMessage(hG1l, BM_SETCHECK, false, 0);
+        }
+        if ((_this->locdom3 == 2) || (_this->locdom3 == 3))
+        {
+            HWND hG1l = ::GetDlgItem(hwnd, IDC_CHECKG3D);
+            ::SendMessage(hG1l, BM_SETCHECK, true, 0);
+        }
+        else
+        {
+            HWND hG1l = ::GetDlgItem(hwnd, IDC_CHECKG3D);
+            ::SendMessage(hG1l, BM_SETCHECK, false, 0);
+        }
 
-			_this->m_dlgvisible = TRUE;
+        // Show the dialog
+        ::SetForegroundWindow(hwnd);
 
-			return TRUE;
-		}
+        _this->m_dlgvisible = TRUE;
 
-	case WM_COMMAND:
-		switch (LOWORD(wParam))
-		{
+        return TRUE;
+    }
 
-		case IDCANCEL:
-			EndDialog(hwnd, TRUE);
-				_this->m_dlgvisible = FALSE;
-				return TRUE;
-		case IDOK:
-			{
-				_this->locdom1=0;
-				_this->locdom2=0;
-				_this->locdom3=0;
-				if (SendMessage(GetDlgItem(hwnd, IDC_CHECKG1L),BM_GETCHECK,0,0) == BST_CHECKED) _this->locdom1=_this->locdom1+1;
-				if (SendMessage(GetDlgItem(hwnd, IDC_CHECKG1D),BM_GETCHECK,0,0) == BST_CHECKED) _this->locdom1=_this->locdom1+2;
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
 
-				if (SendMessage(GetDlgItem(hwnd, IDC_CHECKG2L),BM_GETCHECK,0,0) == BST_CHECKED) _this->locdom2=_this->locdom2+1;
-				if (SendMessage(GetDlgItem(hwnd, IDC_CHECKG2D),BM_GETCHECK,0,0) == BST_CHECKED) _this->locdom2=_this->locdom2+2;
+        case IDCANCEL:
+            ::EndDialog(hwnd, TRUE);
+            _this->m_dlgvisible = FALSE;
+            return TRUE;
+        case IDOK: {
+            _this->locdom1 = 0;
+            _this->locdom2 = 0;
+            _this->locdom3 = 0;
+            if (::SendMessage(::GetDlgItem(hwnd, IDC_CHECKG1L), BM_GETCHECK, 0, 0) == BST_CHECKED)
+            {
+                _this->locdom1 = _this->locdom1 + 1;
+            }
+            if (::SendMessage(::GetDlgItem(hwnd, IDC_CHECKG1D), BM_GETCHECK, 0, 0) == BST_CHECKED)
+            {
+                _this->locdom1 = _this->locdom1 + 2;
+            }
 
-				if (SendMessage(GetDlgItem(hwnd, IDC_CHECKG3L),BM_GETCHECK,0,0) == BST_CHECKED) _this->locdom3=_this->locdom3+1;
-				if (SendMessage(GetDlgItem(hwnd, IDC_CHECKG3D),BM_GETCHECK,0,0) == BST_CHECKED) _this->locdom3=_this->locdom3+2;
+            if (::SendMessage(::GetDlgItem(hwnd, IDC_CHECKG2L), BM_GETCHECK, 0, 0) == BST_CHECKED)
+            {
+                _this->locdom2 = _this->locdom2 + 1;
+            }
+            if (::SendMessage(::GetDlgItem(hwnd, IDC_CHECKG2D), BM_GETCHECK, 0, 0) == BST_CHECKED)
+            {
+                _this->locdom2 = _this->locdom2 + 2;
+            }
 
-				GetDlgItemText(hwnd, IDC_GROUP1, (LPSTR) _this->pszgroup1, 240);
-				GetDlgItemText(hwnd, IDC_GROUP2, (LPSTR) _this->pszgroup2, 240);
-				GetDlgItemText(hwnd, IDC_GROUP3, (LPSTR) _this->pszgroup3, 240);
-	
-				_this->savegroup1(_this->pszgroup1);
-				_this->savegroup2(_this->pszgroup2);
-				_this->savegroup3(_this->pszgroup3);
-				_this->savelocdom1(_this->locdom1);
-				_this->savelocdom2(_this->locdom2);
-				_this->savelocdom3(_this->locdom3);
-				EndDialog(hwnd, TRUE);
-				_this->m_dlgvisible = FALSE;
-				return TRUE;
-			}
-		}
+            if (::SendMessage(::GetDlgItem(hwnd, IDC_CHECKG3L), BM_GETCHECK, 0, 0) == BST_CHECKED)
+            {
+                _this->locdom3 = _this->locdom3 + 1;
+            }
+            if (::SendMessage(::GetDlgItem(hwnd, IDC_CHECKG3D), BM_GETCHECK, 0, 0) == BST_CHECKED)
+            {
+                _this->locdom3 = _this->locdom3 + 2;
+            }
 
-		break;
+            ::GetDlgItemText(hwnd, IDC_GROUP1, (LPSTR)_this->pszgroup1.data(), 240);
+            ::GetDlgItemText(hwnd, IDC_GROUP2, (LPSTR)_this->pszgroup2.data(), 240);
+            ::GetDlgItemText(hwnd, IDC_GROUP3, (LPSTR)_this->pszgroup3.data(), 240);
 
-	case WM_DESTROY:
-		EndDialog(hwnd, FALSE);
-		_this->m_dlgvisible = FALSE;
-		return TRUE;
-	}
-	return 0;
+            _this->savegroup1(_this->pszgroup1.data());
+            _this->savegroup2(_this->pszgroup2.data());
+            _this->savegroup3(_this->pszgroup3.data());
+            _this->savelocdom1(_this->locdom1);
+            _this->savelocdom2(_this->locdom2);
+            _this->savelocdom3(_this->locdom3);
+            ::EndDialog(hwnd, TRUE);
+            _this->m_dlgvisible = FALSE;
+            return TRUE;
+        }
+        }
+
+        break;
+
+    case WM_DESTROY:
+        ::EndDialog(hwnd, FALSE);
+        _this->m_dlgvisible = FALSE;
+        return TRUE;
+    }
+    return 0;
 }
