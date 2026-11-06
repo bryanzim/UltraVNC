@@ -15,11 +15,11 @@
 #include "common/win32_helpers.h"
 #include "Localization.h" // Act : add localization on messages
 #include "resource.h"
-#include "richedit.h"
+#include "Richedit.h"
 #include "vncclient.h"
 #include "vncserver.h"
 
-#include <commctrl.h>
+#include <CommCtrl.h>
 
 #include <algorithm>
 #include <array>
@@ -238,7 +238,7 @@ static bool BytesToUtf8Display(const char* const inBytes, const int inLen, const
         return false;
     }
 
-    wchar_t* wtmp = new wchar_t[wlen + 1];
+    wchar_t* wtmp = new wchar_t[static_cast<unsigned long long>(wlen + 1)];
     wtmp[0U] = 0;
     int wlen2 = ::MultiByteToWideChar(cp, 0, inBytes, inLen, wtmp, wlen);
     if (wlen2 <= 0)
@@ -334,7 +334,7 @@ void TextChat::SetTextFormat(const bool bBold, const bool bItalic, const long nS
         cf.yHeight = nSize;       // set size in points
         ::strcpy_s(cf.szFaceName, 32, szFaceName);
 
-        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
+        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_SETCHARFORMAT, SCF_SELECTION, reinterpret_cast<LPARAM>(&cf));
     }
 }
 
@@ -344,12 +344,12 @@ void TextChat::SetTextFormat(const bool bBold, const bool bItalic, const long nS
 void TextChat::ProcessTextChatMsg(const int nTO)
 {
     rfbTextChatMsg tcm;
-    m_pCC->m_socket->ReadExact(((char*)&tcm) + nTO, sz_rfbTextChatMsg - nTO);
-    int len = Swap32IfLE(tcm.length);
+    m_pCC->m_socket->ReadExact((reinterpret_cast<char*>(&tcm)) + nTO, static_cast<VCard>(sz_rfbTextChatMsg - nTO));
+    int len = static_cast<int>(Swap32IfLE(tcm.length));
 
     if (len == CHAT_OPEN)
     {
-        PlayResource((char*)"IDR_WAVE1");
+        PlayResource(const_cast<char*>(reinterpret_cast<const char *>("IDR_WAVE1")));
         if (m_fTextChatRunning)
         {
             return;
@@ -400,8 +400,8 @@ void TextChat::ProcessTextChatMsg(const int nTO)
         }
         else
         {
-            char* raw = new char[len];
-            if (!m_pCC->m_socket->ReadExact(raw, len))
+            char* raw = new char[static_cast<unsigned long long>(len)];
+            if (!m_pCC->m_socket->ReadExact(raw, static_cast<VCard>(len)))
             {
                 delete[] raw;
                 m_pCC->cl_connected = FALSE;
@@ -413,7 +413,7 @@ void TextChat::ProcessTextChatMsg(const int nTO)
             if (!BytesToUtf8Display(raw, len, assumed, m_szRemoteText, TEXTMAXSIZE))
             {
                 int copyLen = (len >= TEXTMAXSIZE) ? (TEXTMAXSIZE - 1) : len;
-                std::memcpy(m_szRemoteText, raw, copyLen);
+                std::memcpy(m_szRemoteText, raw, static_cast<size_t>(copyLen));
                 m_szRemoteText[copyLen] = 0;
             }
             delete[] raw;
@@ -446,9 +446,9 @@ void TextChat::SendTextChatRequest(const int nMsg)
     rfbTextChatMsg tcm;
     std::memset(&tcm, 0, sizeof(rfbTextChatMsg));
     tcm.type = rfbTextChat;
-    tcm.length = Swap32IfLE(nMsg);
+    tcm.length = static_cast<unsigned int>(Swap32IfLE(nMsg));
     omni_mutex_lock l(m_pCC->GetUpdateLock(), 82);
-    m_pCC->m_socket->SendExact((char*)&tcm, sz_rfbTextChatMsg, rfbTextChat);
+    m_pCC->m_socket->SendExact(reinterpret_cast<char*>(&tcm), sz_rfbTextChatMsg, rfbTextChat);
     return;
 }
 
@@ -467,7 +467,7 @@ void TextChat::PrintMessage(const char* const szMessage, const char* const szSen
     lpG.flags = GTL_NUMBYTES;
     lpG.codepage = CP_UTF8;
 
-    int nLen = static_cast<int>(::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_GETTEXTLENGTHEX, (WPARAM)&lpG, 0L));
+    int nLen = static_cast<int>(::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_GETTEXTLENGTHEX, reinterpret_cast<WPARAM>(&lpG), 0L));
     if (nLen + 32 > TEXTMAXSIZE)
     {
         std::memset(m_szTextBoxBuffer, 0, TEXTMAXSIZE);
@@ -480,10 +480,10 @@ void TextChat::PrintMessage(const char* const szMessage, const char* const szSen
     // Print sender's name with Unicode support
     if ((szSender != nullptr) && (std::strlen(szSender) > 0))
     {
-        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, WM_GETTEXT, TEXTMAXSIZE - 1, (LPARAM)m_szTextBoxBuffer);
+        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, WM_GETTEXT, TEXTMAXSIZE - 1, reinterpret_cast<LPARAM>(m_szTextBoxBuffer));
         cr.cpMax = nLen;
         cr.cpMin = cr.cpMax;
-        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_EXSETSEL, 0, (LPARAM)&cr);
+        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_EXSETSEL, 0, reinterpret_cast<LPARAM>(&cr));
 
         SetTextFormat(false, false, 0x75, "MS Shell Dlg 2", dwColor);
 
@@ -497,18 +497,18 @@ void TextChat::PrintMessage(const char* const szMessage, const char* const szSen
         SETTEXTEX st;
         st.flags = ST_SELECTION;
         st.codepage = 1200; // Unicode (UTF-16LE)
-        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_SETTEXTEX, (WPARAM)&st, (LPARAM)bufferW.data());
+        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_SETTEXTEX, reinterpret_cast<WPARAM>(&st), reinterpret_cast<LPARAM>(bufferW.data()));
     }
 
-    nLen = static_cast<int>(::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_GETTEXTLENGTHEX, (WPARAM)&lpG, 0L));
+    nLen = static_cast<int>(::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_GETTEXTLENGTHEX, reinterpret_cast<WPARAM>(&lpG), 0L));
 
     // Print message with Unicode support
     if (szMessage != nullptr)
     {
-        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, WM_GETTEXT, TEXTMAXSIZE - 1, (LPARAM)m_szTextBoxBuffer);
+        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, WM_GETTEXT, TEXTMAXSIZE - 1, reinterpret_cast<LPARAM>(m_szTextBoxBuffer));
         cr.cpMax = nLen;
         cr.cpMin = cr.cpMax;
-        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_EXSETSEL, 0, (LPARAM)&cr);
+        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_EXSETSEL, 0, reinterpret_cast<LPARAM>(&cr));
 
         SetTextFormat(false, false, 0x75, "MS Shell Dlg 2", dwColor != GREY ? BLACK : GREY);
 
@@ -519,7 +519,7 @@ void TextChat::PrintMessage(const char* const szMessage, const char* const szSen
         SETTEXTEX st;
         st.flags = ST_SELECTION;
         st.codepage = 1200; // Unicode (UTF-16LE)
-        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_SETTEXTEX, (WPARAM)&st, (LPARAM)messageW.data());
+        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_SETTEXTEX, reinterpret_cast<WPARAM>(&st), reinterpret_cast<LPARAM>(messageW.data()));
     }
 
     // Scroll down the chat window
@@ -530,7 +530,7 @@ void TextChat::PrintMessage(const char* const szMessage, const char* const szSen
     si.fMask = SIF_RANGE | SIF_PAGE;
     ::GetScrollInfo(::GetDlgItem(m_hDlg, IDC_CHATAREA_EDIT), SB_VERT, &si);
     si.nPos = si.nMax - std::max(static_cast<int>((si.nPage - 1)), 0);
-    ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, WM_VSCROLL, MAKELONG(SB_THUMBPOSITION, si.nPos), 0L); // Scroll down the ch
+    ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, WM_VSCROLL, static_cast<WPARAM>(MAKELONG(SB_THUMBPOSITION, si.nPos)), 0L); // Scroll down the ch
 
     // This line does the bottom scrolling correctly under Windows NT4, Windows 2000, Windows XP...
     // SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, WM_VSCROLL, SB_BOTTOM, 0L);
@@ -595,13 +595,13 @@ void TextChat::SendLocalText(void)
     std::memset(&tcm, 0, sizeof(rfbTextChatMsg));
     tcm.type = rfbTextChat;
     int sendLen = static_cast<int>(std::strlen(sendBytes.data()));
-    tcm.length = Swap32IfLE(sendLen);
+    tcm.length = static_cast<unsigned int>(Swap32IfLE(sendLen));
     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
     omni_mutex_lock l(m_pCC->GetUpdateLock(), 82);
-    m_pCC->m_socket->SendExactQueue((char*)&tcm, sz_rfbTextChatMsg, rfbTextChat);
+    m_pCC->m_socket->SendExactQueue(reinterpret_cast<char*>(&tcm), sz_rfbTextChatMsg, rfbTextChat);
     if (sendLen > 0)
     {
-        m_pCC->m_socket->SendExact((char*)sendBytes.data(), (const VCard)sendLen);
+        m_pCC->m_socket->SendExact(reinterpret_cast<char*>(sendBytes.data()), static_cast<const VCard>(sendLen));
     }
 
     //and we clear the input box
@@ -613,7 +613,7 @@ void TextChat::SendLocalText(void)
 
 LRESULT CALLBACK TextChat::DoDialogThread(const LPVOID lpParameter)
 {
-    TextChat* _this = (TextChat*)lpParameter;
+    TextChat* _this = reinterpret_cast<TextChat*>(lpParameter);
 
     _this->m_fTextChatRunning = true;
     // TODO: Place code here.
@@ -646,7 +646,7 @@ LRESULT CALLBACK TextChat::DoDialogThread(const LPVOID lpParameter)
         }
     }
 
-    ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_TEXTCHAT_DLG), nullptr, (DLGPROC)TextChatDlgProc, (LPARAM)_this);
+    ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_TEXTCHAT_DLG), nullptr, reinterpret_cast<DLGPROC>(TextChatDlgProc), reinterpret_cast<LPARAM>(_this));
     ::SetThreadDesktop(old_desktop);
     if (desktop)
     {
@@ -659,12 +659,12 @@ LRESULT CALLBACK TextChat::DoDialogThread(const LPVOID lpParameter)
 HWND TextChat::DisplayTextChat()
 {
     DWORD threadID;
-    m_Thread = ::CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)(TextChat::DoDialogThread), (LPVOID)this, 0, &threadID);
+    m_Thread = ::CreateThread(nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>((TextChat::DoDialogThread)), reinterpret_cast<LPVOID>(this), 0, &threadID);
     if (m_Thread)
     {
         ::ResumeThread(m_Thread);
     }
-    return (HWND)0;
+    return static_cast<HWND>(nullptr);
 }
 
 //
@@ -751,10 +751,10 @@ INT_PTR CALLBACK TextChat::TextChatDlgProc(HWND hWnd, const UINT uMsg, const WPA
     {
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_WINVNC));
-        ::SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hWnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         helper::SafeSetWindowUserData(hWnd, lParam);
-        TextChat* _thisInner = (TextChat*)lParam;
+        TextChat* _thisInner = reinterpret_cast<TextChat*>(lParam);
 
         if ((_thisInner->m_szLocalText == nullptr) || (_thisInner->m_szRemoteText == nullptr))
         {
@@ -812,7 +812,7 @@ INT_PTR CALLBACK TextChat::TextChatDlgProc(HWND hWnd, const UINT uMsg, const WPA
         si.fMask = SIF_RANGE | SIF_PAGE;
         ::GetScrollInfo(::GetDlgItem(hWnd, IDC_CHATAREA_EDIT), SB_VERT, &si);
         si.nPos = si.nMax - std::max(static_cast<int>((si.nPage - 1)), 0);
-        ::SendDlgItemMessage(hWnd, IDC_CHATAREA_EDIT, WM_VSCROLL, MAKELONG(SB_THUMBPOSITION, si.nPos), 0L);
+        ::SendDlgItemMessage(hWnd, IDC_CHATAREA_EDIT, WM_VSCROLL, static_cast<WPARAM>(MAKELONG(SB_THUMBPOSITION, si.nPos)), 0L);
 
         ::SetForegroundWindow(hWnd);
 
@@ -872,7 +872,7 @@ INT_PTR CALLBACK TextChat::TextChatDlgProc(HWND hWnd, const UINT uMsg, const WPA
             if (HIWORD(wParam) == EN_UPDATE)
             {
                 ::GetDlgItemText(hWnd, IDC_INPUTAREA_EDIT, _this->m_szLocalText, TEXTMAXSIZE);
-                if (strstr(_this->m_szLocalText, "\n") != 0) // Enter triggers the message transmission
+                if (strstr(_this->m_szLocalText, "\n") != nullptr) // Enter triggers the message transmission
                 {
                     _this->SendLocalText();
                 }
@@ -902,7 +902,7 @@ INT_PTR CALLBACK TextChat::TextChatDlgProc(HWND hWnd, const UINT uMsg, const WPA
     //	[v1.0.2-jp1 fix-->]
     case WM_SIZING:
         LPRECT lprc;
-        lprc = (LPRECT)lParam;
+        lprc = reinterpret_cast<LPRECT>(lParam);
         switch (wParam)
         {
         case WMSZ_TOPLEFT:
@@ -1067,6 +1067,6 @@ LRESULT CALLBACK SBProc(const HWND hWnd, const UINT uMsg, const WPARAM wParam, c
         break;
     }
 
-    return ::CallWindowProc((WNDPROC)pDefSBProc, hWnd, uMsg, wParam, lParam);
+    return ::CallWindowProc(reinterpret_cast<WNDPROC>(pDefSBProc), hWnd, uMsg, wParam, lParam);
 }
 //	[<--v1.0.2-jp1 fix]

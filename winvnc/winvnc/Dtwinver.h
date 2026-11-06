@@ -31,8 +31,8 @@ to maintain a single distribution point for the source code.
 
 ////////////////////////////////// Initial setup //////////////////////////////
 
-#ifndef __DTWINVER_H__
-#define __DTWINVER_H__
+#ifndef DTWINVER_H
+#define DTWINVER_H
 
 //Preprocessor values we need to control the various code paths
 #if defined(UNDER_CE)
@@ -57,9 +57,9 @@ to maintain a single distribution point for the source code.
 
 
 ////////////////////////////////// Includes ///////////////////////////////////
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #if defined(COSVERSION_WIN32) || defined(COSVERSION_WIN64)
 #include <tchar.h>
@@ -896,4 +896,4 @@ protected:
 #endif //#if !defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP)
 };
 
-#endif //__DTWINVER_H__
+#endif //DTWINVER_H

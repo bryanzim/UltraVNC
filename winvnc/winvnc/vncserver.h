@@ -27,8 +27,8 @@ extern bool fShutdownOrdered;
 class vncServer;
 class VirtualDisplay;
 
-#if (!defined(_WINVNC_VNCSERVER))
-#define _WINVNC_VNCSERVER
+#if (!defined(WINVNC_VNCSERVER))
+#define WINVNC_VNCSERVER
 
 // Custom
 // Includes
@@ -161,7 +161,7 @@ public:
     int AutoReconnect_counter;
     virtual void DoNotify(UINT message, WPARAM wparam, LPARAM lparam);
     // Update handling, used by the screen server
-    virtual rfb::UpdateTracker& GetUpdateTracker() { return m_update_tracker; };
+    virtual rfb::UpdateTracker& GetUpdateTracker() { return m_update_tracker; }
     virtual void UpdateMouse();
     // adzm - 2010-07 - Extended clipboard
     //virtual void UpdateClipText(const char* text);
@@ -233,11 +233,11 @@ public:
 
     // sf@2002 - DSM Plugin
     virtual BOOL SetDSMPlugin(BOOL fForceReload);
-    virtual CDSMPlugin* GetDSMPluginPointer() { return m_pDSMPlugin; };
+    virtual CDSMPlugin* GetDSMPluginPointer() { return m_pDSMPlugin; }
 
     // sf@2002 - Cursor handling
     virtual void EnableXRichCursor(BOOL fEnable);
-    virtual BOOL IsXRichCursorEnabled() { return m_fXRichCursor; };
+    virtual BOOL IsXRichCursorEnabled() { return m_fXRichCursor; }
 
     // sf@2002
     virtual void DisableCacheForAllClients();
@@ -256,14 +256,14 @@ public:
             return false;
         }
         return m_fAutoReconnect;
-    };
-    virtual BOOL IdReconnect() { return m_fIdReconnect; };
-    virtual UINT AutoReconnectPort() { return m_AutoReconnectPort; };
+    }
+    virtual BOOL IdReconnect() { return m_fIdReconnect; }
+    virtual UINT AutoReconnectPort() { return m_AutoReconnectPort; }
     virtual char* AutoReconnectAdr() { return m_szAutoReconnectAdr.data(); }
     virtual char* AutoReconnectId() { return m_szAutoReconnectId.data(); }
-    virtual void AutoReconnect(const BOOL fEnabled) { m_fAutoReconnect = fEnabled; };
-    virtual void IdReconnect(const BOOL fEnabled) { m_fIdReconnect = fEnabled; };
-    virtual void AutoReconnectPort(const UINT nPort) { m_AutoReconnectPort = nPort; };
+    virtual void AutoReconnect(const BOOL fEnabled) { m_fAutoReconnect = fEnabled; }
+    virtual void IdReconnect(const BOOL fEnabled) { m_fIdReconnect = fEnabled; }
+    virtual void AutoReconnectPort(const UINT nPort) { m_AutoReconnectPort = nPort; }
     virtual void AutoReconnectAdr(char* const szAdr) { ::strcpy_s(m_szAutoReconnectAdr.data(), 255, szAdr); }
     virtual void AutoReconnectId(char* const szId) { ::strcpy_s(m_szAutoReconnectId.data(), m_szAutoReconnectId.size(), szId); }
     virtual void AutoConnectRetry();
@@ -294,9 +294,9 @@ protected:
     class ServerUpdateTracker : public rfb::UpdateTracker
     {
     public:
-        explicit ServerUpdateTracker() : m_server{ 0 } {};
+        explicit ServerUpdateTracker() : m_server{ nullptr } {}
 
-        virtual void init(vncServer* server) { m_server = server; };
+        virtual void init(vncServer* server) { m_server = server; }
 
         virtual void add_changed(const rfb::Region2D& region);
         virtual void add_cached(const rfb::Region2D& region);

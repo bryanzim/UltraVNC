@@ -16,8 +16,8 @@ inline rfbHighResolutionWheelMsg MakeHighResolutionWheel(unsigned axis, int delt
 {
     rfbHighResolutionWheelMsg msg;
     msg.type = rfbHighResolutionWheel;
-    msg.axis = (CARD8)axis;
-    msg.delta = Swap16IfLE((CARD16)delta);
+    msg.axis = static_cast<CARD8>(axis);
+    msg.delta = Swap16IfLE(static_cast<CARD16>(delta));
     msg.x = Swap16IfLE(x);
     msg.y = Swap16IfLE(y);
     return msg;

@@ -20,7 +20,7 @@
 // depending on SECPKG_ATTR_ENDPOINT_BINDINGS (unavailable before Windows 7
 // and ambiguous about which certificate it hashes server-side).
 #pragma once
-#include <windows.h>
+#include <Windows.h>
 
 #include <wincrypt.h>
 

@@ -68,15 +68,15 @@ void EventLogging::AddEventSourceToRegistry([[maybe_unused]] const LPCTSTR lpszS
     ::lstrcpy(szBuf.data(), szServicePath.data());
 
     // Add the name to the EventMessageFile subkey.
-    if (::RegSetValueEx(hk, _T("EventMessageFile"), 0, REG_EXPAND_SZ, (LPBYTE)szBuf.data(),
-                      (::lstrlen(szBuf.data()) + 1) * sizeof(TCHAR)) != ERROR_SUCCESS)
+    if (::RegSetValueEx(hk, _T("EventMessageFile"), 0, REG_EXPAND_SZ, reinterpret_cast<LPBYTE>(szBuf.data()),
+                      (static_cast<unsigned long long>(::lstrlen(szBuf.data()) + 1)) * sizeof(TCHAR)) != ERROR_SUCCESS)
     {
         ::RegCloseKey(hk);
         return;
     }
 
     dwData = EVENTLOG_ERROR_TYPE | EVENTLOG_WARNING_TYPE | EVENTLOG_INFORMATION_TYPE;
-    if (::RegSetValueEx(hk, _T("TypesSupported"), 0, REG_DWORD, (LPBYTE)&dwData, sizeof(DWORD)) != ERROR_SUCCESS) {}
+    if (::RegSetValueEx(hk, _T("TypesSupported"), 0, REG_DWORD, reinterpret_cast<LPBYTE>(&dwData), sizeof(DWORD)) != ERROR_SUCCESS) {}
     ::RegCloseKey(hk);
 }
 
@@ -102,7 +102,7 @@ void LOGV2(TCHAR* const szMslogonLog, const long EventID, const TCHAR* const for
     ps[0U] = textbuf.data();
     EventLogging log;
     log.AddEventSourceToRegistry(nullptr);
-    log.LogIt(1, EventID, ps.data(), 1, nullptr, 0);
+    log.LogIt(1, static_cast<DWORD>(EventID), ps.data(), 1, nullptr, 0);
     file = _tfopen(szMslogonLog, _T("a"));
     if (file != nullptr)
     {
@@ -142,7 +142,7 @@ void LOG(const long EventID, const TCHAR* const format, ...)
     ps[0U] = textbuf.data();
     EventLogging log;
     log.AddEventSourceToRegistry(nullptr);
-    log.LogIt(1, EventID, ps.data(), 1, nullptr, 0);
+    log.LogIt(1, static_cast<DWORD>(EventID), ps.data(), 1, nullptr, 0);
     if (::GetModuleFileName(nullptr, szMslogonLog.data(), static_cast<DWORD>(szMslogonLog.size())))
     {
         TCHAR* p = ::_tcsrchr(szMslogonLog.data(), '\\');

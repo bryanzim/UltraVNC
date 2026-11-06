@@ -26,11 +26,11 @@
 #include <iphlpapi.h>
 
 #pragma comment(lib, "iphlpapi")
-#include <shlwapi.h>
+#include <Shlwapi.h>
 
 #pragma comment(lib, "shlwapi")
 #ifndef _WINSOCK2API_
-#include <winsock2.h>
+#include <WinSock2.h>
 
 #include <cstdlib>
 
@@ -58,7 +58,7 @@ std::array<char, 256U> strExternIP;
 DWORD WINAPI upnpthread([[maybe_unused]] const LPVOID lpParam)
 {
 #if !defined(__MINGW32__)
-    if (FAILED(::CoInitializeEx(0, COINIT_APARTMENTTHREADED)))
+    if (FAILED(::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED)))
     {
         ::CoUninitialize();
         return 0;
@@ -71,7 +71,7 @@ DWORD WINAPI upnpthread([[maybe_unused]] const LPVOID lpParam)
     PIP_ADAPTER_INFO pAdapterInfo = nullptr;
     DWORD dwRetVal{ 0U };
 
-    pAdapterInfo = (IP_ADAPTER_INFO*)std::malloc(sizeof(IP_ADAPTER_INFO));
+    pAdapterInfo = reinterpret_cast<IP_ADAPTER_INFO*>(std::malloc(sizeof(IP_ADAPTER_INFO)));
     ULONG ulOutBufLen = sizeof(IP_ADAPTER_INFO);
 
     // Make an initial call to GetAdaptersInfo to get
@@ -80,7 +80,7 @@ DWORD WINAPI upnpthread([[maybe_unused]] const LPVOID lpParam)
     if (::GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW)
     {
         std::free(pAdapterInfo);
-        pAdapterInfo = (IP_ADAPTER_INFO*)std::malloc(ulOutBufLen);
+        pAdapterInfo = reinterpret_cast<IP_ADAPTER_INFO*>(std::malloc(ulOutBufLen));
     }
 
     if ((dwRetVal = ::GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) == NO_ERROR)
@@ -104,7 +104,7 @@ DWORD WINAPI upnpthread([[maybe_unused]] const LPVOID lpParam)
 DWORD WINAPI checkthread([[maybe_unused]] const LPVOID lpParam)
 {
 #if !defined(__MINGW32__)
-    if (FAILED(::CoInitializeEx(0, COINIT_APARTMENTTHREADED)))
+    if (FAILED(::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED)))
     {
         ::CoUninitialize();
         return 0;
@@ -122,7 +122,7 @@ DWORD WINAPI checkthread([[maybe_unused]] const LPVOID lpParam)
 DWORD WINAPI mapthread([[maybe_unused]] const LPVOID lpParam)
 {
 #if !defined(__MINGW32__)
-    if (FAILED(::CoInitializeEx(0, COINIT_APARTMENTTHREADED)))
+    if (FAILED(::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED)))
     {
         ::CoUninitialize();
         return 0;
@@ -136,7 +136,7 @@ DWORD WINAPI mapthread([[maybe_unused]] const LPVOID lpParam)
     PIP_ADAPTER_INFO pAdapterInfo = nullptr;
     DWORD dwRetVal{ 0U };
 
-    pAdapterInfo = (IP_ADAPTER_INFO*)std::malloc(sizeof(IP_ADAPTER_INFO));
+    pAdapterInfo = reinterpret_cast<IP_ADAPTER_INFO*>(std::malloc(sizeof(IP_ADAPTER_INFO)));
     ULONG ulOutBufLen = sizeof(IP_ADAPTER_INFO);
 
     // Make an initial call to GetAdaptersInfo to get
@@ -145,13 +145,13 @@ DWORD WINAPI mapthread([[maybe_unused]] const LPVOID lpParam)
     if (::GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW)
     {
         std::free(pAdapterInfo);
-        pAdapterInfo = (IP_ADAPTER_INFO*)std::malloc(ulOutBufLen);
+        pAdapterInfo = reinterpret_cast<IP_ADAPTER_INFO*>(std::malloc(ulOutBufLen));
     }
 
     if ((dwRetVal = ::GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) == NO_ERROR)
     {
         std::strcpy(strLocalIP.data(), pAdapterInfo->IpAddressList.IpAddress.String);
-        UPnPvar.Set_UPnP(strLocalIP.data(), "TCP", "UVNC_TCP", (const short)PortNumber);
+        UPnPvar.Set_UPnP(strLocalIP.data(), "TCP", "UVNC_TCP", static_cast<const short>(PortNumber));
         UPnPvar.OpenPorts(true);
         std::strcpy(strExternIP.data(), UPnPvar.GetExternalIP());
         ::SendMessage(networkproc, WM_COMMAND, 2003, 0);
@@ -166,7 +166,7 @@ DWORD WINAPI mapthread([[maybe_unused]] const LPVOID lpParam)
 DWORD WINAPI unmapthread([[maybe_unused]] const LPVOID lpParam)
 {
 #if !defined(__MINGW32__)
-    if (FAILED(::CoInitializeEx(0, COINIT_APARTMENTTHREADED)))
+    if (FAILED(::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED)))
     {
         ::CoUninitialize();
         return 0;
@@ -179,7 +179,7 @@ DWORD WINAPI unmapthread([[maybe_unused]] const LPVOID lpParam)
     PIP_ADAPTER_INFO pAdapterInfo = nullptr;
     DWORD dwRetVal{ 0U };
 
-    pAdapterInfo = (IP_ADAPTER_INFO*)std::malloc(sizeof(IP_ADAPTER_INFO));
+    pAdapterInfo = reinterpret_cast<IP_ADAPTER_INFO*>(std::malloc(sizeof(IP_ADAPTER_INFO)));
     ULONG ulOutBufLen = sizeof(IP_ADAPTER_INFO);
 
     // Make an initial call to GetAdaptersInfo to get
@@ -188,13 +188,13 @@ DWORD WINAPI unmapthread([[maybe_unused]] const LPVOID lpParam)
     if (::GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW)
     {
         std::free(pAdapterInfo);
-        pAdapterInfo = (IP_ADAPTER_INFO*)std::malloc(ulOutBufLen);
+        pAdapterInfo = reinterpret_cast<IP_ADAPTER_INFO*>(std::malloc(ulOutBufLen));
     }
 
     if ((dwRetVal = ::GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) == NO_ERROR)
     {
         std::strcpy(strLocalIP.data(), pAdapterInfo->IpAddressList.IpAddress.String);
-        UPnPvar.Set_UPnP(strLocalIP.data(), "TCP", "UVNC_TCP", (const short)PortNumber);
+        UPnPvar.Set_UPnP(strLocalIP.data(), "TCP", "UVNC_TCP", static_cast<const short>(PortNumber));
         //UPnPvar.OpenPorts(true);
         std::strcpy(strExternIP.data(), UPnPvar.GetExternalIP());
         ::SendMessage(networkproc, WM_COMMAND, 2003, 0);
@@ -210,7 +210,7 @@ DWORD WINAPI unmapthread([[maybe_unused]] const LPVOID lpParam)
 DWORD WINAPI Fixhread([[maybe_unused]] const LPVOID lpParam)
 {
 #if !defined(__MINGW32__)
-    if (FAILED(::CoInitializeEx(0, COINIT_APARTMENTTHREADED)))
+    if (FAILED(::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED)))
     {
         ::CoUninitialize();
         return 0;
@@ -251,12 +251,12 @@ BOOL CALLBACK DlgProcOptions1(const HWND hwnd, const UINT uMsg, const WPARAM wPa
 
     case WM_INITDIALOG: {
         initdone = false;
-        ::SendMessage(::GetDlgItem(hwnd, IDC_CONNECT_SOCK), BM_SETCHECK, SocketConnect, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_CONNECT_HTTP), BM_SETCHECK, HTTPConnect, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWLOOPBACK), BM_SETCHECK, AllowLoopback, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_LOOPBACKONLY), BM_SETCHECK, LoopbackOnly, 0);
-        ::SetDlgItemInt(hwnd, IDC_PORTRFB, PortNumber, FALSE);
-        ::SetDlgItemInt(hwnd, IDC_PORTHTTP, HttpPortNumber, FALSE);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_CONNECT_SOCK), BM_SETCHECK, static_cast<WPARAM>(SocketConnect), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_CONNECT_HTTP), BM_SETCHECK, static_cast<WPARAM>(HTTPConnect), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWLOOPBACK), BM_SETCHECK, static_cast<WPARAM>(AllowLoopback), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_LOOPBACKONLY), BM_SETCHECK, static_cast<WPARAM>(LoopbackOnly), 0);
+        ::SetDlgItemInt(hwnd, IDC_PORTRFB, static_cast<UINT>(PortNumber), FALSE);
+        ::SetDlgItemInt(hwnd, IDC_PORTHTTP, static_cast<UINT>(HttpPortNumber), FALSE);
         ::CheckDlgButton(hwnd, IDC_PORTNO_AUTO, (AutoPortSelect) ? BST_CHECKED : BST_UNCHECKED);
         ::CheckDlgButton(hwnd, IDC_SPECPORT, (!AutoPortSelect) ? BST_CHECKED : BST_UNCHECKED);
         EditControl = ::GetDlgItem(hwnd, IDC_EDIT3);
@@ -318,7 +318,7 @@ BOOL CALLBACK DlgProcOptions1(const HWND hwnd, const UINT uMsg, const WPARAM wPa
                 std::strcpy(link.data(), "https://uvnc.com/webhelp/");
                 std::strcat(link.data(), "network");
                 std::strcat(link.data(), ".html");
-                ::ShellExecute(::GetDesktopWindow(), "open", link.data(), "", 0, SW_SHOWNORMAL);
+                ::ShellExecute(::GetDesktopWindow(), "open", link.data(), "", nullptr, SW_SHOWNORMAL);
             }
             break;
         case IDOK:
@@ -328,8 +328,8 @@ BOOL CALLBACK DlgProcOptions1(const HWND hwnd, const UINT uMsg, const WPARAM wPa
             LoopbackOnly = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_LOOPBACKONLY, BM_GETCHECK, 0, 0));
             AutoPortSelect = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_PORTNO_AUTO, BM_GETCHECK, 0, 0));
             BOOL ok1, ok2;
-            PortNumber = ::GetDlgItemInt(hwnd, IDC_PORTRFB, &ok1, TRUE);
-            HttpPortNumber = ::GetDlgItemInt(hwnd, IDC_PORTHTTP, &ok2, TRUE);
+            PortNumber = static_cast<LONG>(::GetDlgItemInt(hwnd, IDC_PORTRFB, &ok1, TRUE));
+            HttpPortNumber = static_cast<LONG>(::GetDlgItemInt(hwnd, IDC_PORTHTTP, &ok2, TRUE));
             break;
         case IDCANCEL:
             ::EndDialog(hwnd, IDCANCEL);
@@ -357,8 +357,8 @@ BOOL CALLBACK DlgProcOptions1(const HWND hwnd, const UINT uMsg, const WPARAM wPa
                 ::EnableWindow(::GetDlgItem(hwnd, IDC_CHECKUPNP), (SocketConnect && !AutoPortSelect));
                 ::EnableWindow(::GetDlgItem(hwnd, IDC_FIXUPNP), (!UPNP_status && UPNP_status_checked));
                 BOOL ok1Inner, ok2Inner;
-                PortNumber = ::GetDlgItemInt(hwnd, IDC_PORTRFB, &ok1Inner, TRUE);
-                HttpPortNumber = ::GetDlgItemInt(hwnd, IDC_PORTHTTP, &ok2Inner, TRUE);
+                PortNumber = static_cast<LONG>(::GetDlgItemInt(hwnd, IDC_PORTRFB, &ok1Inner, TRUE));
+                HttpPortNumber = static_cast<LONG>(::GetDlgItemInt(hwnd, IDC_PORTHTTP, &ok2Inner, TRUE));
             }
             break;
         }

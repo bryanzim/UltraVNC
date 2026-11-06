@@ -21,7 +21,7 @@
 HWND LowLevelHook::g_hwndVNCViewer = nullptr;
 DWORD LowLevelHook::g_VncProcessID = 0;
 //BOOL  LowLevelHook::g_fHookActive=FALSE;
-HHOOK LowLevelHook::g_HookID = 0;
+HHOOK LowLevelHook::g_HookID = nullptr;
 BOOL LowLevelHook::g_fCheckScrollLock = TRUE;
 BOOL LowLevelHook::g_fScrollLock = FALSE;
 BOOL LowLevelHook::g_fViewerFullScreen = FALSE;
@@ -37,7 +37,7 @@ BOOL LowLevelHook::Initialize(const HWND hwndMain)
     g_hwndVNCViewer = nullptr;
     //g_fHookActive = GetCurrentScrollLockState() ;
     g_VncProcessID = 0;
-    g_HookID = 0;
+    g_HookID = nullptr;
     g_fScrollLock = FALSE;
     g_fCheckScrollLock = TRUE;
 
@@ -88,7 +88,7 @@ BOOL LowLevelHook::Initialize(const HWND hwndMain)
 // adzm 2009-09-25 - Hook events handled on this thread
 DWORD WINAPI LowLevelHook::HookThreadProc(const LPVOID lpParam)
 {
-    HINSTANCE hInstance = (HINSTANCE)lpParam;
+    HINSTANCE hInstance = reinterpret_cast<HINSTANCE>(lpParam);
 
     MSG msg;
     BOOL bRet;
@@ -98,7 +98,7 @@ DWORD WINAPI LowLevelHook::HookThreadProc(const LPVOID lpParam)
 
     //Try to set the hook procedure
     g_HookID = ::SetWindowsHookEx(WH_KEYBOARD_LL, VncLowLevelKbHookProc, hInstance, 0);
-    if (g_HookID == 0)
+    if (g_HookID == nullptr)
     {
         [[maybe_unused]] DWORD dw = ::GetLastError();
 
@@ -185,7 +185,7 @@ LRESULT CALLBACK LowLevelHook::VncLowLevelKbHookProc(const INT nCode, const WPAR
 
     if (nCode == HC_ACTION)
     {
-        KBDLLHOOKSTRUCT* pkbdllhook = (KBDLLHOOKSTRUCT*)lParam;
+        KBDLLHOOKSTRUCT* pkbdllhook = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
 
         DWORD ProcessID;
 

@@ -34,8 +34,8 @@ static LRESULT CALLBACK MessageDlgProc2(const HWND hwnd, const UINT iMsg, const 
     {
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         //CentreWindow(hwnd);
         ::SetForegroundWindow(hwnd);
         extern char buildtime[];
@@ -94,19 +94,19 @@ static LRESULT CALLBACK MessageDlgProc2(const HWND hwnd, const UINT iMsg, const 
         }
         if (LOWORD(wParam) == IDC_FORUMHYPERLINK)
         {
-            ::ShellExecuteW(::GetDesktopWindow(), L"open", L"https://forum.uvnc.com/", L"", 0, SW_SHOWNORMAL);
+            ::ShellExecuteW(::GetDesktopWindow(), L"open", L"https://forum.uvnc.com/", L"", nullptr, SW_SHOWNORMAL);
         }
         if (LOWORD(wParam) == IDC_WEBSITE)
         {
-            ::ShellExecuteW(::GetDesktopWindow(), L"open", L"https://uvnc.com/", L"", 0, SW_SHOWNORMAL);
+            ::ShellExecuteW(::GetDesktopWindow(), L"open", L"https://uvnc.com/", L"", nullptr, SW_SHOWNORMAL);
         }
         if (LOWORD(wParam) == IDC_GIT)
         {
-            ::ShellExecuteW(::GetDesktopWindow(), L"open", L"https://github.com/ultravnc/UltraVNC", L"", 0, SW_SHOWNORMAL);
+            ::ShellExecuteW(::GetDesktopWindow(), L"open", L"https://github.com/ultravnc/UltraVNC", L"", nullptr, SW_SHOWNORMAL);
         }
         if (LOWORD(wParam) == IDC_WEBDOWNLOAD)
         {
-            ::ShellExecuteW(::GetDesktopWindow(), L"open", L"https://uvnc.com/downloads/ultravnc.html", L"", 0, SW_SHOWNORMAL);
+            ::ShellExecuteW(::GetDesktopWindow(), L"open", L"https://uvnc.com/downloads/ultravnc.html", L"", nullptr, SW_SHOWNORMAL);
         }
     }
     return FALSE;
@@ -117,7 +117,7 @@ void ShowMessageBox2(char* const info, const int error_nr)
     use_wide_msg2 = false;
     infomsg2 = info;
     g_error_nr2 = error_nr;
-    [[maybe_unused]] const int res = static_cast<int>(::DialogBox(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_APP_MESSAGE2), nullptr, (DLGPROC)MessageDlgProc2));
+    [[maybe_unused]] const int res = static_cast<int>(::DialogBox(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_APP_MESSAGE2), nullptr, reinterpret_cast<DLGPROC>(MessageDlgProc2)));
 }
 
 void ShowMessageBox2(const wchar_t* const info, const int error_nr)
@@ -125,5 +125,5 @@ void ShowMessageBox2(const wchar_t* const info, const int error_nr)
     use_wide_msg2 = true;
     infomsg2_w = info;
     g_error_nr2 = error_nr;
-    [[maybe_unused]] const int res = static_cast<int>(::DialogBox(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_APP_MESSAGE2), nullptr, (DLGPROC)MessageDlgProc2));
+    [[maybe_unused]] const int res = static_cast<int>(::DialogBox(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_APP_MESSAGE2), nullptr, reinterpret_cast<DLGPROC>(MessageDlgProc2)));
 }

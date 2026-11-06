@@ -26,7 +26,7 @@
 #include <cstring>
 
 #pragma comment(lib, "iphlpapi")
-#include <shlwapi.h>
+#include <Shlwapi.h>
 
 #include <cstdlib>
 
@@ -67,7 +67,7 @@ void UPnP::Set_UPnP(char* const theIPAddress, char* const theProtocol, char* con
 HRESULT UPnP::OpenPorts(const bool log)
 {
     ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-    HRESULT hr = ::CoCreateInstance(__uuidof(UPnPNAT), nullptr, CLSCTX_INPROC_SERVER, __uuidof(IUPnPNAT), (void**)&pUN);
+    HRESULT hr = ::CoCreateInstance(__uuidof(UPnPNAT), nullptr, CLSCTX_INPROC_SERVER, __uuidof(IUPnPNAT), reinterpret_cast<void**>(&pUN));
 
     if (SUCCEEDED(hr))
     {
@@ -135,7 +135,7 @@ HRESULT UPnP::ClosePorts(const bool log)
     HRESULT hr2 = E_FAIL;
 
     ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-    hr = ::CoCreateInstance(__uuidof(UPnPNAT), nullptr, CLSCTX_INPROC_SERVER, __uuidof(IUPnPNAT), (void**)&pUN);
+    hr = ::CoCreateInstance(__uuidof(UPnPNAT), nullptr, CLSCTX_INPROC_SERVER, __uuidof(IUPnPNAT), reinterpret_cast<void**>(&pUN));
 
     if (SUCCEEDED(hr))
     {
@@ -186,7 +186,7 @@ _bstr_t UPnP::GetExternalIP()
     BSTR bstrExternal = nullptr;
     _bstr_t bstrWrapper;
     ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-    hr = ::CoCreateInstance(__uuidof(UPnPNAT), nullptr, CLSCTX_INPROC_SERVER, __uuidof(IUPnPNAT), (void**)&pUN);
+    hr = ::CoCreateInstance(__uuidof(UPnPNAT), nullptr, CLSCTX_INPROC_SERVER, __uuidof(IUPnPNAT), reinterpret_cast<void**>(&pUN));
 
     if (SUCCEEDED(hr))
     {
@@ -278,7 +278,7 @@ bool mapport(const short port)
     DWORD dwRetVal{ 0U };
     std::array<char, 256U> strLocalIP;
 
-    pAdapterInfo = (IP_ADAPTER_INFO*)std::malloc(sizeof(IP_ADAPTER_INFO));
+    pAdapterInfo = reinterpret_cast<IP_ADAPTER_INFO*>(std::malloc(sizeof(IP_ADAPTER_INFO)));
     ULONG ulOutBufLen = sizeof(IP_ADAPTER_INFO);
 
     // Make an initial call to GetAdaptersInfo to get
@@ -287,7 +287,7 @@ bool mapport(const short port)
     if (::GetAdaptersInfo(pAdapterInfo, &ulOutBufLen) == ERROR_BUFFER_OVERFLOW)
     {
         std::free(pAdapterInfo);
-        pAdapterInfo = (IP_ADAPTER_INFO*)std::malloc(ulOutBufLen);
+        pAdapterInfo = reinterpret_cast<IP_ADAPTER_INFO*>(std::malloc(ulOutBufLen));
     }
 
     if ((dwRetVal = ::GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) == NO_ERROR)

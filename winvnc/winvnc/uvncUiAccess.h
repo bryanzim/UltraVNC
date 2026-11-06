@@ -9,8 +9,8 @@
 //
 
 
-#ifndef _G_UIACCESS_H_
-#define _G_UIACCESS_H_
+#ifndef G_UIACCESS_H
+#define G_UIACCESS_H
 
 #include "stdhdrs.h"
 

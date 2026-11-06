@@ -9,7 +9,7 @@
 //
 
 
-#include <windows.h>
+#include <Windows.h>
 
 class Interval
 {

@@ -14,8 +14,8 @@
 // A FixedMemOutStream writes to a buffer of a fixed length.
 //
 
-#ifndef __RDR_FIXEDMEMOUTSTREAM_H__
-#define __RDR_FIXEDMEMOUTSTREAM_H__
+#ifndef RDR_FIXEDMEMOUTSTREAM_H
+#define RDR_FIXEDMEMOUTSTREAM_H
 
 #include "OutStream.h
 #include "Exception.h"

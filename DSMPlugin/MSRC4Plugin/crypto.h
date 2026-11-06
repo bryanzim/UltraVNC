@@ -10,8 +10,8 @@
 //
 
 
-#ifndef _CRYPTO_H
-#define _CRYPTO_H
+#ifndef CRYPTO_H
+#define CRYPTO_H
 
 #pragma once
 #include <tchar.h>

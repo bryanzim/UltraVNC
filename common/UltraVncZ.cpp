@@ -118,7 +118,7 @@ UINT UltraVncZ::compressZlib(const int compresslevelIn, UINT avail_in, UINT avai
         compStreamInitedZlib = true;
         this->compresslevel = compresslevelIn;
     }
-    previousTotalOut = compStream.total_out;
+    previousTotalOut = static_cast<int>(compStream.total_out);
     if (this->compresslevel != compresslevelIn)
     {
         deflateParams(&compStream, compresslevelIn, Z_DEFAULT_STRATEGY);
@@ -129,7 +129,7 @@ UINT UltraVncZ::compressZlib(const int compresslevelIn, UINT avail_in, UINT avai
     {
         return 0;
     }
-    return compStream.total_out - previousTotalOut;
+    return compStream.total_out - static_cast<uLong>(previousTotalOut);
 }
 
 UINT UltraVncZ::compressZstd(int compresslevelIn, const UINT avail_in, const UINT avail_out, BYTE* const next_in,

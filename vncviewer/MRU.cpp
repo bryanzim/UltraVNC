@@ -18,7 +18,7 @@
 #include "VNCOptions.h"
 
 #include <direct.h>
-#include <shlobj.h>
+#include <ShlObj.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -61,7 +61,7 @@ void MRU::AddItem(const LPTSTR txt)
     // Scan through the index
     for (int i{ 0 }; i < static_cast<int>(::_tcslen(m_index.data())); ++i)
     {
-        id = m_index[i];
+        id = m_index[static_cast<unsigned long long>(i)];
         // Does this entry already contain the item we're adding
         if (GetItem(i, itembuf.data(), MRU_MAX_ITEM_LENGTH) != 0)
         {
@@ -70,7 +70,7 @@ void MRU::AddItem(const LPTSTR txt)
             {
                 for (int j = i; j > 0; --j)
                 {
-                    m_index[j] = m_index[j - 1];
+                    m_index[static_cast<unsigned long long>(j)] = m_index[static_cast<unsigned long long>(j - 1)];
                 }
                 m_index[0U] = id;
                 WriteIndex();
@@ -106,7 +106,7 @@ void MRU::AddItem(const LPTSTR txt)
     // move all the current ids up one
     for (int j = static_cast<int>(::_tcslen(m_index.data()) + 1); j >= 0; --j)
     {
-        m_index[j] = m_index[j - 1];
+        m_index[static_cast<unsigned long long>(j)] = m_index[static_cast<unsigned long long>(j - 1)];
     }
     m_index[MRU_MAX_ITEM_LENGTH] = _T('\0');
     // and insert this one at the front
@@ -131,10 +131,10 @@ int MRU::GetItem(const int index, const LPTSTR buf, int buflen)
         return 0;
     }
     std::array<TCHAR, 2U> valname;
-    valname[0U] = m_index[index];
+    valname[0U] = m_index[static_cast<unsigned long long>(index)];
     valname[1U] = _T('\0');
-    [[maybe_unused]] const DWORD dwbuflen = buflen;
-    ::GetPrivateProfileStringW(L"connection", valname.data(), L"", buf, buflen, m_optionfile);
+    [[maybe_unused]] const DWORD dwbuflen = static_cast<DWORD>(buflen);
+    ::GetPrivateProfileStringW(L"connection", valname.data(), L"", buf, static_cast<DWORD>(buflen), m_optionfile);
     return static_cast<int>(::_tcslen(buf));
 }
 
@@ -202,11 +202,11 @@ void MRU::RemoveItem(const int index)
         return;
     }
     std::array<TCHAR, 2U> valname;
-    valname[0U] = m_index[index];
+    valname[0U] = m_index[static_cast<unsigned long long>(index)];
     valname[1U] = _T('\0');
     ::WritePrivateProfileStringW(L"connection", valname.data(), nullptr, m_optionfile);
 
-    for (unsigned int i = index; i <= ::_tcslen(m_index.data()); ++i)
+    for (unsigned int i = static_cast<unsigned int>(index); i <= ::_tcslen(m_index.data()); ++i)
     {
         m_index[i] = m_index[i + 1];
     }

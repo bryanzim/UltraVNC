@@ -40,7 +40,7 @@
 //#include <WinAble.h>
 #include <omnithread.h>
 
-#include <commctrl.h>
+#include <CommCtrl.h>
 #include <mmsystem.h> // sf@2002
 
 #include <algorithm>
@@ -114,7 +114,7 @@ void PixelCaptureEngine::PixelCaptureEngineInit(const HDC rootdc, HDC memdc, HBI
 {
     m_hmemdc = memdc;
     m_membitmap = membitmap;
-    m_oldbitmap = 0;
+    m_oldbitmap = nullptr;
     m_DIBbits = dibbits;
     m_bCaptureAlpha = bCaptureAlpha;
     m_hrootdc_PixelEngine = rootdc;
@@ -141,7 +141,7 @@ bool PixelCaptureEngine::CaptureRect(const rfb::Rect& rect)
     if (m_bIsVista)
     {
         m_rect = rect;
-        if ((m_oldbitmap = (HBITMAP)::SelectObject(m_hmemdc, m_membitmap)) == nullptr)
+        if ((m_oldbitmap = reinterpret_cast<HBITMAP>(::SelectObject(m_hmemdc, m_membitmap))) == nullptr)
         {
             return false;
         }
@@ -165,8 +165,8 @@ PixelCaptureEngine::CapturePixel(int x, const int y)
     if (m_bIsVista)
     {
         COLORREF cr{ 0U };
-        unsigned int index = (m_bytesPerRow * y) + (m_bytesPerPixel * x);
-        std::memcpy(&cr, ((char*)m_DIBbits) + index, m_bytesPerPixel);
+        unsigned int index = static_cast<unsigned int>((m_bytesPerRow * y) + (m_bytesPerPixel * x));
+        std::memcpy(&cr, (reinterpret_cast<char*>(m_DIBbits)) + index, static_cast<size_t>(m_bytesPerPixel));
         return cr;
     }
     else
@@ -183,7 +183,7 @@ void PixelCaptureEngine::ReleaseCapture()
     if (m_bIsVista)
     {
         ::SelectObject(m_hmemdc, m_oldbitmap);
-        m_oldbitmap = 0;
+        m_oldbitmap = nullptr;
     }
 }
 
@@ -225,7 +225,7 @@ bool vncDesktop::FastDetectChanges(rfb::Region2D& rgn, rfb::Rect& rect, const in
         for (int i{ 0 }; i < (5 * PIXEL_BLOCK_SIZE / GRID_OFFSET); ++i)
         {
             RGBPixelList* pList = new RGBPixelList;
-            pList->reserve((rect.height() / PIXEL_BLOCK_SIZE) * (rect.width() / PIXEL_BLOCK_SIZE));
+            pList->reserve(static_cast<unsigned long long>((rect.height() / PIXEL_BLOCK_SIZE) * (rect.width() / PIXEL_BLOCK_SIZE)));
             if (pList != nullptr)
             {
                 m_lGridsList.push_back(pList);
@@ -258,17 +258,17 @@ bool vncDesktop::FastDetectChanges(rfb::Region2D& rgn, rfb::Rect& rect, const in
                 hProcess = ::OpenProcess(PROCESS_ALL_ACCESS, 0, pid);
                 RECT* ptritemrect;
                 RECT itemrect;
-                ptritemrect = (RECT*)::VirtualAllocEx(hProcess, nullptr, sizeof(RECT), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+                ptritemrect = reinterpret_cast<RECT*>(::VirtualAllocEx(hProcess, nullptr, sizeof(RECT), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
                 if (ptritemrect == nullptr) {}
                 else
                 {
-                    ::SendMessage(hWnd, LVM_GETITEMRECT, j, (LPARAM)ptritemrect);
+                    ::SendMessage(hWnd, LVM_GETITEMRECT, static_cast<WPARAM>(j), reinterpret_cast<LPARAM>(ptritemrect));
 #ifdef _X64
                     SIZE_T copied = 0;
 #else
                     DWORD copied{ 0U };
 #endif
-                    ::ReadProcessMemory(hProcess, (void*)ptritemrect, (LPVOID)&itemrect, sizeof(itemrect), &copied);
+                    ::ReadProcessMemory(hProcess, reinterpret_cast<void*>(ptritemrect), reinterpret_cast<LPVOID>(&itemrect), sizeof(itemrect), &copied);
                     rfb::Rect wrect = rfb::Rect(itemrect).intersect(m_Cliprect);
                     iconregion.assign_union(wrect);
                     ::VirtualFreeEx(hProcess, ptritemrect, 0, MEM_RELEASE);
@@ -442,7 +442,7 @@ bool vncDesktop::FastDetectChanges(rfb::Region2D& rgn, rfb::Rect& rect, const in
     if (idle_counter > 20)
     {
         //Beep(100,idle_counter);
-        ::Sleep(idle_counter);
+        ::Sleep(static_cast<DWORD>(idle_counter));
     }
     // 250 increased to 500, possible even 1000 will still have a good reaction time
     if (idle_counter > 1000)
@@ -522,15 +522,15 @@ vncDesktop::vncDesktop()
     hUser32 = ::LoadLibraryEx("USER32", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (hUser32)
     {
-        pbi = (pBlockInput)::GetProcAddress(hUser32, "BlockInput");
+        pbi = reinterpret_cast<pBlockInput>(::GetProcAddress(hUser32, "BlockInput"));
     }
     no_default_desktop = false;
     can_be_hooked = false;
 
     show_all_monitors = true;
     m_bIsInputDisabledByClient = false;
-    m_input_desktop = 0;
-    m_home_desktop = 0;
+    m_input_desktop = nullptr;
+    m_home_desktop = nullptr;
     idle_counter = 0;
     trigger_events[0U] = ::CreateEvent(nullptr, TRUE, FALSE, "timer");
     trigger_events[1U] = ::CreateEvent(nullptr, TRUE, FALSE, "screenupdate");
@@ -586,7 +586,7 @@ vncDesktop::~vncDesktop()
             if (Window() == nullptr)
             {
                 ::SetEvent(trigger_events[5U]);
-            };
+            }
             ::Sleep(100);
             ++counter;
             if (counter > 50)
@@ -625,8 +625,8 @@ vncDesktop::~vncDesktop()
             // with this:
             // "typedef std::list<void*> GridsList;"
             // we must be carefull to avoid memory leaks...
-            ((RGBPixelList*)(*iGrid))->clear();
-            delete ((RGBPixelList*)(*iGrid));
+            (reinterpret_cast<RGBPixelList*>((*iGrid)))->clear();
+            delete (reinterpret_cast<RGBPixelList*>((*iGrid)));
         }
     }
     vnclog.Print(LL_INTINFO, VNCLOG("~vncDesktop m_lGridsList.clear\n"));
@@ -638,7 +638,7 @@ vncDesktop::~vncDesktop()
     g_Desktop_running = false;
     for (int i{ 0 }; i < 6; ++i)
     {
-        ::CloseHandle(trigger_events[i]);
+        ::CloseHandle(trigger_events[static_cast<unsigned long long>(i)]);
     }
     ::CloseHandle(restart_event);
     ::CloseHandle(eventPlaceholder1);
@@ -723,7 +723,7 @@ vncDesktop::PreConnectInitBitmap()
     m_bminfo.bmi.bmiHeader.biWidth = m_bmrect.br.x;
     m_bminfo.bmi.bmiHeader.biHeight = m_bmrect.br.y;
     m_bminfo.bmi.bmiHeader.biSizeImage =
-        std::abs((m_bminfo.bmi.bmiHeader.biWidth * m_bminfo.bmi.bmiHeader.biHeight * m_bminfo.bmi.bmiHeader.biBitCount) / 8);
+        static_cast<DWORD>(std::abs((m_bminfo.bmi.bmiHeader.biWidth * m_bminfo.bmi.bmiHeader.biHeight * m_bminfo.bmi.bmiHeader.biBitCount) / 8));
     m_bminfo.bmi.bmiHeader.biHeight = -std::abs(m_bminfo.bmi.bmiHeader.biHeight);
     m_bminfo.bmi.bmiHeader.biCompression = BI_RGB;
     m_bminfo.truecolour = true;
@@ -964,7 +964,7 @@ BOOL vncDesktop::Shutdown()
         {
             vnclog.Print(LL_INTERR, VNCLOG("failed to close desktop\n"));
         }
-        m_input_desktop = 0;
+        m_input_desktop = nullptr;
     }
     GridsList::iterator iGrid;
     for (iGrid = m_lGridsList.begin(); iGrid != m_lGridsList.end(); ++iGrid)
@@ -976,8 +976,8 @@ BOOL vncDesktop::Shutdown()
             // with this:
             // "typedef std::list<void*> GridsList;"
             // we must be carefull to avoid memory leaks...
-            ((RGBPixelList*)(*iGrid))->clear();
-            delete ((RGBPixelList*)(*iGrid));
+            (reinterpret_cast<RGBPixelList*>((*iGrid)))->clear();
+            delete (reinterpret_cast<RGBPixelList*>((*iGrid)));
         }
     }
     m_lGridsList.clear();
@@ -1051,12 +1051,12 @@ void vncDesktop::KillScreenSaver()
             vnclog.Print(LL_INTINFO, VNCLOG("Killing ScreenSaver\n"));
 
             // Close all windows on the screen saver desktop
-            ::EnumDesktopWindows(hDesk, (WNDENUMPROC)&KillScreenSaverFunc, 0);
+            ::EnumDesktopWindows(hDesk, reinterpret_cast<WNDENUMPROC>(&KillScreenSaverFunc), 0);
             ::CloseDesktop(hDesk);
             // Pause long enough for the screen-saver to close
             //Sleep(2000);
             // Reset the screen saver so it can run again
-            ::SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, TRUE, 0, SPIF_SENDWININICHANGE);
+            ::SystemParametersInfo(SPI_SETSCREENSAVEACTIVE, TRUE, nullptr, SPIF_SENDWININICHANGE);
         }
         break;
     }
@@ -1087,9 +1087,9 @@ vncDesktop::InitBitmap()
         INT devNum{ 0 };
         BOOL result;
         DriverFound = false;
-        while (result = ::EnumDisplayDevicesA(nullptr, devNum, &dd, 0))
+        while (result = ::EnumDisplayDevicesA(nullptr, static_cast<DWORD>(devNum), &dd, 0))
         {
-            if (std::strcmp((const char*)&dd.DeviceString[0U], driverName) == 0)
+            if (std::strcmp(reinterpret_cast<const char*>(&dd.DeviceString[0U]), driverName) == 0)
             {
                 DriverFound = true;
                 break;
@@ -1098,7 +1098,7 @@ vncDesktop::InitBitmap()
         }
         if (DriverFound)
         {
-            deviceName = (LPSTR)&dd.DeviceName[0U];
+            deviceName = reinterpret_cast<LPSTR>(&dd.DeviceName[0U]);
             //JnZn558
             if (m_hrootdc_Desktop != nullptr)
             {
@@ -1235,7 +1235,7 @@ vncDesktop::InitBitmap()
     m_bminfo.bmi.bmiHeader.biWidth = m_bmrect.br.x;
     m_bminfo.bmi.bmiHeader.biHeight = m_bmrect.br.y;
     m_bminfo.bmi.bmiHeader.biSizeImage =
-        std::abs((m_bminfo.bmi.bmiHeader.biWidth * m_bminfo.bmi.bmiHeader.biHeight * m_bminfo.bmi.bmiHeader.biBitCount) / 8);
+        static_cast<DWORD>(std::abs((m_bminfo.bmi.bmiHeader.biWidth * m_bminfo.bmi.bmiHeader.biHeight * m_bminfo.bmi.bmiHeader.biBitCount) / 8));
     m_bminfo.bmi.bmiHeader.biHeight = -std::abs(m_bminfo.bmi.bmiHeader.biHeight);
 
     // Is the bitmap palette-based or truecolour?
@@ -1272,7 +1272,7 @@ BOOL vncDesktop::ThunkBitmapInfo()
         m_bminfo.bmi.bmiHeader.biCompression = BI_RGB;
         m_bminfo.bmi.bmiHeader.biBitCount = 8;
         m_bminfo.bmi.bmiHeader.biSizeImage =
-            std::abs((m_bminfo.bmi.bmiHeader.biWidth * m_bminfo.bmi.bmiHeader.biHeight * m_bminfo.bmi.bmiHeader.biBitCount) / 8);
+            static_cast<DWORD>(std::abs((m_bminfo.bmi.bmiHeader.biWidth * m_bminfo.bmi.bmiHeader.biHeight * m_bminfo.bmi.bmiHeader.biBitCount) / 8));
         m_bminfo.bmi.bmiHeader.biClrImportant = 0;
         m_bminfo.truecolour = FALSE;
 
@@ -1285,7 +1285,7 @@ BOOL vncDesktop::ThunkBitmapInfo()
         m_bminfo.bmi.bmiHeader.biPlanes = 1;
         m_bminfo.bmi.bmiHeader.biCompression = BI_RGB;
         m_bminfo.bmi.bmiHeader.biSizeImage =
-            std::abs((m_bminfo.bmi.bmiHeader.biWidth * m_bminfo.bmi.bmiHeader.biHeight * m_bminfo.bmi.bmiHeader.biBitCount) / 8);
+            static_cast<DWORD>(std::abs((m_bminfo.bmi.bmiHeader.biWidth * m_bminfo.bmi.bmiHeader.biHeight * m_bminfo.bmi.bmiHeader.biBitCount) / 8));
         // Display format is non-VNC compatible - use the slow blit method
         m_formatmunged = TRUE;
         break;
@@ -1325,11 +1325,11 @@ vncDesktop::SetPixFormat()
     */
 
     m_scrinfo.framebufferWidth =
-        (CARD16)(m_bmrect.br.x - ((m_bmrect.tl.x < 0) ? 0 : m_bmrect.tl.x)); // Swap endian before actually sending
+        static_cast<CARD16>((m_bmrect.br.x - ((m_bmrect.tl.x < 0) ? 0 : m_bmrect.tl.x))); // Swap endian before actually sending
     m_scrinfo.framebufferHeight =
-        (CARD16)(m_bmrect.br.y - ((m_bmrect.tl.y < 0) ? 0 : m_bmrect.tl.y)); // Swap endian before actually sending
-    m_scrinfo.format.bitsPerPixel = (CARD8)m_bminfo.bmi.bmiHeader.biBitCount;
-    m_scrinfo.format.depth = (CARD8)m_bminfo.bmi.bmiHeader.biBitCount;
+        static_cast<CARD16>((m_bmrect.br.y - ((m_bmrect.tl.y < 0) ? 0 : m_bmrect.tl.y))); // Swap endian before actually sending
+    m_scrinfo.format.bitsPerPixel = static_cast<CARD8>(m_bminfo.bmi.bmiHeader.biBitCount);
+    m_scrinfo.format.depth = static_cast<CARD8>(m_bminfo.bmi.bmiHeader.biBitCount);
     if (m_scrinfo.format.depth == 32)
     {
         m_scrinfo.format.depth = 24;
@@ -1361,9 +1361,9 @@ BOOL vncDesktop::SetPixShifts()
         {
             if (m_bminfo.bmi.bmiHeader.biCompression == BI_BITFIELDS)
             {
-                redMask = *(DWORD*)&m_bminfo.bmi.bmiColors[0U];
-                greenMask = *(DWORD*)&m_bminfo.bmi.bmiColors[1U];
-                blueMask = *(DWORD*)&m_bminfo.bmi.bmiColors[2U];
+                redMask = *reinterpret_cast<DWORD*>(&m_bminfo.bmi.bmiColors[0U]);
+                greenMask = *reinterpret_cast<DWORD*>(&m_bminfo.bmi.bmiColors[1U]);
+                blueMask = *reinterpret_cast<DWORD*>(&m_bminfo.bmi.bmiColors[2U]);
             }
         }
         //if (m_screenCapture) redMask = 0x7c00; greenMask = 0x03e0; blueMask = 0x001f;
@@ -1382,9 +1382,9 @@ BOOL vncDesktop::SetPixShifts()
         {
             if (m_bminfo.bmi.bmiHeader.biCompression == BI_BITFIELDS)
             {
-                redMask = *(DWORD*)&m_bminfo.bmi.bmiColors[0U];
-                greenMask = *(DWORD*)&m_bminfo.bmi.bmiColors[1U];
-                blueMask = *(DWORD*)&m_bminfo.bmi.bmiColors[2U];
+                redMask = *reinterpret_cast<DWORD*>(&m_bminfo.bmi.bmiColors[0U]);
+                greenMask = *reinterpret_cast<DWORD*>(&m_bminfo.bmi.bmiColors[1U]);
+                blueMask = *reinterpret_cast<DWORD*>(&m_bminfo.bmi.bmiColors[2U]);
             }
         }
         break;
@@ -1424,7 +1424,7 @@ BOOL vncDesktop::SetPalette()
             LOGPALETTE* palette;
             const UINT size = sizeof(LOGPALETTE) + (sizeof(PALETTEENTRY) * 256);
 
-            palette = (LOGPALETTE*)new char[size];
+            palette = reinterpret_cast<LOGPALETTE*>(new char[size]);
             if (palette == nullptr)
             {
                 vnclog.Print(LL_INTERR, VNCLOG("unable to allocate logical palette\n"));
@@ -1511,7 +1511,7 @@ BOOL vncDesktop::SetPalette()
                 vnclog.Print(LL_INTERR, VNCLOG("unable to create temporary DC"), ::GetLastError());
                 return FALSE;
             }
-            HBITMAP old_bitmap = (HBITMAP)::SelectObject(bitmapDC, m_membitmap);
+            HBITMAP old_bitmap = reinterpret_cast<HBITMAP>(::SelectObject(bitmapDC, m_membitmap));
             if (!old_bitmap)
             {
                 vnclog.Print(LL_INTERR, VNCLOG("unable to select DIB section into temporary DC"), ::GetLastError());
@@ -1600,7 +1600,7 @@ vncDesktop::Init(vncServer* server)
         return ERROR_DESKTOP_NO_DESKTOPTHREAD;
     }
     m_thread = thread;
-    return thread->Init(this, m_server);
+    return static_cast<DWORD>(thread->Init(this, m_server));
 }
 
 int vncDesktop::ScreenBuffSize()
@@ -1620,7 +1620,7 @@ void vncDesktop::WriteMessageOnScreen(char* const tt, BYTE* const scrBuff, const
     HBRUSH backgroundBrush = ::CreateSolidBrush(bgcol);
 
     HBITMAP oldbitmap;
-    if ((oldbitmap = (HBITMAP)::SelectObject(m_hmemdc, m_membitmap)) == nullptr)
+    if ((oldbitmap = reinterpret_cast<HBITMAP>(::SelectObject(m_hmemdc, m_membitmap))) == nullptr)
     {
         return;
     }
@@ -1636,7 +1636,7 @@ void vncDesktop::WriteMessageOnScreen(char* const tt, BYTE* const scrBuff, const
     CopyToBuffer(rect, scrBuff, scrBuffSize);
 }
 
-#include <wtsapi32.h>
+#include <WtsApi32.h>
 
 #include <cstdlib>
 
@@ -1680,7 +1680,7 @@ void vncDesktop::WriteMessageOnScreenPreConnect(BYTE* const scrBuff, const UINT 
         DWORD pBytesReturned{ 0U };
         if (handle)
         {
-            pFunc = (_WTSQUERYSESSIONINFORMATION)::GetProcAddress(handle, "WTSQuerySessionInformationA");
+            pFunc = reinterpret_cast<_WTSQUERYSESSIONINFORMATION>(::GetProcAddress(handle, "WTSQuerySessionInformationA"));
             if (pFunc(WTS_CURRENT_SERVER_HANDLE, sesmsg[0U].ID, WTSUserName, &ppBuffer, &pBytesReturned))
             {
                 ::strcpy_s(sesmsg[0U].username, 32, ppBuffer);
@@ -1689,7 +1689,7 @@ void vncDesktop::WriteMessageOnScreenPreConnect(BYTE* const scrBuff, const UINT 
         }
         ++aantal_session;
 
-        WTS_SESSION_INFO* pSessions = 0;
+        WTS_SESSION_INFO* pSessions = nullptr;
         DWORD nSessions(0U);
         if (pWTSEnumerateSessions.isValid() && pWTSFreeMemory.isValid())
         {
@@ -1712,7 +1712,7 @@ void vncDesktop::WriteMessageOnScreenPreConnect(BYTE* const scrBuff, const UINT 
                         DWORD pBytesReturnedInner{ 0U };
                         if (handleInner)
                         {
-                            pFuncInner = (_WTSQUERYSESSIONINFORMATION)::GetProcAddress(handleInner, "WTSQuerySessionInformationA");
+                            pFuncInner = reinterpret_cast<_WTSQUERYSESSIONINFORMATION>(::GetProcAddress(handleInner, "WTSQuerySessionInformationA"));
                             if (pFuncInner(WTS_CURRENT_SERVER_HANDLE, pSessions[i].SessionId, WTSUserName, &ppBufferInner, &pBytesReturnedInner))
                             {
                                 std::memset(sesmsg[aantal_session].username, 0, 32);
@@ -1733,7 +1733,7 @@ void vncDesktop::WriteMessageOnScreenPreConnect(BYTE* const scrBuff, const UINT 
     }
     else
     {
-        WTS_SESSION_INFO* pSessions = 0;
+        WTS_SESSION_INFO* pSessions = nullptr;
         DWORD nSessions(0U);
         if (pWTSEnumerateSessions.isValid() && pWTSFreeMemory.isValid())
         {
@@ -1755,7 +1755,7 @@ void vncDesktop::WriteMessageOnScreenPreConnect(BYTE* const scrBuff, const UINT 
                         DWORD pBytesReturned{ 0U };
                         if (handle)
                         {
-                            pFunc = (_WTSQUERYSESSIONINFORMATION)::GetProcAddress(handle, "WTSQuerySessionInformationA");
+                            pFunc = reinterpret_cast<_WTSQUERYSESSIONINFORMATION>(::GetProcAddress(handle, "WTSQuerySessionInformationA"));
                             if (pFunc(WTS_CURRENT_SERVER_HANDLE, pSessions[i].SessionId, WTSUserName, &ppBuffer, &pBytesReturned))
                             {
                                 std::memset(sesmsg[aantal_session].username, 0, 32);
@@ -1801,7 +1801,7 @@ void vncDesktop::WriteMessageOnScreenPreConnect(BYTE* const scrBuff, const UINT 
     HBRUSH backgroundBrush = ::CreateSolidBrush(bgcol);
 
     HBITMAP oldbitmap;
-    if ((oldbitmap = (HBITMAP)::SelectObject(m_hmemdc, m_membitmap)) == nullptr)
+    if ((oldbitmap = reinterpret_cast<HBITMAP>(::SelectObject(m_hmemdc, m_membitmap))) == nullptr)
     {
         return;
     }
@@ -1820,16 +1820,16 @@ void vncDesktop::WriteMessageOnScreenPreConnect(BYTE* const scrBuff, const UINT 
     }
 
     ::SetRect(&rect, 30, 50, 640, 640);
-    hFont = (HFONT)::GetStockObject(ANSI_FIXED_FONT);
-    if ((hOldFont = (HFONT)::SelectObject(m_hmemdc, hFont)))
+    hFont = reinterpret_cast<HFONT>(::GetStockObject(ANSI_FIXED_FONT));
+    if ((hOldFont = reinterpret_cast<HFONT>(::SelectObject(m_hmemdc, hFont))))
     {
         ::DrawText(m_hmemdc, mytext22.data(), static_cast<int>(std::strlen(mytext22.data())), &rect, DT_LEFT | DT_WORDBREAK);
         ::SelectObject(m_hmemdc, hOldFont);
     }
 
     ::SetRect(&rect, 30, 180, 640, 640);
-    hFont = (HFONT)::GetStockObject(ANSI_FIXED_FONT);
-    if ((hOldFont = (HFONT)::SelectObject(m_hmemdc, hFont)))
+    hFont = reinterpret_cast<HFONT>(::GetStockObject(ANSI_FIXED_FONT));
+    if ((hOldFont = reinterpret_cast<HFONT>(::SelectObject(m_hmemdc, hFont))))
     {
         ::DrawText(m_hmemdc, menustring.data(), static_cast<int>(std::strlen(menustring.data())), &rect, DT_LEFT);
         ::SelectObject(m_hmemdc, hOldFont);
@@ -1868,7 +1868,7 @@ void vncDesktop::CaptureScreen(const rfb::Rect& rect, BYTE* const scrBuff, const
     {
         // Select the memory bitmap into the memory DC
         HBITMAP oldbitmap;
-        if ((oldbitmap = (HBITMAP)::SelectObject(m_hmemdc, m_membitmap)) == nullptr)
+        if ((oldbitmap = reinterpret_cast<HBITMAP>(::SelectObject(m_hmemdc, m_membitmap))) == nullptr)
         {
             return;
         }
@@ -1886,8 +1886,8 @@ void vncDesktop::CaptureScreen(const rfb::Rect& rect, BYTE* const scrBuff, const
         else
         {
 
-            int xoffset = mymonitor[m_current_monitor].offsetx;
-            int yoffset = mymonitor[m_current_monitor].offsety;
+            int xoffset = mymonitor[static_cast<unsigned long long>(m_current_monitor)].offsetx;
+            int yoffset = mymonitor[static_cast<unsigned long long>(m_current_monitor)].offsety;
 
             blitok = ::BitBlt(m_hmemdc, rect.tl.x, rect.tl.y, (rect.br.x - rect.tl.x), (rect.br.y - rect.tl.y), m_hrootdc_Desktop,
                             rect.tl.x + xoffset, rect.tl.y + yoffset, m_captureROP);
@@ -1995,7 +1995,7 @@ void vncDesktop::CaptureMouse(BYTE* const scrBuff, const UINT scrBuffSize)
 
         // Select the memory bitmap into the memory DC
         HBITMAP oldbitmap;
-        if ((oldbitmap = (HBITMAP)::SelectObject(m_hmemdc, m_membitmap)) == nullptr)
+        if ((oldbitmap = reinterpret_cast<HBITMAP>(::SelectObject(m_hmemdc, m_membitmap))) == nullptr)
         {
             if (IconInfo.hbmMask != nullptr)
             {
@@ -2048,7 +2048,7 @@ BOOL vncDesktop::GetRichCursorData(BYTE* const databuf, const HCURSOR hcursor, c
     {
         return FALSE;
     }
-    HBITMAP oldbitmap = (HBITMAP)::SelectObject(m_hmemdc, membitmap);
+    HBITMAP oldbitmap = reinterpret_cast<HBITMAP>(::SelectObject(m_hmemdc, membitmap));
     if (oldbitmap == nullptr)
     {
         ::DeleteObject(membitmap);
@@ -2068,7 +2068,7 @@ BOOL vncDesktop::GetRichCursorData(BYTE* const databuf, const HCURSOR hcursor, c
     else
     {
         RECT rect{ 0, 0, width, height };
-        ::FillRect(m_hmemdc, &rect, (HBRUSH)::GetStockObject(BLACK_BRUSH));
+        ::FillRect(m_hmemdc, &rect, reinterpret_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH)));
     }
 
     // Draw the cursor at the specified size
@@ -2078,7 +2078,7 @@ BOOL vncDesktop::GetRichCursorData(BYTE* const databuf, const HCURSOR hcursor, c
     ::SelectObject(m_hmemdc, oldbitmap);
 
     // Prepare BITMAPINFO structure (copy most m_bminfo fields)
-    BITMAPINFO* bmi = (BITMAPINFO*)std::calloc(1, sizeof(BITMAPINFO) + 256 * sizeof(RGBQUAD));
+    BITMAPINFO* bmi = reinterpret_cast<BITMAPINFO*>(std::calloc(1, sizeof(BITMAPINFO) + 256 * sizeof(RGBQUAD)));
     int lines{ 0 };
     if (bmi)
     {
@@ -2090,12 +2090,12 @@ BOOL vncDesktop::GetRichCursorData(BYTE* const databuf, const HCURSOR hcursor, c
         // Calculate row size with DWORD alignment
         const int bytes_pixel = bmi->bmiHeader.biBitCount / 8;
         int row_bytes = width * bytes_pixel;
-        while (row_bytes % sizeof(DWORD))
+        while (static_cast<unsigned long long>(row_bytes) % sizeof(DWORD))
         {
             ++row_bytes;
         }
-        std::memset(databuf, 0x00, row_bytes * height);
-        lines = ::GetDIBits(m_hmemdc, membitmap, 0, height, databuf, bmi, DIB_RGB_COLORS);
+        std::memset(databuf, 0x00, static_cast<size_t>(row_bytes * height));
+        lines = ::GetDIBits(m_hmemdc, membitmap, 0, static_cast<UINT>(height), databuf, bmi, DIB_RGB_COLORS);
 
         // Cleanup
         std::free(bmi);
@@ -2135,7 +2135,7 @@ void vncDesktop::SetClipText(const LPSTR rfbStr)
 
             if (hMem != nullptr)
             {
-                LPSTR pMem = (char*)::GlobalLock(hMem);
+                LPSTR pMem = reinterpret_cast<char*>(::GlobalLock(hMem));
 
                 // Get the data
                 if (pMem)
@@ -2176,7 +2176,7 @@ inline void vncDesktop::MaskToMaxAndShift(DWORD mask, CARD16& max, CARD8& shift)
     {
         mask >>= 1;
     }
-    max = (CARD16)mask;
+    max = static_cast<CARD16>(mask);
 }
 
 // Copy data from the memory bitmap into a buffer
@@ -2205,13 +2205,13 @@ void vncDesktop::CopyToBuffer(const rfb::Rect& rect, BYTE* const destbuff, [[may
 
     // Set the number of bytes for GetDIBits to actually write
     // NOTE : GetDIBits pads the destination buffer if biSizeImage < no. of bytes required
-    m_bminfo.bmi.bmiHeader.biSizeImage = (rect.br.y - rect.tl.y) * m_bytesPerRow;
+    m_bminfo.bmi.bmiHeader.biSizeImage = static_cast<DWORD>((rect.br.y - rect.tl.y) * m_bytesPerRow);
 
     // Get the actual bits from the bitmap into the bit buffer
     // If fast (DIBsection) blits are disabled then use the old GetDIBits technique
     if (m_DIBbits == nullptr)
     {
-        if (::GetDIBits(m_hmemdc, m_membitmap, y_inv, (rect.br.y - rect.tl.y), destbuffpos, &m_bminfo.bmi, DIB_RGB_COLORS) == 0)
+        if (::GetDIBits(m_hmemdc, m_membitmap, static_cast<UINT>(y_inv), (static_cast<UINT>(rect.br.y - rect.tl.y)), destbuffpos, &m_bminfo.bmi, DIB_RGB_COLORS) == 0)
         {
 #ifdef _MSC_VER
             _RPT1(_CRT_WARN, "vncDesktop : [1] GetDIBits failed! %d\n", ::GetLastError());
@@ -2226,7 +2226,7 @@ void vncDesktop::CopyToBuffer(const rfb::Rect& rect, BYTE* const destbuff, [[may
         // something weird goes wrong in the code. It's here to keep the function general, though!]
 
         const int bytesPerPixel = m_scrinfo.format.bitsPerPixel / 8;
-        BYTE* srcbuffpos = (BYTE*)m_DIBbits;
+        BYTE* srcbuffpos = reinterpret_cast<BYTE*>(m_DIBbits);
 
         srcbuffpos += (m_bytesPerRow * rect.tl.y) + (bytesPerPixel * rect.tl.x);
         destbuffpos += bytesPerPixel * rect.tl.x;
@@ -2235,7 +2235,7 @@ void vncDesktop::CopyToBuffer(const rfb::Rect& rect, BYTE* const destbuff, [[may
 
         for (int y = rect.tl.y; y < rect.br.y; ++y)
         {
-            std::memcpy(destbuffpos, srcbuffpos, widthBytes);
+            std::memcpy(destbuffpos, srcbuffpos, static_cast<size_t>(widthBytes));
             srcbuffpos += m_bytesPerRow;
             destbuffpos += m_bytesPerRow;
         }
@@ -2689,7 +2689,7 @@ void vncDesktop::StartStopddihook(const BOOL enabled)
     }
 }
 
-void vncDesktop::StartStophookdll(const BOOL enabled) { ::PostMessage(m_hwnd, WM_HOOKCHANGE, enabled, 0); }
+void vncDesktop::StartStophookdll(const BOOL enabled) { ::PostMessage(m_hwnd, WM_HOOKCHANGE, static_cast<WPARAM>(enabled), 0); }
 
 
 //
@@ -2733,7 +2733,7 @@ void vncDesktop::SetBlockInputState(const bool newstate)
         }
         m_bIsInputDisabledByClient = newstate;
         state = !newstate;
-        ; // !block_input(false);
+         // !block_input(false);
     }
     else
     {

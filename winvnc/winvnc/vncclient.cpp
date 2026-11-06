@@ -83,10 +83,10 @@
 #include "winvnc.h"
 
 #include <mmsystem.h> // sf@2002
-#include <shlobj.h>
+#include <ShlObj.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <userenv.h>
+#include <UserEnv.h>
 
 #include <iterator>
 #include <map>
@@ -206,7 +206,7 @@ static bool ValidateFileTransferPath(const char* const szPath, const char* szUtf
         {
             ++p;
         }
-        std::size_t segLen = p - seg;
+        std::size_t segLen = static_cast<std::size_t>(p - seg);
         if ((segLen == 2) && (seg[0U] == L'.') && (seg[1U] == L'.'))
         {
             return false;
@@ -310,11 +310,11 @@ static void MakeLongPath(const char* const utf8, WCHAR* const outW, const int ou
     ::MultiByteToWideChar(CP_UTF8, 0, utf8, -1, tmp.data(), static_cast<int>(tmp.size()));
     if (tmp[0U] && (tmp[1U] == L':'))
     {
-        ::_snwprintf_s(outW, outLen, _TRUNCATE, L"\\\\?\\%s", tmp.data());
+        ::_snwprintf_s(outW, static_cast<size_t>(outLen), _TRUNCATE, L"\\\\?\\%s", tmp.data());
     }
     else
     {
-        ::wcscpy_s(outW, outLen, tmp.data());
+        ::wcscpy_s(outW, static_cast<rsize_t>(outLen), tmp.data());
     }
 }
 
@@ -333,7 +333,7 @@ bool replaceFile(const char* const src, const char* const dst)
     // make the file read/write if it's read only.
     if ((dwFileAttribs != INVALID_FILE_ATTRIBUTES) && dwFileAttribs & FILE_ATTRIBUTE_READONLY)
     {
-        ::SetFileAttributesW(dstW.data(), dwFileAttribs & ~FILE_ATTRIBUTE_READONLY);
+        ::SetFileAttributesW(dstW.data(), dwFileAttribs & static_cast<DWORD>(~FILE_ATTRIBUTE_READONLY));
     }
 
     status = ::MoveFileExW(srcW.data(), dstW.data(), MOVEFILE_REPLACE_EXISTING) ? true : false;
@@ -567,7 +567,7 @@ void vncClientUpdateThread::get_time_now(unsigned long* abs_sec, unsigned long* 
 
     const DWORD days =
         ((st.wYear - 1970) * 365 + (st.wYear - 1969) / 4 +
-         ((st.wYear % 4) ? days_in_preceding_months[st.wMonth - 1] : days_in_preceding_months_leap[st.wMonth - 1]) + st.wDay - 1);
+         ((st.wYear % 4) ? days_in_preceding_months[st.wMonth - 1] : days_in_preceding_months_leap[st.wMonth - 1]) + static_cast<DWORD>(st.wDay - 1));
 
     *abs_sec = st.wSecond + 60 * (st.wMinute + 60 * (st.wHour + 24 * days));
 }
@@ -655,7 +655,7 @@ void* vncClientUpdateThread::run_undetached([[maybe_unused]] void* const arg)
                     {
                         if (!m_client->cl_connected)
                         {
-                            return 0;
+                            return nullptr;
                         }
                         if (m_signal->wait(UPDATE_INTERVAL * 100) == false)
                         {
@@ -697,7 +697,7 @@ void* vncClientUpdateThread::run_undetached([[maybe_unused]] void* const arg)
                     rsfb.buffer_w = Swap16IfLE(ViewerSize.br.x);
                     rsfb.buffer_h = Swap16IfLE(ViewerSize.br.y);
                     omni_mutex_lock lInner(m_client->GetUpdateLock(), 82);
-                    m_client->m_socket->SendExact((char*)&rsfb, sz_rfbPalmVNCReSizeFrameBufferMsg, rfbPalmVNCReSizeFrameBuffer);
+                    m_client->m_socket->SendExact(reinterpret_cast<char*>(&rsfb), sz_rfbPalmVNCReSizeFrameBufferMsg, rfbPalmVNCReSizeFrameBuffer);
                 }
                 else // eSVNC-UltraVNC Scaling
                 {
@@ -707,7 +707,7 @@ void* vncClientUpdateThread::run_undetached([[maybe_unused]] void* const arg)
                     rsmsg.framebufferWidth = Swap16IfLE(ViewerSize.br.x);
                     rsmsg.framebufferHeigth = Swap16IfLE(ViewerSize.br.y);
                     omni_mutex_lock lInner(m_client->GetUpdateLock(), 82);
-                    m_client->m_socket->SendExact((char*)&rsmsg, sz_rfbResizeFrameBufferMsg, rfbResizeFrameBuffer);
+                    m_client->m_socket->SendExact(reinterpret_cast<char*>(&rsmsg), sz_rfbResizeFrameBufferMsg, rfbResizeFrameBuffer);
                     m_client->m_ScaledScreen = m_client->m_encodemgr.m_buffer->GetViewerSize();
                     m_client->m_nScale = m_client->m_encodemgr.m_buffer->GetScale();
                 }
@@ -772,18 +772,18 @@ void* vncClientUpdateThread::run_undetached([[maybe_unused]] void* const arg)
                         std::memset(&message, 0, sizeof(rfbServerCutTextMsg));
                         message.type = rfbServerCutText;
 
-                        message.length = Swap32IfLE(-actualLen);
+                        message.length = static_cast<unsigned int>(Swap32IfLE(-actualLen));
 
                         bShouldFlush = true;
 
                         //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-                        if (!m_client->SendRFBMsgQueue(rfbServerCutText, (BYTE*)&message, sizeof(message)))
+                        if (!m_client->SendRFBMsgQueue(rfbServerCutText, reinterpret_cast<BYTE*>(&message), sizeof(message)))
                         {
                             m_client->m_socket->Close();
                         }
                         if (!m_client->m_socket->SendExactQueue(
-                                (char*)(m_client->m_clipboard.extendedClipboardDataMessage.GetData()),
-                                m_client->m_clipboard.extendedClipboardDataMessage.GetDataLength()))
+                                reinterpret_cast<char*>(const_cast<BYTE *>((m_client->m_clipboard.extendedClipboardDataMessage.GetData()))),
+                                static_cast<VCard>(m_client->m_clipboard.extendedClipboardDataMessage.GetDataLength())))
                         {
                             m_client->m_socket->Close();
                         }
@@ -796,10 +796,10 @@ void* vncClientUpdateThread::run_undetached([[maybe_unused]] void* const arg)
                         // Convert wstring to ANSI for wire transmission
                         const wchar_t* cliptext_w = m_client->m_clipboard.m_strLastCutText.c_str();
                         int ansiLen = ::WideCharToMultiByte(CP_ACP, 0, cliptext_w, -1, nullptr, 0, nullptr, nullptr);
-                        char* cliptext = new char[ansiLen];
+                        char* cliptext = new char[static_cast<unsigned long long>(ansiLen)];
                         ::WideCharToMultiByte(CP_ACP, 0, cliptext_w, -1, cliptext, ansiLen, nullptr, nullptr);
 
-                        char* unixtext = new char[ansiLen];
+                        char* unixtext = new char[static_cast<unsigned long long>(ansiLen)];
 
                         // Replace CR-LF with LF - never send CR-LF on the wire,
                         // since Unix won't like it
@@ -821,11 +821,11 @@ void* vncClientUpdateThread::run_undetached([[maybe_unused]] void* const arg)
                         bShouldFlush = true;
 
                         //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-                        if (!m_client->SendRFBMsgQueue(rfbServerCutText, (BYTE*)&message, sizeof(message)))
+                        if (!m_client->SendRFBMsgQueue(rfbServerCutText, reinterpret_cast<BYTE*>(&message), sizeof(message)))
                         {
                             m_client->m_socket->Close();
                         }
-                        if (!m_client->m_socket->SendExactQueue(unixtext, (VCard)std::strlen(unixtext)))
+                        if (!m_client->m_socket->SendExactQueue(unixtext, static_cast<VCard>(std::strlen(unixtext))))
                         {
                             m_client->m_socket->Close();
                         }
@@ -847,19 +847,19 @@ void* vncClientUpdateThread::run_undetached([[maybe_unused]] void* const arg)
                         std::memset(&message, 0, sizeof(rfbServerCutTextMsg));
                         message.type = rfbServerCutText;
 
-                        message.length = Swap32IfLE(-actualLen);
+                        message.length = static_cast<unsigned int>(Swap32IfLE(-actualLen));
 
                         //adzm 2010-09 - minimize packets. SendExact flushes the queue.Queue
 
                         bShouldFlush = true;
 
-                        if (!m_client->SendRFBMsgQueue(rfbServerCutText, (BYTE*)&message, sizeof(message)))
+                        if (!m_client->SendRFBMsgQueue(rfbServerCutText, reinterpret_cast<BYTE*>(&message), sizeof(message)))
                         {
                             m_client->m_socket->Close();
                         }
                         if (!m_client->m_socket->SendExact(
-                                (char*)(m_client->m_clipboard.extendedClipboardDataNotifyMessage.GetData()),
-                                m_client->m_clipboard.extendedClipboardDataNotifyMessage.GetDataLength()))
+                                reinterpret_cast<char*>(const_cast<BYTE *>((m_client->m_clipboard.extendedClipboardDataNotifyMessage.GetData()))),
+                                static_cast<VCard>(m_client->m_clipboard.extendedClipboardDataNotifyMessage.GetDataLength())))
                         {
                             m_client->m_socket->Close();
                         }
@@ -913,7 +913,7 @@ void* vncClientUpdateThread::run_undetached([[maybe_unused]] void* const arg)
         yield();
     }
 
-    return 0;
+    return nullptr;
 }
 
 vncClientThread::~vncClientThread()
@@ -980,7 +980,7 @@ BOOL vncClientThread::InitVersion()
             // Generate the server's protocol version
             // RDV 2010-6-10
             rfbProtocolVersionMsg protocolMsg{};
-            ::sprintf_s((char*)protocolMsg, 13, rfbProtocolVersionFormat, rfbProtocolMajorVersion, rfbProtocolMinorVersion);
+            ::sprintf_s(reinterpret_cast<char*>(protocolMsg), 13, rfbProtocolVersionFormat, rfbProtocolMajorVersion, rfbProtocolMinorVersion);
             // adzm 2010-08
             bool bRetry{ true };
             bool bReady{ false };
@@ -990,10 +990,10 @@ BOOL vncClientThread::InitVersion()
                 // RDV 2010-6-10
                 int Send_OK{ 0 };
                 int Recv_OK{ 0 };
-                Send_OK = m_socket->SendExact((char*)&protocolMsg, sz_rfbProtocolVersionMsg);
+                Send_OK = m_socket->SendExact(reinterpret_cast<char*>(&protocolMsg), sz_rfbProtocolVersionMsg);
                 if (Send_OK == 1)
                 {
-                    Recv_OK = m_socket->ReadExact((char*)&protocol_ver, sz_rfbProtocolVersionMsg);
+                    Recv_OK = m_socket->ReadExact(reinterpret_cast<char*>(&protocol_ver), sz_rfbProtocolVersionMsg);
                 }
                 // Send our protocol version, and get the client's protocol version
                 if (!Send_OK || !Recv_OK)
@@ -1001,7 +1001,7 @@ BOOL vncClientThread::InitVersion()
                     bReady = false;
                     // we need to reconnect!
 
-                    ::Sleep(std::min(nRetry * 1000, 30000));
+                    ::Sleep(static_cast<DWORD>(std::min(nRetry * 1000, 30000)));
 
                     if (TryReconnect())
                     {
@@ -1047,7 +1047,7 @@ BOOL vncClientThread::InitVersion()
     }
 
     // Check viewer's the protocol version
-    sscanf_s((char*)&protocol_ver, rfbProtocolVersionFormat, &m_major, &m_minor);
+    sscanf_s(reinterpret_cast<char*>(&protocol_ver), rfbProtocolVersionFormat, &m_major, &m_minor);
     if (m_major != rfbProtocolMajorVersion)
     {
         return FALSE;
@@ -1083,7 +1083,7 @@ BOOL vncClientThread::InitGiiVersion()
         rfbGIIServerVersion.minVersion = rfbGIIMinVersion;
         rfbGIIServerVersion.minVersion = Swap16IfLE(rfbGIIServerVersion.minVersion);
         // Send our protocol version, and get the client's protocol version
-        if (!m_socket->SendExactQueue((char*)&rfbGIIServerVersion, sz_rfbGIIServerVersionMsg))
+        if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&rfbGIIServerVersion), sz_rfbGIIServerVersionMsg))
         {
             vnclog.Print(LL_INTINFO, VNCLOG("Write GII Protocol Version failed"));
             bReady = FALSE;
@@ -1287,7 +1287,7 @@ void vncClientThread::SendConnFailed(const char* const szMessage)
     {
         // 0 = Failure
         CARD8 value = 0;
-        if (!m_socket->SendExactQueue((char*)&value, sizeof(value)))
+        if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&value), sizeof(value)))
         {
             return;
         }
@@ -1295,17 +1295,17 @@ void vncClientThread::SendConnFailed(const char* const szMessage)
     else
     {
         CARD32 auth_val = Swap32IfLE(rfbConnFailed);
-        if (!m_socket->SendExactQueue((char*)&auth_val, sizeof(auth_val)))
+        if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&auth_val), sizeof(auth_val)))
         {
             return;
         }
     }
     CARD32 errlen = Swap32IfLE(std::strlen(szMessage));
-    if (!m_socket->SendExactQueue((char*)&errlen, sizeof(errlen)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&errlen), sizeof(errlen)))
     {
         return;
     }
-    m_socket->SendExact(szMessage, (const VCard)std::strlen(szMessage));
+    m_socket->SendExact(szMessage, static_cast<const VCard>(std::strlen(szMessage)));
 }
 
 void vncClientThread::LogAuthResult(const bool success, const bool isconnected)
@@ -1315,22 +1315,22 @@ void vncClientThread::LogAuthResult(const bool success, const bool isconnected)
     {
         vnclog.Print(LL_CONNERR, VNCLOG("authentication failed\n"));
         typedef BOOL (*LogeventFn)(char* machine, char* szMslogonLog);
-        LogeventFn Logevent = 0;
+        LogeventFn Logevent = nullptr;
         std::array<char, MAX_PATH> szCurrentDir;
         ::strcpy_s(szCurrentDir.data(), szCurrentDir.size(), winvncFolder.data());
         ::strcat_s(szCurrentDir.data(), szCurrentDir.size(), "\\logging.dll");
         HMODULE hModule = ::LoadLibrary(szCurrentDir.data());
         if (hModule)
         {
-            Logevent = (LogeventFn)::GetProcAddress(hModule, "LOGFAILEDV2");
-            Logevent((char*)m_client->GetClientNameName(), settings->getLogFile());
+            Logevent = reinterpret_cast<LogeventFn>(::GetProcAddress(hModule, "LOGFAILEDV2"));
+            Logevent(reinterpret_cast<char*>(const_cast<char *>(m_client->GetClientNameName())), settings->getLogFile());
             ::FreeLibrary(hModule);
         }
     }
     else
     {
         typedef BOOL (*LogeventFn)(char* machine, int clientId, bool isinteractive, char* szMsLogonLog);
-        LogeventFn Logevent = 0;
+        LogeventFn Logevent = nullptr;
         std::array<char, MAX_PATH> szCurrentDir;
         ::strcpy_s(szCurrentDir.data(), szCurrentDir.size(), winvncFolder.data());
         ::strcat_s(szCurrentDir.data(), szCurrentDir.size(), "\\logging.dll");
@@ -1339,13 +1339,13 @@ void vncClientThread::LogAuthResult(const bool success, const bool isconnected)
         {
             if (!isconnected)
             {
-                Logevent = (LogeventFn)::GetProcAddress(hModule, "LOGCONNV2");
+                Logevent = reinterpret_cast<LogeventFn>(::GetProcAddress(hModule, "LOGCONNV2"));
             }
             else
             {
-                Logevent = (LogeventFn)::GetProcAddress(hModule, "LOGLOGONV2");
+                Logevent = reinterpret_cast<LogeventFn>(::GetProcAddress(hModule, "LOGLOGONV2"));
             }
-            Logevent((char*)m_client->GetClientNameName(), m_client->GetClientId(),
+            Logevent(reinterpret_cast<char*>(const_cast<char *>(m_client->GetClientNameName())), m_client->GetClientId(),
                      (m_client->m_keyboardenabled && m_client->m_pointerenabled), settings->getLogFile());
             ::FreeLibrary(hModule);
         }
@@ -1421,7 +1421,7 @@ BOOL vncClientThread::InitAuthenticate()
 
     // Read the client's initialisation message
     rfbClientInitMsg client_ini{};
-    if (!m_socket->ReadExact((char*)&client_ini, sz_rfbClientInitMsg))
+    if (!m_socket->ReadExact(reinterpret_cast<char*>(&client_ini), sz_rfbClientInitMsg))
     {
         return FALSE;
     }
@@ -1429,7 +1429,7 @@ BOOL vncClientThread::InitAuthenticate()
     if (client_ini.flags & clientInitExtraMsgSupport)
     {
         rfbClientInitExtraMsg msg{};
-        if (!m_socket->ReadExact((char*)&msg, sz_rfbClientInitExtraMsg))
+        if (!m_socket->ReadExact(reinterpret_cast<char*>(&msg), sz_rfbClientInitExtraMsg))
         {
             return FALSE;
         }
@@ -1442,7 +1442,7 @@ BOOL vncClientThread::InitAuthenticate()
         {
             // Client sends UTF-16LE Unicode directly
             std::array<wchar_t, 128U> infoMsgW;
-            if (!m_socket->ReadExact((char*)infoMsgW.data(), msg.textLength))
+            if (!m_socket->ReadExact(reinterpret_cast<char*>(infoMsgW.data()), msg.textLength))
             {
                 return FALSE;
             }
@@ -1483,11 +1483,11 @@ BOOL vncClientThread::InitAuthenticate()
         HMODULE hModule = ::LoadLibrary(szCurrentDir.data());
         if (hModule)
         {
-            Logevent = (LogeventFn)::GetProcAddress(hModule, "LOGEXTRAINFOV2");
+            Logevent = reinterpret_cast<LogeventFn>(::GetProcAddress(hModule, "LOGEXTRAINFOV2"));
 
             if (Logevent)
             {
-                Logevent((char*)m_client->infoMsg, settings->getLogFile());
+                Logevent(reinterpret_cast<char*>(m_client->infoMsg), settings->getLogFile());
             }
             ::FreeLibrary(hModule);
         }
@@ -1649,8 +1649,8 @@ BOOL vncClientThread::AuthenticateClient(std::vector<CARD8>& current_auth, const
 
     // adzm 2010-09 - Send the auths
     {
-        CARD8 authCount = (CARD8)auth_types.size();
-        if (!m_socket->SendExactQueue((const char*)&authCount, sizeof(authCount)))
+        CARD8 authCount = static_cast<CARD8>(auth_types.size());
+        if (!m_socket->SendExactQueue(reinterpret_cast<const char*>(&authCount), sizeof(authCount)))
         {
             return FALSE;
         }
@@ -1658,7 +1658,7 @@ BOOL vncClientThread::AuthenticateClient(std::vector<CARD8>& current_auth, const
         for (std::vector<CARD8>::iterator auth_it = auth_types.begin(); auth_it != auth_types.end(); ++auth_it)
         {
             CARD8 authType = *auth_it;
-            if (!m_socket->SendExactQueue((const char*)&authType, sizeof(authType)))
+            if (!m_socket->SendExactQueue(reinterpret_cast<const char*>(&authType), sizeof(authType)))
             {
                 return FALSE;
             }
@@ -1671,7 +1671,7 @@ BOOL vncClientThread::AuthenticateClient(std::vector<CARD8>& current_auth, const
     // read the accepted auth type
     CARD8 auth_accepted = rfbInvalidAuth;
     std::string auth_message;
-    if (!m_socket->ReadExact((char*)&auth_accepted, sizeof(auth_accepted)))
+    if (!m_socket->ReadExact(reinterpret_cast<char*>(&auth_accepted), sizeof(auth_accepted)))
     {
         return FALSE;
     }
@@ -1835,7 +1835,7 @@ BOOL vncClientThread::AuthenticateClient(std::vector<CARD8>& current_auth, const
     // instead. So see the AuthSCPrompt function.
 
     CARD32 auth_result_msg = Swap32IfLE(auth_result);
-    if (!m_socket->SendExactQueue((char*)&auth_result_msg, sizeof(auth_result_msg)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&auth_result_msg), sizeof(auth_result_msg)))
     {
         return FALSE;
     }
@@ -1874,11 +1874,11 @@ BOOL vncClientThread::AuthenticateClient(std::vector<CARD8>& current_auth, const
             auth_message = "authentication rejected";
         }
         CARD32 auth_message_length = Swap32IfLE(auth_message.length());
-        if (!m_socket->SendExactQueue((char*)&auth_message_length, sizeof(auth_message_length)))
+        if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&auth_message_length), sizeof(auth_message_length)))
         {
             return FALSE;
         }
-        if (!m_socket->SendExact(auth_message.c_str(), (VCard)auth_message.length()))
+        if (!m_socket->SendExact(auth_message.c_str(), static_cast<VCard>(auth_message.length())))
         {
             return FALSE;
         }
@@ -1892,11 +1892,11 @@ BOOL vncClientThread::AuthenticateClient(std::vector<CARD8>& current_auth, const
             auth_message = "Server require a higher viewer version.";
         }
         CARD32 auth_message_length = Swap32IfLE(auth_message.length());
-        if (!m_socket->SendExactQueue((char*)&auth_message_length, sizeof(auth_message_length)))
+        if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&auth_message_length), sizeof(auth_message_length)))
         {
             return FALSE;
         }
-        if (!m_socket->SendExact(auth_message.c_str(), (VCard)auth_message.length()))
+        if (!m_socket->SendExact(auth_message.c_str(), static_cast<VCard>(auth_message.length())))
         {
             return FALSE;
         }
@@ -1972,7 +1972,7 @@ BOOL vncClientThread::AuthenticateLegacyClient([[maybe_unused]] const bool iscon
     // CARD32, byte swap is needed
     auth_type = Swap32IfLE(auth_type);
     // adzm 2010-09 - Send the single auth type
-    if (!m_socket->SendExact((const char*)&auth_type, sizeof(auth_type)))
+    if (!m_socket->SendExact(reinterpret_cast<const char*>(&auth_type), sizeof(auth_type)))
     {
         return FALSE;
     }
@@ -1993,7 +1993,7 @@ BOOL vncClientThread::AuthenticateLegacyClient([[maybe_unused]] const bool iscon
         if (auth_success && m_ms_logon)
         {
             CARD32 auth_result_msg = Swap32IfLE(rfbLegacy_MsLogon);
-            if (!m_socket->SendExact((char*)&auth_result_msg, sizeof(auth_result_msg)))
+            if (!m_socket->SendExact(reinterpret_cast<char*>(&auth_result_msg), sizeof(auth_result_msg)))
             {
                 return FALSE;
             }
@@ -2043,7 +2043,7 @@ BOOL vncClientThread::AuthenticateLegacyClient([[maybe_unused]] const bool iscon
     if (auth_type != rfbNoAuth)
     {
         CARD32 auth_result_msg = Swap32IfLE(auth_result);
-        if (!m_socket->SendExact((char*)&auth_result_msg, sizeof(auth_result_msg)))
+        if (!m_socket->SendExact(reinterpret_cast<char*>(&auth_result_msg), sizeof(auth_result_msg)))
         {
             return FALSE;
         }
@@ -2107,13 +2107,13 @@ BOOL vncClientThread::AuthSecureVNCPlugin(std::string& auth_message)
 
         WORD wChallengeLength = static_cast<WORD>(nChallengeLength);
 
-        if (!m_socket->SendExactQueue((const char*)&wChallengeLength, sizeof(wChallengeLength)))
+        if (!m_socket->SendExactQueue(reinterpret_cast<const char*>(&wChallengeLength), sizeof(wChallengeLength)))
         {
             m_socket->GetIntegratedPlugin()->FreeMemory(pChallenge);
             return FALSE;
         }
 
-        if (!m_socket->SendExact((const char*)pChallenge, nChallengeLength))
+        if (!m_socket->SendExact(reinterpret_cast<const char*>(pChallenge), static_cast<VCard>(nChallengeLength)))
         {
             m_socket->GetIntegratedPlugin()->FreeMemory(pChallenge);
             return FALSE;
@@ -2124,7 +2124,7 @@ BOOL vncClientThread::AuthSecureVNCPlugin(std::string& auth_message)
         {
             passphraseused = 2;
         }
-        if (!m_socket->SendExact((const char*)&passphraseused, 1))
+        if (!m_socket->SendExact(reinterpret_cast<const char*>(&passphraseused), 1))
         {
             m_socket->GetIntegratedPlugin()->FreeMemory(pChallenge);
             return FALSE;
@@ -2132,7 +2132,7 @@ BOOL vncClientThread::AuthSecureVNCPlugin(std::string& auth_message)
 
         m_socket->GetIntegratedPlugin()->FreeMemory(pChallenge);
         WORD wResponseLength{ 0U };
-        if (!m_socket->ReadExact((char*)&wResponseLength, sizeof(wResponseLength)))
+        if (!m_socket->ReadExact(reinterpret_cast<char*>(&wResponseLength), sizeof(wResponseLength)))
         {
             return FALSE;
         }
@@ -2142,7 +2142,7 @@ BOOL vncClientThread::AuthSecureVNCPlugin(std::string& auth_message)
         }
         BYTE* pResponseData = new BYTE[wResponseLength];
         ::ZeroMemory(pResponseData, wResponseLength);
-        if (!m_socket->ReadExact((char*)pResponseData, wResponseLength))
+        if (!m_socket->ReadExact(reinterpret_cast<char*>(pResponseData), wResponseLength))
         {
             delete[] pResponseData;
             return FALSE;
@@ -2168,7 +2168,7 @@ BOOL vncClientThread::AuthSecureVNCPlugin(std::string& auth_message)
 
         if (!m_ms_logon && ((std::strlen(plainPassword) != 0) || (std::strlen(plainPasswordViewOnly) != 0)))
         {
-            if (!m_socket->ReadExact((char*)&wResponseLength, sizeof(wResponseLength)))
+            if (!m_socket->ReadExact(reinterpret_cast<char*>(&wResponseLength), sizeof(wResponseLength)))
             {
                 return FALSE;
             }
@@ -2178,7 +2178,7 @@ BOOL vncClientThread::AuthSecureVNCPlugin(std::string& auth_message)
             }
             pResponseData = new BYTE[wResponseLength];
 
-            if (!m_socket->ReadExact((char*)pResponseData, wResponseLength))
+            if (!m_socket->ReadExact(reinterpret_cast<char*>(pResponseData), wResponseLength))
             {
                 delete[] pResponseData;
                 return FALSE;
@@ -2234,7 +2234,7 @@ BOOL vncClientThread::AuthSecureVNCPlugin_old(std::string& auth_message)
 
     if (!m_ms_logon && plainPassword && (std::strlen(plainPassword) > 0))
     {
-        m_socket->GetIntegratedPlugin()->SetPasswordData((const BYTE*)plainPassword, static_cast<int>(std::strlen(plainPassword)));
+        m_socket->GetIntegratedPlugin()->SetPasswordData(reinterpret_cast<const BYTE*>(plainPassword), static_cast<int>(std::strlen(plainPassword)));
     }
 
     int nSequenceNumber{ 0 };
@@ -2252,13 +2252,13 @@ BOOL vncClientThread::AuthSecureVNCPlugin_old(std::string& auth_message)
 
         WORD wChallengeLength = static_cast<WORD>(nChallengeLength);
 
-        if (!m_socket->SendExactQueue((const char*)&wChallengeLength, sizeof(wChallengeLength)))
+        if (!m_socket->SendExactQueue(reinterpret_cast<const char*>(&wChallengeLength), sizeof(wChallengeLength)))
         {
             m_socket->GetIntegratedPlugin()->FreeMemory(pChallenge);
             return FALSE;
         }
 
-        if (!m_socket->SendExact((const char*)pChallenge, nChallengeLength))
+        if (!m_socket->SendExact(reinterpret_cast<const char*>(pChallenge), static_cast<VCard>(nChallengeLength)))
         {
             m_socket->GetIntegratedPlugin()->FreeMemory(pChallenge);
             return FALSE;
@@ -2266,7 +2266,7 @@ BOOL vncClientThread::AuthSecureVNCPlugin_old(std::string& auth_message)
 
         m_socket->GetIntegratedPlugin()->FreeMemory(pChallenge);
         WORD wResponseLength{ 0U };
-        if (!m_socket->ReadExact((char*)&wResponseLength, sizeof(wResponseLength)))
+        if (!m_socket->ReadExact(reinterpret_cast<char*>(&wResponseLength), sizeof(wResponseLength)))
         {
             return FALSE;
         }
@@ -2277,7 +2277,7 @@ BOOL vncClientThread::AuthSecureVNCPlugin_old(std::string& auth_message)
 
         BYTE* pResponseData = new BYTE[wResponseLength];
 
-        if (!m_socket->ReadExact((char*)pResponseData, wResponseLength))
+        if (!m_socket->ReadExact(reinterpret_cast<char*>(pResponseData), wResponseLength))
         {
             delete[] pResponseData;
             return FALSE;
@@ -2359,12 +2359,12 @@ BOOL vncClientThread::AuthMsLogon([[maybe_unused]] std::string& auth_message)
     // Restore handshake timeout after interactive wait
     m_socket->SetTimeout(30000);
 
-    int64ToBytes(dh.createEncryptionKey(bytesToInt64(resp.data())), (char*)key.data());
+    int64ToBytes(dh.createEncryptionKey(bytesToInt64(resp.data())), reinterpret_cast<char*>(key.data()));
     vnclog.Print(0, "After DH: g=%I64u, m=%I64u, i=%I64u, key=%I64u\n", bytesToInt64(gen.data()), bytesToInt64(mod.data()),
-                 bytesToInt64(pub.data()), bytesToInt64((char*)key.data()));
-    vncDecryptBytes((unsigned char*)user.data(), sizeof(user), key.data());
+                 bytesToInt64(pub.data()), bytesToInt64(reinterpret_cast<char*>(key.data())));
+    vncDecryptBytes(reinterpret_cast<unsigned char*>(user.data()), sizeof(user), key.data());
     user[255U] = '\0';
-    vncDecryptBytes((unsigned char*)passwd.data(), sizeof(passwd), key.data());
+    vncDecryptBytes(reinterpret_cast<unsigned char*>(passwd.data()), sizeof(passwd), key.data());
     passwd[63U] = '\0';
 
     int result = CheckUserGroupPasswordUni(user.data(), passwd.data(), m_client->GetClientNameAddress());
@@ -2409,7 +2409,7 @@ BOOL vncClientThread::AuthMsLogonIII([[maybe_unused]] std::string& auth_message)
     }
 
     // Send server public key
-    if (!m_socket->SendExactQueue((char*)server_pk.data(), sizeof(server_pk)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(server_pk.data()), sizeof(server_pk)))
     {
         return FALSE;
     }
@@ -2423,7 +2423,7 @@ BOOL vncClientThread::AuthMsLogonIII([[maybe_unused]] std::string& auth_message)
     m_client->authAttempted = true;
 
     // Read client public key
-    if (!m_socket->ReadExact((char*)client_pk.data(), sizeof(client_pk)))
+    if (!m_socket->ReadExact(reinterpret_cast<char*>(client_pk.data()), sizeof(client_pk)))
     {
         return FALSE;
     }
@@ -2460,9 +2460,9 @@ BOOL vncClientThread::AuthMsLogonIII([[maybe_unused]] std::string& auth_message)
     // MS-Logon IV replaces this with XChaCha20-Poly1305 AEAD.
     std::array<unsigned char, 8U> key;
     std::memcpy(key.data(), aes_key.data(), 8);
-    vncDecryptBytes((unsigned char*)user.data(), sizeof(user), key.data());
+    vncDecryptBytes(reinterpret_cast<unsigned char*>(user.data()), sizeof(user), key.data());
     user[255U] = '\0';
-    vncDecryptBytes((unsigned char*)passwd.data(), sizeof(passwd), key.data());
+    vncDecryptBytes(reinterpret_cast<unsigned char*>(passwd.data()), sizeof(passwd), key.data());
     passwd[63U] = '\0';
 
     // Verify credentials
@@ -2514,7 +2514,7 @@ BOOL vncClientThread::AuthMsLogonIV([[maybe_unused]] std::string& auth_message)
     }
 
     // Send server public key
-    if (!m_socket->SendExactQueue((char*)server_pk.data(), sizeof(server_pk)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(server_pk.data()), sizeof(server_pk)))
     {
         return FALSE;
     }
@@ -2528,7 +2528,7 @@ BOOL vncClientThread::AuthMsLogonIV([[maybe_unused]] std::string& auth_message)
     m_client->authAttempted = true;
 
     // Read client public key
-    if (!m_socket->ReadExact((char*)client_pk.data(), sizeof(client_pk)))
+    if (!m_socket->ReadExact(reinterpret_cast<char*>(client_pk.data()), sizeof(client_pk)))
     {
         return FALSE;
     }
@@ -2544,11 +2544,11 @@ BOOL vncClientThread::AuthMsLogonIV([[maybe_unused]] std::string& auth_message)
     std::array<unsigned char, crypto_aead_xchacha20poly1305_ietf_KEYBYTES> enc_key;
     std::array<unsigned char, crypto_aead_xchacha20poly1305_ietf_NPUBBYTES> nonce_user;
     std::array<unsigned char, crypto_aead_xchacha20poly1305_ietf_NPUBBYTES> nonce_pass;
-    crypto_generichash(enc_key.data(), sizeof(enc_key), (const unsigned char*)"uvnc-mslogon4-key", 17, shared_secret.data(),
+    crypto_generichash(enc_key.data(), sizeof(enc_key), reinterpret_cast<const unsigned char*>("uvnc-mslogon4-key"), 17, shared_secret.data(),
                        sizeof(shared_secret));
-    crypto_generichash(nonce_user.data(), sizeof(nonce_user), (const unsigned char*)"uvnc-mslogon4-user", 18, shared_secret.data(),
+    crypto_generichash(nonce_user.data(), sizeof(nonce_user), reinterpret_cast<const unsigned char*>("uvnc-mslogon4-user"), 18, shared_secret.data(),
                        sizeof(shared_secret));
-    crypto_generichash(nonce_pass.data(), sizeof(nonce_pass), (const unsigned char*)"uvnc-mslogon4-passwd", 20, shared_secret.data(),
+    crypto_generichash(nonce_pass.data(), sizeof(nonce_pass), reinterpret_cast<const unsigned char*>("uvnc-mslogon4-passwd"), 20, shared_secret.data(),
                        sizeof(shared_secret));
 
     // Zero out secrets
@@ -2558,11 +2558,11 @@ BOOL vncClientThread::AuthMsLogonIV([[maybe_unused]] std::string& auth_message)
     // Read encrypted credentials (plaintext size + 16-byte Poly1305 tag)
     std::array<unsigned char, 256 + crypto_aead_xchacha20poly1305_ietf_ABYTES> user_ct;
     std::array<unsigned char, 64 + crypto_aead_xchacha20poly1305_ietf_ABYTES> passwd_ct;
-    if (!m_socket->ReadExact((char*)user_ct.data(), sizeof(user_ct)))
+    if (!m_socket->ReadExact(reinterpret_cast<char*>(user_ct.data()), sizeof(user_ct)))
     {
         return FALSE;
     }
-    if (!m_socket->ReadExact((char*)passwd_ct.data(), sizeof(passwd_ct)))
+    if (!m_socket->ReadExact(reinterpret_cast<char*>(passwd_ct.data()), sizeof(passwd_ct)))
     {
         return FALSE;
     }
@@ -2571,14 +2571,14 @@ BOOL vncClientThread::AuthMsLogonIV([[maybe_unused]] std::string& auth_message)
     m_socket->SetTimeout(30000);
 
     // Decrypt and authenticate credentials
-    if (crypto_aead_xchacha20poly1305_ietf_decrypt((unsigned char*)user.data(), nullptr, nullptr, user_ct.data(), sizeof(user_ct), nullptr,
+    if (crypto_aead_xchacha20poly1305_ietf_decrypt(reinterpret_cast<unsigned char*>(user.data()), nullptr, nullptr, user_ct.data(), sizeof(user_ct), nullptr,
                                                    0, nonce_user.data(), enc_key.data()) != 0)
     {
         vnclog.Print(LL_LOGSCREEN, "MS-Logon IV: credential authentication failed (user)\n");
         sodium_memzero(enc_key.data(), sizeof(enc_key));
         return FALSE;
     }
-    if (crypto_aead_xchacha20poly1305_ietf_decrypt((unsigned char*)passwd.data(), nullptr, nullptr, passwd_ct.data(), sizeof(passwd_ct),
+    if (crypto_aead_xchacha20poly1305_ietf_decrypt(reinterpret_cast<unsigned char*>(passwd.data()), nullptr, nullptr, passwd_ct.data(), sizeof(passwd_ct),
                                                    nullptr, 0, nonce_pass.data(), enc_key.data()) != 0)
     {
         vnclog.Print(LL_LOGSCREEN, "MS-Logon IV: credential authentication failed (passwd)\n");
@@ -2668,7 +2668,7 @@ BOOL vncClientThread::AuthMsLogonReject(std::string& auth_message)
     m_socket->SetTimeout(30000);
 
     // Compute key but don't use it for anything
-    int64ToBytes(dh.createEncryptionKey(bytesToInt64(resp.data())), (char*)key.data());
+    int64ToBytes(dh.createEncryptionKey(bytesToInt64(resp.data())), reinterpret_cast<char*>(key.data()));
 
     // Set error message for old viewer
     auth_message = "This server requires MS-Logon III or newer (secure authentication). "
@@ -2691,7 +2691,7 @@ BOOL vncClientThread::AuthVnc([[maybe_unused]] std::string& auth_message)
         std::array<char, 16U> challenge{};
         std::array<char, 16U> challenge2; //PGM
         std::array<char, 16U> response;
-        vncRandomBytes((BYTE*)challenge.data());
+        vncRandomBytes(reinterpret_cast<BYTE*>(challenge.data()));
         std::memcpy(challenge2.data(), challenge.data(), 16); //PGM
 
         {
@@ -2714,13 +2714,13 @@ BOOL vncClientThread::AuthVnc([[maybe_unused]] std::string& auth_message)
             // Restore handshake timeout after the interactive wait
             m_socket->SetTimeout(30000);
             // Encrypt the challenge bytes
-            vncEncryptBytes((BYTE*)challenge.data(), plain);
+            vncEncryptBytes(reinterpret_cast<BYTE*>(challenge.data()), plain);
 
             auth_ok = TRUE;
             // Compare them to the response
             for (int i{ 0 }; i < sizeof(challenge); ++i)
             {
-                if (challenge[i] != response[i])
+                if (challenge[static_cast<unsigned long long>(i)] != response[static_cast<unsigned long long>(i)])
                 {
                     auth_ok = FALSE;
                     break;
@@ -2738,12 +2738,12 @@ BOOL vncClientThread::AuthVnc([[maybe_unused]] std::string& auth_message)
                     auth_ok = TRUE; //PGM
 
                     // Encrypt the view-only challenge bytes //PGM
-                    vncEncryptBytes((BYTE*)challenge2.data(), plain2); //PGM
+                    vncEncryptBytes(reinterpret_cast<BYTE*>(challenge2.data()), plain2); //PGM
 
                     // Compare them to the response //PGM
                     for (int i{ 0 }; i < sizeof(challenge2); ++i) //PGM
                     {                                             //PGM
-                        if (challenge2[i] != response[i])         //PGM
+                        if (challenge2[static_cast<unsigned long long>(i)] != response[static_cast<unsigned long long>(i)])         //PGM
                         {                                         //PGM
                             auth_ok = FALSE;                      //PGM
                             break;                                //PGM
@@ -2772,11 +2772,11 @@ BOOL vncClientThread::AuthSCPrompt(std::string& auth_message)
     getinfo(mytext.data());
     int size = static_cast<int>(std::strlen(mytext.data()));
     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-    if (!m_socket->SendExactQueue((char*)&size, sizeof(int)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&size), sizeof(int)))
     {
         return FALSE;
     }
-    if (!m_socket->SendExact((char*)mytext.data(), size))
+    if (!m_socket->SendExact(reinterpret_cast<char*>(mytext.data()), static_cast<VCard>(size)))
     {
         return FALSE;
     }
@@ -2784,7 +2784,7 @@ BOOL vncClientThread::AuthSCPrompt(std::string& auth_message)
     m_socket->SetTimeout(120000);
     m_client->authAttempted = true;
     int nummer{ 0 };
-    if (!m_socket->ReadExact((char*)&nummer, sizeof(int)))
+    if (!m_socket->ReadExact(reinterpret_cast<char*>(&nummer), sizeof(int)))
     {
         m_socket->SetTimeout(30000);
         return FALSE;
@@ -2853,7 +2853,7 @@ BOOL vncClientThread::AuthVeNCrypt(std::string& auth_message)
     auth->PlainAuthCallback = [this](const std::string& user, const std::string& pass, std::string& msg) {
         if (m_ms_logon)
         {
-            int result = CheckUserGroupPasswordUni((char*)user.c_str(), (char*)pass.c_str(), m_client->GetClientNameAddress());
+            int result = CheckUserGroupPasswordUni(reinterpret_cast<char*>(const_cast<char *>(user.c_str())), reinterpret_cast<char*>(const_cast<char *>(pass.c_str())), m_client->GetClientNameAddress());
             vnclog.Print(LL_INTINFO, "VeNCrypt Plain CheckUserGroupPasswordUni result=%i\n", result);
             if (result == 2)
             { // view-only
@@ -2870,12 +2870,12 @@ BOOL vncClientThread::AuthVeNCrypt(std::string& auth_message)
             return false;
         }
         vncPasswd::ToText plain(settings->getPasswd(), settings->getSecure());
-        if ((std::strlen(plain) > 0) && (pass == (const char*)plain))
+        if ((std::strlen(plain) > 0) && (pass == static_cast<const char*>(plain)))
         {
             return true;
         }
         vncPasswd::ToText plain2(settings->getPasswdViewOnly(), settings->getSecure());
-        if ((std::strlen(plain2) > 0) && (pass == (const char*)plain2))
+        if ((std::strlen(plain2) > 0) && (pass == static_cast<const char*>(plain2)))
         {
             m_client->EnableKeyboard(false);
             m_client->EnablePointer(false);
@@ -2928,7 +2928,7 @@ BOOL vncClientThread::AuthRSAAES(const CARD8 authType, std::string& auth_message
 
     if (requireUser)
     {
-        int result = CheckUserGroupPasswordUni((char*)user.c_str(), (char*)pass.c_str(), m_client->GetClientNameAddress());
+        int result = CheckUserGroupPasswordUni(reinterpret_cast<char*>(const_cast<char *>(user.c_str())), reinterpret_cast<char*>(const_cast<char *>(pass.c_str())), m_client->GetClientNameAddress());
         vnclog.Print(LL_INTINFO, "RA2 CheckUserGroupPasswordUni result=%i\n", result);
         if (result == 2)
         { // ViewOnly?
@@ -2949,13 +2949,13 @@ BOOL vncClientThread::AuthRSAAES(const CARD8 authType, std::string& auth_message
     // Password-only subtype: compare against the VNC password (and the
     // view-only password, which grants a restricted session).
     vncPasswd::ToText plain(settings->getPasswd(), settings->getSecure());
-    if ((std::strlen(plain) > 0) && (pass == (const char*)plain))
+    if ((std::strlen(plain) > 0) && (pass == static_cast<const char*>(plain)))
     {
         m_ra2Auth = std::move(auth);
         return TRUE;
     }
     vncPasswd::ToText plain2(settings->getPasswdViewOnly(), settings->getSecure());
-    if ((std::strlen(plain2) > 0) && (pass == (const char*)plain2))
+    if ((std::strlen(plain2) > 0) && (pass == static_cast<const char*>(plain2)))
     {
         m_client->EnableKeyboard(false);
         m_client->EnablePointer(false);
@@ -2974,7 +2974,7 @@ void ClearKeyState(const BYTE key)
 
     std::array<BYTE, 256U> keyState{};
 
-    ::GetKeyboardState((LPBYTE)keyState.data());
+    ::GetKeyboardState(reinterpret_cast<LPBYTE>(keyState.data()));
 
     if (keyState[key] & 1)
     {
@@ -2996,7 +2996,7 @@ void GetIPString(char* buffer, const int buflen)
 
     if (gethostname(namebuf.data(), 256) != 0)
     {
-        ::strncpy_s(buffer, buflen, "Host name unavailable", buflen);
+        ::strncpy_s(buffer, static_cast<rsize_t>(buflen), "Host name unavailable", static_cast<rsize_t>(buflen));
         return;
     }
     if (settings->getIPV6())
@@ -3005,7 +3005,7 @@ void GetIPString(char* buffer, const int buflen)
 
         LPSOCKADDR sockaddr_ip;
         struct addrinfo hint;
-        struct addrinfo* serverinfo = 0;
+        struct addrinfo* serverinfo = nullptr;
         std::memset(&hint, 0, sizeof(hint));
         hint.ai_family = AF_UNSPEC;
         hint.ai_socktype = SOCK_STREAM;
@@ -3016,7 +3016,7 @@ void GetIPString(char* buffer, const int buflen)
 
         //make sure the buffer is not overwritten
 
-        if (getaddrinfo(namebuf.data(), 0, &hint, &serverinfo) == 0)
+        if (getaddrinfo(namebuf.data(), nullptr, &hint, &serverinfo) == 0)
         {
             struct addrinfo* p;
             p = serverinfo;
@@ -3033,11 +3033,11 @@ void GetIPString(char* buffer, const int buflen)
                     ipbufferlength = 46;
                     std::memset(ipstringbuffer.data(), 0, 46);
 
-                    pIpv6Addr = (struct sockaddr_in6*)p->ai_addr;
+                    pIpv6Addr = reinterpret_cast<struct sockaddr_in6*>(p->ai_addr);
                     std::memcpy(&Ipv6Addr, pIpv6Addr, sizeof(Ipv6Addr));
                     Ipv6Addr.sin6_family = AF_INET6;
 
-                    sockaddr_ip = (LPSOCKADDR)p->ai_addr;
+                    sockaddr_ip = reinterpret_cast<LPSOCKADDR>(p->ai_addr);
 
                     ::WSAAddressToString(sockaddr_ip, static_cast<DWORD>(p->ai_addrlen), nullptr, ipstringbuffer.data(),
                                        &ipbufferlength);
@@ -3049,7 +3049,7 @@ void GetIPString(char* buffer, const int buflen)
                     int len2 = static_cast<int>(std::strlen(szText.data()));
                     if (len + len2 < buflen)
                     {
-                        ::strcat_s(buffer, buflen, szText.data());
+                        ::strcat_s(buffer, static_cast<rsize_t>(buflen), szText.data());
                     }
                     break;
                 }
@@ -3066,7 +3066,7 @@ void GetIPString(char* buffer, const int buflen)
         ph = gethostbyname(namebuf.data());
         if (!ph)
         {
-            ::strncpy_s(buffer, buflen, "IP address unavailable", buflen);
+            ::strncpy_s(buffer, static_cast<rsize_t>(buflen), "IP address unavailable", static_cast<rsize_t>(buflen));
             return;
         }
 
@@ -3077,12 +3077,12 @@ void GetIPString(char* buffer, const int buflen)
             for (int j{ 0 }; j < ph->h_length; ++j)
             {
                 ::sprintf_s(digtxt.data(), digtxt.size(), "%d.", static_cast<unsigned char>(ph->h_addr_list[i][j]));
-                ::strncat_s(buffer, buflen, digtxt.data(), (buflen - 1) - std::strlen(buffer));
+                ::strncat_s(buffer, static_cast<rsize_t>(buflen), digtxt.data(), (static_cast<size_t>(buflen - 1)) - std::strlen(buffer));
             }
             buffer[std::strlen(buffer) - 1] = '\0';
-            if (ph->h_addr_list[i + 1] != 0)
+            if (ph->h_addr_list[i + 1] != nullptr)
             {
-                ::strncat_s(buffer, buflen, ", ", (buflen - 1) - std::strlen(buffer));
+                ::strncat_s(buffer, static_cast<rsize_t>(buflen), ", ", (static_cast<size_t>(buflen - 1)) - std::strlen(buffer));
             }
         }
     }
@@ -3218,12 +3218,12 @@ bool vncClientThread::TryReconnect()
     bool result;
     if (settings->getIPV6())
     {
-        result = m_socket->CreateConnect(m_client->GetHost(), m_client->GetHostPort());
+        result = m_socket->CreateConnect(m_client->GetHost(), static_cast<VCard>(m_client->GetHostPort()));
     }
     else
     {
         m_socket->Create();
-        result = m_socket->Connect(m_client->GetHost(), m_client->GetHostPort());
+        result = m_socket->Connect(m_client->GetHost(), static_cast<VCard>(m_client->GetHostPort()));
     }
     if (result)
     {
@@ -3265,8 +3265,8 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
     HINSTANCE user32 = ::LoadLibraryExA("user32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (user32)
     {
-        InjectTouchInputUVNC = (PtrInjectTouchInput)(::GetProcAddress(user32, "InjectTouchInput"));
-        InitializeTouchInjectionUVNC = (PtrInitializeTouchInjection)(::GetProcAddress(user32, "InitializeTouchInjection"));
+        InjectTouchInputUVNC = reinterpret_cast<PtrInjectTouchInput>((::GetProcAddress(user32, "InjectTouchInput")));
+        InitializeTouchInjectionUVNC = reinterpret_cast<PtrInitializeTouchInjection>((::GetProcAddress(user32, "InitializeTouchInjection")));
     }
 
 #endif
@@ -3280,7 +3280,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
     vnclog.Print(LL_CLIENTS, VNCLOG("client connected : %s (%hd)\n"), m_client->GetClientNameName(), m_client->GetClientId());
     // Save the handle to the thread's original desktop
     HDESK home_desktop = ::GetThreadDesktop(::GetCurrentThreadId());
-    HDESK input_desktop = 0;
+    HDESK input_desktop = nullptr;
 
     // Initially blacklist the client so that excess connections from it get dropped
     m_server->AddAuthHostsBlacklist(m_client->GetClientNameAddress());
@@ -3375,7 +3375,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
     vnclog.Print(LL_INTINFO, VNCLOG("authenticated connection\n"));
 
     // Set Client Connect time
-    m_client->SetConnectTime(GetTimeFunction());
+    m_client->SetConnectTime(static_cast<long>(GetTimeFunction()));
 
     // INIT PIXEL FORMAT
 
@@ -3402,7 +3402,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
     bool fIP{ false };
     std::array<char, MAX_COMPUTERNAME_LENGTH + 3 + 256 + 32> desktopname{ 0 };
     DWORD desktopnamelen = MAX_COMPUTERNAME_LENGTH + 1 + 256 + 32;
-    std::memset((char*)desktopname.data(), 0, sizeof(desktopname));
+    std::memset(reinterpret_cast<char*>(desktopname.data()), 0, sizeof(desktopname));
     if (::GetComputerName(desktopname.data(), &desktopnamelen))
     {
         // Make the name lowercase
@@ -3457,12 +3457,12 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
     server_ini.format.greenMax = Swap16IfLE(server_ini.format.greenMax);
     server_ini.format.blueMax = Swap16IfLE(server_ini.format.blueMax);
 
-    CARD32 nNameLength = (CARD32)std::strlen(desktopname.data());
+    CARD32 nNameLength = static_cast<CARD32>(std::strlen(desktopname.data()));
 
     server_ini.nameLength = Swap32IfLE(nNameLength);
 
     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-    if (!m_socket->SendExactQueue((char*)&server_ini, sizeof(server_ini)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&server_ini), sizeof(server_ini)))
     {
         m_server->RemoveClient(m_client->GetClientId());
         return;
@@ -3551,7 +3551,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
         if (need_first_keepalive)
         {
             // send first keepalive to let the client know we accepted the encoding request
-            m_client->SendServerStateUpdate(rfbKeepAliveInterval, settings->getkeepAliveInterval());
+            m_client->SendServerStateUpdate(rfbKeepAliveInterval, static_cast<CARD32>(settings->getkeepAliveInterval()));
             m_client->SendKeepAlive(true);
             need_first_keepalive = false;
         }
@@ -3564,7 +3564,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
         if (need_first_idletime)
         {
             // send idletime to let the client know we accepted the encoding request
-            m_client->SendServerStateUpdate(rfbIdleInputTimeout, settings->getIdleInputTimeout());
+            m_client->SendServerStateUpdate(rfbIdleInputTimeout, static_cast<CARD32>(settings->getIdleInputTimeout()));
             need_first_idletime = false;
         }
 
@@ -3619,7 +3619,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
         // adzm 2010-09
         if (!m_socket->IsPluginStreamingIn() && m_socket->IsUsePluginEnabled() && m_server->GetDSMPluginPointer()->IsEnabled())
         {
-            if (!m_socket->ReadExact((char*)&msg.type, sizeof(msg.type)))
+            if (!m_socket->ReadExact(reinterpret_cast<char*>(&msg.type), sizeof(msg.type)))
             {
                 m_client->cl_connected = FALSE;
                 break;
@@ -3629,7 +3629,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
         else
         {
             // Try to read a message ID
-            if (!m_socket->ReadExact((char*)&msg.type, sizeof(msg.type)))
+            if (!m_socket->ReadExact(reinterpret_cast<char*>(&msg.type), sizeof(msg.type)))
             {
                 vnclog.Print(LL_CONNERR, VNCLOG("client loop: msg.type read failed\n"));
                 m_client->cl_connected = FALSE;
@@ -3650,7 +3650,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
 
         case rfbSetPixelFormat:
             // Read the rest of the message:
-            if (!m_socket->ReadExact(((char*)&msg) + nTO, sz_rfbSetPixelFormatMsg - nTO))
+            if (!m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(sz_rfbSetPixelFormatMsg - nTO)))
             {
                 m_client->cl_connected = FALSE;
                 break;
@@ -3685,7 +3685,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
 
         case rfbSetEncodings:
             // Read the rest of the message:
-            if (!m_socket->ReadExact(((char*)&msg) + nTO, sz_rfbSetEncodingsMsg - nTO))
+            if (!m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(sz_rfbSetEncodingsMsg - nTO)))
             {
                 m_client->cl_connected = FALSE;
                 break;
@@ -3737,7 +3737,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                     CARD32 encoding = 0;
 
                     // Read an encoding in
-                    if (!m_socket->ReadExact((char*)&encoding, sizeof(encoding)))
+                    if (!m_socket->ReadExact(reinterpret_cast<char*>(&encoding), sizeof(encoding)))
                     {
                         m_client->cl_connected = FALSE;
                         break;
@@ -3837,7 +3837,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                     {
                         // Client specified subsampling used for JPEG compression
                         int subsamp = static_cast<int>((Swap32IfLE(encoding) - rfbEncodingSubsamp1X));
-                        m_client->m_encodemgr.SetSubsampling((subsamp_type)subsamp);
+                        m_client->m_encodemgr.SetSubsampling(static_cast<subsamp_type>(subsamp));
                         vnclog.Print(LL_INTINFO, VNCLOG("subsampling requested: %d\n"), subsamp);
                         continue;
                     }
@@ -4043,13 +4043,13 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
             std::uint16_t lengthMsg{ 0U };
             bool bigEndian{ false };
             omni_mutex_lock ll(m_client->GetUpdateLock(), 776);
-            if (!m_socket->ReadExact((char*)&subType, sizeof(subType)))
+            if (!m_socket->ReadExact(reinterpret_cast<char*>(&subType), sizeof(subType)))
             {
                 vnclog.Print(LL_INTERR, VNCLOG("GII:Extension Reading subtype failed !\n"));
                 m_client->cl_connected = FALSE;
                 break;
             }
-            if (!m_socket->ReadExact((char*)&lengthMsg, sizeof(lengthMsg)))
+            if (!m_socket->ReadExact(reinterpret_cast<char*>(&lengthMsg), sizeof(lengthMsg)))
             {
                 vnclog.Print(LL_INTERR, VNCLOG("GII:Extension Reading length failed !\n"));
                 m_client->cl_connected = FALSE;
@@ -4079,7 +4079,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                 rfbGIIValutorEvent.header.subType = subType;
                 rfbGIIValutorEvent.header.length = lengthMsg;
                 // read rest of client's inject data
-                if (!m_socket->ReadExact((char*)(&rfbGIIValutorEvent) + sz_rfbGIIMsgHeader,
+                if (!m_socket->ReadExact(reinterpret_cast<char*>((&rfbGIIValutorEvent)) + sz_rfbGIIMsgHeader,
                                          sizeof(rfbGIIValutorEvent) - sz_rfbGIIMsgHeader))
                 {
                     vnclog.Print(LL_INTERR, VNCLOG("GIIExtension reading client creation failed\n"));
@@ -4118,7 +4118,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         DWORD ValuatorTime_msec{ 0U };
                         DWORD64 ValuatorTime_usec{ 0U };
 
-                        if (!m_socket->ReadExact((char*)&ValuatorFlag, sizeof(DWORD)))
+                        if (!m_socket->ReadExact(reinterpret_cast<char*>(&ValuatorFlag), sizeof(DWORD)))
                         {
                             vnclog.Print(LL_INTERR, VNCLOG("GIIExtension reading TouchINfo failed\n"));
                             m_client->cl_connected = FALSE;
@@ -4129,7 +4129,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                             ValuatorFlag = Swap32IfLE(ValuatorFlag);
                         }
 
-                        if (!m_socket->ReadExact((char*)&ValuatorTouch_Id, sizeof(DWORD)))
+                        if (!m_socket->ReadExact(reinterpret_cast<char*>(&ValuatorTouch_Id), sizeof(DWORD)))
                         {
                             vnclog.Print(LL_INTERR, VNCLOG("GIIExtension reading TouchINfo failed\n"));
                             m_client->cl_connected = FALSE;
@@ -4141,7 +4141,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         }
                         TI[j].TouchId = ValuatorTouch_Id;
 
-                        if (!m_socket->ReadExact((char*)&ValuatorTouch_Position16XY, sizeof(DWORD)))
+                        if (!m_socket->ReadExact(reinterpret_cast<char*>(&ValuatorTouch_Position16XY), sizeof(DWORD)))
                         {
                             vnclog.Print(LL_INTERR, VNCLOG("GIIExtension reading TouchINfo failed\n"));
                             m_client->cl_connected = FALSE;
@@ -4165,7 +4165,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
 
                         if (ValuatorFlag & S1_flag)
                         {
-                            if (!m_socket->ReadExact((char*)&ValuatorTouch_Area, sizeof(DWORD)))
+                            if (!m_socket->ReadExact(reinterpret_cast<char*>(&ValuatorTouch_Area), sizeof(DWORD)))
                             {
                                 vnclog.Print(LL_INTERR, VNCLOG("GIIExtension reading TouchINfo failed\n"));
                                 m_client->cl_connected = FALSE;
@@ -4185,7 +4185,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         }
 
                         if (ValuatorFlag & PR_flag)
-                            if (!m_socket->ReadExact((char*)&ValuatorTouch_Pressure, sizeof(DWORD)))
+                            if (!m_socket->ReadExact(reinterpret_cast<char*>(&ValuatorTouch_Pressure), sizeof(DWORD)))
                             {
                                 vnclog.Print(LL_INTERR, VNCLOG("GIIExtension reading TouchINfo failed\n"));
                                 m_client->cl_connected = FALSE;
@@ -4197,7 +4197,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         }
 
                         if (ValuatorFlag & TI_flag)
-                            if (!m_socket->ReadExact((char*)&ValuatorTime_msec, sizeof(DWORD)))
+                            if (!m_socket->ReadExact(reinterpret_cast<char*>(&ValuatorTime_msec), sizeof(DWORD)))
                             {
                                 vnclog.Print(LL_INTERR, VNCLOG("GIIExtension reading TouchINfo failed\n"));
                                 m_client->cl_connected = FALSE;
@@ -4209,7 +4209,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         }
 
                         if (ValuatorFlag & HC_flag)
-                            if (!m_socket->ReadExact((char*)&ValuatorTime_usec, sizeof(DWORD64)))
+                            if (!m_socket->ReadExact(reinterpret_cast<char*>(&ValuatorTime_usec), sizeof(DWORD64)))
                             {
                                 vnclog.Print(LL_INTERR, VNCLOG("GIIExtension reading TouchINfo failed\n"));
                                 m_client->cl_connected = FALSE;
@@ -4218,7 +4218,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         const int endianTest{ 1 };
                         if (bigEndian)
                         {
-                            ValuatorTime_usec = Swap64IfLE(ValuatorTime_usec);
+                            ValuatorTime_usec = static_cast<DWORD64>(Swap64IfLE(ValuatorTime_usec));
                         }
 
                         TI[j].pointerflag = POINTER_FLAG_NONE;
@@ -4347,7 +4347,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                     break;
                 }
                 // read client's version info and process
-                if (!m_socket->ReadExact((char*)&clientVersion, sizeof(clientVersion)))
+                if (!m_socket->ReadExact(reinterpret_cast<char*>(&clientVersion), sizeof(clientVersion)))
                 {
                     vnclog.Print(LL_INTERR, VNCLOG("GIIExtension reading client version failed\n"));
                     m_client->cl_connected = FALSE;
@@ -4381,7 +4381,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                 rfbGIIClientDeviceCreation.header.subType = subType;
                 rfbGIIClientDeviceCreation.header.length = lengthMsg;
                 // read rest of client's creation data
-                if (!m_socket->ReadExact((char*)(&rfbGIIClientDeviceCreation) + sz_rfbGIIMsgHeader,
+                if (!m_socket->ReadExact(reinterpret_cast<char*>((&rfbGIIClientDeviceCreation)) + sz_rfbGIIMsgHeader,
                                          sizeof(rfbGIIClientDeviceCreation) - sz_rfbGIIMsgHeader))
                 {
                     vnclog.Print(LL_INTERR, VNCLOG("GIIExtension reading client creation failed\n"));
@@ -4410,7 +4410,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                     rfbGIIValuatorMsg rfbGIIValutor{};
                     for (unsigned int i{ 0U }; i < rfbGIIClientDeviceCreation.numValuators; ++i)
                     {
-                        if (!m_socket->ReadExact((char*)&rfbGIIValutor, sizeof(rfbGIIValutor)))
+                        if (!m_socket->ReadExact(reinterpret_cast<char*>(&rfbGIIValutor), sizeof(rfbGIIValutor)))
                         {
                             vnclog.Print(LL_INTERR, VNCLOG("GIIExtension reading device creation valuators failed\n"));
                             m_client->cl_connected = FALSE;
@@ -4443,7 +4443,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                             // Send our protocol version, and get the client's protocol version
 
                             vnclog.Print(LL_INTERR, VNCLOG("GIIExtension writing device creation\n"));
-                            if (!m_socket->SendExactQueue((char*)&rfbGIIServerDeviceCreation, sz_rfbGIIServerDeviceCreationMsg))
+                            if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&rfbGIIServerDeviceCreation), sz_rfbGIIServerDeviceCreationMsg))
                             {
                                 vnclog.Print(LL_INTERR, VNCLOG("GIIExtension writing device creation failed\n"));
                                 m_client->cl_connected = FALSE;
@@ -4500,7 +4500,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
 #endif
 
         case rfbFramebufferUpdateRequest:
-            if (!m_socket->ReadExact(((char*)&msg) + nTO, sz_rfbFramebufferUpdateRequestMsg - nTO))
+            if (!m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(sz_rfbFramebufferUpdateRequestMsg - nTO)))
             {
                 m_client->cl_connected = FALSE;
                 break;
@@ -4514,18 +4514,18 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
 
         case rfbKeyEvent:
             // Read the rest of the message:
-            if (m_socket->ReadExact(((char*)&msg) + nTO, sz_rfbKeyEventMsg - nTO))
+            if (m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(sz_rfbKeyEventMsg - nTO)))
             {
                 if (PreConnect)
                 {
                     msg.ke.key = Swap32IfLE(msg.ke.key);
                     if (msg.ke.down != 0)
                     {
-                        int index = msg.ke.key - 97;
+                        int index = static_cast<int>(msg.ke.key - 97);
                         HANDLE hprconnectevent = nullptr;
                         if ((index > -1) && (index < 100))
                         {
-                            PreConnectID = m_client->m_encodemgr.m_buffer->m_desktop->sesmsg[index].ID;
+                            PreConnectID = static_cast<int>(m_client->m_encodemgr.m_buffer->m_desktop->sesmsg[index].ID);
                             hprconnectevent = ::OpenEvent(EVENT_MODIFY_STATE, FALSE, "Global\\SessionEventUltraPreConnect");
                             HANDLE m_hFileMa = nullptr;
                             m_hFileMa = ::OpenFileMapping(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, "Global\\SessionUltraPreConnect");
@@ -4534,7 +4534,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                             {
                                 data = ::MapViewOfFile(m_hFileMa, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
                             }
-                            int* mydata = (int*)data;
+                            int* mydata = reinterpret_cast<int*>(data);
                             if (data)
                             {
                                 *mydata = PreConnectID;
@@ -4582,14 +4582,14 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
             unsigned wheelAxis = rfbWheelVertical;
             int wheelDelta{ 0 };
             // Use the same DSM-aware type offset as the legacy pointer path.
-            if (m_socket->ReadExact(((char*)&msg) + nTO, size - nTO))
+            if (m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(size - nTO)))
             {
                 if (preciseWheel)
                 {
                     unsigned x, y;
                     rfb::Rect bounds = m_client->m_encodemgr.m_buffer->GetViewerSize();
                     if (!m_client->m_supportsHighResolutionWheel ||
-                        !DecodeHighResolutionWheel(msg.wheel, bounds.width(), bounds.height(), wheelAxis, wheelDelta, x, y))
+                        !DecodeHighResolutionWheel(msg.wheel, static_cast<unsigned int>(bounds.width()), static_cast<unsigned int>(bounds.height()), wheelAxis, wheelDelta, x, y))
                     {
                         vnclog.Print(LL_CONNERR, VNCLOG("Invalid or unnegotiated high-resolution wheel message\n"));
                         m_client->cl_connected = FALSE;
@@ -4700,25 +4700,25 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                             ((m_client->m_ptrevent.buttonMask & rfbButton4Mask) == 0))
                         {
                             flags |= MOUSEEVENTF_WHEEL;
-                            wheel_movement = (DWORD) + 120;
+                            wheel_movement = static_cast<DWORD>(+ 120);
                         }
                         else if (((msg.pe.buttonMask & rfbButton5Mask) != 0) &&
                                  ((m_client->m_ptrevent.buttonMask & rfbButton5Mask) == 0))
                         {
                             flags |= MOUSEEVENTF_WHEEL;
-                            wheel_movement = (DWORD)-120;
+                            wheel_movement = static_cast<DWORD>(-120);
                         }
                         else if (((msg.pe.buttonMask & rfbButton6Mask) != 0) &&
                                  ((m_client->m_ptrevent.buttonMask & rfbButton6Mask) == 0))
                         {
                             flags |= MOUSEEVENTF_HWHEEL;
-                            wheel_movement = (DWORD)-120;
+                            wheel_movement = static_cast<DWORD>(-120);
                         }
                         else if (((msg.pe.buttonMask & rfbButton7Mask) != 0) &&
                                  ((m_client->m_ptrevent.buttonMask & rfbButton7Mask) == 0))
                         {
                             flags |= MOUSEEVENTF_HWHEEL;
-                            wheel_movement = (DWORD) + 120;
+                            wheel_movement = static_cast<DWORD>(+ 120);
                         }
                     }
                     else
@@ -4756,15 +4756,15 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                     //primary display always have (0,0) as corner
                     if (m_client->m_single_display)
                     {
-                        unsigned long x = ((msg.pe.x + (m_client->monitor_Offsetx)) * 65535) / (screenX - 1);
-                        unsigned long y = ((msg.pe.y + (m_client->monitor_Offsety)) * 65535) / (screenY - 1);
+                        unsigned long x = static_cast<unsigned long>(((msg.pe.x + (m_client->monitor_Offsetx)) * 65535) / (screenX - 1));
+                        unsigned long y = static_cast<unsigned long>(((msg.pe.y + (m_client->monitor_Offsety)) * 65535) / (screenY - 1));
                         // Do the pointer event
                         if (preciseWheel)
                         {
                             INPUT evt{};
                             evt.type = INPUT_MOUSE;
-                            evt.mi.dx = x;
-                            evt.mi.dy = y;
+                            evt.mi.dx = static_cast<LONG>(x);
+                            evt.mi.dy = static_cast<LONG>(y);
                             evt.mi.dwFlags = flags;
                             evt.mi.mouseData = wheel_movement;
                             evt.mi.dwExtraInfo = m_server->SendExtraMouse() ? DWEXTRA_VNC_REMOTE : 0;
@@ -4817,14 +4817,14 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                             std::array<ULONG, 3U> mouseInfo{};
                             if (flags & MOUSEEVENTF_MOVE)
                             {
-                                flags &= ~MOUSEEVENTF_ABSOLUTE;
+                                flags &= static_cast<DWORD>(~MOUSEEVENTF_ABSOLUTE);
                                 ::SystemParametersInfo(SPI_GETMOUSE, 0, &mouseInfo, 0);
                                 ::SystemParametersInfo(SPI_GETMOUSESPEED, 0, &oldSpeed, 0);
                                 ULONG idealMouseInfo[] = { 10, 0, 0 };
                                 ::SystemParametersInfo(SPI_SETMOUSESPEED, 0, &newSpeed, 0);
                                 ::SystemParametersInfo(SPI_SETMOUSE, 0, &idealMouseInfo, 0);
                             }
-                            ::mouse_event(flags, msg.pe.x - cursorPos.x, msg.pe.y - cursorPos.y, wheel_movement,
+                            ::mouse_event(flags, static_cast<DWORD>(msg.pe.x - cursorPos.x), static_cast<DWORD>(msg.pe.y - cursorPos.y), wheel_movement,
                                           m_server->SendExtraMouse() ? DWEXTRA_VNC_REMOTE : 0);
                             if (flags & MOUSEEVENTF_MOVE)
                             {
@@ -4855,11 +4855,11 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
 
         case rfbClientCutText:
             // Read the rest of the message:
-            if (m_socket->ReadExact(((char*)&msg) + nTO, sz_rfbClientCutTextMsg - nTO))
+            if (m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(sz_rfbClientCutTextMsg - nTO)))
             {
                 // Allocate storage for the text
                 // adzm - 2010-07 - Extended clipboard
-                int length = Swap32IfLE(msg.cct.length);
+                int length = static_cast<int>(Swap32IfLE(msg.cct.length));
                 // View-only clients may not write to the server clipboard.
                 // The message body is still read and discarded below so the
                 // protocol stays in sync.
@@ -4881,7 +4881,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                     extendedClipboardDataMessage.EnsureBufferLength(length, false);
 
                     // Read in the data
-                    if (!m_socket->ReadExact((char*)extendedClipboardDataMessage.GetBuffer(), length))
+                    if (!m_socket->ReadExact(reinterpret_cast<char*>(extendedClipboardDataMessage.GetBuffer()), static_cast<VCard>(length)))
                     {
                         break;
                     }
@@ -4891,7 +4891,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         m_client->cl_connected = FALSE;
                         break;
                     }
-                    DWORD action = extendedClipboardDataMessage.GetFlags() & clipActionMask;
+                    DWORD action = extendedClipboardDataMessage.GetFlags() & static_cast<CARD32>(clipActionMask);
 
                     // clipCaps may be combined with other actions
                     if (action & clipCaps)
@@ -4941,9 +4941,9 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                             request.AddFlag(clipRequest | formats);
                             rfbServerCutTextMsg header{};
                             header.type = rfbServerCutText;
-                            header.length = Swap32IfLE(-request.GetDataLength());
-                            if (!m_client->SendRFBMsgQueue(rfbServerCutText, (BYTE*)&header, sizeof(header)) ||
-                                !m_socket->SendExact((char*)request.GetData(), request.GetDataLength()))
+                            header.length = static_cast<unsigned int>(Swap32IfLE(-request.GetDataLength()));
+                            if (!m_client->SendRFBMsgQueue(rfbServerCutText, reinterpret_cast<BYTE*>(&header), sizeof(header)) ||
+                                !m_socket->SendExact(reinterpret_cast<char*>(const_cast<BYTE *>(request.GetData())), static_cast<VCard>(request.GetDataLength())))
                             {
                                 m_client->cl_connected = FALSE;
                             }
@@ -4959,7 +4959,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                 {
                     char* winStr{ nullptr };
                     {
-                        char* text = new char[length + 1];
+                        char* text = new char[static_cast<unsigned long long>(length + 1)];
                         if (text == nullptr)
                         {
                             break;
@@ -4967,14 +4967,14 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         text[length] = 0;
 
                         // Read in the text
-                        if (!m_socket->ReadExact(text, length))
+                        if (!m_socket->ReadExact(text, static_cast<VCard>(length)))
                         {
                             delete[] text;
                             break;
                         }
 
                         const int len = static_cast<int>(std::strlen(text));
-                        winStr = new char[len * 2 + 1];
+                        winStr = new char[static_cast<unsigned long long>(len * 2 + 1)];
 
                         int j{ 0 };
                         for (int i{ 0 }; i < len; ++i)
@@ -4997,7 +4997,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         int nWideLen = ::MultiByteToWideChar(CP_ACP, 0, winStr, -1, nullptr, 0);
                         if (nWideLen > 0)
                         {
-                            wchar_t* wideStr = new wchar_t[nWideLen];
+                            wchar_t* wideStr = new wchar_t[static_cast<unsigned long long>(nWideLen)];
                             ::MultiByteToWideChar(CP_ACP, 0, winStr, -1, wideStr, nWideLen);
                             m_client->m_clipboard.m_strLastCutText = wideStr;
                             delete[] wideStr;
@@ -5034,7 +5034,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
             // Read the rest of the message
             if (m_client->m_fPalmVNCScaling)
             {
-                if (!m_socket->ReadExact(((char*)&msg) + nTO, sz_rfbPalmVNCSetScaleFactorMsg - nTO))
+                if (!m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(sz_rfbPalmVNCSetScaleFactorMsg - nTO)))
                 {
                     m_client->cl_connected = FALSE;
                     break;
@@ -5042,7 +5042,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
             }
             else
             {
-                if (!m_socket->ReadExact(((char*)&msg) + nTO, sz_rfbSetScaleMsg - nTO))
+                if (!m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(sz_rfbSetScaleMsg - nTO)))
                 {
                     m_client->cl_connected = FALSE;
                     break;
@@ -5084,7 +5084,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
 
         // Set Server Input
         case rfbSetServerInput:
-            if (!m_socket->ReadExact(((char*)&msg) + nTO, sz_rfbSetServerInputMsg - nTO))
+            if (!m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(sz_rfbSetServerInputMsg - nTO)))
             {
                 m_client->cl_connected = FALSE;
                 break;
@@ -5125,7 +5125,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
             break;
 
         case rfbSetDesktopSize:
-            if (!m_socket->ReadExact(((char*)&msg) + nTO, sz_rfbSetDesktopSizeMsg - nTO))
+            if (!m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(sz_rfbSetDesktopSizeMsg - nTO)))
             {
                 m_client->cl_connected = FALSE;
                 break;
@@ -5136,12 +5136,12 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                 for (int i{ 0 }; i < msg.sdm.numberOfScreens; ++i)
                 {
                     rfbExtDesktopScreen eds{};
-                    if (!m_socket->ReadExact(((char*)&eds), sz_rfbExtDesktopScreen))
+                    if (!m_socket->ReadExact((reinterpret_cast<char*>(&eds)), sz_rfbExtDesktopScreen))
                     {
                         m_client->cl_connected = FALSE;
                         break;
                     }
-                    [[maybe_unused]] int id = Swap32IfLE(eds.id);
+                    [[maybe_unused]] int id = static_cast<int>(Swap32IfLE(eds.id));
                     int x = Swap16IfLE(eds.x);
                     int y = Swap16IfLE(eds.y);
                     int w = Swap16IfLE(eds.width);
@@ -5187,13 +5187,13 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
             break;
             // Set Single Window
         case rfbSetMonitor:
-            if (m_socket->ReadExact(((char*)&msg) + nTO, sz_rfbMonitorMsg - nTO))
+            if (m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(sz_rfbMonitorMsg - nTO)))
             {
                 m_client->m_encodemgr.m_buffer->m_desktop->SetMonitor(msg.mm.nbr);
             }
             break;
         case rfbSetSW:
-            if (!m_socket->ReadExact(((char*)&msg) + nTO, sz_rfbSetSWMsg - nTO))
+            if (!m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(sz_rfbSetSWMsg - nTO)))
             {
                 m_client->cl_connected = FALSE;
                 break;
@@ -5204,8 +5204,8 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                 break;
             }
             m_client->m_encodemgr.m_buffer->m_desktop->SetSW(
-                (Swap16IfLE(msg.sw.x) + m_client->monitor_Offsetx + m_client->m_ScreenOffsetx) * m_client->m_nScale,
-                (Swap16IfLE(msg.sw.y) + m_client->monitor_Offsety + m_client->m_ScreenOffsety) * m_client->m_nScale);
+                static_cast<int>((Swap16IfLE(msg.sw.x) + m_client->monitor_Offsetx + m_client->m_ScreenOffsetx) * m_client->m_nScale),
+                static_cast<int>((Swap16IfLE(msg.sw.y) + m_client->monitor_Offsety + m_client->m_ScreenOffsety) * m_client->m_nScale));
             break;
 
             // Modif sf@2002 - Text Chat
@@ -5234,7 +5234,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
 
             // Read the rest of the message:
             m_client->m_fFileTransferRunning = TRUE;
-            if (m_socket->ReadExact(((char*)&msg) + nTO, sz_rfbFileTransferMsg - nTO))
+            if (m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(sz_rfbFileTransferMsg - nTO)))
             {
                 switch (msg.ft.contentType)
                 {
@@ -5270,7 +5270,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                     CARD32 sizeL = Swap32IfLE(msg.ft.size);
                     CARD32 sizeH = 0;
                     CARD32 sizeHtmp = 0;
-                    if (!m_socket->ReadExact((char*)&sizeHtmp, sizeof(CARD32)))
+                    if (!m_socket->ReadExact(reinterpret_cast<char*>(&sizeHtmp), sizeof(CARD32)))
                     {
                         //vnclog.Print(LL_INTINFO, VNCLOG("*** File Transfer: Failed to receive SizeH from Viewer. Abort!\n"));
                         break;
@@ -5353,8 +5353,8 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         }
                     }
                     dwFreeKBytes = static_cast<unsigned long>((Int64ShraMod32(lpFreeBytesAvailable.QuadPart, 10)));
-                    __int64 nnFileSize = (((__int64)sizeH) << 32) + sizeL;
-                    if ((__int64)dwFreeKBytes < (__int64)(nnFileSize / 1000))
+                    __int64 nnFileSize = ((static_cast<__int64>(sizeH)) << 32) + sizeL;
+                    if (static_cast<__int64>(dwFreeKBytes) < static_cast<__int64>((nnFileSize / 1000)))
                     {
 #if DEBUG_FT
                         ::OutputDebugStringW(L"=== SRV FTOffer: FAIL - insufficient disk space\n");
@@ -5461,15 +5461,15 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                             if (lpCSBuff)
                             {
                                 int nCSBufferLen =
-                                    m_client->GenerateFileChecksums(m_client->m_hDestFile, lpCSBuff.get(), nCSBufferSize);
+                                    m_client->GenerateFileChecksums(m_client->m_hDestFile, lpCSBuff.get(), static_cast<int>(nCSBufferSize));
                                 if (nCSBufferLen != -1)
                                 {
                                     ft.contentType = rfbFileChecksums;
                                     ft.size = Swap32IfLE(nCSBufferSize);
-                                    ft.length = Swap32IfLE(nCSBufferLen);
+                                    ft.length = static_cast<unsigned int>(Swap32IfLE(nCSBufferLen));
                                     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-                                    m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-                                    m_socket->SendExactQueue((char*)lpCSBuff.get(), nCSBufferLen);
+                                    m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+                                    m_socket->SendExactQueue(reinterpret_cast<char*>(lpCSBuff.get()), static_cast<VCard>(nCSBufferLen));
                                 }
                             }
                         }
@@ -5479,8 +5479,8 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                     ft.size = Swap32IfLE(dwDstSize); // File Size in bytes, 0xFFFFFFFF (-1) means error
                     ft.length = Swap32IfLE(std::strlen(m_client->m_szFullDestName.data()));
                     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-                    m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-                    m_socket->SendExact((char*)m_client->m_szFullDestName.data(), (const VCard)std::strlen(m_client->m_szFullDestName.data()));
+                    m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+                    m_socket->SendExact(reinterpret_cast<char*>(m_client->m_szFullDestName.data()), static_cast<const VCard>(std::strlen(m_client->m_szFullDestName.data())));
 
                     if (dwDstSize == 0xFFFFFFFF)
                     {
@@ -5510,7 +5510,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                     m_client->m_fFileDownloadError = false;
                     m_client->m_fFileDownloadRunning = true;
                     m_client->FTDownloadStartHook();
-                    m_socket->SetRecvTimeout(settings->getftTimeout() * 1000);
+                    m_socket->SetRecvTimeout(static_cast<VCard32>(settings->getftTimeout() * 1000));
                 }
                 break;
 
@@ -5532,9 +5532,9 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         m_client->cl_connected = FALSE;
                         break;
                     }
-                    m_socket->SetSendTimeout(settings->getftTimeout() * 1000);
+                    m_socket->SetSendTimeout(static_cast<VCard32>(settings->getftTimeout() * 1000));
                     m_client->cl_connected =
-                        m_client->ReceiveDestinationFileChecksums(Swap32IfLE(msg.ft.size), Swap32IfLE(msg.ft.length));
+                        m_client->ReceiveDestinationFileChecksums(static_cast<int>(Swap32IfLE(msg.ft.size)), static_cast<int>(Swap32IfLE(msg.ft.length)));
                     break;
 
                     // Destination file (viewer side) is ready for reception (size > 0) or not (size = -1)
@@ -5588,7 +5588,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                     {
                         break;
                     }
-                    m_client->cl_connected = m_client->ReceiveFileChunk(Swap32IfLE(msg.ft.length), Swap32IfLE(msg.ft.size));
+                    m_client->cl_connected = m_client->ReceiveFileChunk(static_cast<int>(Swap32IfLE(msg.ft.length)), static_cast<int>(Swap32IfLE(msg.ft.size)));
                     m_client->SendKeepAlive();
                     break;
 
@@ -5650,9 +5650,9 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                             }
                             else
                             {
-                                ft.size = Swap32IfLE(-1);
+                                ft.size = static_cast<unsigned int>(Swap32IfLE(-1));
                             }
-                            m_client->m_socket->SendExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+                            m_client->m_socket->SendExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
                             m_client->fFTRequest = false;
                         }
                     }
@@ -5684,7 +5684,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
 
                     // The client requests the content of a directory or Drives List
                 case rfbDirContentRequest:
-                    switch (msg.ft.contentParam & ~(CARD16)rfbRDirContentUnicode)
+                    switch (msg.ft.contentParam & ~static_cast<CARD16>(rfbRDirContentUnicode))
                     {
                         // Client requests the List of Local Drives
                     case rfbRDrivesList: {
@@ -5708,7 +5708,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                             // with a char corresponding to the type of drive
                             // We obtain something like "C:l<NULL>D:c<NULL>....Z:n\<NULL><NULL>"
                             // Isn't it ugly?
-                            nType = ::GetDriveType(szDrive.data());
+                            nType = static_cast<int>(::GetDriveType(szDrive.data()));
                             switch (nType)
                             {
                             case DRIVE_FIXED:
@@ -5731,10 +5731,10 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         ft.type = rfbFileTransfer;
                         ft.contentType = rfbDirPacket;
                         ft.contentParam = rfbADrivesList;
-                        ft.length = Swap32IfLE(static_cast<int>(dwLen));
+                        ft.length = static_cast<unsigned int>(Swap32IfLE(static_cast<int>(dwLen)));
                         //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-                        m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-                        m_socket->SendExact((char*)szDrivesList.data(), static_cast<int>(dwLen));
+                        m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+                        m_socket->SendExact(reinterpret_cast<char*>(szDrivesList.data()), static_cast<int>(dwLen));
                     }
                     break;
 
@@ -5812,7 +5812,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                             LPMALLOC pMalloc = nullptr;
                             HRESULT hrMalloc = ::SHGetMalloc(&pMalloc);
                             HRESULT hrLoc =
-                                (SUCCEEDED(hrMalloc) && pMalloc) ? ::SHGetSpecialFolderLocation(0, nFolder, &pidl) : E_FAIL;
+                                (SUCCEEDED(hrMalloc) && pMalloc) ? ::SHGetSpecialFolderLocation(nullptr, nFolder, &pidl) : E_FAIL;
                             if (SUCCEEDED(hrMalloc) && (hrLoc == NOERROR) && pidl)
                             {
                                 BOOL bPath = ::SHGetPathFromIDListW(pidl, szDirW.data());
@@ -5928,7 +5928,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                                 // Old viewers see an unrecognised contentParam with length=0 and treat it as end-of-dir.
                                 ft.contentParam = rfbADirInaccessible;
                                 ft.length = Swap32IfLE(0);
-                                m_socket->SendExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+                                m_socket->SendExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
                                 break;
                             }
 
@@ -5948,10 +5948,10 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                                 ::strcpy_s(szDirNoStar.data(), szDirNoStar.size(), szDir.data());
                                 szDirNoStar[std::strlen(szDirNoStar.data()) - 1] = '\0'; // strip '*'
                             }
-                            ft.contentParam = (CARD16)(rfbADirectory | rfbADirUnicode);
-                            ft.length = Swap32IfLE((CARD32)std::strlen(szDirNoStar.data()));
-                            m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-                            m_socket->SendExactQueue(szDirNoStar.data(), (const VCard)std::strlen(szDirNoStar.data()));
+                            ft.contentParam = static_cast<CARD16>((rfbADirectory | rfbADirUnicode));
+                            ft.length = Swap32IfLE(static_cast<CARD32>(std::strlen(szDirNoStar.data())));
+                            m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+                            m_socket->SendExactQueue(szDirNoStar.data(), static_cast<const VCard>(std::strlen(szDirNoStar.data())));
 
                             BOOL fRet = TRUE;
                             while (fRet)
@@ -5988,33 +5988,33 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                                                   "WIN32_FIND_DATAW: cAlternateFileName must immediately follow cFileName");
                                     std::array<char, sizeof(WIN32_FIND_DATAW)> szFileSpec;
                                     int nOptLen = static_cast<int>(
-                                        (offsetof(WIN32_FIND_DATAW, cFileName) + (lstrlenW(fdW.cFileName) + 1) * sizeof(wchar_t)));
+                                        (offsetof(WIN32_FIND_DATAW, cFileName) + (static_cast<unsigned long long>(lstrlenW(fdW.cFileName) + 1)) * sizeof(wchar_t)));
                                     if ((nOptLen < 0) || (nOptLen > static_cast<int>(sizeof(WIN32_FIND_DATAW))))
                                     {
                                         nOptLen = sizeof(WIN32_FIND_DATAW);
                                     }
-                                    std::memcpy(szFileSpec.data(), &fdW, nOptLen);
+                                    std::memcpy(szFileSpec.data(), &fdW, static_cast<size_t>(nOptLen));
 
-                                    ft.contentParam = (CARD16)(rfbADirectory | rfbADirUnicode);
-                                    ft.length = Swap32IfLE(nOptLen);
-                                    m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-                                    m_socket->SendExactQueue(szFileSpec.data(), nOptLen);
+                                    ft.contentParam = static_cast<CARD16>((rfbADirectory | rfbADirUnicode));
+                                    ft.length = static_cast<unsigned int>(Swap32IfLE(nOptLen));
+                                    m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+                                    m_socket->SendExactQueue(szFileSpec.data(), static_cast<VCard>(nOptLen));
                                 }
                                 else if (std::wcscmp(fdW.cFileName, L"."))
                                 {
                                     std::array<char, sizeof(WIN32_FIND_DATAW)> szFileSpec;
                                     int nOptLen = static_cast<int>((offsetof(WIN32_FIND_DATAW, cFileName) +
-                                                                    lstrlenW(fdW.cFileName) * sizeof(wchar_t) + sizeof(wchar_t)));
+                                                                    static_cast<unsigned long long>(lstrlenW(fdW.cFileName)) * sizeof(wchar_t) + sizeof(wchar_t)));
                                     if ((nOptLen < 0) || (nOptLen > static_cast<int>(sizeof(WIN32_FIND_DATAW))))
                                     {
                                         nOptLen = sizeof(WIN32_FIND_DATAW);
                                     }
-                                    std::memcpy(szFileSpec.data(), &fdW, nOptLen);
+                                    std::memcpy(szFileSpec.data(), &fdW, static_cast<size_t>(nOptLen));
 
-                                    ft.contentParam = (CARD16)(rfbAFile | rfbADirUnicode);
-                                    ft.length = Swap32IfLE(nOptLen);
-                                    m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-                                    m_socket->SendExactQueue(szFileSpec.data(), nOptLen);
+                                    ft.contentParam = static_cast<CARD16>((rfbAFile | rfbADirUnicode));
+                                    ft.length = static_cast<unsigned int>(Swap32IfLE(nOptLen));
+                                    m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+                                    m_socket->SendExactQueue(szFileSpec.data(), static_cast<VCard>(nOptLen));
                                 }
                                 fRet = ::FindNextFileW(ff, &fdW);
                             }
@@ -6032,15 +6032,15 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                             {
                                 ft.contentParam = rfbADirInaccessible;
                                 ft.length = Swap32IfLE(0);
-                                m_socket->SendExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+                                m_socket->SendExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
                                 break;
                             }
 
                             ft.length = Swap32IfLE(std::strlen(szDir.data()) - 1);
                             //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-                            m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+                            m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
                             // sf@2004 - Also send back the full directory path to the viewer (necessary for Shorcuts)
-                            m_socket->SendExactQueue((char*)szDir.data(), (const VCard)(std::strlen(szDir.data()) - 1));
+                            m_socket->SendExactQueue(reinterpret_cast<char*>(szDir.data()), static_cast<const VCard>((std::strlen(szDir.data()) - 1)));
 
                             BOOL fRet = TRUE;
                             while (fRet)
@@ -6071,13 +6071,13 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
 
                                     // Serialize the interesting part of WIN32_FIND_DATA
                                     std::array<char, sizeof(WIN32_FIND_DATA)> szFileSpec;
-                                    int nOptLen = sizeof(WIN32_FIND_DATA) - MAX_PATH - 14 + ::lstrlen(fd.cFileName);
-                                    std::memcpy(szFileSpec.data(), &fd, nOptLen);
+                                    int nOptLen = sizeof(WIN32_FIND_DATA) - MAX_PATH - static_cast<int>(14 + ::lstrlen(fd.cFileName));
+                                    std::memcpy(szFileSpec.data(), &fd, static_cast<size_t>(nOptLen));
 
-                                    ft.length = Swap32IfLE(nOptLen);
+                                    ft.length = static_cast<unsigned int>(Swap32IfLE(nOptLen));
                                     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-                                    m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-                                    m_socket->SendExactQueue((char*)szFileSpec.data(), nOptLen);
+                                    m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+                                    m_socket->SendExactQueue(reinterpret_cast<char*>(szFileSpec.data()), static_cast<VCard>(nOptLen));
                                 }
                                 else if (std::strcmp(fd.cFileName, "."))
                                 {
@@ -6085,13 +6085,13 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                                     // Get rid of the trailing blank chars. It makes a BIG
                                     // difference when there's a lot of files in the dir.
                                     std::array<char, sizeof(WIN32_FIND_DATA)> szFileSpec;
-                                    int nOptLen = sizeof(WIN32_FIND_DATA) - MAX_PATH - 14 + ::lstrlen(fd.cFileName);
-                                    std::memcpy(szFileSpec.data(), &fd, nOptLen);
+                                    int nOptLen = sizeof(WIN32_FIND_DATA) - MAX_PATH - static_cast<int>(14 + ::lstrlen(fd.cFileName));
+                                    std::memcpy(szFileSpec.data(), &fd, static_cast<size_t>(nOptLen));
 
-                                    ft.length = Swap32IfLE(nOptLen);
+                                    ft.length = static_cast<unsigned int>(Swap32IfLE(nOptLen));
                                     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-                                    m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-                                    m_socket->SendExactQueue((char*)szFileSpec.data(), nOptLen);
+                                    m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+                                    m_socket->SendExactQueue(reinterpret_cast<char*>(szFileSpec.data()), static_cast<VCard>(nOptLen));
                                 }
                                 fRet = ::FindNextFile(ff, &fd);
                             }
@@ -6101,7 +6101,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         // End of the transfer
                         ft.contentParam = 0;
                         ft.length = Swap32IfLE(0);
-                        m_socket->SendExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+                        m_socket->SendExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
                     }
                     } // end inner switch (rfbDirContentRequest)
                     break;
@@ -6148,12 +6148,12 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         ft.type = rfbFileTransfer;
                         ft.contentType = rfbCommandReturn;
                         ft.contentParam = rfbADirCreate;
-                        ft.size = fRet ? 0 : -1;
+                        ft.size = fRet ? 0 : static_cast<CARD32>(-1);
                         ft.length = msg.ft.length;
 
                         //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-                        m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-                        m_socket->SendExact((char*)szDir.data(), static_cast<int>(length));
+                        m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+                        m_socket->SendExact(reinterpret_cast<char*>(szDir.data()), static_cast<int>(length));
                         if (fRet)
                         {
                             m_client->FTNewFolderHook(szDir.data());
@@ -6210,12 +6210,12 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         ft.type = rfbFileTransfer;
                         ft.contentType = rfbCommandReturn;
                         ft.contentParam = rfbAFileDelete;
-                        ft.size = fRet ? 0 : -1;
+                        ft.size = fRet ? 0 : static_cast<CARD32>(-1);
                         ft.length = Swap32IfLE(length);
 
                         //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-                        m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-                        m_socket->SendExact((char*)newname.c_str(), length);
+                        m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+                        m_socket->SendExact(reinterpret_cast<char*>(const_cast<char *>(newname.c_str())), length);
                         if (fRet)
                         {
                             m_client->FTDeleteHook(szFile.data(), isDir);
@@ -6276,12 +6276,12 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         ft.type = rfbFileTransfer;
                         ft.contentType = rfbCommandReturn;
                         ft.contentParam = rfbAFileRename;
-                        ft.size = fRet ? 0 : -1;
+                        ft.size = fRet ? 0 : static_cast<CARD32>(-1);
                         ft.length = msg.ft.length;
 
                         //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-                        m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-                        m_socket->SendExact((char*)szNames.data(), static_cast<int>(length));
+                        m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+                        m_socket->SendExact(reinterpret_cast<char*>(szNames.data()), static_cast<int>(length));
                         if (fRet)
                         {
                             m_client->FTRenameHook(szCurrentName.data(), szNewName.data());
@@ -6321,7 +6321,7 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
         case rfbNotifyPluginStreaming:
             if (sz_rfbNotifyPluginStreamingMsg > 1)
             {
-                if (!m_socket->ReadExact(((char*)&msg) + nTO, sz_rfbNotifyPluginStreamingMsg - nTO))
+                if (!m_socket->ReadExact((reinterpret_cast<char*>(&msg)) + nTO, static_cast<VCard>(sz_rfbNotifyPluginStreamingMsg - nTO)))
                 {
                     m_client->cl_connected = FALSE;
                     break;
@@ -6392,15 +6392,15 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
     //////////////////
 #ifndef SC_20
     typedef BOOL (*LogeventFn)(char* machine, char* user, int clientId, bool isinteractive, char* szMslogonLog);
-    LogeventFn Logevent = 0;
+    LogeventFn Logevent = nullptr;
     std::array<char, MAX_PATH> szCurrentDir;
     ::strcpy_s(szCurrentDir.data(), szCurrentDir.size(), winvncFolder.data());
     ::strcat_s(szCurrentDir.data(), szCurrentDir.size(), "\\logging.dll");
     HMODULE hModule = ::LoadLibrary(szCurrentDir.data());
     if (hModule)
     {
-        Logevent = (LogeventFn)::GetProcAddress(hModule, "LOGEXITV2");
-        Logevent((char*)m_client->GetClientNameName(), (char*)m_client->GetClientDomainUsername(), m_client->GetClientId(),
+        Logevent = reinterpret_cast<LogeventFn>(::GetProcAddress(hModule, "LOGEXITV2"));
+        Logevent(reinterpret_cast<char*>(const_cast<char *>(m_client->GetClientNameName())), reinterpret_cast<char*>(const_cast<char *>(m_client->GetClientDomainUsername())), m_client->GetClientId(),
                  (m_client->m_keyboardenabled && m_client->m_pointerenabled), settings->getLogFile());
         ::FreeLibrary(hModule);
     }
@@ -6451,7 +6451,7 @@ vncClient::vncClient() : m_clipboard(ClipboardSettings::defaultServerCaps), Send
 {
     vnclog.Print(LL_INTINFO, VNCLOG("vncClient() executing...\n"));
 
-    m_hPToken = 0;
+    m_hPToken = nullptr;
 
     m_socket = nullptr;
     m_client_name_name = nullptr;
@@ -6500,7 +6500,7 @@ vncClient::vncClient() : m_clipboard(ClipboardSettings::defaultServerCaps), Send
     m_fClientSupportsUnicode = false; // Set to true when client sends rfbEncodingFTProtocolVersion
     m_pZipUnZip = new CMiniZipNG();   // Directory File Transfer utils (Unicode-aware)
 
-    m_hDestFile = 0;
+    m_hDestFile = nullptr;
     //m_szFullDestName = NULL;
     m_dwFileSize = 0;
     m_dwNbPackets = 0;
@@ -6562,8 +6562,8 @@ vncClient::vncClient() : m_clipboard(ClipboardSettings::defaultServerCaps), Send
     m_supportsUnicodeTextChat = false;
     m_supportsHighResolutionWheel = false;
     m_supportsChatFileTransfer = false;
-    m_pBuff = 0;
-    m_pCompBuff = 0;
+    m_pBuff = nullptr;
+    m_pCompBuff = nullptr;
     m_NewSWDesktop = 0;
     NewsizeW = 0;
     NewsizeH = 0;
@@ -6757,7 +6757,7 @@ BOOL vncClient::Init(vncServer* server, VSocket* socket, const BOOL auth, const 
     {
         return FALSE;
     }
-    return ((vncClientThread*)m_thread_ClientThread)->Init(this, m_server, m_socket, auth, shared);
+    return (reinterpret_cast<vncClientThread*>(m_thread_ClientThread))->Init(this, m_server, m_socket, auth, shared);
 
     return FALSE;
 }
@@ -6772,8 +6772,8 @@ void vncClient::Kill(bool deleted)
     }
     if (m_thread_ClientThread)
     {
-        ((vncClientThread*)m_thread_ClientThread)->ReleaseVeNCrypt();
-        ((vncClientThread*)m_thread_ClientThread)->ReleaseRA2();
+        (reinterpret_cast<vncClientThread*>(m_thread_ClientThread))->ReleaseVeNCrypt();
+        (reinterpret_cast<vncClientThread*>(m_thread_ClientThread))->ReleaseRA2();
     }
     if (m_socket != nullptr)
     {
@@ -6781,7 +6781,7 @@ void vncClient::Kill(bool deleted)
     }
     if (deleted && m_thread_ClientThread)
     {
-        ((vncClientThread*)m_thread_ClientThread)->m_deleted = true;
+        (reinterpret_cast<vncClientThread*>(m_thread_ClientThread))->m_deleted = true;
     }
     if (m_server->virtualDisplay)
     {
@@ -6810,10 +6810,10 @@ bool vncClient::NotifyUpdate(const rfbFramebufferUpdateRequestMsg fur)
     monitor mon = m_encodemgr.m_buffer->m_desktop->devicenaamToPosMap[displayname.data()];
     if (mon.Height && mon.Width && (m_encodemgr.m_buffer->m_desktop->m_current_monitor == MULTI_MON_ALL))
     {
-        m_ScaledScreen.tl.x = mon.offsetx / m_nScale;
-        m_ScaledScreen.tl.y = mon.offsety / m_nScale;
-        m_ScaledScreen.br.x = (mon.Width + mon.offsetx) / m_nScale;
-        m_ScaledScreen.br.y = (mon.Height + mon.offsety) / m_nScale;
+        m_ScaledScreen.tl.x = static_cast<int>(mon.offsetx / m_nScale);
+        m_ScaledScreen.tl.y = static_cast<int>(mon.offsety / m_nScale);
+        m_ScaledScreen.br.x = static_cast<int>((mon.Width + mon.offsetx) / m_nScale);
+        m_ScaledScreen.br.y = static_cast<int>((mon.Height + mon.offsety) / m_nScale);
     }
 
     if (!fur.incremental)
@@ -6822,10 +6822,10 @@ bool vncClient::NotifyUpdate(const rfbFramebufferUpdateRequestMsg fur)
         {
             m_NewSWUpdateWaiting = true;
         }
-        update.tl.x = (m_ScaledScreen.tl.x + monitor_Offsetx) * m_nScale;
-        update.tl.y = (m_ScaledScreen.tl.y + monitor_Offsety) * m_nScale;
-        update.br.x = update.tl.x + (m_ScaledScreen.br.x - m_ScaledScreen.tl.x) * m_nScale;
-        update.br.y = update.tl.y + (m_ScaledScreen.br.y - m_ScaledScreen.tl.y) * m_nScale;
+        update.tl.x = static_cast<int>((m_ScaledScreen.tl.x + monitor_Offsetx) * m_nScale);
+        update.tl.y = static_cast<int>((m_ScaledScreen.tl.y + monitor_Offsety) * m_nScale);
+        update.br.x = static_cast<int>(update.tl.x + (m_ScaledScreen.br.x - m_ScaledScreen.tl.x) * m_nScale);
+        update.br.y = static_cast<int>(update.tl.y + (m_ScaledScreen.br.y - m_ScaledScreen.tl.y) * m_nScale);
         update_rgn = update;
         if (update_rgn.is_empty())
         {
@@ -6839,10 +6839,10 @@ bool vncClient::NotifyUpdate(const rfbFramebufferUpdateRequestMsg fur)
         if (m_firstExtDesktopIncremental)
         {
             //The first full was used for the extDesktopSize, we send it now
-            update.tl.x = (m_ScaledScreen.tl.x + monitor_Offsetx) * m_nScale;
-            update.tl.y = (m_ScaledScreen.tl.y + monitor_Offsety) * m_nScale;
-            update.br.x = update.tl.x + (m_ScaledScreen.br.x - m_ScaledScreen.tl.x) * m_nScale;
-            update.br.y = update.tl.y + (m_ScaledScreen.br.y - m_ScaledScreen.tl.y) * m_nScale;
+            update.tl.x = static_cast<int>((m_ScaledScreen.tl.x + monitor_Offsetx) * m_nScale);
+            update.tl.y = static_cast<int>((m_ScaledScreen.tl.y + monitor_Offsety) * m_nScale);
+            update.br.x = static_cast<int>(update.tl.x + (m_ScaledScreen.br.x - m_ScaledScreen.tl.x) * m_nScale);
+            update.br.y = static_cast<int>(update.tl.y + (m_ScaledScreen.br.y - m_ScaledScreen.tl.y) * m_nScale);
             update_rgn = update;
             if (update_rgn.is_empty())
             {
@@ -6854,26 +6854,26 @@ bool vncClient::NotifyUpdate(const rfbFramebufferUpdateRequestMsg fur)
         }
         else
         {
-            update.tl.x = (Swap16IfLE(fur.x) + monitor_Offsetx) * m_nScale;
-            update.tl.y = (Swap16IfLE(fur.y) + monitor_Offsety) * m_nScale;
-            update.br.x = update.tl.x + Swap16IfLE(fur.w) * m_nScale;
-            update.br.y = update.tl.y + Swap16IfLE(fur.h) * m_nScale;
+            update.tl.x = static_cast<int>((Swap16IfLE(fur.x) + monitor_Offsetx) * m_nScale);
+            update.tl.y = static_cast<int>((Swap16IfLE(fur.y) + monitor_Offsety) * m_nScale);
+            update.br.x = static_cast<int>(update.tl.x + Swap16IfLE(fur.w) * m_nScale);
+            update.br.y = static_cast<int>(update.tl.y + Swap16IfLE(fur.h) * m_nScale);
             // Verify max size, scaled changed on server while not pushed to viewer
-            if (update.tl.x < static_cast<int>(((m_ScaledScreen.tl.x + monitor_Offsetx) * m_nScale)))
+            if (update.tl.x < static_cast<int>(((static_cast<UINT>(m_ScaledScreen.tl.x + monitor_Offsetx)) * m_nScale)))
             {
-                update.tl.x = (m_ScaledScreen.tl.x + monitor_Offsetx) * m_nScale;
+                update.tl.x = static_cast<int>((m_ScaledScreen.tl.x + monitor_Offsetx) * m_nScale);
             }
-            if (update.tl.y < static_cast<int>(((m_ScaledScreen.tl.y + monitor_Offsety) * m_nScale)))
+            if (update.tl.y < static_cast<int>(((static_cast<UINT>(m_ScaledScreen.tl.y + monitor_Offsety)) * m_nScale)))
             {
-                update.tl.y = (m_ScaledScreen.tl.y + monitor_Offsety) * m_nScale;
+                update.tl.y = static_cast<int>((m_ScaledScreen.tl.y + monitor_Offsety) * m_nScale);
             }
-            if (update.br.x > static_cast<int>((update.tl.x + (m_ScaledScreen.br.x - m_ScaledScreen.tl.x) * m_nScale)))
+            if (update.br.x > static_cast<int>((static_cast<UINT>(update.tl.x) + (static_cast<UINT>(m_ScaledScreen.br.x - m_ScaledScreen.tl.x)) * m_nScale)))
             {
-                update.br.x = update.tl.x + (m_ScaledScreen.br.x - m_ScaledScreen.tl.x) * m_nScale;
+                update.br.x = static_cast<int>(update.tl.x + (m_ScaledScreen.br.x - m_ScaledScreen.tl.x) * m_nScale);
             }
-            if (update.br.y > static_cast<int>((update.tl.y + (m_ScaledScreen.br.y - m_ScaledScreen.tl.y) * m_nScale)))
+            if (update.br.y > static_cast<int>((static_cast<UINT>(update.tl.y) + (static_cast<UINT>(m_ScaledScreen.br.y - m_ScaledScreen.tl.y)) * m_nScale)))
             {
-                update.br.y = update.tl.y + (m_ScaledScreen.br.y - m_ScaledScreen.tl.y) * m_nScale;
+                update.br.y = static_cast<int>(update.tl.y + (m_ScaledScreen.br.y - m_ScaledScreen.tl.y) * m_nScale);
             }
             update_rgn = update;
             if (update_rgn.is_empty())
@@ -7150,10 +7150,10 @@ void vncClient::EnableProtocol_no_mutex()
 BOOL vncClient::SendRFBMsg(const CARD8 type, BYTE* const buffer, const int buflen)
 {
     // Set the message type
-    ((rfbServerToClientMsg*)buffer)->type = type;
+    (reinterpret_cast<rfbServerToClientMsg*>(buffer))->type = type;
 
     // Send the message
-    if (!m_socket->SendExact((char*)buffer, buflen, type))
+    if (!m_socket->SendExact(reinterpret_cast<char*>(buffer), static_cast<VCard>(buflen), type))
     {
         vnclog.Print(LL_CONNERR, VNCLOG("failed to send RFB message to client\n"));
 
@@ -7167,10 +7167,10 @@ BOOL vncClient::SendRFBMsg(const CARD8 type, BYTE* const buffer, const int bufle
 BOOL vncClient::SendRFBMsgQueue(const CARD8 type, BYTE* const buffer, const int buflen)
 {
     // Set the message type
-    ((rfbServerToClientMsg*)buffer)->type = type;
+    (reinterpret_cast<rfbServerToClientMsg*>(buffer))->type = type;
 
     // Send the message
-    if (!m_socket->SendExactQueue((char*)buffer, buflen, type))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(buffer), static_cast<VCard>(buflen), type))
     {
         vnclog.Print(LL_CONNERR, VNCLOG("failed to send RFB message to client\n"));
 
@@ -7235,10 +7235,10 @@ BOOL vncClient::SendUpdate(rfb::SimpleUpdateTracker& update)
                 rfbFramebufferUpdateMsg header{};
                 header.nRects = Swap16IfLE(1);
                 //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-                SendRFBMsgQueue(rfbFramebufferUpdate, (BYTE*)&header, sz_rfbFramebufferUpdateMsg);
-                m_socket->SendExact((char*)&hdr, sizeof(hdr));
-                m_socket->SendExact((char*)&edsHdr, sizeof(edsHdr));
-                m_socket->SendExact((char*)&eds, sizeof(eds));
+                SendRFBMsgQueue(rfbFramebufferUpdate, reinterpret_cast<BYTE*>(&header), sz_rfbFramebufferUpdateMsg);
+                m_socket->SendExact(reinterpret_cast<char*>(&hdr), sizeof(hdr));
+                m_socket->SendExact(reinterpret_cast<char*>(&edsHdr), sizeof(edsHdr));
+                m_socket->SendExact(reinterpret_cast<char*>(&eds), sizeof(eds));
                 m_use_ExtDesktopSize = false;
                 m_firstExtDesktop = false;
                 sizeUpdateSent = true;
@@ -7248,14 +7248,14 @@ BOOL vncClient::SendUpdate(rfb::SimpleUpdateTracker& update)
         {
             hdr.r.x = 0;
             hdr.r.y = 0;
-            hdr.r.w = Swap16IfLE(NewsizeW * m_nScale_viewer / m_nScale);
-            hdr.r.h = Swap16IfLE(NewsizeH * m_nScale_viewer / m_nScale);
+            hdr.r.w = Swap16IfLE(static_cast<UINT>(NewsizeW) * m_nScale_viewer / m_nScale);
+            hdr.r.h = Swap16IfLE(static_cast<UINT>(NewsizeH) * m_nScale_viewer / m_nScale);
             hdr.encoding = Swap32IfLE(rfbEncodingNewFBSize);
             rfbFramebufferUpdateMsg header{};
             header.nRects = Swap16IfLE(1);
             //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-            SendRFBMsgQueue(rfbFramebufferUpdate, (BYTE*)&header, sz_rfbFramebufferUpdateMsg);
-            m_socket->SendExact((char*)&hdr, sizeof(hdr));
+            SendRFBMsgQueue(rfbFramebufferUpdate, reinterpret_cast<BYTE*>(&header), sz_rfbFramebufferUpdateMsg);
+            m_socket->SendExact(reinterpret_cast<char*>(&hdr), sizeof(hdr));
             if (m_singleExtendMode)
             {
                 //send position of the virtual screen
@@ -7263,15 +7263,15 @@ BOOL vncClient::SendUpdate(rfb::SimpleUpdateTracker& update)
                 m_encodemgr.m_buffer->m_desktop->m_current_monitor = MULTI_MON_ALL;
                 m_encodemgr.m_buffer->SetAllMonitors(true);
                 monitor mon = m_encodemgr.m_buffer->m_desktop->devicenaamToPosMap[displayname.data()];
-                hdr.r.x = Swap16IfLE(mon.offsetx * m_nScale_viewer / m_nScale);
-                hdr.r.y = Swap16IfLE(mon.offsety * m_nScale_viewer / m_nScale);
-                hdr.r.w = Swap16IfLE(mon.Width * m_nScale_viewer / m_nScale);
-                hdr.r.h = Swap16IfLE(mon.Height * m_nScale_viewer / m_nScale);
+                hdr.r.x = Swap16IfLE(static_cast<UINT>(mon.offsetx) * m_nScale_viewer / m_nScale);
+                hdr.r.y = Swap16IfLE(static_cast<UINT>(mon.offsety) * m_nScale_viewer / m_nScale);
+                hdr.r.w = Swap16IfLE(static_cast<UINT>(mon.Width) * m_nScale_viewer / m_nScale);
+                hdr.r.h = Swap16IfLE(static_cast<UINT>(mon.Height) * m_nScale_viewer / m_nScale);
                 hdr.encoding = Swap32IfLE(rfbEncodingExtViewSize);
                 rfbFramebufferUpdateMsg headerInner{};
                 headerInner.nRects = Swap16IfLE(1);
-                SendRFBMsgQueue(rfbFramebufferUpdate, (BYTE*)&headerInner, sz_rfbFramebufferUpdateMsg);
-                m_socket->SendExact((char*)&hdr, sizeof(hdr));
+                SendRFBMsgQueue(rfbFramebufferUpdate, reinterpret_cast<BYTE*>(&headerInner), sz_rfbFramebufferUpdateMsg);
+                m_socket->SendExact(reinterpret_cast<char*>(&hdr), sizeof(hdr));
             }
             sizeUpdateSent = true;
         }
@@ -7316,7 +7316,7 @@ BOOL vncClient::SendUpdate(rfb::SimpleUpdateTracker& update)
         for (i = update_info.changed.begin(); i != update_info.changed.end(); ++i)
         {
             // Tight specific (lastrect)
-            numsubrects = m_encodemgr.GetNumCodedRects(*i);
+            numsubrects = static_cast<int>(m_encodemgr.GetNumCodedRects(*i));
 
             // Skip rest rectangles if an encoder will use LastRect extension.
             if (numsubrects == 0)
@@ -7336,7 +7336,7 @@ BOOL vncClient::SendUpdate(rfb::SimpleUpdateTracker& update)
         for (i = update_info.cached.begin(); i != update_info.cached.end(); ++i)
         {
             // Tight specific (lastrect)
-            numsubrects = m_encodemgr.GetNumCodedRects(*i);
+            numsubrects = static_cast<int>(m_encodemgr.GetNumCodedRects(*i));
 
             // Skip rest rectangles if an encoder will use LastRect extension.
             if (numsubrects == 0)
@@ -7383,7 +7383,7 @@ BOOL vncClient::SendUpdate(rfb::SimpleUpdateTracker& update)
     rfbFramebufferUpdateMsg header{};
     header.nRects = Swap16IfLE(updates);
     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-    if (!SendRFBMsgQueue(rfbFramebufferUpdate, (BYTE*)&header, sz_rfbFramebufferUpdateMsg))
+    if (!SendRFBMsgQueue(rfbFramebufferUpdate, reinterpret_cast<BYTE*>(&header), sz_rfbFramebufferUpdateMsg))
     {
         return FALSE;
     }
@@ -7474,7 +7474,7 @@ BOOL vncClient::SendRectangles(const rfb::RectVector& rects)
 #ifdef _XZ
     if (m_encodemgr.IsBulkRectEncoding())
     {
-        return m_encodemgr.EncodeBulkRects(rects, m_nScale, m_socket);
+        return static_cast<BOOL>(m_encodemgr.EncodeBulkRects(rects, m_nScale, m_socket));
     }
 #endif
 
@@ -7536,10 +7536,10 @@ BOOL vncClient::SendRectangle(const rfb::Rect& rect)
     // Get the buffer to encode the rectangle
     // Modif sf@2002 - Scaling
     rfb::Rect ScaledRect;
-    ScaledRect.tl.y = rect.tl.y / m_nScale;
-    ScaledRect.br.y = rect.br.y / m_nScale;
-    ScaledRect.tl.x = rect.tl.x / m_nScale;
-    ScaledRect.br.x = rect.br.x / m_nScale;
+    ScaledRect.tl.y = static_cast<int>(rect.tl.y / m_nScale);
+    ScaledRect.br.y = static_cast<int>(rect.br.y / m_nScale);
+    ScaledRect.tl.x = static_cast<int>(rect.tl.x / m_nScale);
+    ScaledRect.br.x = static_cast<int>(rect.br.x / m_nScale);
     /*#ifdef _DEBUG
     char			szText[256];
     sprintf_s(szText,"++++++++++++++++++++++++++++++++++++++++++++++REct1 %i %i %i %i  \n",rect.tl.x,rect.br.x,rect.tl.y,rect.br.y);
@@ -7582,7 +7582,7 @@ BOOL vncClient::SendRectangle(const rfb::Rect& rect)
         // If SendExact() was called from inside the encoder
         if (m_socket->GetNetRectBufOffset() > 0)
         {
-            TheSize = m_socket->GetNetRectBufOffset();
+            TheSize = static_cast<UINT>(m_socket->GetNetRectBufOffset());
 #ifdef _DEBUG
             std::array<char, 256U> szText;
             DWORD error = ::GetLastError();
@@ -7613,10 +7613,10 @@ BOOL vncClient::SendRectangle(const rfb::Rect& rect)
         }
 
         // Send the header
-        m_socket->SendExactQueue((char*)pDataBuffer, sz_rfbFramebufferUpdateRectHeader);
+        m_socket->SendExactQueue(reinterpret_cast<char*>(pDataBuffer), sz_rfbFramebufferUpdateRectHeader);
 
         // Send the size of the following rects data buffer
-        CARD32 Size = (CARD32)(TheSize + bytes - sz_rfbFramebufferUpdateRectHeader);
+        CARD32 Size = static_cast<CARD32>((TheSize + bytes - sz_rfbFramebufferUpdateRectHeader));
 #ifdef _DEBUG
         std::array<char, 256U> szText;
         DWORD error = ::GetLastError();
@@ -7625,9 +7625,9 @@ BOOL vncClient::SendRectangle(const rfb::Rect& rect)
         ::OutputDebugString(szText.data());
 #endif
         Size = Swap32IfLE(Size);
-        m_socket->SendExactQueue((char*)&Size, sizeof(CARD32));
+        m_socket->SendExactQueue(reinterpret_cast<char*>(&Size), sizeof(CARD32));
         // Send the data buffer
-        m_socket->SendExactQueue(((char*)pDataBuffer + sz_rfbFramebufferUpdateRectHeader),
+        m_socket->SendExactQueue((reinterpret_cast<char*>(pDataBuffer) + sz_rfbFramebufferUpdateRectHeader),
                                  TheSize + bytes - sz_rfbFramebufferUpdateRectHeader);
     }
     else // Normal case - No DSM - Symetry is not important
@@ -7637,7 +7637,7 @@ BOOL vncClient::SendRectangle(const rfb::Rect& rect)
         // if (bytes == 0) return false; // From realvnc337. No! Causes viewer disconnections/
 
         // Send the encoded data
-        return m_socket->SendExactQueue((char*)(m_encodemgr.GetClientBuffer()), bytes);
+        return m_socket->SendExactQueue(reinterpret_cast<char*>((m_encodemgr.GetClientBuffer())), bytes);
     }
 
     return true;
@@ -7649,23 +7649,23 @@ BOOL vncClient::SendCopyRect(const rfb::Rect& dest, const rfb::Point& source)
     // Create the message header
     // Modif sf@2002 - Scaling
     rfbFramebufferUpdateRectHeader copyrecthdr{};
-    copyrecthdr.r.x = Swap16IfLE((dest.tl.x - monitor_Offsetx) / m_nScale);
-    copyrecthdr.r.y = Swap16IfLE((dest.tl.y - monitor_Offsety) / m_nScale);
-    copyrecthdr.r.w = Swap16IfLE((dest.br.x - dest.tl.x) / m_nScale);
-    copyrecthdr.r.h = Swap16IfLE((dest.br.y - dest.tl.y) / m_nScale);
+    copyrecthdr.r.x = Swap16IfLE((static_cast<UINT>(dest.tl.x - monitor_Offsetx)) / m_nScale);
+    copyrecthdr.r.y = Swap16IfLE((static_cast<UINT>(dest.tl.y - monitor_Offsety)) / m_nScale);
+    copyrecthdr.r.w = Swap16IfLE((static_cast<UINT>(dest.br.x - dest.tl.x)) / m_nScale);
+    copyrecthdr.r.h = Swap16IfLE((static_cast<UINT>(dest.br.y - dest.tl.y)) / m_nScale);
     copyrecthdr.encoding = Swap32IfLE(rfbEncodingCopyRect);
 
     // Create the CopyRect-specific section
     rfbCopyRect copyrectbody{};
-    copyrectbody.srcX = Swap16IfLE((source.x - monitor_Offsetx) / m_nScale);
-    copyrectbody.srcY = Swap16IfLE((source.y - monitor_Offsety) / m_nScale);
+    copyrectbody.srcX = Swap16IfLE((static_cast<UINT>(source.x - monitor_Offsetx)) / m_nScale);
+    copyrectbody.srcY = Swap16IfLE((static_cast<UINT>(source.y - monitor_Offsety)) / m_nScale);
 
     // Now send the message;
-    if (!m_socket->SendExactQueue((char*)&copyrecthdr, sizeof(copyrecthdr)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&copyrecthdr), sizeof(copyrecthdr)))
     {
         return FALSE;
     }
-    if (!m_socket->SendExactQueue((char*)&copyrectbody, sizeof(copyrectbody)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&copyrectbody), sizeof(copyrectbody)))
     {
         return FALSE;
     }
@@ -7702,7 +7702,7 @@ BOOL vncClient::SendPalette()
     setcmap.nColours = Swap16IfLE(ncolours);
 
     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-    if (!m_socket->SendExactQueue((char*)&setcmap, sz_rfbSetColourMapEntriesMsg, rfbSetColourMapEntries))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&setcmap), sz_rfbSetColourMapEntriesMsg, rfbSetColourMapEntries))
     {
         delete[] rgbquad;
         return FALSE;
@@ -7716,12 +7716,12 @@ BOOL vncClient::SendPalette()
             CARD16 r, g, b;
         } pixeldata{};
 
-        pixeldata.r = Swap16IfLE(((CARD16)rgbquad[i].rgbRed) << 8);
-        pixeldata.g = Swap16IfLE(((CARD16)rgbquad[i].rgbGreen) << 8);
-        pixeldata.b = Swap16IfLE(((CARD16)rgbquad[i].rgbBlue) << 8);
+        pixeldata.r = Swap16IfLE((static_cast<CARD16>(rgbquad[i].rgbRed)) << 8);
+        pixeldata.g = Swap16IfLE((static_cast<CARD16>(rgbquad[i].rgbGreen)) << 8);
+        pixeldata.b = Swap16IfLE((static_cast<CARD16>(rgbquad[i].rgbBlue)) << 8);
 
         //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-        if (!m_socket->SendExactQueue((char*)&pixeldata, sizeof(pixeldata)))
+        if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&pixeldata), sizeof(pixeldata)))
         {
             delete[] rgbquad;
             return FALSE;
@@ -7785,10 +7785,10 @@ BOOL vncClient::SendCacheRect(const rfb::Rect& dest)
     // Modif rdv@2002 - v1.1.x - Application Resize
     // Modif sf@2002 - Scaling
     rfbFramebufferUpdateRectHeader cacherecthdr{};
-    cacherecthdr.r.x = Swap16IfLE((dest.tl.x - monitor_Offsetx) / m_nScale);
-    cacherecthdr.r.y = Swap16IfLE((dest.tl.y - monitor_Offsety) / m_nScale);
-    cacherecthdr.r.w = Swap16IfLE((dest.br.x - dest.tl.x) / m_nScale);
-    cacherecthdr.r.h = Swap16IfLE((dest.br.y - dest.tl.y) / m_nScale);
+    cacherecthdr.r.x = Swap16IfLE((static_cast<UINT>(dest.tl.x - monitor_Offsetx)) / m_nScale);
+    cacherecthdr.r.y = Swap16IfLE((static_cast<UINT>(dest.tl.y - monitor_Offsety)) / m_nScale);
+    cacherecthdr.r.w = Swap16IfLE((static_cast<UINT>(dest.br.x - dest.tl.x)) / m_nScale);
+    cacherecthdr.r.h = Swap16IfLE((static_cast<UINT>(dest.br.y - dest.tl.y)) / m_nScale);
     cacherecthdr.encoding = Swap32IfLE(rfbEncodingCache);
 
     totalraw += (dest.br.x - dest.tl.x) * (dest.br.y - dest.tl.y) * 32 / 8; // 32-bit test
@@ -7797,11 +7797,11 @@ BOOL vncClient::SendCacheRect(const rfb::Rect& dest)
     cacherectbody.special = Swap16IfLE(9999); //not used dummy
 
     // Now send the message;
-    if (!m_socket->SendExactQueue((char*)&cacherecthdr, sizeof(cacherecthdr)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&cacherecthdr), sizeof(cacherecthdr)))
     {
         return FALSE;
     }
-    if (!m_socket->SendExactQueue((char*)&cacherectbody, sizeof(cacherectbody)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&cacherectbody), sizeof(cacherectbody)))
     {
         return FALSE;
     }
@@ -7833,7 +7833,7 @@ BOOL vncClient::SendCursorPosUpdate()
     hdr.r.h = 0;
     hdr.encoding = Swap32IfLE(rfbEncodingPointerPos);
 
-    if (!m_socket->SendExactQueue((char*)&hdr, sizeof(hdr)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&hdr), sizeof(hdr)))
     {
         return FALSE;
     }
@@ -7853,7 +7853,7 @@ BOOL vncClient::SendLastRect()
     hdr.encoding = Swap32IfLE(rfbEncodingLastRect);
 
     // Now send the message;
-    if (!m_socket->SendExactQueue((char*)&hdr, sizeof(hdr)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&hdr), sizeof(hdr)))
     {
         return FALSE;
     }
@@ -7874,7 +7874,7 @@ BOOL vncClient::SendCacheZip(const rfb::RectVector& rects)
     {
         return true;
     }
-    unsigned long rawDataSize = nNbCacheRects * sz_rfbRectangle;
+    unsigned long rawDataSize = static_cast<unsigned long>(nNbCacheRects * sz_rfbRectangle);
     unsigned long maxCompSize = (rawDataSize + (rawDataSize / 100) + 8);
 
     // Check RawCacheZipBuff
@@ -7900,11 +7900,11 @@ BOOL vncClient::SendCacheZip(const rfb::RectVector& rects)
     BYTE* p = m_pRawCacheZipBuf;
     for (i = rects.begin(); i != rects.end(); ++i)
     {
-        theRect.x = Swap16IfLE(((*i).tl.x - monitor_Offsetx) / m_nScale);
-        theRect.y = Swap16IfLE(((*i).tl.y - monitor_Offsety) / m_nScale);
-        theRect.w = Swap16IfLE(((*i).br.x - (*i).tl.x) / m_nScale);
-        theRect.h = Swap16IfLE(((*i).br.y - (*i).tl.y) / m_nScale);
-        std::memcpy(p, (BYTE*)&theRect, sz_rfbRectangle);
+        theRect.x = Swap16IfLE((static_cast<UINT>((*i).tl.x - monitor_Offsetx)) / m_nScale);
+        theRect.y = Swap16IfLE((static_cast<UINT>((*i).tl.y - monitor_Offsety)) / m_nScale);
+        theRect.w = Swap16IfLE((static_cast<UINT>((*i).br.x - (*i).tl.x)) / m_nScale);
+        theRect.h = Swap16IfLE((static_cast<UINT>((*i).br.y - (*i).tl.y)) / m_nScale);
+        std::memcpy(p, reinterpret_cast<BYTE*>(&theRect), sz_rfbRectangle);
         p += sz_rfbRectangle;
     }
 
@@ -7925,7 +7925,7 @@ BOOL vncClient::SendCacheZip(const rfb::RectVector& rects)
     }
 
     int nRet =
-        compress((unsigned char*)(m_pCacheZipBuf), (unsigned long*)&maxCompSize, (unsigned char*)m_pRawCacheZipBuf, rawDataSize);
+        compress(reinterpret_cast<unsigned char*>((m_pCacheZipBuf)), reinterpret_cast<unsigned long*>(&maxCompSize), reinterpret_cast<unsigned char*>(m_pRawCacheZipBuf), rawDataSize);
 
     if (nRet != 0)
     {
@@ -7948,15 +7948,15 @@ BOOL vncClient::SendCacheZip(const rfb::RectVector& rects)
     CacheZipHeader.nBytes = Swap32IfLE(maxCompSize);
 
     // Now send the message
-    if (!m_socket->SendExactQueue((char*)&CacheRectsHeader, sizeof(CacheRectsHeader)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&CacheRectsHeader), sizeof(CacheRectsHeader)))
     {
         return FALSE;
     }
-    if (!m_socket->SendExactQueue((char*)&CacheZipHeader, sizeof(CacheZipHeader)))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(&CacheZipHeader), sizeof(CacheZipHeader)))
     {
         return FALSE;
     }
-    if (!m_socket->SendExactQueue((char*)m_pCacheZipBuf, maxCompSize))
+    if (!m_socket->SendExactQueue(reinterpret_cast<char*>(m_pCacheZipBuf), maxCompSize))
     {
         return FALSE;
     }
@@ -8027,7 +8027,7 @@ int vncClient::GenerateFileChecksums(const HANDLE hFile, char* const lpCSBuffer,
             }
 
             unsigned long cs = adler32(0L, Z_NULL, 0);
-            cs = adler32(cs, (unsigned char*)lpBuffer, static_cast<int>(dwNbBytesRead));
+            cs = adler32(cs, reinterpret_cast<unsigned char*>(lpBuffer), static_cast<int>(dwNbBytesRead));
 
             std::memcpy(lpCSBuffer + nCSBufferOffset, &cs, 4);
             nCSBufferOffset += 4;
@@ -8071,15 +8071,15 @@ bool vncClient::ReceiveDestinationFileChecksums([[maybe_unused]] const int nSize
         m_nCSBufferSize = 0;
     }
 
-    m_lpCSBuffer = new char[nLen + 1];
+    m_lpCSBuffer = new char[static_cast<unsigned long long>(nLen + 1)];
     if (m_lpCSBuffer == nullptr)
     {
         return false;
     }
 
-    std::memset(m_lpCSBuffer, '\0', nLen + 1);
+    std::memset(m_lpCSBuffer, '\0', static_cast<size_t>(nLen + 1));
 
-    VBool res = m_socket->ReadExact((char*)m_lpCSBuffer, nLen);
+    VBool res = m_socket->ReadExact(reinterpret_cast<char*>(m_lpCSBuffer), static_cast<VCard>(nLen));
     m_nCSBufferSize = nLen;
 
     return res == VTrue;
@@ -8128,7 +8128,7 @@ bool vncClient::ReceiveFileChunk(const int nLen, const int nSize)
     }
     else
     {
-        connected = m_socket->ReadExact((char*)m_pBuff, nLen) == VTrue;
+        connected = m_socket->ReadExact(reinterpret_cast<char*>(m_pBuff), static_cast<VCard>(nLen)) == VTrue;
         if (connected)
         {
             if (nSize == 0)
@@ -8140,10 +8140,10 @@ bool vncClient::ReceiveFileChunk(const int nLen, const int nSize)
             if (fCompressed)
             {
                 // Decompress incoming data
-                int nRet = uncompress((unsigned char*)m_pCompBuff,   // Dest
-                                      (unsigned long*)&nRawBytes,    // Dest len
-                                      (const unsigned char*)m_pBuff, // Src
-                                      nLen                           // Src len
+                int nRet = uncompress(reinterpret_cast<unsigned char*>(m_pCompBuff),   // Dest
+                                      reinterpret_cast<unsigned long*>(&nRawBytes),    // Dest len
+                                      reinterpret_cast<const unsigned char*>(m_pBuff), // Src
+                                      static_cast<uLong>(nLen)                           // Src len
                 );
                 if (nRet != 0)
                 {
@@ -8153,7 +8153,7 @@ bool vncClient::ReceiveFileChunk(const int nLen, const int nSize)
                 }
             }
 
-            fRes = ::WriteFile(m_hDestFile, fCompressed ? m_pCompBuff : m_pBuff, fCompressed ? nRawBytes : nLen, &m_dwNbBytesWritten,
+            fRes = ::WriteFile(m_hDestFile, fCompressed ? m_pCompBuff : m_pBuff, fCompressed ? nRawBytes : static_cast<DWORD>(nLen), &m_dwNbBytesWritten,
                              nullptr);
         }
         else
@@ -8172,7 +8172,7 @@ bool vncClient::ReceiveFileChunk(const int nLen, const int nSize)
         return connected;
     }
 
-    m_dwTotalNbBytesWritten += (fAlreadyHere ? nLen : m_dwNbBytesWritten);
+    m_dwTotalNbBytesWritten += (fAlreadyHere ? static_cast<DWORD>(nLen) : m_dwNbBytesWritten);
     ++m_dwNbReceivedPackets;
 
     return connected;
@@ -8251,7 +8251,7 @@ void vncClient::FinishFileReception()
 
     if (m_fFileDownloadError && m_fUserAbortedFileTransfer)
     {
-        SplitTransferredFileNameAndDate(m_szFullDestName.data(), 0);
+        SplitTransferredFileNameAndDate(m_szFullDestName.data(), nullptr);
         {
             std::array<WCHAR, MAX_PATH * 4> _dp;
             MakeLongPath(m_szFullDestName.data(), _dp.data(), static_cast<int>(_dp.size()));
@@ -8346,7 +8346,7 @@ bool vncClient::SendFileChunk()
                         {
                             m_nCSOffset += 4;
                             unsigned long cs = adler32(0L, Z_NULL, 0);
-                            cs = adler32(cs, (unsigned char*)m_pBuff, static_cast<int>(m_dwNbBytesRead));
+                            cs = adler32(cs, reinterpret_cast<unsigned char*>(m_pBuff), static_cast<int>(m_dwNbBytesRead));
                             if (cs == nCS)
                             {
                                 fAlreadyThere = true;
@@ -8363,7 +8363,7 @@ bool vncClient::SendFileChunk()
                     ft.contentType = rfbFilePacket;
                     ft.size = Swap32IfLE(2); // Means "Empty packet"// Swap32IfLE(nCS);
                     ft.length = Swap32IfLE(m_dwNbBytesRead);
-                    m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+                    m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
                 }
                 else
                 {
@@ -8373,7 +8373,7 @@ bool vncClient::SendFileChunk()
                     bool fCompressed{ false };
                     if (m_fCompressionEnabled)
                     {
-                        int nRetC = compress((unsigned char*)(m_pCompBuff), (unsigned long*)&nMaxCompSize, (unsigned char*)m_pBuff,
+                        int nRetC = compress(reinterpret_cast<unsigned char*>((m_pCompBuff)), reinterpret_cast<unsigned long*>(&nMaxCompSize), reinterpret_cast<unsigned char*>(m_pBuff),
                                              m_dwNbBytesRead);
 
                         if (nRetC != 0)
@@ -8402,16 +8402,16 @@ bool vncClient::SendFileChunk()
                     ft.length = fCompressed ? Swap32IfLE(nMaxCompSize) : Swap32IfLE(m_dwNbBytesRead);
 
                     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-                    connected = VFalse != m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+                    connected = VFalse != m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
                     if (connected)
                     {
                         if (fCompressed)
                         {
-                            connected = VFalse != m_socket->SendExact((char*)m_pCompBuff, nMaxCompSize);
+                            connected = VFalse != m_socket->SendExact(reinterpret_cast<char*>(m_pCompBuff), nMaxCompSize);
                         }
                         else
                         {
-                            connected = VFalse != m_socket->SendExact((char*)m_pBuff, m_dwNbBytesRead);
+                            connected = VFalse != m_socket->SendExact(reinterpret_cast<char*>(m_pBuff), m_dwNbBytesRead);
                         }
                     }
                 }
@@ -8473,14 +8473,14 @@ void vncClient::FinishFileSending()
     {
         ft.type = rfbFileTransfer;
         ft.contentType = rfbEndOfFile;
-        m_socket->SendExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+        m_socket->SendExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
     }
     else // Error in file copy
     {
         // TODO : send an error msg to the client...
         ft.type = rfbFileTransfer;
         ft.contentType = rfbAbortFileTransfer;
-        m_socket->SendExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+        m_socket->SendExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
     }
 
     helper::close_handle(m_hSrcFile);
@@ -8533,7 +8533,7 @@ bool vncClient::GetSpecialFolderPath(const int nId, char* const szPath)
         return false;
     }
 
-    if (::SHGetSpecialFolderLocation(0, nId, &pidl) == NOERROR)
+    if (::SHGetSpecialFolderLocation(nullptr, nId, &pidl) == NOERROR)
     {
         retval = ::SHGetPathFromIDList(pidl, szPath) ? true : false;
 
@@ -8630,10 +8630,10 @@ int vncClient::ZipPossibleDirectory(const LPSTR szSrcFileName)
         ::WideCharToMultiByte(CP_UTF8, 0, szDirNameW.data(), -1, szDirNameUtf8.data(), static_cast<int>(szDirNameUtf8.size()), nullptr, nullptr);
         std::array<char, MAX_PATH * 8> szHexName;
         szHexName[0U] = '\0';
-        for (int _hi{ 0 }; (szDirNameUtf8[_hi] != '\0') && (_hi < MAX_PATH * 4 - 1); ++_hi)
+        for (int _hi{ 0 }; (szDirNameUtf8[static_cast<unsigned long long>(_hi)] != '\0') && (_hi < MAX_PATH * 4 - 1); ++_hi)
         {
             std::array<char, 3U> _hbuf;
-            ::sprintf_s(_hbuf.data(), _hbuf.size(), "%02X", static_cast<unsigned char>(szDirNameUtf8[_hi]));
+            ::sprintf_s(_hbuf.data(), _hbuf.size(), "%02X", static_cast<unsigned char>(szDirNameUtf8[static_cast<unsigned long long>(_hi)]));
             ::strcat_s(szHexName.data(), szHexName.size(), _hbuf.data());
         }
         if (std::strlen(szHexName.data()) > 200)
@@ -8744,9 +8744,9 @@ bool vncClient::UnzipPossibleDirectory(const LPSTR szFileName)
         // szDirName now contains either a hex-encoded UTF-8 dirname (new format)
         // or an 8.3 short dirname (old format). Detect by checking if all chars are hex digits.
         bool bIsHexEncoded = ((std::strlen(szDirName.data()) > 0) && (std::strlen(szDirName.data()) % 2 == 0));
-        for (int _ci{ 0 }; bIsHexEncoded && szDirName[_ci]; ++_ci)
+        for (int _ci{ 0 }; bIsHexEncoded && szDirName[static_cast<unsigned long long>(_ci)]; ++_ci)
         {
-            if (!std::isxdigit(static_cast<unsigned char>(szDirName[_ci])))
+            if (!std::isxdigit(static_cast<unsigned char>(szDirName[static_cast<unsigned long long>(_ci)])))
             {
                 bIsHexEncoded = false;
             }
@@ -8760,12 +8760,12 @@ bool vncClient::UnzipPossibleDirectory(const LPSTR szFileName)
         {
             std::array<char, MAX_PATH * 4> szUtf8;
             int nBytes{ 0 };
-            for (int _di{ 0 }; szDirName[_di] && szDirName[_di + 1]; _di += 2, ++nBytes)
+            for (int _di{ 0 }; szDirName[static_cast<unsigned long long>(_di)] && szDirName[static_cast<unsigned long long>(_di + 1)]; _di += 2, ++nBytes)
             {
-                char _hx[3U] = { szDirName[_di], szDirName[_di + 1], '\0' };
-                szUtf8[nBytes] = static_cast<char>(std::strtol(_hx, nullptr, 16));
+                char _hx[3U] = { szDirName[static_cast<unsigned long long>(_di)], szDirName[static_cast<unsigned long long>(_di + 1)], '\0' };
+                szUtf8[static_cast<unsigned long long>(nBytes)] = static_cast<char>(std::strtol(_hx, nullptr, 16));
             }
-            szUtf8[nBytes] = '\0';
+            szUtf8[static_cast<unsigned long long>(nBytes)] = '\0';
             ::MultiByteToWideChar(CP_UTF8, 0, szUtf8.data(), -1, szFinalDirNameW.data(), static_cast<int>(szFinalDirNameW.size()));
             vnclog.Print(0, _T("  Decoded dirname: %s\n"), szFinalDirNameW.data());
         }
@@ -8906,7 +8906,7 @@ bool vncClient::MyGetFileSize(char* const szFilePath, ULARGE_INTEGER* const n2Fi
 
     (*n2FileSize).LowPart = fdW.nFileSizeLow;
     (*n2FileSize).HighPart = fdW.nFileSizeHigh;
-    (*n2FileSize).QuadPart = (((__int64)fdW.nFileSizeHigh) << 32) + fdW.nFileSizeLow;
+    (*n2FileSize).QuadPart = static_cast<ULONGLONG>(((static_cast<__int64>(fdW.nFileSizeHigh)) << 32) + fdW.nFileSizeLow);
 
     return true;
 }
@@ -8946,7 +8946,7 @@ bool vncClient::DoFTUserImpersonation()
     }
 
     std::array<char, UNLEN + 1> username{};
-    processHelper::CurrentUser((char*)username.data(), sizeof(username));
+    processHelper::CurrentUser(reinterpret_cast<char*>(username.data()), sizeof(username));
     vnclog.Print(LL_INTERR, VNCLOG("%%%%%%%%%%%%% vncClient::DoFTUserImpersonation - currentUser = %s\n"), username.data());
     if (std::strcmp(username.data(), "") != 0)
     {
@@ -9022,7 +9022,7 @@ void vncClient::UndoFTUserImpersonation()
     vnclog.Print(LL_INTERR, VNCLOG("%%%%%%%%%%%%% vncClient::UNDoFTUserImpersonation - Impersonationtoken exists\n"));
     ::RevertToSelf();
     m_fFTUserImpersonatedOk = false;
-    m_hPToken = 0;
+    m_hPToken = nullptr;
 }
 #endif // SC_20
 
@@ -9052,7 +9052,7 @@ void vncClient::SendServerStateUpdate(CARD32 state, CARD32 value)
         rsmsg.state = Swap32IfLE(state);
         rsmsg.value = Swap32IfLE(value);
 
-        m_socket->SendExact((char*)&rsmsg, sz_rfbServerStateMsg, rfbServerState);
+        m_socket->SendExact(reinterpret_cast<char*>(&rsmsg), sz_rfbServerStateMsg, rfbServerState);
     }
 }
 
@@ -9062,7 +9062,7 @@ void vncClient::SendMonitorInfo()
     std::memset(&mm, 0, sizeof mm);
     mm.type = rfbMonitorInfo;
     mm.nbr = static_cast<CARD8>(m_encodemgr.m_buffer->m_desktop->nr_monitors);
-    m_socket->SendExact((char*)&mm, sz_rfbMonitorMsg, rfbMonitorInfo);
+    m_socket->SendExact(reinterpret_cast<char*>(&mm), sz_rfbMonitorMsg, rfbMonitorInfo);
 }
 
 void vncClient::SendKeepAlive(const bool bForce)
@@ -9082,7 +9082,7 @@ void vncClient::SendKeepAlive(const bool bForce)
         std::memset(&kp, 0, sizeof kp);
         kp.type = rfbKeepAlive;
         omni_mutex_lock l(GetUpdateLock(), 255);
-        m_socket->SendExact((char*)&kp, sz_rfbKeepAliveMsg, rfbKeepAlive);
+        m_socket->SendExact(reinterpret_cast<char*>(&kp), sz_rfbKeepAliveMsg, rfbKeepAlive);
     }
 }
 
@@ -9094,7 +9094,7 @@ void vncClient::SendFTProtocolMsg()
     ft.contentType = rfbFileTransferProtocolVersion;
     ft.contentParam = FT_PROTO_VERSION_4;
     ft.size = Swap32IfLE(sz_rfbBlockSize);
-    m_socket->SendExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+    m_socket->SendExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
 }
 
 // adzm - 2010-07 - Extended clipboard
@@ -9106,11 +9106,11 @@ void vncClient::NotifyExtendedClipboardSupport()
     rfbServerCutTextMsg msg;
     std::memset(&msg, 0, sizeof(rfbServerCutTextMsg));
     msg.type = rfbServerCutText;
-    msg.length = Swap32IfLE(-extendedDataMessage.GetDataLength());
+    msg.length = static_cast<unsigned int>(Swap32IfLE(-extendedDataMessage.GetDataLength()));
 
     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-    m_socket->SendExactQueue((char*)&msg, sz_rfbServerCutTextMsg, rfbServerCutText);
-    m_socket->SendExact((char*)(extendedDataMessage.GetData()), extendedDataMessage.GetDataLength());
+    m_socket->SendExactQueue(reinterpret_cast<char*>(&msg), sz_rfbServerCutTextMsg, rfbServerCutText);
+    m_socket->SendExact(reinterpret_cast<char*>(const_cast<BYTE *>((extendedDataMessage.GetData()))), static_cast<VCard>(extendedDataMessage.GetDataLength()));
 }
 
 // adzm 2010-09 - Notify streaming DSM plugin support
@@ -9121,13 +9121,13 @@ void vncClient::NotifyPluginStreamingSupport()
     msg.type = rfbNotifyPluginStreaming;
 
     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-    m_socket->SendExact((char*)&msg, sz_rfbNotifyPluginStreamingMsg, rfbNotifyPluginStreaming);
+    m_socket->SendExact(reinterpret_cast<char*>(&msg), sz_rfbNotifyPluginStreamingMsg, rfbNotifyPluginStreaming);
     m_socket->SetPluginStreamingOut();
 }
 
 DWORD WINAPI CompressFolder(const LPVOID lpParam)
 {
-    vncClient* client = (vncClient*)lpParam;
+    vncClient* client = reinterpret_cast<vncClient*>(lpParam);
     if (client->m_hPToken)
     {
         ::ImpersonateLoggedOnUser(client->m_hPToken);
@@ -9135,7 +9135,7 @@ DWORD WINAPI CompressFolder(const LPVOID lpParam)
     int nDirZipRet = client->ZipPossibleDirectory(client->m_szSrcFileName.data());
     if (client->m_socket)
     {
-        return client->filetransferrequestPart2(nDirZipRet);
+        return static_cast<DWORD>(client->filetransferrequestPart2(nDirZipRet));
     }
     return 0;
 }
@@ -9201,13 +9201,13 @@ int vncClient::filetransferrequestPart2(const int nDirZipRet)
         ft.size = Swap32IfLE(0xffffffffu); // File Size in bytes, 0xFFFFFFFF (-1) means error
         ft.length = Swap32IfLE(std::strlen(m_szSrcFileName.data()));
         //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-        m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-        m_socket->SendExactQueue((char*)m_szSrcFileName.data(), (const VCard)std::strlen(m_szSrcFileName.data()));
+        m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+        m_socket->SendExactQueue(reinterpret_cast<char*>(m_szSrcFileName.data()), static_cast<const VCard>(std::strlen(m_szSrcFileName.data())));
         // 2 May 2008 jdp send the highpart too, else the client will hang
         // sf@2004 - Improving huge file size handling
         // TODO: what if we're speaking the old protocol, how can we tell?
         CARD32 sizeH = Swap32IfLE(0xffffffffu);
-        m_socket->SendExact((char*)&sizeH, sizeof(CARD32));
+        m_socket->SendExact(reinterpret_cast<char*>(&sizeH), sizeof(CARD32));
 
         m_fFileUploadError = true;
         m_fFileUploadRunning = false;
@@ -9292,12 +9292,12 @@ int vncClient::filetransferrequestPart2(const int nDirZipRet)
     ft.size = Swap32IfLE(n2SrcSize.LowPart); // File Size in bytes, 0xFFFFFFFF (-1) means error
     ft.length = Swap32IfLE(std::strlen(m_szSrcFileName.data()));
     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-    m_socket->SendExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-    m_socket->SendExactQueue((char*)m_szSrcFileName.data(), (const VCard)std::strlen(m_szSrcFileName.data()));
+    m_socket->SendExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+    m_socket->SendExactQueue(reinterpret_cast<char*>(m_szSrcFileName.data()), static_cast<const VCard>(std::strlen(m_szSrcFileName.data())));
 
     // sf@2004 - Improving huge file size handling
     CARD32 sizeH = Swap32IfLE(n2SrcSize.HighPart);
-    m_socket->SendExact((char*)&sizeH, sizeof(CARD32));
+    m_socket->SendExact(reinterpret_cast<char*>(&sizeH), sizeof(CARD32));
 
     // delete [] szSrcFileName;
     if ((n2SrcSize.LowPart == 0xFFFFFFFF) && (n2SrcSize.HighPart == 0xFFFFFFFF))

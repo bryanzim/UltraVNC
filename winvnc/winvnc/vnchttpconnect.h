@@ -22,8 +22,8 @@
 
 class vncHTTPConnect;
 
-#if (!defined(_WINVNC_VNCHTTPCONNECT))
-#define _WINVNC_VNCHTTPCONNECT
+#if (!defined(WINVNC_VNCHTTPCONNECT))
+#define WINVNC_VNCHTTPCONNECT
 
 // Includes
 #include "stdhdrs.h"
@@ -58,4 +58,4 @@ protected:
     omni_thread* m_thread;
 };
 
-#endif // _WINVNC_VNCHTTPCONNECT
+#endif // WINVNC_VNCHTTPCONNECT

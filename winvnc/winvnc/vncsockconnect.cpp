@@ -125,7 +125,7 @@ vncSockConnect::~vncSockConnect()
     {
         // *** This is a hack to force the listen thread out of the accept call,
         // because Winsock accept semantics are broken
-        ((vncSockConnectThread*)m_thread)->m_shutdown = TRUE;
+        (reinterpret_cast<vncSockConnectThread*>(m_thread))->m_shutdown = TRUE;
 
         VSocket socket;
         if (settings->getIPV6())
@@ -181,7 +181,7 @@ BOOL vncSockConnect::Init(vncServer* const server, UINT port)
         }
     }
     //udpecho server
-    StartEchoServer(m_port);
+    StartEchoServer(static_cast<int>(m_port));
     // Create the new thread
     m_thread = new vncSockConnectThread;
     if (m_thread == nullptr)
@@ -190,5 +190,5 @@ BOOL vncSockConnect::Init(vncServer* const server, UINT port)
     }
 
     // And start it running
-    return ((vncSockConnectThread*)m_thread)->Init(&m_socket, server);
+    return (reinterpret_cast<vncSockConnectThread*>(m_thread))->Init(&m_socket, server);
 }

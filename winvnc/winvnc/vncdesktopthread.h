@@ -9,8 +9,8 @@
 //
 
 
-#if !defined(_WINVNC_VNCDESKTOPTHREAD)
-#define _WINVNC_VNCDESKTOPTHREAD
+#if !defined(WINVNC_VNCDESKTOPTHREAD)
+#define WINVNC_VNCDESKTOPTHREAD
 #include "stdhdrs.h"
 
 #include "CpuUsage.h"
@@ -47,7 +47,7 @@ public:
         MyGetCursorInfo = nullptr;
         if (hUser32)
         {
-            MyGetCursorInfo = (_GetCursorInfo)::GetProcAddress(hUser32, "GetCursorInfo");
+            MyGetCursorInfo = reinterpret_cast<_GetCursorInfo>(::GetProcAddress(hUser32, "GetCursorInfo"));
         }
         g_DesktopThread_running = true;
 
@@ -66,7 +66,7 @@ public:
         // replaced by macpu ini setting
         //MAX_CPU_USAGE=20;
         monitor_sleep_timer = 0;
-    };
+    }
 
 protected:
     ~vncDesktopThread()
@@ -84,7 +84,7 @@ protected:
         {
             ::FreeLibrary(hUser32);
         }
-    };
+    }
 
 private:
     bool handle_display_change(HANDLE& threadhandle, rfb::Region2D& rgncache, rfb::SimpleUpdateTracker& clipped_updates,

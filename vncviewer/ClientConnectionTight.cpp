@@ -43,14 +43,14 @@ void ClientConnection::ReadTightRect(rfbFramebufferUpdateRectHeader* const pfbur
     }
 
     CARD8 comp_ctl;
-    ReadExact((char*)&comp_ctl, 1);
+    ReadExact(reinterpret_cast<char*>(&comp_ctl), 1);
 
     /* Flush zlib streams if we are told by the server to do so. */
     for (int i{ 0 }; i < 4; ++i)
     {
         if (comp_ctl & 1)
         {
-            UltraVncZ* uz = &ultraVncZTight[i];
+            UltraVncZ* uz = &ultraVncZTight[static_cast<unsigned long long>(i)];
             uz->endInflateStream(zstd);
         }
         comp_ctl >>= 1;
@@ -64,22 +64,22 @@ void ClientConnection::ReadTightRect(rfbFramebufferUpdateRectHeader* const pfbur
             (m_myFormat.blueMax == 0xFF))
         {
             std::array<CARD8, 3U> fillColourBuf;
-            ReadExact((char*)fillColourBuf.data(), 3);
-            CARD32* p = (CARD32*)colorpointer.data();
-            *p = ((CARD32)fillColourBuf[0U] << m_myFormat.redShift) | ((CARD32)fillColourBuf[1U] << m_myFormat.greenShift) |
-                 ((CARD32)fillColourBuf[2U] << m_myFormat.blueShift);
+            ReadExact(reinterpret_cast<char*>(fillColourBuf.data()), 3);
+            CARD32* p = reinterpret_cast<CARD32*>(colorpointer.data());
+            *p = (static_cast<CARD32>(fillColourBuf[0U]) << m_myFormat.redShift) | (static_cast<CARD32>(fillColourBuf[1U]) << m_myFormat.greenShift) |
+                 (static_cast<CARD32>(fillColourBuf[2U]) << m_myFormat.blueShift);
         }
         else
         {
             CARD32 fillColourBuf;
-            ReadExact((char*)&fillColourBuf, m_myFormat.bitsPerPixel / 8);
+            ReadExact(reinterpret_cast<char*>(&fillColourBuf), m_myFormat.bitsPerPixel / 8);
             std::memcpy(colorpointer.data(), &fillColourBuf, m_myFormat.bitsPerPixel / 8);
         }
 
         omni_mutex_lock l(m_bitmapdcMutex);
 
         FillSolidRect_ultra(pfburh->r.x, pfburh->r.y, pfburh->r.w, pfburh->r.h, m_myFormat.bitsPerPixel,
-                            (BYTE*)colorpointer.data());
+                            reinterpret_cast<BYTE*>(colorpointer.data()));
         return;
     }
 
@@ -113,7 +113,7 @@ void ClientConnection::ReadTightRect(rfbFramebufferUpdateRectHeader* const pfbur
     if ((comp_ctl & rfbTightExplicitFilter) != 0)
     {
         CARD8 filter_id;
-        ReadExact((char*)&filter_id, 1);
+        ReadExact(reinterpret_cast<char*>(&filter_id), 1);
 
         switch (filter_id)
         {
@@ -145,14 +145,14 @@ void ClientConnection::ReadTightRect(rfbFramebufferUpdateRectHeader* const pfbur
     int rowSize = (pfburh->r.w * bitsPixel + 7) / 8;
     if (pfburh->r.h * rowSize < TIGHT_MIN_TO_COMPRESS)
     {
-        CheckBufferSize(pfburh->r.h * rowSize);
+        CheckBufferSize(static_cast<UINT>(pfburh->r.h * rowSize));
         ReadExact(m_netbuf, pfburh->r.h * rowSize);
 
         CheckZlibBufferSize(pfburh->r.w * pfburh->r.h * 4);
         (this->*m_tightCurrentFilter)(pfburh->r.h);
 
         omni_mutex_lock l(m_bitmapdcMutex);
-        SETPIXELS_NOCONV(m_zlibbuf, pfburh->r.x, pfburh->r.y, pfburh->r.w, pfburh->r.h);
+        SETPIXELS_NOCONV(m_zlibbuf, pfburh->r.x, pfburh->r.y, pfburh->r.w, pfburh->r.h)
 
         return;
     }
@@ -168,11 +168,11 @@ void ClientConnection::ReadTightRect(rfbFramebufferUpdateRectHeader* const pfbur
 
     /* Now let's initialize compression stream if needed. */
     const int stream_id = comp_ctl & 0x03;
-    UltraVncZ* uz = &ultraVncZTight[stream_id];
+    UltraVncZ* uz = &ultraVncZTight[static_cast<unsigned long long>(stream_id)];
 
     /* Read, decode and draw actual pixel data in a loop. */
-    int beforeBufferSize = TIGHT_BUFFER_SIZE * bitsPixel / (bitsPixel + sizeof(COLORREF) * 8) & 0xFFFFFFFC;
-    CheckBufferSize(beforeBufferSize);
+    int beforeBufferSize = static_cast<int>(TIGHT_BUFFER_SIZE * bitsPixel / (bitsPixel + sizeof(COLORREF) * 8) & 0xFFFFFFFC);
+    CheckBufferSize(static_cast<UINT>(beforeBufferSize));
 
     int afterBufferSize = TIGHT_BUFFER_SIZE - beforeBufferSize;
     CheckZlibBufferSize(afterBufferSize);
@@ -195,15 +195,15 @@ void ClientConnection::ReadTightRect(rfbFramebufferUpdateRectHeader* const pfbur
 
         compressedLen -= portionLen;
 
-        BYTE* next_in = (Bytef*)m_tightbuf.data();
-        UINT avail_in = portionLen;
+        BYTE* next_in = reinterpret_cast<Bytef*>(m_tightbuf.data());
+        UINT avail_in = static_cast<UINT>(portionLen);
         BYTE* next_out;
         UINT avail_out;
 
         do
         {
-            next_out = (Bytef*)&m_netbuf[extraBytes];
-            avail_out = beforeBufferSize - extraBytes;
+            next_out = reinterpret_cast<Bytef*>(&m_netbuf[extraBytes]);
+            avail_out = static_cast<UINT>(beforeBufferSize - extraBytes);
 
             err = uz->decompress(avail_in, avail_out, next_in, next_out, zstd);
 
@@ -212,19 +212,19 @@ void ClientConnection::ReadTightRect(rfbFramebufferUpdateRectHeader* const pfbur
                 return;
             }
 
-            numRows = (beforeBufferSize - avail_out) / rowSize;
+            numRows = static_cast<int>((beforeBufferSize - avail_out) / rowSize);
 
             (this->*m_tightCurrentFilter)(numRows);
 
-            extraBytes = beforeBufferSize - avail_out - numRows * rowSize;
+            extraBytes = static_cast<UINT>(beforeBufferSize) - static_cast<int>(avail_out - numRows * rowSize);
             if (extraBytes > 0)
             {
-                std::memcpy(m_netbuf, &m_netbuf[numRows * rowSize], extraBytes);
+                std::memcpy(m_netbuf, &m_netbuf[numRows * rowSize], static_cast<size_t>(extraBytes));
             }
 
             omni_mutex_lock l(m_bitmapdcMutex);
 
-            SETPIXELS_NOCONV(m_zlibbuf, pfburh->r.x, pfburh->r.y + rowsProcessed, pfburh->r.w, numRows);
+            SETPIXELS_NOCONV(m_zlibbuf, pfburh->r.x, pfburh->r.y + rowsProcessed, pfburh->r.w, numRows)
 
             rowsProcessed += numRows;
         } while (avail_out == 0);
@@ -239,15 +239,15 @@ void ClientConnection::ReadTightRect(rfbFramebufferUpdateRectHeader* const pfbur
 int ClientConnection::ReadCompactLen()
 {
     CARD8 len_byte;
-    ReadExact((char*)&len_byte, 1);
+    ReadExact(reinterpret_cast<char*>(&len_byte), 1);
     int compressedLen = static_cast<int>(len_byte) & 0x7F;
     if (len_byte & 0x80)
     {
-        ReadExact((char*)&len_byte, 1);
+        ReadExact(reinterpret_cast<char*>(&len_byte), 1);
         compressedLen |= (static_cast<int>(len_byte) & 0x7F) << 7;
         if (len_byte & 0x80)
         {
-            ReadExact((char*)&len_byte, 1);
+            ReadExact(reinterpret_cast<char*>(&len_byte), 1);
             compressedLen |= (static_cast<int>(len_byte) & 0xFF) << 14;
         }
     }
@@ -297,11 +297,11 @@ int ClientConnection::InitFilterGradient(const int rw, const int rh)
     if (m_tightCutZeros)
     {
         m_tightCurrentFilter = &ClientConnection::FilterGradient24;
-        std::memset(m_tightPrevRow.data(), 0, rw * 3);
+        std::memset(m_tightPrevRow.data(), 0, static_cast<size_t>(rw * 3));
     }
     else
     {
-        std::memset(m_tightPrevRow.data(), 0, rw * 3 * sizeof(CARD16));
+        std::memset(m_tightPrevRow.data(), 0, static_cast<unsigned long long>(rw * 3) * sizeof(CARD16));
     }
 
     return bits;
@@ -313,7 +313,7 @@ int ClientConnection::InitFilterPalette(const int rw, [[maybe_unused]] const int
     m_tightRectWidth = rw;
 
     CARD8 numColors;
-    ReadExact((char*)&numColors, 1);
+    ReadExact(reinterpret_cast<char*>(&numColors), 1);
 
     m_tightRectColors = static_cast<int>(numColors);
     if (++m_tightRectColors < 2)
@@ -324,20 +324,20 @@ int ClientConnection::InitFilterPalette(const int rw, [[maybe_unused]] const int
     if ((m_myFormat.depth == 24) && (m_myFormat.redMax == 0xFF) && (m_myFormat.greenMax == 0xFF) && (m_myFormat.blueMax == 0xFF))
     {
 
-        CheckBufferSize(m_tightRectColors * 3);
+        CheckBufferSize(static_cast<UINT>(m_tightRectColors * 3));
         ReadExact(m_netbuf, m_tightRectColors * 3);
 
         for (int i{ 0 }; i < m_tightRectColors; ++i)
         {
-            m_tightPalette[i] = COLOR_FROM_PIXEL24_ADDRESS(&m_netbuf[i * 3]);
+            m_tightPalette[static_cast<unsigned long long>(i)] = COLOR_FROM_PIXEL24_ADDRESS(&m_netbuf[i * 3]);
         }
     }
     else
     {
-        CheckBufferSize(m_tightRectColors * (m_myFormat.bitsPerPixel / 8));
+        CheckBufferSize(static_cast<UINT>(m_tightRectColors * (m_myFormat.bitsPerPixel / 8)));
         ReadExact(m_netbuf, m_tightRectColors * (m_myFormat.bitsPerPixel / 8));
 
-        SETUP_COLOR_SHORTCUTS;
+        SETUP_COLOR_SHORTCUTS
 
         int i;
         switch (m_myFormat.bitsPerPixel)
@@ -345,19 +345,19 @@ int ClientConnection::InitFilterPalette(const int rw, [[maybe_unused]] const int
         case 8:
             for (i = 0; i < m_tightRectColors; ++i)
             {
-                m_tightPalette[i] = COLOR_FROM_PIXEL8_ADDRESS(&m_netbuf[i]);
+                m_tightPalette[static_cast<unsigned long long>(i)] = COLOR_FROM_PIXEL8_ADDRESS(&m_netbuf[i]);
             }
             break;
         case 16:
             for (i = 0; i < m_tightRectColors; ++i)
             {
-                m_tightPalette[i] = COLOR_FROM_PIXEL16_ADDRESS(&m_netbuf[i * 2]);
+                m_tightPalette[static_cast<unsigned long long>(i)] = COLOR_FROM_PIXEL16_ADDRESS(&m_netbuf[i * 2]);
             }
             break;
         default:
             for (i = 0; i < m_tightRectColors; ++i)
             {
-                m_tightPalette[i] = COLOR_FROM_PIXEL32_ADDRESS(&m_netbuf[i * 4]);
+                m_tightPalette[static_cast<unsigned long long>(i)] = COLOR_FROM_PIXEL32_ADDRESS(&m_netbuf[i * 4]);
             }
         }
     }
@@ -373,7 +373,7 @@ int ClientConnection::InitFilterPalette(const int rw, [[maybe_unused]] const int
                                                                                                                                    \
     void ClientConnection::FilterCopy##bpp(int numRows)                                                                            \
     {                                                                                                                              \
-        COLORREF* dst = (COLORREF*)m_zlibbuf;                                                                                      \
+        COLORREF* dst = reinterpret_cast<COLORREF*>(m_zlibbuf);                                                                                      \
                                                                                                                                    \
         SETUP_COLOR_SHORTCUTS;                                                                                                     \
                                                                                                                                    \
@@ -399,8 +399,8 @@ DEFINE_TIGHT_FILTER_COPY(32)
     {                                                                                                                              \
         int x, y, c;                                                                                                               \
         CARD##bpp* src = (CARD##bpp*)m_netbuf;                                                                                     \
-        COLORREF* dst = (COLORREF*)m_zlibbuf;                                                                                      \
-        CARD16* thatRow = (CARD16*)m_tightPrevRow.data();                                                                                 \
+        COLORREF* dst = reinterpret_cast<COLORREF*>(m_zlibbuf);                                                                                      \
+        CARD16* thatRow = reinterpret_cast<CARD16*>(m_tightPrevRow.data());                                                                                 \
         std::array<CARD16, 2048 * 3> thisRow;                                                                                                  \
         CARD16 pix[3U];                                                                                                            \
         CARD16 max[3U];                                                                                                            \
@@ -421,11 +421,11 @@ DEFINE_TIGHT_FILTER_COPY(32)
             /* First pixel in a row */                                                                                             \
             for (c = 0; c < 3; ++c)                                                                                                \
             {                                                                                                                      \
-                pix[c] = (CARD16)((src[y * m_tightRectWidth] >> shift[c]) + thatRow[c] & max[c]);                                  \
+                pix[c] = static_cast<CARD16>(((src[y * m_tightRectWidth] >> shift[c]) + thatRow[c] & max[c]));                                  \
                 thisRow[c] = pix[c];                                                                                               \
             }                                                                                                                      \
             dst[y * m_tightRectWidth] =                                                                                            \
-                PALETTERGB((CARD32)pix[0U] * 255 / max[0U], (CARD32)pix[1U] * 255 / max[1U], (CARD32)pix[2U] * 255 / max[2U]);     \
+                PALETTERGB(static_cast<CARD32>(pix[0U]) * 255 / max[0U], static_cast<CARD32>(pix[1U]) * 255 / max[1U], static_cast<CARD32>(pix[2U]) * 255 / max[2U]);     \
                                                                                                                                    \
             /* Remaining pixels of a row */                                                                                        \
             for (x = 1; x < m_tightRectWidth; ++x)                                                                                 \
@@ -442,11 +442,11 @@ DEFINE_TIGHT_FILTER_COPY(32)
                     {                                                                                                              \
                         est[c] = 0;                                                                                                \
                     }                                                                                                              \
-                    pix[c] = (CARD16)((src[y * m_tightRectWidth + x] >> shift[c]) + est[c] & max[c]);                              \
+                    pix[c] = static_cast<CARD16>(((src[y * m_tightRectWidth + x] >> shift[c]) + est[c] & max[c]));                              \
                     thisRow[x * 3 + c] = pix[c];                                                                                   \
                 }                                                                                                                  \
                 dst[y * m_tightRectWidth + x] =                                                                                    \
-                    PALETTERGB((CARD32)pix[0U] * 255 / max[0U], (CARD32)pix[1U] * 255 / max[1U], (CARD32)pix[2U] * 255 / max[2U]); \
+                    PALETTERGB(static_cast<CARD32>(pix[0U]) * 255 / max[0U], static_cast<CARD32>(pix[1U]) * 255 / max[1U], static_cast<CARD32>(pix[2U]) * 255 / max[2U]); \
             }                                                                                                                      \
             std::memcpy(thatRow, thisRow.data(), m_tightRectWidth * 3 * sizeof(CARD16));                                                  \
         }                                                                                                                          \
@@ -462,7 +462,7 @@ void ClientConnection::FilterGradient24(const int numRows)
     std::array<CARD8, 3U> pix;
     std::array<int, 3U> est;
 
-    COLORREF* dst = (COLORREF*)m_zlibbuf;
+    COLORREF* dst = reinterpret_cast<COLORREF*>(m_zlibbuf);
 
     for (int y{ 0 }; y < numRows; ++y)
     {
@@ -470,8 +470,8 @@ void ClientConnection::FilterGradient24(const int numRows)
         // First pixel in a row
         for (int c{ 0 }; c < 3; ++c)
         {
-            pix[c] = m_tightPrevRow[c] + m_netbuf[y * m_tightRectWidth * 3 + c];
-            thisRow[c] = pix[c];
+            pix[static_cast<unsigned long long>(c)] = m_tightPrevRow[static_cast<unsigned long long>(c)] + m_netbuf[y * m_tightRectWidth * 3 + c];
+            thisRow[static_cast<unsigned long long>(c)] = pix[static_cast<unsigned long long>(c)];
         }
         dst[y * m_tightRectWidth] = COLOR_FROM_PIXEL24_ADDRESS(pix.data());
 
@@ -480,31 +480,31 @@ void ClientConnection::FilterGradient24(const int numRows)
         {
             for (int c{ 0 }; c < 3; ++c)
             {
-                est[c] = static_cast<int>(m_tightPrevRow[x * 3 + c]) + static_cast<int>(pix[c]) -
-                         static_cast<int>(m_tightPrevRow[(x - 1) * 3 + c]);
-                if (est[c] > 0xFF)
+                est[static_cast<unsigned long long>(c)] = static_cast<int>(m_tightPrevRow[static_cast<unsigned long long>(x * 3 + c)]) + static_cast<int>(pix[static_cast<unsigned long long>(c)]) -
+                         static_cast<int>(m_tightPrevRow[static_cast<unsigned long long>((x - 1) * 3 + c)]);
+                if (est[static_cast<unsigned long long>(c)] > 0xFF)
                 {
-                    est[c] = 0xFF;
+                    est[static_cast<unsigned long long>(c)] = 0xFF;
                 }
-                else if (est[c] < 0x00)
+                else if (est[static_cast<unsigned long long>(c)] < 0x00)
                 {
-                    est[c] = 0x00;
+                    est[static_cast<unsigned long long>(c)] = 0x00;
                 }
-                pix[c] = (CARD8)est[c] + m_netbuf[(y * m_tightRectWidth + x) * 3 + c];
-                thisRow[x * 3 + c] = pix[c];
+                pix[static_cast<unsigned long long>(c)] = static_cast<CARD8>(est[c]) + m_netbuf[(y * m_tightRectWidth + x) * 3 + c];
+                thisRow[static_cast<unsigned long long>(x * 3 + c)] = pix[static_cast<unsigned long long>(c)];
             }
             dst[y * m_tightRectWidth + x] = COLOR_FROM_PIXEL24_ADDRESS(pix.data());
         }
 
-        std::memcpy(m_tightPrevRow.data(), thisRow.data(), m_tightRectWidth * 3);
+        std::memcpy(m_tightPrevRow.data(), thisRow.data(), static_cast<size_t>(m_tightRectWidth * 3));
     }
 }
 
 void ClientConnection::FilterPalette(const int numRows)
 {
     int x, y, b, w;
-    CARD8* src = (CARD8*)m_netbuf;
-    COLORREF* dst = (COLORREF*)m_zlibbuf;
+    CARD8* src = reinterpret_cast<CARD8*>(m_netbuf);
+    COLORREF* dst = reinterpret_cast<COLORREF*>(m_zlibbuf);
 
     if (m_tightRectColors == 2)
     {
@@ -612,7 +612,7 @@ void ClientConnection::DecompressJpegRect(int x, int y, const int w, const int h
         return;
     }
 
-    CheckBufferSize(compressedLen);
+    CheckBufferSize(static_cast<UINT>(compressedLen));
     ReadExact(m_netbuf, compressedLen);
 
     cinfo.err = jpeg_std_error(&jerr);
@@ -623,7 +623,7 @@ void ClientConnection::DecompressJpegRect(int x, int y, const int w, const int h
 
         //JpegSetSrcManager(&cinfo, m_netbuf, compressedLen);
 
-        jpegBufferPtr = (JOCTET*)m_netbuf;
+        jpegBufferPtr = reinterpret_cast<JOCTET*>(m_netbuf);
         jpegBufferLen = static_cast<std::size_t>(compressedLen);
 
         sourceManager.init_source = JpegInitSource;
@@ -667,7 +667,7 @@ void ClientConnection::DecompressJpegRect(int x, int y, const int w, const int h
     CheckZlibBufferSize(2 * w * 4);
 
     std::array<JSAMPROW, 1U> rowPointer;
-    rowPointer[0U] = (JSAMPROW)m_zlibbuf;
+    rowPointer[0U] = static_cast<JSAMPROW>(m_zlibbuf);
 
     COLORREF* pixelPtr;
     for (int dy{ 0 }; cinfo.output_scanline < cinfo.output_height; ++dy)
@@ -677,12 +677,12 @@ void ClientConnection::DecompressJpegRect(int x, int y, const int w, const int h
         {
             break;
         }
-        pixelPtr = (COLORREF*)&m_zlibbuf[w * 4];
+        pixelPtr = reinterpret_cast<COLORREF*>(&m_zlibbuf[w * 4]);
         for (int dx{ 0 }; dx < w; ++dx)
         {
             *pixelPtr++ = COLOR_FROM_PIXEL24_ADDRESS(&m_zlibbuf[dx * 3]);
         }
-        SETPIXELS_NOCONV(&m_zlibbuf[w * 4], x, y + dy, w, 1);
+        SETPIXELS_NOCONV(&m_zlibbuf[w * 4], x, y + dy, w, 1)
     }
 
     if (!jpegError)

@@ -16,7 +16,7 @@
 #include "UltraVNCHelperFunctions.h"
 #include "vncviewer.h"
 
-#include <shlobj.h>
+#include <ShlObj.h>
 
 #include <array>
 #include <cstddef>
@@ -88,19 +88,19 @@ void SessionDialog::InitTab(const HWND hwnd)
     item.pszText = szTabName.data();
     TabCtrl_InsertItem(m_hTab, 7, &item);
     // Use m_hInstResDLL for dialog resources (translated dialogs)
-    hTabEncoders = ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_ENCODERS), hwnd, (DLGPROC)DlgProcEncoders, (LONG_PTR)this);
+    hTabEncoders = ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_ENCODERS), hwnd, reinterpret_cast<DLGPROC>(DlgProcEncoders), reinterpret_cast<LONG_PTR>(this));
     hTabKeyboardMouse =
-        ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_KEYBOARDMOUSE), hwnd, (DLGPROC)DlgProcKeyboardMouse, (LONG_PTR)this);
-    hTabDisplay = ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_DISPLAY), hwnd, (DLGPROC)DlgProcDisplay, (LONG_PTR)this);
-    hTabMisc = ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_MISC), hwnd, (DLGPROC)DlgProcMisc, (LONG_PTR)this);
-    hTabSecurity = ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_SECURITY), hwnd, (DLGPROC)DlgProcSecurity, (LONG_PTR)this);
+        ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_KEYBOARDMOUSE), hwnd, reinterpret_cast<DLGPROC>(DlgProcKeyboardMouse), reinterpret_cast<LONG_PTR>(this));
+    hTabDisplay = ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_DISPLAY), hwnd, reinterpret_cast<DLGPROC>(DlgProcDisplay), reinterpret_cast<LONG_PTR>(this));
+    hTabMisc = ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_MISC), hwnd, reinterpret_cast<DLGPROC>(DlgProcMisc), reinterpret_cast<LONG_PTR>(this));
+    hTabSecurity = ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_SECURITY), hwnd, reinterpret_cast<DLGPROC>(DlgProcSecurity), reinterpret_cast<LONG_PTR>(this));
     hTabQuickOptions =
-        ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_QUICKOPTIONS), hwnd, (DLGPROC)DlgProcQuickOptions, (LONG_PTR)this);
-    hTabListen = ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_LISTEN), hwnd, (DLGPROC)DlgProcListen, (LONG_PTR)this);
-    hTabConfig = ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_CONFIG), hwnd, (DLGPROC)DlgProcConfig, (LONG_PTR)this);
+        ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_QUICKOPTIONS), hwnd, reinterpret_cast<DLGPROC>(DlgProcQuickOptions), reinterpret_cast<LONG_PTR>(this));
+    hTabListen = ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_LISTEN), hwnd, reinterpret_cast<DLGPROC>(DlgProcListen), reinterpret_cast<LONG_PTR>(this));
+    hTabConfig = ::CreateDialogParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_CONFIG), hwnd, reinterpret_cast<DLGPROC>(DlgProcConfig), reinterpret_cast<LONG_PTR>(this));
     RECT rc;
     ::GetWindowRect(m_hTab, &rc);
-    ::MapWindowPoints(nullptr, hwnd, (POINT*)&rc, 2);
+    ::MapWindowPoints(nullptr, hwnd, reinterpret_cast<POINT*>(&rc), 2);
     TabCtrl_AdjustRect(m_hTab, FALSE, &rc);
     ::SetWindowPos(hTabEncoders, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_SHOWWINDOW);
     ::SetWindowPos(hTabKeyboardMouse, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
@@ -114,7 +114,7 @@ void SessionDialog::InitTab(const HWND hwnd)
 ////////////////////////////////////////////////////////////////////////////////
 int SessionDialog::HandleNotify([[maybe_unused]] const HWND hwndDlg, [[maybe_unused]] const WPARAM wParam, const LPARAM lParam)
 {
-    LPNMHDR pn = (LPNMHDR)lParam;
+    LPNMHDR pn = reinterpret_cast<LPNMHDR>(lParam);
     switch (pn->code)
     {
     case TCN_SELCHANGE:
@@ -213,15 +213,15 @@ BOOL CALLBACK DlgProcEncoders(const HWND hwnd, const UINT uMsg, const WPARAM wPa
     {
     case WM_INITDIALOG: {
         helper::SafeSetWindowUserData(hwnd, lParam);
-        SessionDialog* _thisInner = (SessionDialog*)lParam;
+        SessionDialog* _thisInner = reinterpret_cast<SessionDialog*>(lParam);
         _thisInner->EncodersHwnd = hwnd;
         _thisInner->InitDlgProcEncoders();
         return TRUE;
     }
     case WM_CTLCOLORDLG:
-        return static_cast<BOOL>((INT_PTR)::GetStockObject(WHITE_BRUSH));
+        return static_cast<BOOL>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
     case WM_CTLCOLORSTATIC: {
-        HDC hdcStatic = (HDC)wParam;
+        HDC hdcStatic = reinterpret_cast<HDC>(wParam);
         ::SetTextColor(hdcStatic, RGB(0, 0, 0));
         ::SetBkMode(hdcStatic, TRANSPARENT);
         return static_cast<LONG>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
@@ -241,7 +241,7 @@ BOOL CALLBACK DlgProcEncoders(const HWND hwnd, const UINT uMsg, const WPARAM wPa
             break;
         }
     }
-    return (INT_PTR)FALSE;
+    return static_cast<INT_PTR>(FALSE);
 }
 ////////////////////////////////////////////////////////////////////////////////
 BOOL CALLBACK DlgProcKeyboardMouse(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
@@ -251,15 +251,15 @@ BOOL CALLBACK DlgProcKeyboardMouse(const HWND hwnd, const UINT uMsg, const WPARA
     {
     case WM_INITDIALOG: {
         helper::SafeSetWindowUserData(hwnd, lParam);
-        SessionDialog* _thisInner = (SessionDialog*)lParam;
+        SessionDialog* _thisInner = reinterpret_cast<SessionDialog*>(lParam);
         _thisInner->KeyboardMouseHwnd = hwnd;
         _thisInner->InitDlgProcKeyboardMouse();
         return TRUE;
     }
     case WM_CTLCOLORDLG:
-        return static_cast<BOOL>((INT_PTR)::GetStockObject(WHITE_BRUSH));
+        return static_cast<BOOL>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
     case WM_CTLCOLORSTATIC: {
-        HDC hdcStatic = (HDC)wParam;
+        HDC hdcStatic = reinterpret_cast<HDC>(wParam);
         ::SetTextColor(hdcStatic, RGB(0, 0, 0));
         ::SetBkMode(hdcStatic, TRANSPARENT);
         return static_cast<LONG>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
@@ -278,7 +278,7 @@ BOOL CALLBACK DlgProcKeyboardMouse(const HWND hwnd, const UINT uMsg, const WPARA
             break;
         }
     }
-    return (INT_PTR)FALSE;
+    return static_cast<INT_PTR>(FALSE);
 }
 ////////////////////////////////////////////////////////////////////////////////
 BOOL CALLBACK DlgProcDisplay(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
@@ -288,17 +288,17 @@ BOOL CALLBACK DlgProcDisplay(const HWND hwnd, const UINT uMsg, const WPARAM wPar
     {
     case WM_INITDIALOG: {
         helper::SafeSetWindowUserData(hwnd, lParam);
-        SessionDialog* _thisInner = (SessionDialog*)lParam;
+        SessionDialog* _thisInner = reinterpret_cast<SessionDialog*>(lParam);
         _thisInner->DisplayHwnd = hwnd;
         _thisInner->InitDlgProcDisplay();
         return TRUE;
     }
 
     case WM_CTLCOLORDLG:
-        return static_cast<BOOL>((INT_PTR)::GetStockObject(WHITE_BRUSH));
+        return static_cast<BOOL>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
 
     case WM_CTLCOLORSTATIC: {
-        HDC hdcStatic = (HDC)wParam;
+        HDC hdcStatic = reinterpret_cast<HDC>(wParam);
         ::SetTextColor(hdcStatic, RGB(0, 0, 0));
         ::SetBkMode(hdcStatic, TRANSPARENT);
         return static_cast<LONG>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
@@ -377,7 +377,7 @@ BOOL CALLBACK DlgProcDisplay(const HWND hwnd, const UINT uMsg, const WPARAM wPar
         break;
     }
     }
-    return (INT_PTR)FALSE;
+    return static_cast<INT_PTR>(FALSE);
 }
 ////////////////////////////////////////////////////////////////////////////////
 BOOL CALLBACK DlgProcMisc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
@@ -387,15 +387,15 @@ BOOL CALLBACK DlgProcMisc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
     {
     case WM_INITDIALOG: {
         helper::SafeSetWindowUserData(hwnd, lParam);
-        SessionDialog* _thisInner = (SessionDialog*)lParam;
+        SessionDialog* _thisInner = reinterpret_cast<SessionDialog*>(lParam);
         _thisInner->MiscHwnd = hwnd;
         _thisInner->InitDlgProcMisc();
         return TRUE;
     }
     case WM_CTLCOLORDLG:
-        return static_cast<BOOL>((INT_PTR)::GetStockObject(WHITE_BRUSH));
+        return static_cast<BOOL>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
     case WM_CTLCOLORSTATIC: {
-        HDC hdcStatic = (HDC)wParam;
+        HDC hdcStatic = reinterpret_cast<HDC>(wParam);
         ::SetTextColor(hdcStatic, RGB(0, 0, 0));
         ::SetBkMode(hdcStatic, TRANSPARENT);
         return static_cast<LONG>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
@@ -411,7 +411,7 @@ BOOL CALLBACK DlgProcMisc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
             res = ::GetDlgItemText(hwnd, IDC_PREFIX, _this->prefix, 56);
             if (_this->Shared)
             {
-                _this->reconnectcounter = ::GetDlgItemInt(hwnd, IDC_SERVER_RECON, nullptr, TRUE);
+                _this->reconnectcounter = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SERVER_RECON, nullptr, TRUE));
             }
             else
             {
@@ -419,14 +419,14 @@ BOOL CALLBACK DlgProcMisc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
             }
             if (_this->Shared)
             {
-                _this->autoReconnect = ::GetDlgItemInt(hwnd, IDC_SERVER_RECON_TIME, nullptr, TRUE);
+                _this->autoReconnect = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SERVER_RECON_TIME, nullptr, TRUE));
             }
             else
             {
                 _this->autoReconnect = 0;
             }
 
-            _this->FTTimeout = ::GetDlgItemInt(hwnd, IDC_FTTIMEOUT, nullptr, TRUE);
+            _this->FTTimeout = static_cast<int>(::GetDlgItemInt(hwnd, IDC_FTTIMEOUT, nullptr, TRUE));
 
             HWND hsponsor = ::GetDlgItem(hwnd, IDC_CHECK1);
             if (::SendMessage(hsponsor, BM_GETCHECK, 0, 0) == BST_CHECKED)
@@ -449,7 +449,7 @@ BOOL CALLBACK DlgProcMisc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
             break;
         }
     }
-    return (INT_PTR)FALSE;
+    return static_cast<INT_PTR>(FALSE);
 }
 ////////////////////////////////////////////////////////////////////////////////
 BOOL CALLBACK DlgProcSecurity(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
@@ -459,17 +459,17 @@ BOOL CALLBACK DlgProcSecurity(const HWND hwnd, const UINT uMsg, const WPARAM wPa
     {
     case WM_INITDIALOG: {
         helper::SafeSetWindowUserData(hwnd, lParam);
-        SessionDialog* _thisInner = (SessionDialog*)lParam;
+        SessionDialog* _thisInner = reinterpret_cast<SessionDialog*>(lParam);
         _thisInner->SecurityHwnd = hwnd;
         _thisInner->InitDlgProcSecurity();
         return TRUE;
     }
 
     case WM_CTLCOLORDLG:
-        return static_cast<BOOL>((INT_PTR)::GetStockObject(WHITE_BRUSH));
+        return static_cast<BOOL>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
 
     case WM_CTLCOLORSTATIC: {
-        HDC hdcStatic = (HDC)wParam;
+        HDC hdcStatic = reinterpret_cast<HDC>(wParam);
         ::SetTextColor(hdcStatic, RGB(0, 0, 0));
         ::SetBkMode(hdcStatic, TRANSPARENT);
         return static_cast<LONG>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
@@ -492,11 +492,11 @@ BOOL CALLBACK DlgProcSecurity(const HWND hwnd, const UINT uMsg, const WPARAM wPa
 
             if ((::_tcscmp(_this->szDSMPluginFilename.data(), _T("")) != 0) && enable)
             {
-                int pos = static_cast<int>(::SendMessage(hplugin, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), (LPARAM) & (_this->szDSMPluginFilename[0U])));
+                int pos = static_cast<int>(::SendMessage(hplugin, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(& (_this->szDSMPluginFilename[0U]))));
 
                 if (pos != CB_ERR)
                 {
-                    ::SendMessage(hplugin, CB_SETCURSEL, pos, 0);
+                    ::SendMessage(hplugin, CB_SETCURSEL, static_cast<WPARAM>(pos), 0);
                     HWND hUsePlugin = ::GetDlgItem(hwnd, IDC_PLUGIN_CHECK);
                     ::SendMessage(hUsePlugin, BM_SETCHECK, TRUE, 0);
                     ::EnableWindow(::GetDlgItem(hwnd, IDC_PLUGINS_COMBO), TRUE);
@@ -522,7 +522,7 @@ BOOL CALLBACK DlgProcSecurity(const HWND hwnd, const UINT uMsg, const WPARAM wPa
                 if (_this->m_pDSMPlugin->IsLoaded())
                 {
                     _this->m_pDSMPlugin->DescribePlugin();
-                    if (!::_tcsicmp((LPCTSTR)_this->m_pDSMPlugin->GetPluginFileName(), szPlugin.data()))
+                    if (!::_tcsicmp(reinterpret_cast<LPCTSTR>(_this->m_pDSMPlugin->GetPluginFileName()), szPlugin.data()))
                     {
                         fLoadIt = false;
                         _this->m_pDSMPlugin->SetPluginParams(hwnd, szParams.data());
@@ -564,7 +564,7 @@ BOOL CALLBACK DlgProcSecurity(const HWND hwnd, const UINT uMsg, const WPARAM wPa
             break;
         }
     }
-    return (INT_PTR)FALSE;
+    return static_cast<INT_PTR>(FALSE);
 }
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -575,17 +575,17 @@ BOOL CALLBACK DlgProcListen(const HWND hwnd, const UINT uMsg, const WPARAM wPara
     {
     case WM_INITDIALOG: {
         helper::SafeSetWindowUserData(hwnd, lParam);
-        SessionDialog* _thisInner = (SessionDialog*)lParam;
+        SessionDialog* _thisInner = reinterpret_cast<SessionDialog*>(lParam);
         _thisInner->ListenHwnd = hwnd;
         _thisInner->InitDlgProcListen();
         return TRUE;
     }
 
     case WM_CTLCOLORDLG:
-        return static_cast<BOOL>((INT_PTR)::GetStockObject(WHITE_BRUSH));
+        return static_cast<BOOL>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
 
     case WM_CTLCOLORSTATIC: {
-        HDC hdcStatic = (HDC)wParam;
+        HDC hdcStatic = reinterpret_cast<HDC>(wParam);
         ::SetTextColor(hdcStatic, RGB(0, 0, 0));
         ::SetBkMode(hdcStatic, TRANSPARENT);
         return static_cast<LONG>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
@@ -606,7 +606,7 @@ BOOL CALLBACK DlgProcListen(const HWND hwnd, const UINT uMsg, const WPARAM wPara
             break;
         }
     }
-    return (INT_PTR)FALSE;
+    return static_cast<INT_PTR>(FALSE);
 }
 ////////////////////////////////////////////////////////////////////////////////
 BOOL CALLBACK DlgProcQuickOptions(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
@@ -616,17 +616,17 @@ BOOL CALLBACK DlgProcQuickOptions(const HWND hwnd, const UINT uMsg, const WPARAM
     {
     case WM_INITDIALOG: {
         helper::SafeSetWindowUserData(hwnd, lParam);
-        SessionDialog* _thisInner = (SessionDialog*)lParam;
+        SessionDialog* _thisInner = reinterpret_cast<SessionDialog*>(lParam);
         _thisInner->QuickOptionsHwnd = hwnd;
         _thisInner->SetQuickOption(_thisInner->quickoption);
         return TRUE;
     }
 
     case WM_CTLCOLORDLG:
-        return static_cast<BOOL>((INT_PTR)::GetStockObject(WHITE_BRUSH));
+        return static_cast<BOOL>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
 
     case WM_CTLCOLORSTATIC: {
-        HDC hdcStatic = (HDC)wParam;
+        HDC hdcStatic = reinterpret_cast<HDC>(wParam);
         ::SetTextColor(hdcStatic, RGB(0, 0, 0));
         ::SetBkMode(hdcStatic, TRANSPARENT);
         return static_cast<LONG>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
@@ -644,7 +644,7 @@ BOOL CALLBACK DlgProcQuickOptions(const HWND hwnd, const UINT uMsg, const WPARAM
             break;
         }
     }
-    return (INT_PTR)FALSE;
+    return static_cast<INT_PTR>(FALSE);
 }
 ////////////////////////////////////////////////////////////////////////////////
 BOOL CALLBACK DlgProcConfig(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
@@ -654,7 +654,7 @@ BOOL CALLBACK DlgProcConfig(const HWND hwnd, const UINT uMsg, const WPARAM wPara
     {
     case WM_INITDIALOG: {
         helper::SafeSetWindowUserData(hwnd, lParam);
-        SessionDialog* _thisInner = (SessionDialog*)lParam;
+        SessionDialog* _thisInner = reinterpret_cast<SessionDialog*>(lParam);
         _thisInner->ConfigHwnd = hwnd;
         _thisInner->InitDlgProcConfig();
 
@@ -663,10 +663,10 @@ BOOL CALLBACK DlgProcConfig(const HWND hwnd, const UINT uMsg, const WPARAM wPara
     }
 
     case WM_CTLCOLORDLG:
-        return static_cast<BOOL>((INT_PTR)::GetStockObject(WHITE_BRUSH));
+        return static_cast<BOOL>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
 
     case WM_CTLCOLORSTATIC: {
-        HDC hdcStatic = (HDC)wParam;
+        HDC hdcStatic = reinterpret_cast<HDC>(wParam);
         ::SetTextColor(hdcStatic, RGB(0, 0, 0));
         ::SetBkMode(hdcStatic, TRANSPARENT);
         return static_cast<LONG>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
@@ -688,7 +688,7 @@ BOOL CALLBACK DlgProcConfig(const HWND hwnd, const UINT uMsg, const WPARAM wPara
             }
             else
             {
-                ::SetWindowText(::GetDlgItem(hwnd, IDC_CUSTOMCONFIG), (LPCTSTR)_this->customConfigFile.data());
+                ::SetWindowText(::GetDlgItem(hwnd, IDC_CUSTOMCONFIG), reinterpret_cast<LPCTSTR>(_this->customConfigFile.data()));
                 _this->LoadFromFile(_this->customConfigFile.data());
             }
             return TRUE;
@@ -697,7 +697,7 @@ BOOL CALLBACK DlgProcConfig(const HWND hwnd, const UINT uMsg, const WPARAM wPara
             break;
         }
     }
-    return (INT_PTR)FALSE;
+    return static_cast<INT_PTR>(FALSE);
 }
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -712,7 +712,7 @@ void SessionDialog::InitDlgProcEncoders()
     {
         HWND hPref = ::GetDlgItem(hwnd, IDC_RAWRADIO + (i - rfbEncodingRaw));
         ::SendMessage(hPref, BM_SETCHECK, (i == nPreferredEncoding), 0);
-        ::EnableWindow(hPref, (UseEnc[i] && !autoDetect));
+        ::EnableWindow(hPref, (UseEnc[static_cast<unsigned long long>(i)] && !autoDetect));
     }
     HWND hCopyRect = ::GetDlgItem(hwnd, ID_SESSION_SET_CRECT);
     ::SendMessage(hCopyRect, BM_SETCHECK, UseEnc[rfbEncodingCopyRect], 0);
@@ -727,8 +727,8 @@ void SessionDialog::InitDlgProcEncoders()
     ::SendMessage(hAj, BM_SETCHECK, enableJpegCompression, 0);
     HWND hQl = ::GetDlgItem(hwnd, IDC_QUALITYLEVEL);
     ::EnableWindow(hQl, !autoDetect);
-    ::SetDlgItemInt(hwnd, IDC_COMPRESSLEVEL, compressLevel, FALSE);
-    ::SetDlgItemInt(hwnd, IDC_QUALITYLEVEL, jpegQualityLevel, FALSE);
+    ::SetDlgItemInt(hwnd, IDC_COMPRESSLEVEL, static_cast<UINT>(compressLevel), FALSE);
+    ::SetDlgItemInt(hwnd, IDC_QUALITYLEVEL, static_cast<UINT>(jpegQualityLevel), FALSE);
     // sf@2005 - New Color depth choice
     HWND hColorMode = nullptr;
     hColorMode = ::GetDlgItem(hwnd, IDC_FULLCOLORS_RADIO);
@@ -816,7 +816,7 @@ void SessionDialog::InitDlgProcKeyboardMouse()
     ::SendMessage(hSwap, BM_SETCHECK, SwapMouse, 0);
     HWND hViewOnly = ::GetDlgItem(hwnd, IDC_VIEWONLY);
     ::SendMessage(hViewOnly, BM_SETCHECK, ViewOnly, 0);
-    ::SetDlgItemInt(hwnd, IDC_MOUSE_THROTTLE, throttleMouse, FALSE);
+    ::SetDlgItemInt(hwnd, IDC_MOUSE_THROTTLE, static_cast<UINT>(throttleMouse), FALSE);
     HWND hRemoteCursorEnabled = ::GetDlgItem(hwnd, IDC_CSHAPE_ENABLE_RADIO);
     HWND hRemoteCursorIgnored = ::GetDlgItem(hwnd, IDC_CSHAPE_IGNORE_RADIO);
     HWND hRemoteCursorDisabled = ::GetDlgItem(hwnd, IDC_CSHAPE_DISABLE_RADIO);
@@ -861,7 +861,7 @@ void SessionDialog::setDisplays()
     DWORD dev{ 0U };
     DWORD id{ 0U };
     int width, height;
-    while (::EnumDisplayDevicesA(0, dev, &dd, 0))
+    while (::EnumDisplayDevicesA(nullptr, dev, &dd, 0))
     {
         if (!(dd.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER) && (dd.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) &&
             (dd.StateFlags & DISPLAY_DEVICE_PRIMARY_DEVICE))
@@ -894,14 +894,14 @@ void SessionDialog::setDisplays()
             dm.dmSize = sizeof(dm);
             dm.dmDriverExtra = 0;
 
-            if (::EnumDisplaySettingsExA((char*)dd.DeviceName, ENUM_CURRENT_SETTINGS, &dm, 0) == FALSE)
+            if (::EnumDisplaySettingsExA(reinterpret_cast<char*>(dd.DeviceName), ENUM_CURRENT_SETTINGS, &dm, 0) == FALSE)
             {
-                ::EnumDisplaySettingsExA((char*)dd.DeviceName, ENUM_REGISTRY_SETTINGS, &dm, 0);
+                ::EnumDisplaySettingsExA(reinterpret_cast<char*>(dd.DeviceName), ENUM_REGISTRY_SETTINGS, &dm, 0);
             }
 
-            width = dm.dmPelsWidth;
-            height = dm.dmPelsHeight;
-            ::strcpy_s(primaryDevicename.data(), primaryDevicename.size(), (char*)dd.DeviceName);
+            width = static_cast<int>(dm.dmPelsWidth);
+            height = static_cast<int>(dm.dmPelsHeight);
+            ::strcpy_s(primaryDevicename.data(), primaryDevicename.size(), reinterpret_cast<char*>(dd.DeviceName));
             ++id;
         }
 
@@ -909,7 +909,7 @@ void SessionDialog::setDisplays()
     }
     DEVMODEA dm{ 0 };
     dm.dmSize = sizeof(dm);
-    for (int iModeNum{ 0 }; ::EnumDisplaySettingsA(primaryDevicename.data(), iModeNum, &dm) != 0; ++iModeNum)
+    for (int iModeNum{ 0 }; ::EnumDisplaySettingsA(primaryDevicename.data(), static_cast<DWORD>(iModeNum), &dm) != 0; ++iModeNum)
     {
         if (dm.dmBitsPerPel == 32)
         {
@@ -918,7 +918,7 @@ void SessionDialog::setDisplays()
     }
     HWND slider = ::GetDlgItem(DisplayHwnd, IDC_SLIDERRES);
     int mapSize = static_cast<int>(resolutionMap.size());
-    ::SendMessage(slider, TBM_SETRANGE, (WPARAM)1, (LPARAM)MAKELONG(0, mapSize > 0 ? mapSize - 1 : 0));
+    ::SendMessage(slider, TBM_SETRANGE, static_cast<WPARAM>(1), static_cast<LPARAM>(MAKELONG(0, mapSize > 0 ? mapSize - 1 : 0)));
     ::SendMessage(slider, TBM_SETTICFREQ, 1, 10);
     map<pair<int, int>, int>::iterator itr;
     int it{ 0 };
@@ -1001,11 +1001,11 @@ void SessionDialog::InitDlgProcDisplay()
     std::array<TCHAR, 4U> szPer;
     for (int i{ 0 }; i <= 12; ++i)
     {
-        ::_itow_s(Scales[i], szPer.data(), szPer.size(), 10);
-        ::SendMessage(hViewerScale, CB_INSERTSTRING, (WPARAM)i, (LPARAM)szPer.data());
+        ::_itow_s(Scales[static_cast<unsigned long long>(i)], szPer.data(), szPer.size(), 10);
+        ::SendMessage(hViewerScale, CB_INSERTSTRING, static_cast<WPARAM>(i), reinterpret_cast<LPARAM>(szPer.data()));
     }
-    ::SetDlgItemInt(hwnd, IDC_SCALE_CB, ((scale_num * 100) / scale_den), FALSE);
-    ::SetDlgItemInt(hwnd, IDC_SERVER_SCALE, nServerScale, FALSE);
+    ::SetDlgItemInt(hwnd, IDC_SCALE_CB, (static_cast<UINT>((scale_num * 100) / scale_den)), FALSE);
+    ::SetDlgItemInt(hwnd, IDC_SERVER_SCALE, static_cast<UINT>(nServerScale), FALSE);
 
     HWND hFullScreen = ::GetDlgItem(hwnd, IDC_FULLSCREEN);
     ::SendMessage(hFullScreen, BM_SETCHECK, FullScreen, 0);
@@ -1026,7 +1026,7 @@ void SessionDialog::InitDlgProcMisc()
     HWND hwnd = MiscHwnd;
     if (Shared)
     {
-        ::SetDlgItemInt(hwnd, IDC_SERVER_RECON, reconnectcounter, FALSE);
+        ::SetDlgItemInt(hwnd, IDC_SERVER_RECON, static_cast<UINT>(reconnectcounter), FALSE);
     }
     else
     {
@@ -1034,13 +1034,13 @@ void SessionDialog::InitDlgProcMisc()
     }
     if (Shared)
     {
-        ::SetDlgItemInt(hwnd, IDC_SERVER_RECON_TIME, autoReconnect, FALSE);
+        ::SetDlgItemInt(hwnd, IDC_SERVER_RECON_TIME, static_cast<UINT>(autoReconnect), FALSE);
     }
     else
     {
         ::SetDlgItemInt(hwnd, IDC_SERVER_RECON_TIME, 0, FALSE);
     }
-    ::SetDlgItemInt(hwnd, IDC_FTTIMEOUT, FTTimeout, FALSE);
+    ::SetDlgItemInt(hwnd, IDC_FTTIMEOUT, static_cast<UINT>(FTTimeout), FALSE);
     HWND hsponsor = ::GetDlgItem(hwnd, IDC_CHECK1);
     ::SendMessage(hsponsor, BM_SETCHECK, g_disable_sponsor, 1);
     ::SetDlgItemText(hwnd, IDC_FOLDER, folder.data());
@@ -1051,10 +1051,10 @@ void SessionDialog::InitDlgProcMisc()
     ::SendMessage(hHideEndOfStreamError, BM_SETCHECK, HideEndOfStreamError, 0);
     HWND hcomboscreen = ::GetDlgItem(hwnd, IDC_IMAGEFORMAT);
     ::SendMessage(hcomboscreen, CB_RESETCONTENT, 0, 0);
-    ::SendMessageW(hcomboscreen, CB_ADDSTRING, 0, (LPARAM)L".jpeg");
-    ::SendMessageW(hcomboscreen, CB_ADDSTRING, 0, (LPARAM)L".png");
-    ::SendMessageW(hcomboscreen, CB_ADDSTRING, 0, (LPARAM)L".gif");
-    ::SendMessageW(hcomboscreen, CB_ADDSTRING, 0, (LPARAM)L".bmp");
+    ::SendMessageW(hcomboscreen, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L".jpeg"));
+    ::SendMessageW(hcomboscreen, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L".png"));
+    ::SendMessageW(hcomboscreen, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L".gif"));
+    ::SendMessageW(hcomboscreen, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L".bmp"));
     if (::_tcscmp(imageFormat.data(), _T(".jpeg")) == 0)
     {
         ::SendMessage(hcomboscreen, CB_SETCURSEL, 0, 0);
@@ -1083,7 +1083,7 @@ void SessionDialog::InitDlgProcConfig()
     }
     else
     {
-        ::SetWindowText(::GetDlgItem(hwnd, IDC_CUSTOMCONFIG), (LPCTSTR)customConfigFile.data());
+        ::SetWindowText(::GetDlgItem(hwnd, IDC_CUSTOMCONFIG), reinterpret_cast<LPCTSTR>(customConfigFile.data()));
     }
     HWND hfUseOnlyDefaultConfigFile = ::GetDlgItem(hwnd, IDC_CHECKCONFIG);
     ::SendMessage(hfUseOnlyDefaultConfigFile, BM_SETCHECK, fUseOnlyDefaultConfigFile, 0);
@@ -1117,7 +1117,7 @@ void SessionDialog::InitDlgProcSecurity()
     HWND hfUseEncryption = ::GetDlgItem(hwnd, IDC_PLUGIN_CHECK);
     ::SendMessage(hfUseEncryption, BM_SETCHECK, fUseDSMPlugin, 0);
     ::SendDlgItemMessage(hwnd, IDC_EDITCUSTOMMESSAGE, EM_SETLIMITTEXT, 244, 0);
-    ::SetDlgItemText(hwnd, IDC_EDITCUSTOMMESSAGE, (LPCTSTR)InfoMsg.data());
+    ::SetDlgItemText(hwnd, IDC_EDITCUSTOMMESSAGE, reinterpret_cast<LPCTSTR>(InfoMsg.data()));
     HWND hipv6 = ::GetDlgItem(hwnd, IDC_IPV6);
     ::SendMessage(hipv6, BM_SETCHECK, ipv6, 0);
 }
@@ -1125,14 +1125,14 @@ void SessionDialog::InitDlgProcSecurity()
 void SessionDialog::InitDlgProcListen()
 {
     HWND hwnd = ListenHwnd;
-    ::SetDlgItemInt(hwnd, IDC_LISTENPORT, listenport, FALSE);
+    ::SetDlgItemInt(hwnd, IDC_LISTENPORT, static_cast<UINT>(listenport), FALSE);
 }
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 void SessionDialog::ReadDlgProcListen()
 {
     HWND hwnd = ListenHwnd;
-    listenport = ::GetDlgItemInt(hwnd, IDC_LISTENPORT, nullptr, TRUE);
+    listenport = static_cast<int>(::GetDlgItemInt(hwnd, IDC_LISTENPORT, nullptr, TRUE));
 }
 ////////////////////////////////////////////////////////////////////////////////
 void SessionDialog::ReadDlgProcEncoders()
@@ -1189,7 +1189,7 @@ void SessionDialog::ReadDlgProcEncoders()
     // Tight Specific
     HWND hAllowCompressLevel = ::GetDlgItem(hwnd, IDC_ALLOW_COMPRESSLEVEL);
     useCompressLevel = (::SendMessage(hAllowCompressLevel, BM_GETCHECK, 0, 0) == BST_CHECKED);
-    compressLevel = ::GetDlgItemInt(hwnd, IDC_COMPRESSLEVEL, nullptr, TRUE);
+    compressLevel = static_cast<int>(::GetDlgItemInt(hwnd, IDC_COMPRESSLEVEL, nullptr, TRUE));
     if (compressLevel < 0)
     {
         compressLevel = 0;
@@ -1200,7 +1200,7 @@ void SessionDialog::ReadDlgProcEncoders()
     }
     HWND hAllowJpeg = ::GetDlgItem(hwnd, IDC_ALLOW_JPEG);
     enableJpegCompression = (::SendMessage(hAllowJpeg, BM_GETCHECK, 0, 0) == BST_CHECKED);
-    jpegQualityLevel = ::GetDlgItemInt(hwnd, IDC_QUALITYLEVEL, nullptr, TRUE);
+    jpegQualityLevel = static_cast<int>(::GetDlgItemInt(hwnd, IDC_QUALITYLEVEL, nullptr, TRUE));
     if (jpegQualityLevel < 0)
     {
         jpegQualityLevel = 0;
@@ -1275,7 +1275,7 @@ void SessionDialog::ReadDlgProcDisplay()
 
     [[maybe_unused]] HWND hViewerScaling = ::GetDlgItem(hwnd, IDC_SCALE_CB);
     int nErr;
-    int nPer = ::GetDlgItemInt(hwnd, IDC_SCALE_CB, &nErr, FALSE);
+    int nPer = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SCALE_CB, &nErr, FALSE));
     if (nPer > 0)
     {
         scale_num = nPer;
@@ -1285,7 +1285,7 @@ void SessionDialog::ReadDlgProcDisplay()
 
     if (scaling || fAutoScaling)
     {
-        nServerScale = ::GetDlgItemInt(hwnd, IDC_SERVER_SCALE, nullptr, TRUE);
+        nServerScale = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SERVER_SCALE, nullptr, TRUE));
         FixScaling();
     }
     else
@@ -1293,7 +1293,7 @@ void SessionDialog::ReadDlgProcDisplay()
         scale_num = 1;
         scale_den = 1;
         // Modif sf@2002 - Server Scaling
-        nServerScale = ::GetDlgItemInt(hwnd, IDC_SERVER_SCALE, nullptr, TRUE);
+        nServerScale = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SERVER_SCALE, nullptr, TRUE));
         if ((nServerScale < 1) || (nServerScale > 9))
         {
             nServerScale = 1;
@@ -1342,7 +1342,7 @@ void SessionDialog::ReadDlgProcMisc()
     res = ::GetDlgItemText(hwnd, IDC_PREFIX, prefix, 56);
     if (Shared)
     {
-        reconnectcounter = ::GetDlgItemInt(hwnd, IDC_SERVER_RECON, nullptr, TRUE);
+        reconnectcounter = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SERVER_RECON, nullptr, TRUE));
     }
     else
     {
@@ -1350,14 +1350,14 @@ void SessionDialog::ReadDlgProcMisc()
     }
     if (Shared)
     {
-        autoReconnect = ::GetDlgItemInt(hwnd, IDC_SERVER_RECON_TIME, nullptr, TRUE);
+        autoReconnect = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SERVER_RECON_TIME, nullptr, TRUE));
     }
     else
     {
         autoReconnect = 0;
     }
 
-    FTTimeout = ::GetDlgItemInt(hwnd, IDC_FTTIMEOUT, nullptr, TRUE);
+    FTTimeout = static_cast<int>(::GetDlgItemInt(hwnd, IDC_FTTIMEOUT, nullptr, TRUE));
 
     HWND hsponsor = ::GetDlgItem(hwnd, IDC_CHECK1);
     if (::SendMessage(hsponsor, BM_GETCHECK, 0, 0) == BST_CHECKED)
@@ -1404,7 +1404,7 @@ void SessionDialog::ReadDlgProcSecurity()
     fAutoAcceptNoDSM = (::SendMessage(::GetDlgItem(hwnd, IDC_AUTOACCEPTNOWARN), BM_GETCHECK, 0, 0) == BST_CHECKED);
     restricted = (::SendMessage(::GetDlgItem(hwnd, IDC_HIDEMENU), BM_GETCHECK, 0, 0) == BST_CHECKED);
     ipv6 = (::SendMessage(::GetDlgItem(hwnd, IDC_IPV6), BM_GETCHECK, 0, 0) == BST_CHECKED);
-    ::GetDlgItemText(hwnd, IDC_EDITCUSTOMMESSAGE, (LPTSTR)InfoMsg.data(), 255);
+    ::GetDlgItemText(hwnd, IDC_EDITCUSTOMMESSAGE, reinterpret_cast<LPTSTR>(InfoMsg.data()), 255);
 }
 ////////////////////////////////////////////////////////////////////////////////
 void SessionDialog::ReadDlgProcConfig()
@@ -1449,7 +1449,7 @@ void SessionDialog::ReadDlgProc()
             int numberOfHosts{ 1 };
             for (int i{ 0 }; i < static_cast<int>(::_tcslen(hostname.data())); ++i)
             {
-                if (hostname[i] == ';')
+                if (hostname[static_cast<unsigned long long>(i)] == ';')
                 {
                     ++numberOfHosts;
                 }
@@ -1487,7 +1487,7 @@ int SessionDialog::HandeleEncodersMessages(const HWND hwnd, const WPARAM wParam)
         for (int i = rfbEncodingRaw; i <= LASTENCODING; ++i)
         {
             [[maybe_unused]] const int aa = IDC_RAWRADIO + (i - rfbEncodingRaw);
-            ::EnableWindow(::GetDlgItem(hwnd, IDC_RAWRADIO + (i - rfbEncodingRaw)), (UseEnc[i] && !ad));
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_RAWRADIO + (i - rfbEncodingRaw)), (UseEnc[static_cast<unsigned long long>(i)] && !ad));
         }
         ::EnableWindow(::GetDlgItem(hwnd, ID_SESSION_SET_CRECT), !ad);
         ::EnableWindow(::GetDlgItem(hwnd, IDC_FULLCOLORS_RADIO), !ad);
@@ -1717,13 +1717,13 @@ void SessionDialog::StartListener()
     SettingsFromUI();
     for (int i = rfbEncodingRaw; i <= LASTENCODING; ++i)
     {
-        m_pOpt->m_UseEnc[i] = UseEnc[i];
+        m_pOpt->m_UseEnc[static_cast<unsigned long long>(i)] = UseEnc[static_cast<unsigned long long>(i)];
     }
 
     m_pOpt->m_PreferredEncodings.clear();
     for (int i{ 0 }; i < PreferredEncodings.size(); ++i)
     {
-        m_pOpt->m_PreferredEncodings.push_back(PreferredEncodings[i]);
+        m_pOpt->m_PreferredEncodings.push_back(PreferredEncodings[static_cast<unsigned long long>(i)]);
     }
 
     m_pOpt->autoDetect = autoDetect;

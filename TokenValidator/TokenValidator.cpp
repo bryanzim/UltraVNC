@@ -30,7 +30,7 @@
 #include "TokenRes.h"
 #include "TokenValidatorPlugin.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <bcrypt.h>
 

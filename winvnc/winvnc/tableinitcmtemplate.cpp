@@ -50,7 +50,7 @@ static void rfbInitColourMapSingleTableOUTVNC(char** table, rfbPixelFormat* cons
     {
         std::free(*table);
     }
-    *table = (char*)std::malloc(nEntries * sizeof(OUT_T));
+    *table = reinterpret_cast<char*>(std::malloc(nEntries * sizeof(OUT_T)));
     if (*table == nullptr)
     {
         vnclog.Print(LL_INTERR, VNCLOG("failed to allocate translation table\n"));
@@ -96,7 +96,7 @@ static void rfbInitColourMapSingleTableOUTVNC(char** table, rfbPixelFormat* cons
 
     // We now have the colour table intact. Map it into a translation table
     int r, g, b;
-    OUT_T* t = (OUT_T*)*table;
+    OUT_T* t = reinterpret_cast<OUT_T*>(*table);
 
     for (i = 0; i < nEntries; ++i)
     {

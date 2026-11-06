@@ -37,7 +37,7 @@ namespace BcryptHelp
         NTSTATUS st = ::BCryptCreateHash(hAlg, &hHash, nullptr, 0, nullptr, 0, 0);
         if (st == 0)
         {
-            st = ::BCryptHashData(hHash, (PUCHAR)data, static_cast<ULONG>(len), 0);
+            st = ::BCryptHashData(hHash, reinterpret_cast<PUCHAR>(const_cast<void*>(data)), static_cast<ULONG>(len), 0);
             if (st == 0)
             {
                 st = ::BCryptFinishHash(hHash, out, 32, 0);
@@ -62,10 +62,10 @@ namespace BcryptHelp
             return false;
         }
         BCRYPT_HASH_HANDLE hHash = nullptr;
-        NTSTATUS st = ::BCryptCreateHash(hAlg, &hHash, nullptr, 0, (PUCHAR)key, static_cast<ULONG>(keyLen), 0);
+        NTSTATUS st = ::BCryptCreateHash(hAlg, &hHash, nullptr, 0, reinterpret_cast<PUCHAR>(const_cast<void*>(key)), static_cast<ULONG>(keyLen), 0);
         if (st == 0)
         {
-            st = ::BCryptHashData(hHash, (PUCHAR)data, static_cast<ULONG>(dataLen), 0);
+            st = ::BCryptHashData(hHash, reinterpret_cast<PUCHAR>(const_cast<void*>(data)), static_cast<ULONG>(dataLen), 0);
             if (st == 0)
             {
                 st = ::BCryptFinishHash(hHash, out, 32, 0);
@@ -111,7 +111,7 @@ namespace BcryptHelp
             }
             for (int j{ 0 }; j < 32; ++j)
             {
-                t[j] ^= prev[j];
+                t[static_cast<unsigned long long>(j)] ^= prev[static_cast<unsigned long long>(j)];
             }
         }
         std::memcpy(out, t.data(), outLen);

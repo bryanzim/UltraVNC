@@ -21,8 +21,8 @@
 
 class vncEncodeMgr;
 
-#if !defined(_WINVNC_VNCENCODEMGR)
-#define _WINVNC_VNCENCODEMGR
+#if !defined(WINVNC_VNCENCODEMGR)
+#define WINVNC_VNCENCODEMGR
 #pragma once
 
 // Includes
@@ -84,10 +84,10 @@ public:
     // BUFFER INFO
     inline rfb::Rect GetSize();
     inline BYTE* GetClientBuffer();
-    inline UINT GetClientBuffSize() { return m_clientbuffsize; }; // sf@2002
+    inline UINT GetClientBuffSize() { return m_clientbuffsize; } // sf@2002
     inline BOOL GetPalette(RGBQUAD* quadbuff, UINT ncolours);
 
-    inline omni_mutex& GetUpdateLock() { return m_buffer->m_desktop->GetUpdateLock(); };
+    inline omni_mutex& GetUpdateLock() { return m_buffer->m_desktop->GetUpdateLock(); }
 
     // ENCODING & TRANSLATION
     inline UINT GetNumCodedRects(const rfb::Rect& rect);
@@ -109,7 +109,7 @@ public:
     inline void EnableRichCursor(BOOL enable);
     inline BOOL SetServerFormat();
     inline BOOL SetClientFormat(rfbPixelFormat& format);
-    inline rfbPixelFormat GetClientFormat() { return m_clientformat; };
+    inline rfbPixelFormat GetClientFormat() { return m_clientformat; }
     inline void SetBufferOffset(int x, int y);
     // CURSOR HANDLING
     inline BOOL IsCursorUpdatePending();
@@ -118,13 +118,13 @@ public:
     inline BOOL SendEmptyCursorShape(VSocket* outConn);
     inline BOOL IsXCursorSupported();
     // CLIENT OPTIONS
-    inline void AvailableQueueEnabled(const BOOL enable) { m_use_queue = enable; };
-    inline void AvailableZRLE(const BOOL enable) { m_use_zrle = enable; };
+    inline void AvailableQueueEnabled(const BOOL enable) { m_use_queue = enable; }
+    inline void AvailableZRLE(const BOOL enable) { m_use_zrle = enable; }
 #ifdef _XZ
-    inline void AvailableXZ(const BOOL enable) { m_use_xz = enable; };
+    inline void AvailableXZ(const BOOL enable) { m_use_xz = enable; }
 #endif
-    inline void AvailableTight(const BOOL enable) { m_use_tight = enable; };
-    inline void EnableQueuing(const BOOL enable) { m_fEnableQueuing = enable; };
+    inline void AvailableTight(const BOOL enable) { m_use_tight = enable; }
+    inline void EnableQueuing(const BOOL enable) { m_fEnableQueuing = enable; }
     inline BOOL IsMouseWheelTight();
     // CACHE HANDLING
     inline void EnableCache(BOOL enabled);
@@ -144,13 +144,13 @@ public:
                 || (m_encoding == rfbEncodingXZYW) || (m_encoding == rfbEncodingXZ)
 #endif
         );
-    };
+    }
 #ifdef _XZ
-    inline bool IsBulkRectEncoding() { return ((m_encoding == rfbEncodingXZ) || (m_encoding == rfbEncodingXZYW)); };
+    inline bool IsBulkRectEncoding() { return ((m_encoding == rfbEncodingXZ) || (m_encoding == rfbEncodingXZYW)); }
 #endif
-    inline bool IsUltraEncoding() { return ((m_encoding == rfbEncodingUltra) || (m_encoding == rfbEncodingUltra2)); };
-    inline bool IsUltra2Encoding() { return (m_encoding == rfbEncodingUltra2); };
-    inline bool IsEncoderSet() { return ((m_encoder != nullptr) && (m_encoding != rfbEncodingRaw)); };
+    inline bool IsUltraEncoding() { return ((m_encoding == rfbEncodingUltra) || (m_encoding == rfbEncodingUltra2)); }
+    inline bool IsUltra2Encoding() { return (m_encoding == rfbEncodingUltra2); }
+    inline bool IsEncoderSet() { return ((m_encoder != nullptr) && (m_encoding != rfbEncodingRaw)); }
 
 protected:
     // Routine used internally to ensure the client buffer is OK
@@ -540,7 +540,7 @@ inline BOOL vncEncodeMgr::SetEncoding(CARD32 encoding, const BOOL reinitialize)
 
         // sf@2003 - UltraEncoder Queing does not work with DSM - Disable it in this case until
         // some work is done to improve Queuing/DSM compatibility
-        ((vncEncodeUltra*)(m_encoder))->EnableQueuing(m_fEnableQueuing);
+        (reinterpret_cast<vncEncodeUltra*>((m_encoder)))->EnableQueuing(m_fEnableQueuing);
         EnableXCursor(false);
         EnableRichCursor(false);
         EnableCache(false);
@@ -585,8 +585,8 @@ inline BOOL vncEncodeMgr::SetEncoding(CARD32 encoding, const BOOL reinitialize)
             zrleEncoder = new vncEncodeZRLE;
         }
         m_encoder = zrleEncoder;
-        ((vncEncodeZRLE*)zrleEncoder)->m_use_zywrle = FALSE;
-        ((vncEncodeZRLE*)zrleEncoder)->set_use_zstd(true);
+        (reinterpret_cast<vncEncodeZRLE*>(zrleEncoder))->m_use_zywrle = FALSE;
+        (reinterpret_cast<vncEncodeZRLE*>(zrleEncoder))->set_use_zstd(true);
         break;
     case rfbEncodingZRLE:
         vnclog.Print(LL_INTINFO, VNCLOG("ZRLE encoder requested\n"));
@@ -595,8 +595,8 @@ inline BOOL vncEncodeMgr::SetEncoding(CARD32 encoding, const BOOL reinitialize)
             zrleEncoder = new vncEncodeZRLE;
         }
         m_encoder = zrleEncoder;
-        ((vncEncodeZRLE*)zrleEncoder)->m_use_zywrle = FALSE;
-        ((vncEncodeZRLE*)zrleEncoder)->set_use_zstd(false);
+        (reinterpret_cast<vncEncodeZRLE*>(zrleEncoder))->m_use_zywrle = FALSE;
+        (reinterpret_cast<vncEncodeZRLE*>(zrleEncoder))->set_use_zstd(false);
         break;
 
     case rfbEncodingZSTDYWRLE:
@@ -606,8 +606,8 @@ inline BOOL vncEncodeMgr::SetEncoding(CARD32 encoding, const BOOL reinitialize)
             zrleEncoder = new vncEncodeZRLE;
         }
         m_encoder = zrleEncoder;
-        ((vncEncodeZRLE*)zrleEncoder)->m_use_zywrle = TRUE;
-        ((vncEncodeZRLE*)zrleEncoder)->set_use_zstd(true);
+        (reinterpret_cast<vncEncodeZRLE*>(zrleEncoder))->m_use_zywrle = TRUE;
+        (reinterpret_cast<vncEncodeZRLE*>(zrleEncoder))->set_use_zstd(true);
         break;
     case rfbEncodingZYWRLE:
         vnclog.Print(LL_INTINFO, VNCLOG("ZYWRLE encoder requested\n"));
@@ -616,8 +616,8 @@ inline BOOL vncEncodeMgr::SetEncoding(CARD32 encoding, const BOOL reinitialize)
             zrleEncoder = new vncEncodeZRLE;
         }
         m_encoder = zrleEncoder;
-        ((vncEncodeZRLE*)zrleEncoder)->m_use_zywrle = TRUE;
-        ((vncEncodeZRLE*)zrleEncoder)->set_use_zstd(false);
+        (reinterpret_cast<vncEncodeZRLE*>(zrleEncoder))->m_use_zywrle = TRUE;
+        (reinterpret_cast<vncEncodeZRLE*>(zrleEncoder))->set_use_zstd(false);
         break;
 #ifdef _XZ
     case rfbEncodingXZ:
@@ -630,7 +630,7 @@ inline BOOL vncEncodeMgr::SetEncoding(CARD32 encoding, const BOOL reinitialize)
         {
             m_encoder = m_hold_xz_encoder;
         }
-        ((vncEncodeXZ*)m_encoder)->m_use_xzyw = FALSE;
+        (reinterpret_cast<vncEncodeXZ*>(m_encoder))->m_use_xzyw = FALSE;
         xz_encoder_in_use = true;
         break;
 
@@ -644,7 +644,7 @@ inline BOOL vncEncodeMgr::SetEncoding(CARD32 encoding, const BOOL reinitialize)
         {
             m_encoder = m_hold_xz_encoder;
         }
-        ((vncEncodeXZ*)m_encoder)->m_use_xzyw = TRUE;
+        (reinterpret_cast<vncEncodeXZ*>(m_encoder))->m_use_xzyw = TRUE;
         xz_encoder_in_use = true;
         break;
 #endif
@@ -664,7 +664,7 @@ inline BOOL vncEncodeMgr::SetEncoding(CARD32 encoding, const BOOL reinitialize)
             return FALSE;
         }
         zlib_encoder_in_use = true;
-        ((vncEncodeZlib*)m_encoder)->set_use_zstd(false);
+        (reinterpret_cast<vncEncodeZlib*>(m_encoder))->set_use_zstd(false);
         break;
 
     case rfbEncodingZstd:
@@ -682,7 +682,7 @@ inline BOOL vncEncodeMgr::SetEncoding(CARD32 encoding, const BOOL reinitialize)
             return FALSE;
         }
         zlib_encoder_in_use = true; //
-        ((vncEncodeZlib*)m_encoder)->set_use_zstd(true);
+        (reinterpret_cast<vncEncodeZlib*>(m_encoder))->set_use_zstd(true);
         break;
 
     case rfbEncodingZlibHex:
@@ -700,7 +700,7 @@ inline BOOL vncEncodeMgr::SetEncoding(CARD32 encoding, const BOOL reinitialize)
             return FALSE;
         }
         zlibhex_encoder_in_use = true; //
-        ((vncEncodeZlibHex*)m_encoder)->set_use_zstd(false);
+        (reinterpret_cast<vncEncodeZlibHex*>(m_encoder))->set_use_zstd(false);
         break;
 
     case rfbEncodingZstdHex:
@@ -718,7 +718,7 @@ inline BOOL vncEncodeMgr::SetEncoding(CARD32 encoding, const BOOL reinitialize)
             return FALSE;
         }
         zlibhex_encoder_in_use = true; //
-        ((vncEncodeZlibHex*)m_encoder)->set_use_zstd(true);
+        (reinterpret_cast<vncEncodeZlibHex*>(m_encoder))->set_use_zstd(true);
         break;
 
     case rfbEncodingTight:
@@ -736,7 +736,7 @@ inline BOOL vncEncodeMgr::SetEncoding(CARD32 encoding, const BOOL reinitialize)
             return FALSE;
         }
         tight_encoder_in_use = true;
-        ((vncEncodeTight*)m_encoder)->set_use_zstd(false);
+        (reinterpret_cast<vncEncodeTight*>(m_encoder))->set_use_zstd(false);
         break;
 
     case rfbEncodingTightZstd:
@@ -754,7 +754,7 @@ inline BOOL vncEncodeMgr::SetEncoding(CARD32 encoding, const BOOL reinitialize)
             return FALSE;
         }
         tight_encoder_in_use = true;
-        ((vncEncodeTight*)m_encoder)->set_use_zstd(true);
+        (reinterpret_cast<vncEncodeTight*>(m_encoder))->set_use_zstd(true);
         break;
 
     default:
@@ -1008,8 +1008,8 @@ inline void vncEncodeMgr::SetCompressLevel(int level)
 inline void vncEncodeMgr::SetQualityLevel(int level)
 {
     m_qualitylevel = ((level >= 0) && (level <= 9)) ? level : -1;
-    m_finequalitylevel = coarsequal2finequal[level];
-    m_subsampling = coarsequal2subsamp[level];
+    m_finequalitylevel = coarsequal2finequal[static_cast<unsigned long long>(level)];
+    m_subsampling = coarsequal2subsamp[static_cast<unsigned long long>(level)];
     if (m_encoder != nullptr)
     {
         m_encoder->SetQualityLevel(m_qualitylevel);
@@ -1068,4 +1068,4 @@ inline BOOL vncEncodeMgr::IsCacheEnabled() { return m_cache_enabled; }
 
 inline void vncEncodeMgr::LastRect(VSocket* const outConn) { m_encoder->LastRect(outConn); }
 
-#endif // _WINVNC_VNCENCODEMGR
+#endif // WINVNC_VNCENCODEMGR

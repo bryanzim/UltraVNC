@@ -36,11 +36,11 @@ BOOL CALLBACK DlgProcMISC(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
 
     case WM_INITDIALOG: {
         initdone6 = false;
-        ::SendMessage(::GetDlgItem(hwnd, IDC_DISABLETRAY), BM_SETCHECK, DisableTrayIcon, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_RDPMODE), BM_SETCHECK, Rdpmode, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_KICKRDP), BM_SETCHECK, kickrdp, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_DISINI), BM_SETCHECK, BUseRegistry, 0);
-        ::SetDlgItemInt(hwnd, IDC_SCALE, DefaultScale, false);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_DISABLETRAY), BM_SETCHECK, static_cast<WPARAM>(DisableTrayIcon), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_RDPMODE), BM_SETCHECK, static_cast<WPARAM>(Rdpmode), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_KICKRDP), BM_SETCHECK, static_cast<WPARAM>(kickrdp), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_DISINI), BM_SETCHECK, static_cast<WPARAM>(BUseRegistry), 0);
+        ::SetDlgItemInt(hwnd, IDC_SCALE, static_cast<UINT>(DefaultScale), false);
         ::SetDlgItemText(hwnd, IDC_SCL, servicecmdline.data());
         bool debug{ false };
         if (DebugMode >= 2)
@@ -147,20 +147,20 @@ BOOL CALLBACK DlgProcMISC(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
                 std::strcpy(link.data(), "https://uvnc.com/webhelp/");
                 std::strcat(link.data(), "misc");
                 std::strcat(link.data(), ".html");
-                ::ShellExecute(::GetDesktopWindow(), "open", link.data(), "", 0, SW_SHOWNORMAL);
+                ::ShellExecute(::GetDesktopWindow(), "open", link.data(), "", nullptr, SW_SHOWNORMAL);
             }
             break;
         case IDOK: {
-            DisableTrayIcon = ::IsDlgButtonChecked(hwnd, IDC_DISABLETRAY);
-            Rdpmode = ::IsDlgButtonChecked(hwnd, IDC_RDPMODE);
-            BUseRegistry = ::IsDlgButtonChecked(hwnd, IDC_DISINI);
-            kickrdp = ::IsDlgButtonChecked(hwnd, IDC_KICKRDP);
-            DefaultScale = ::GetDlgItemInt(hwnd, IDC_SCALE, nullptr, FALSE);
+            DisableTrayIcon = static_cast<LONG>(::IsDlgButtonChecked(hwnd, IDC_DISABLETRAY));
+            Rdpmode = static_cast<LONG>(::IsDlgButtonChecked(hwnd, IDC_RDPMODE));
+            BUseRegistry = static_cast<LONG>(::IsDlgButtonChecked(hwnd, IDC_DISINI));
+            kickrdp = static_cast<LONG>(::IsDlgButtonChecked(hwnd, IDC_KICKRDP));
+            DefaultScale = static_cast<LONG>(::GetDlgItemInt(hwnd, IDC_SCALE, nullptr, FALSE));
             if ((DefaultScale < 1) || (DefaultScale > 9))
             {
                 DefaultScale = 1;
             }
-            Avilog = ::IsDlgButtonChecked(hwnd, IDC_VIDEO);
+            Avilog = static_cast<LONG>(::IsDlgButtonChecked(hwnd, IDC_VIDEO));
             ::GetDlgItemText(hwnd, IDC_EDIT_PATH, path, 512);
             ::GetDlgItemText(hwnd, IDC_SCL, servicecmdline.data(), 256);
             bool log_checked = ::IsDlgButtonChecked(hwnd, IDC_LOG);

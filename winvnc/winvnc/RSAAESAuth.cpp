@@ -105,12 +105,12 @@ struct AESCipher
         keyBlob.hdr.aiKeyAlg = (keySize == 128 ? CALG_AES_128 : CALG_AES_256);
         keyBlob.cbKeySize = min(keySize / 8, static_cast<DWORD>(sizeof(keyBlob.key)));
         std::memcpy(keyBlob.key, key, keyBlob.cbKeySize);
-        if (!::CryptImportKey(hProv, (BYTE*)&keyBlob, offsetof(SymKeyBlob, key) + keyBlob.cbKeySize, 0, 0, &hKey))
+        if (!::CryptImportKey(hProv, reinterpret_cast<BYTE*>(&keyBlob), offsetof(SymKeyBlob, key) + keyBlob.cbKeySize, 0, 0, &hKey))
         {
             return SetErr("CryptImportKey failed (%u)", ::GetLastError());
         }
         DWORD mode = CRYPT_MODE_ECB;
-        if (!::CryptSetKeyParam(hKey, KP_MODE, (BYTE*)&mode, 0))
+        if (!::CryptSetKeyParam(hKey, KP_MODE, reinterpret_cast<BYTE*>(&mode), 0))
         {
             return SetErr("CryptSetKeyParam failed (%u)", ::GetLastError());
         }
@@ -119,7 +119,7 @@ struct AESCipher
 
     bool Encrypt(void* const buf, DWORD size = BlockSize)
     {
-        if (!::CryptEncrypt(hKey, 0, FALSE, 0, (BYTE*)buf, &size, size))
+        if (!::CryptEncrypt(hKey, 0, FALSE, 0, reinterpret_cast<BYTE*>(buf), &size, size))
         {
             return SetErr("CryptEncrypt failed (%u)", ::GetLastError());
         }
@@ -177,7 +177,7 @@ struct CMACAuth
                 }
                 pos = 0;
             }
-            pad[pos++] ^= ((const BYTE*)buf)[i];
+            pad[pos++] ^= (reinterpret_cast<const BYTE*>(buf))[i];
         }
         return true;
     }
@@ -292,7 +292,7 @@ struct EAXMode
                 WrapIncr(ctr);
                 pos = 0;
             }
-            ((BYTE*)buf)[i] ^= pad[pos++];
+            (reinterpret_cast<BYTE*>(buf))[i] ^= pad[pos++];
         }
         if (encrypt && !auth.Process(buf, size))
         {
@@ -309,7 +309,7 @@ struct EAXMode
         }
         for (DWORD i{ 0U }; i < size; ++i)
         {
-            ((BYTE*)tag)[i] ^= tagNonce[i] ^ tagAad[i];
+            (reinterpret_cast<BYTE*>(tag))[i] ^= tagNonce[i] ^ tagAad[i];
         }
         pos = -1;
         return true;
@@ -446,7 +446,7 @@ bool RSAAESAuth::RawSendAll(const BYTE* const data, const DWORD len)
     DWORD sent{ 0U };
     while (sent < len)
     {
-        int n = m_socket->Send((const char*)data + sent, (VCard)(len - sent));
+        int n = m_socket->Send(reinterpret_cast<const char*>(data) + sent, static_cast<VCard>((len - sent)));
         if (n <= 0)
         {
             vnclog.Print(LL_CONNERR, VNCLOG("RA2: raw send failed n=%d wsa=%d\n"), n, ::WSAGetLastError());
@@ -462,7 +462,7 @@ bool RSAAESAuth::RawReadExact(BYTE* const data, const DWORD len)
     DWORD got{ 0U };
     while (got < len)
     {
-        int n = m_socket->Read((char*)data + got, static_cast<int>((len - got)));
+        int n = m_socket->Read(reinterpret_cast<char*>(data) + got, static_cast<int>((len - got)));
         if (n <= 0)
         {
             vnclog.Print(LL_CONNERR, VNCLOG("RA2: raw recv failed n=%d wsa=%d\n"), n, ::WSAGetLastError());
@@ -606,7 +606,7 @@ bool RSAAESAuth::LoadServerKey()
         return Fail("public key decode failed", ::GetLastError());
     }
 
-    RSAPUBKEY* rsaPub = (RSAPUBKEY*)(blob.data() + sizeof(BLOBHEADER));
+    RSAPUBKEY* rsaPub = reinterpret_cast<RSAPUBKEY*>((blob.data() + sizeof(BLOBHEADER)));
     BYTE* modulusLE = blob.data() + sizeof(BLOBHEADER) + sizeof(RSAPUBKEY);
     if ((rsaPub->bitlen < MinRsaKeyLength) || (rsaPub->bitlen > MaxRsaKeyLength))
     {
@@ -622,7 +622,7 @@ bool RSAAESAuth::LoadServerKey()
     DWORD e = rsaPub->pubexp;
     for (int i = static_cast<int>(m_serverKeyBytes) - 1; (i >= 0) && e; --i)
     {
-        m_serverE[i] = static_cast<BYTE>((e & 0xff));
+        m_serverE[static_cast<unsigned long long>(i)] = static_cast<BYTE>((e & 0xff));
         e >>= 8;
     }
 
@@ -632,7 +632,7 @@ bool RSAAESAuth::LoadServerKey()
     {
         return Fail("private key not accessible", ::GetLastError());
     }
-    m_hServerKey = (m_certKeySpec == CERT_NCRYPT_KEY_SPEC) ? (NCRYPT_KEY_HANDLE)m_hCertKey : 0;
+    m_hServerKey = (m_certKeySpec == CERT_NCRYPT_KEY_SPEC) ? static_cast<NCRYPT_KEY_HANDLE>(m_hCertKey) : 0;
     m_certCtx = ctx;
     return true;
 }
@@ -658,7 +658,7 @@ bool RSAAESAuth::ReadClientPublicKey()
     {
         return Fail("failed to read client key length");
     }
-    m_clientKeyBits = Swap32IfLE(*(DWORD*)hdr.data());
+    m_clientKeyBits = Swap32IfLE(*reinterpret_cast<DWORD*>(hdr.data()));
     if (m_clientKeyBits < MinRsaKeyLength)
     {
         return Fail("client RSA key too small");
@@ -702,10 +702,10 @@ bool RSAAESAuth::ReadClientPublicKey()
     keyBlob.hdr.aiKeyAlg = CALG_RSA_KEYX;
     keyBlob.key.magic = BCRYPT_RSAPUBLIC_MAGIC; // RSA1
     keyBlob.key.bitlen = m_clientKeyBits;
-    keyBlob.key.pubexp = Swap32IfLE(*(DWORD*)&m_clientE[m_clientKeyBytes - 4]);
+    keyBlob.key.pubexp = Swap32IfLE(*reinterpret_cast<DWORD*>(&m_clientE[m_clientKeyBytes - 4]));
     std::memcpy(keyBlob.modulus, m_clientN.data(), m_clientKeyBytes);
     ArraySwap(keyBlob.modulus, m_clientKeyBytes);
-    if (!::CryptImportKey(m_hProv, (BYTE*)&keyBlob, offsetof(PubKeyBlob, modulus) + m_clientKeyBytes, 0, 0, &m_hClientKey))
+    if (!::CryptImportKey(m_hProv, reinterpret_cast<BYTE*>(&keyBlob), offsetof(PubKeyBlob, modulus) + m_clientKeyBytes, 0, 0, &m_hClientKey))
     {
         return Fail("invalid client RSA key", ::GetLastError());
     }
@@ -721,7 +721,7 @@ bool RSAAESAuth::SendServerRandom()
     {
         return Fail("CryptAcquireContext failed", ::GetLastError());
     }
-    if (!::CryptGenRandom(m_hProv, size, (BYTE*)m_serverRandom.data()))
+    if (!::CryptGenRandom(m_hProv, size, reinterpret_cast<BYTE*>(m_serverRandom.data())))
     {
         return Fail("CryptGenRandom failed", ::GetLastError());
     }
@@ -736,7 +736,7 @@ bool RSAAESAuth::SendServerRandom()
     }
     DWORD len16 = Swap16IfLE(size);
     ArraySwap(buffer, size); // CAPI emits little-endian ciphertext
-    if (!RawSendAll((BYTE*)&len16, 2) || !RawSendAll(buffer, size))
+    if (!RawSendAll(reinterpret_cast<BYTE*>(&len16), 2) || !RawSendAll(buffer, size))
     {
         return Fail("failed to send server random");
     }
@@ -750,7 +750,7 @@ bool RSAAESAuth::ReadClientRandom()
     {
         return Fail("failed to read client random length");
     }
-    DWORD size = Swap16IfLE(*(WORD*)hdr.data());
+    DWORD size = Swap16IfLE(*reinterpret_cast<WORD*>(hdr.data()));
     if (size != m_serverKeyBytes)
     {
         return Fail("server key size does not match random length");
@@ -784,7 +784,7 @@ bool RSAAESAuth::ReadClientRandom()
         // must be little-endian.
         ArraySwap(ct.data(), size);
         HCRYPTKEY hPrivKey = 0;
-        if (!::CryptGetUserKey((HCRYPTPROV)m_hCertKey, AT_KEYEXCHANGE, &hPrivKey))
+        if (!::CryptGetUserKey(reinterpret_cast<HCRYPTPROV>(m_hCertKey), AT_KEYEXCHANGE, &hPrivKey))
         {
             return Fail("cannot access certificate private key", ::GetLastError());
         }
@@ -819,7 +819,7 @@ bool RSAAESAuth::SetCipher()
         {
             return false;
         }
-        if (!::CryptHashData(m_hHash, (BYTE*)a, size, 0) || !::CryptHashData(m_hHash, (BYTE*)b, size, 0))
+        if (!::CryptHashData(m_hHash, const_cast<BYTE*>(reinterpret_cast<const BYTE *>(a)), size, 0) || !::CryptHashData(m_hHash, const_cast<BYTE*>(reinterpret_cast<const BYTE *>(b)), size, 0))
         {
             return false;
         }
@@ -862,7 +862,7 @@ bool RSAAESAuth::SetCipher()
         DWORD sent{ 0U };
         while (sent < static_cast<DWORD>(frame.size()))
         {
-            int n = socket->Send((const char*)frame.data() + sent, (VCard)(frame.size() - sent));
+            int n = socket->Send(reinterpret_cast<const char*>(frame.data()) + sent, static_cast<VCard>((frame.size() - sent)));
             if (n <= 0)
             {
                 return false;
@@ -880,7 +880,7 @@ bool RSAAESAuth::SetCipher()
             DWORD got2{ 0U };
             while (got2 < 2)
             {
-                int n = socket->Read((char*)hdr.data() + got2, 2 - static_cast<int>(got2));
+                int n = socket->Read(reinterpret_cast<char*>(hdr.data()) + got2, static_cast<VCard>(2 - static_cast<int>(got2)));
                 if (n <= 0)
                 {
                     return false;
@@ -894,7 +894,7 @@ bool RSAAESAuth::SetCipher()
             DWORD off = EAXStream::AadSize;
             while (off < frame.size())
             {
-                int n = socket->Read((char*)frame.data() + off, static_cast<int>((frame.size() - off)));
+                int n = socket->Read(reinterpret_cast<char*>(frame.data()) + off, static_cast<int>((frame.size() - off)));
                 if (n <= 0)
                 {
                     return false;
@@ -924,7 +924,7 @@ bool RSAAESAuth::SetCipher()
 static bool EaxSend([[maybe_unused]] RSAAESAuth* const self, VSocket* const socket, const void* const data, const DWORD len)
 {
     // The callbacks are installed; SendExact routes through them.
-    return socket->SendExact((const char*)data, len) != FALSE;
+    return socket->SendExact(reinterpret_cast<const char*>(data), len) != FALSE;
 }
 
 bool RSAAESAuth::SendKeyHash()
@@ -940,8 +940,8 @@ bool RSAAESAuth::SendKeyHash()
     }
     DWORD sl = Swap32IfLE(m_serverKeyBits);
     DWORD cl = Swap32IfLE(m_clientKeyBits);
-    if (!::CryptHashData(m_hHash, (BYTE*)&sl, 4, 0) || !::CryptHashData(m_hHash, m_serverN.data(), m_serverKeyBytes, 0) ||
-        !::CryptHashData(m_hHash, m_serverE.data(), m_serverKeyBytes, 0) || !::CryptHashData(m_hHash, (BYTE*)&cl, 4, 0) ||
+    if (!::CryptHashData(m_hHash, reinterpret_cast<BYTE*>(&sl), 4, 0) || !::CryptHashData(m_hHash, m_serverN.data(), m_serverKeyBytes, 0) ||
+        !::CryptHashData(m_hHash, m_serverE.data(), m_serverKeyBytes, 0) || !::CryptHashData(m_hHash, reinterpret_cast<BYTE*>(&cl), 4, 0) ||
         !::CryptHashData(m_hHash, m_clientN.data(), m_clientKeyBytes, 0) ||
         !::CryptHashData(m_hHash, m_clientE.data(), m_clientKeyBytes, 0))
     {
@@ -968,7 +968,7 @@ bool RSAAESAuth::ReadClientHash()
 {
     DWORD hashSize = (m_keySize == 128 ? 20 : 32);
     std::vector<BYTE> recvHash(hashSize);
-    if (!m_socket->ReadExact((char*)recvHash.data(), (VCard)hashSize))
+    if (!m_socket->ReadExact(reinterpret_cast<char*>(recvHash.data()), static_cast<VCard>(hashSize)))
     {
         return Fail("failed to read client hash");
     }
@@ -981,8 +981,8 @@ bool RSAAESAuth::ReadClientHash()
     }
     DWORD cl = Swap32IfLE(m_clientKeyBits);
     DWORD sl = Swap32IfLE(m_serverKeyBits);
-    if (!::CryptHashData(m_hHash, (BYTE*)&cl, 4, 0) || !::CryptHashData(m_hHash, m_clientN.data(), m_clientKeyBytes, 0) ||
-        !::CryptHashData(m_hHash, m_clientE.data(), m_clientKeyBytes, 0) || !::CryptHashData(m_hHash, (BYTE*)&sl, 4, 0) ||
+    if (!::CryptHashData(m_hHash, reinterpret_cast<BYTE*>(&cl), 4, 0) || !::CryptHashData(m_hHash, m_clientN.data(), m_clientKeyBytes, 0) ||
+        !::CryptHashData(m_hHash, m_clientE.data(), m_clientKeyBytes, 0) || !::CryptHashData(m_hHash, reinterpret_cast<BYTE*>(&sl), 4, 0) ||
         !::CryptHashData(m_hHash, m_serverN.data(), m_serverKeyBytes, 0) ||
         !::CryptHashData(m_hHash, m_serverE.data(), m_serverKeyBytes, 0))
     {
@@ -1017,7 +1017,7 @@ bool RSAAESAuth::SendSubtype()
 bool RSAAESAuth::ReadCredentials(std::string& user, std::string& pass)
 {
     BYTE ulen{ 0U }, plen = 0;
-    if (!m_socket->ReadExact((char*)&ulen, 1))
+    if (!m_socket->ReadExact(reinterpret_cast<char*>(&ulen), 1))
     {
         return Fail("failed to read username length");
     }
@@ -1026,7 +1026,7 @@ bool RSAAESAuth::ReadCredentials(std::string& user, std::string& pass)
     {
         return Fail("failed to read username");
     }
-    if (!m_socket->ReadExact((char*)&plen, 1))
+    if (!m_socket->ReadExact(reinterpret_cast<char*>(&plen), 1))
     {
         return Fail("failed to read password length");
     }

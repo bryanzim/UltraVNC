@@ -31,7 +31,7 @@ int local_resolve(const char* const host, struct sockaddr_in* addr, [[maybe_unus
         ent = gethostbyname(host);
         if (ent)
         {
-            std::memcpy(&addr->sin_addr, ent->h_addr, ent->h_length);
+            std::memcpy(&addr->sin_addr, ent->h_addr, static_cast<size_t>(ent->h_length));
             addr->sin_family = ent->h_addrtype;
             debug("resolved: %s (%s)\n", host, inet_ntoa(addr->sin_addr));
         }
@@ -112,9 +112,9 @@ open_connection(const char* const host, u_short port)
     s = socket(AF_INET, SOCK_STREAM, 0);
     // NAGLE
     const int one{ 1 };
-    setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char*)&one, sizeof(one));
+    setsockopt(s, IPPROTO_TCP, TCP_NODELAY, const_cast<char*>(reinterpret_cast<const char *>(&one)), sizeof(one));
 
-    if (connect(s, (struct sockaddr*)&saddr, sizeof(saddr)) == SOCKET_ERROR)
+    if (connect(s, reinterpret_cast<struct sockaddr*>(&saddr), sizeof(saddr)) == SOCKET_ERROR)
     {
         debug("connect() failed.\n");
         return static_cast<SOCKET>(SOCKET_ERROR);
@@ -156,12 +156,12 @@ DWORD WINAPI mode12listener([[maybe_unused]] const LPVOID lpParam)
         debug("socket() initialized\n");
     }
 
-    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&one, sizeof(one));
+    setsockopt(static_cast<SOCKET>(sock), IPPROTO_TCP, TCP_NODELAY, const_cast<char*>(reinterpret_cast<const char *>(&one)), sizeof(one));
 
     name.sin_family = AF_INET;
     name.sin_port = htons(static_cast<u_short>(saved_portA));
     name.sin_addr.s_addr = htonl(INADDR_ANY);
-    if (bind(sock, (struct sockaddr*)&name, sizeof(name)) < 0)
+    if (bind(static_cast<SOCKET>(sock), reinterpret_cast<struct sockaddr*>(&name), sizeof(name)) < 0)
     {
         fatal("bind() failed, errno=%d\n", socket_errno());
     }
@@ -169,7 +169,7 @@ DWORD WINAPI mode12listener([[maybe_unused]] const LPVOID lpParam)
     {
         debug("bind() succeded to port %i\n", saved_portA);
     }
-    if (listen(sock, 1) < 0)
+    if (listen(static_cast<SOCKET>(sock), 1) < 0)
     {
         fatal("listen() failed, errno=%d\n", socket_errno());
     }
@@ -186,7 +186,7 @@ DWORD WINAPI mode12listener([[maybe_unused]] const LPVOID lpParam)
         std::memset(remotehost.data(), 0, 256);
         std::memset(pv, 0, sizeof(pv));
         //		debug ("Waiting for Viewer connection...\n");
-        connection = static_cast<int>(accept(sock, (struct sockaddr*)&client, &socklen));
+        connection = static_cast<int>(accept(static_cast<SOCKET>(sock), reinterpret_cast<struct sockaddr*>(&client), &socklen));
         ::Sleep(1000);
         ip_peer = inet_ntoa(client.sin_addr);
         if (connection < 0)
@@ -199,40 +199,40 @@ DWORD WINAPI mode12listener([[maybe_unused]] const LPVOID lpParam)
         {
             // NAGLE
             const int one_local{ 1 };
-            setsockopt(connection, IPPROTO_TCP, TCP_NODELAY, (char*)&one_local, sizeof(one_local));
+            setsockopt(static_cast<SOCKET>(connection), IPPROTO_TCP, TCP_NODELAY, const_cast<char*>(reinterpret_cast<const char *>(&one_local)), sizeof(one_local));
             DWORD ii{ 5000U }; // disable
-            setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO, (char*)&ii, sizeof(ii));
-            setsockopt(connection, SOL_SOCKET, SO_SNDTIMEO, (char*)&ii, sizeof(ii));
+            setsockopt(static_cast<SOCKET>(connection), SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&ii), sizeof(ii));
+            setsockopt(static_cast<SOCKET>(connection), SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&ii), sizeof(ii));
 
             debug("accept() connection \n");
             ::sprintf_s(pv, rfbProtocolVersionFormat, rfbProtocolMajorVersion, rfbProtocolMinorVersion);
             if (WriteExact(connection, pv, sz_rfbProtocolVersionMsg) < 0)
             {
                 debug("Writing protocol version error");
-                closesocket(connection);
+                closesocket(static_cast<SOCKET>(connection));
                 goto end;
             }
             if (ReadExact(connection, proxyadress.data(), MAX_HOST_NAME_LEN) < 0)
             {
                 debug("Reading Proxy settings error");
-                closesocket(connection);
+                closesocket(static_cast<SOCKET>(connection));
                 goto end;
             }
             DWORD i{ 0U }; // disable
-            setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO, (char*)&i, sizeof(i));
-            setsockopt(connection, SOL_SOCKET, SO_SNDTIMEO, (char*)&i, sizeof(i));
+            setsockopt(static_cast<SOCKET>(connection), SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&i), sizeof(i));
+            setsockopt(static_cast<SOCKET>(connection), SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&i), sizeof(i));
             if (!ParseDisplay(proxyadress.data(), 255, remotehost.data(), 255, &remoteport))
             {
                 debug("ParseDisplay failed");
-                shutdown(sock, 2);
-                closesocket(connection);
+                shutdown(static_cast<SOCKET>(sock), 2);
+                closesocket(static_cast<SOCKET>(connection));
                 continue;
             }
             ::strcpy_s(dest_host.data(), dest_host.size(), remotehost.data());
             dest_port = static_cast<u_short>(remoteport);
             //debug ("Server %s port %d \n", dest_host,remoteport);
-            shutdown(sock, 2);
-            local_in = local_out = connection;
+            shutdown(static_cast<SOCKET>(sock), 2);
+            local_in = local_out = static_cast<SOCKET>(connection);
             char* pch;
             char* comm;
             char* posn;
@@ -243,7 +243,7 @@ DWORD WINAPI mode12listener([[maybe_unused]] const LPVOID lpParam)
 
             if (pch == nullptr)
             {
-                closesocket(connection);
+                closesocket(static_cast<SOCKET>(connection));
                 debug("ID refused %i \n", remoteport);
                 goto end;
             }
@@ -253,22 +253,22 @@ DWORD WINAPI mode12listener([[maybe_unused]] const LPVOID lpParam)
                 alsoID = true;
                 if (comm)
                 {
-                    if (lookup_comment(remoteport) == nullptr)
+                    if (lookup_comment(static_cast<ULONG>(remoteport)) == nullptr)
                     {
-                        closesocket(connection);
+                        closesocket(static_cast<SOCKET>(connection));
                         debug("ID-XXX refused %i , ID not in use.\n", remoteport, comm);
                         goto end;
                     }
-                    if (std::strcmp(lookup_comment(remoteport), comm) != 0)
+                    if (std::strcmp(lookup_comment(static_cast<ULONG>(remoteport)), comm) != 0)
                     {
-                        closesocket(connection);
+                        closesocket(static_cast<SOCKET>(connection));
                         debug("ID-XXX refused %i , incorrect %s\n", remoteport, comm);
                         goto end;
                     }
                 }
                 else
                 {
-                    closesocket(connection);
+                    closesocket(static_cast<SOCKET>(connection));
                     debug("ID- refused %i\n", remoteport);
                     goto end;
                 }
@@ -292,14 +292,14 @@ DWORD WINAPI mode12listener([[maybe_unused]] const LPVOID lpParam)
                 }
                 if (!found2)
                 {
-                    closesocket(connection);
+                    closesocket(static_cast<SOCKET>(connection));
                     debug("ID refused %i \n", remoteport);
                 }
                 if (found2)
                 {
                     teststruct.local_in = local_in;
                     teststruct.local_out = local_out;
-                    teststruct.code = remoteport;
+                    teststruct.code = static_cast<ULONG>(remoteport);
                     ::strcpy_s(teststruct.hostname, ip_peer);
                     Add_viewer_list(&teststruct);
                     debug("ID added %i \n", remoteport);
@@ -314,9 +314,9 @@ DWORD WINAPI mode12listener([[maybe_unused]] const LPVOID lpParam)
                         teststruct.local_out = local_out;
                         teststruct.remote = Servers[Find_server_list(&teststruct)].remote;
                         teststruct.server = 0;
-                        teststruct.server_nummer = Find_server_list(&teststruct);
-                        teststruct.viewer_nummer = Find_viewer_list(&teststruct);
-                        ::CreateThread(nullptr, 0, do_repeater, (LPVOID)&teststruct, 0, &dwThreadId);
+                        teststruct.server_nummer = static_cast<int>(Find_server_list(&teststruct));
+                        teststruct.viewer_nummer = static_cast<int>(Find_viewer_list(&teststruct));
+                        ::CreateThread(nullptr, 0, do_repeater, reinterpret_cast<LPVOID>(&teststruct), 0, &dwThreadId);
                     }
                     else
                     {
@@ -326,7 +326,7 @@ DWORD WINAPI mode12listener([[maybe_unused]] const LPVOID lpParam)
                             teststruct.remote = local_in;
                             if (teststruct.waitingThread == 0)
                             {
-                                ::CreateThread(nullptr, 0, do_repeater_wait, (LPVOID)&teststruct, 0, &dwThreadId);
+                                ::CreateThread(nullptr, 0, do_repeater_wait, reinterpret_cast<LPVOID>(&teststruct), 0, &dwThreadId);
                             }
                         }
                     }
@@ -338,7 +338,7 @@ DWORD WINAPI mode12listener([[maybe_unused]] const LPVOID lpParam)
                 if (remote == SOCKET_ERROR)
                 {
                     debug("Unable to connect to destination host, errno=%d\n", socket_errno());
-                    closesocket(connection);
+                    closesocket(static_cast<SOCKET>(connection));
                     goto end;
                 }
                 debug("connected\n");
@@ -346,7 +346,7 @@ DWORD WINAPI mode12listener([[maybe_unused]] const LPVOID lpParam)
                 teststruct.local_in = local_in;
                 teststruct.local_out = local_out;
                 teststruct.remote = remote;
-                ::CreateThread(nullptr, 0, do_repeater, (LPVOID)&teststruct, 0, &dwThreadId);
+                ::CreateThread(nullptr, 0, do_repeater, reinterpret_cast<LPVOID>(&teststruct), 0, &dwThreadId);
             }
             //do_repeater(local_in, local_out, remote);
         }
@@ -366,7 +366,7 @@ void Start_mode12listenerThread()
 
 void Stop_mode12listenerThread()
 {
-    closesocket(sock);
+    closesocket(static_cast<SOCKET>(sock));
     notstopped = 0;
 
     ::WaitForSingleObject(hmode12listener, 5000);

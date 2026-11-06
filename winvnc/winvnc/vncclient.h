@@ -26,8 +26,8 @@ class DesktopUsersToken;
 class vncClient;
 using vncClientId = SHORT;
 
-#if (!defined(_WINVNC_VNCCLIENT))
-#define _WINVNC_VNCCLIENT
+#if (!defined(WINVNC_VNCCLIENT))
+#define WINVNC_VNCCLIENT
 #ifndef __GNUC__
 #pragma warning(disable : 4786)
 #endif
@@ -211,7 +211,7 @@ public:
             nr_incr_rgn_empty = 0;
         }
         return value;
-    };
+    }
 
     // Has the client sent an input event?
     virtual BOOL RemoteEventReceived()
@@ -219,11 +219,11 @@ public:
         const BOOL result = m_remoteevent;
         m_remoteevent = FALSE;
         return result;
-    };
+    }
 
     // The UpdateLock
     // This must be held for a number of routines to be successfully invoked...
-    virtual omni_mutex& GetUpdateLock() { return m_encodemgr.GetUpdateLock(); };
+    virtual omni_mutex& GetUpdateLock() { return m_encodemgr.GetUpdateLock(); }
 
     // Functions for setting & getting the client settings
     virtual void EnableKeyboard(const BOOL enable)
@@ -232,14 +232,14 @@ public:
         {
             m_keyboardenabled = enable;
         }
-    };
+    }
     virtual void EnablePointer(const BOOL enable)
     {
         if (m_pointerenabled == true)
         {
             m_pointerenabled = enable;
         }
-    };
+    }
 
     virtual void EnableGii(const BOOL enable)
     {
@@ -247,18 +247,18 @@ public:
         {
             m_GiiEnabled = enable;
         }
-    };
+    }
 
-    virtual void EnableJap(const bool enable) { m_jap = enable; };
-    virtual void ForceCursorShape(const bool enable) { m_ForceCursorShape = enable; };
-    virtual void EnableUnicode(const bool enable) { m_unicode = enable; };
-    virtual void SetCapability(int capability) { m_capability = capability; };
+    virtual void EnableJap(const bool enable) { m_jap = enable; }
+    virtual void ForceCursorShape(const bool enable) { m_ForceCursorShape = enable; }
+    virtual void EnableUnicode(const bool enable) { m_unicode = enable; }
+    virtual void SetCapability(int capability) { m_capability = capability; }
 
-    virtual int GetCapability() { return m_capability; };
+    virtual int GetCapability() { return m_capability; }
     virtual const char* GetClientDomainUsername();
     virtual const char* GetClientNameName();
     const char* GetClientNameAddress();
-    virtual vncClientId GetClientId() { return m_id; };
+    virtual vncClientId GetClientId() { return m_id; }
 
     // Disable/enable protocol messages to the client
     virtual void DisableProtocol();
@@ -272,21 +272,21 @@ public:
     virtual void SetScreenOffset(int x, int y, bool single_display);
     virtual void InitialUpdate(bool value);
 
-    virtual TextChat* GetTextChatPointer() { return m_pTextChat; }; // sf@2002
-    virtual void SetUltraViewer(const bool fTrue) { m_fUltraViewer = fTrue; };
-    virtual bool IsUltraViewer() { return m_fUltraViewer; };
+    virtual TextChat* GetTextChatPointer() { return m_pTextChat; } // sf@2002
+    virtual void SetUltraViewer(const bool fTrue) { m_fUltraViewer = fTrue; }
+    virtual bool IsUltraViewer() { return m_fUltraViewer; }
     bool singleExtendRequested() { return m_singleExtendMode; }
     virtual void EnableCache(BOOL enabled);
     // sf@2002
-    virtual void SetConnectTime(const long lTime) { m_lConnectTime = lTime; };
-    virtual long GetConnectTime() { return m_lConnectTime; };
-    virtual bool IsSlowEncoding() { return m_encodemgr.IsSlowEncoding(); };
-    virtual bool IsUltraEncoding() { return m_encodemgr.IsUltraEncoding(); };
-    virtual bool IsUltra2Encoding() { return m_encodemgr.IsUltra2Encoding(); };
-    virtual bool IsEncoderSet() { return m_encodemgr.IsEncoderSet(); };
-    virtual bool IsFileTransBusy() { return (m_fFileUploadRunning || m_fFileDownloadRunning || m_fFileSessionOpen); };
+    virtual void SetConnectTime(const long lTime) { m_lConnectTime = lTime; }
+    virtual long GetConnectTime() { return m_lConnectTime; }
+    virtual bool IsSlowEncoding() { return m_encodemgr.IsSlowEncoding(); }
+    virtual bool IsUltraEncoding() { return m_encodemgr.IsUltraEncoding(); }
+    virtual bool IsUltra2Encoding() { return m_encodemgr.IsUltra2Encoding(); }
+    virtual bool IsEncoderSet() { return m_encodemgr.IsEncoderSet(); }
+    virtual bool IsFileTransBusy() { return (m_fFileUploadRunning || m_fFileDownloadRunning || m_fFileSessionOpen); }
     void SetProtocolVersion(rfbProtocolVersionMsg* protocolMsg);
-    void SetOutgoing(bool outgoing) { m_outgoing = outgoing; };
+    void SetOutgoing(bool outgoing) { m_outgoing = outgoing; }
     void Clear_Update_Tracker();
     void TriggerUpdate();
     void UpdateCursorShape();
@@ -309,8 +309,8 @@ public:
         {
             m_szRepeaterID = _strdup(szid);
         }
-    };
-    char* GetRepeaterID() { return m_szRepeaterID; };
+    }
+    char* GetRepeaterID() { return m_szRepeaterID; }
 
     // adzm 2009-08-02
     void SetHost(char* szHost)
@@ -326,11 +326,11 @@ public:
         {
             m_szHost = _strdup(szHost);
         }
-    };
-    char* GetHost() { return m_szHost; };
+    }
+    char* GetHost() { return m_szHost; }
 
-    void SetHostPort(const int port) { m_hostPort = port; };
-    int GetHostPort() { return m_hostPort; };
+    void SetHostPort(const int port) { m_hostPort = port; }
+    int GetHostPort() { return m_hostPort; }
 
     // sf@2004 - Asynchronous File Transfer - Delta Transfer
     int GenerateFileChecksums(HANDLE hFile, char* lpCSBuffer, int nCSBufferSize);
@@ -413,8 +413,8 @@ protected:
     class ClientUpdateTracker : public rfb::SimpleUpdateTracker
     {
     public:
-        explicit ClientUpdateTracker() : m_client{ 0 } {};
-        virtual ~ClientUpdateTracker() {};
+        explicit ClientUpdateTracker() : m_client{ nullptr } {}
+        virtual ~ClientUpdateTracker() {}
 
         void init(vncClient* client) { m_client = client; }
 
@@ -452,20 +452,20 @@ protected:
 
         virtual void flush_update(rfb::UpdateInfo& info, const rfb::Region2D& cliprgn)
         {
-            ;
+            
             // RealVNC 336 change - omni_mutex_lock l(m_client->GetUpdateLock());
             SimpleUpdateTracker::flush_update(info, cliprgn);
         }
         virtual void flush_update(rfb::UpdateTracker& to, const rfb::Region2D& cliprgn)
         {
-            ;
+            
             // RealVNC 336 change - omni_mutex_lock l(m_client->GetUpdateLock());
             SimpleUpdateTracker::flush_update(to, cliprgn);
         }
 
         virtual void get_update(rfb::UpdateInfo& info) const
         {
-            ;
+            
             // RealVNC 336 change - omni_mutex_lock l(m_client->GetUpdateLock());
             SimpleUpdateTracker::get_update(info);
         }
@@ -489,7 +489,7 @@ protected:
 
     // Make the update tracker available externally
 public:
-    rfb::UpdateTracker& GetUpdateTracker() { return m_update_tracker; };
+    rfb::UpdateTracker& GetUpdateTracker() { return m_update_tracker; }
     int monitor_Offsetx;
     int monitor_Offsety;
     int m_ScreenOffsetx;

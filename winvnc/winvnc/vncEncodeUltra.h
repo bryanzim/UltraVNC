@@ -16,8 +16,8 @@
 
 class vncEncodeUltra;
 
-#if !defined(_WINVNC_EncodeULTRA)
-#define _WINVNC_EncodeULTRA
+#if !defined(WINVNC_EncodeULTRA)
+#define WINVNC_EncodeULTRA
 #pragma once
 
 #include "lzo/minilzo.h"
@@ -64,7 +64,7 @@ public:
     virtual void AddToQueu2(BYTE* source, int size, VSocket* outConn, int must_be_zipped);
     virtual void SendUltrarects(VSocket* outConn);
 
-    void EnableQueuing(const BOOL fEnable) { m_queueEnable = fEnable; };
+    void EnableQueuing(const BOOL fEnable) { m_queueEnable = fEnable; }
 
     // Implementation
 protected:

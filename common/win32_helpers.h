@@ -12,11 +12,11 @@
 #if !defined(UVNC_COMMON_H)
 #define UVNC_COMMON_H
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
-#include <commctrl.h>
+#include <CommCtrl.h>
 
 namespace helper
 {
@@ -27,7 +27,7 @@ namespace helper
 #ifndef _X64
         pUserData = (T*)::GetWindowLong(hwnd, GWL_USERDATA);
 #else
-        pUserData = (T*)::GetWindowLongPtr(hwnd, GWLP_USERDATA);
+        pUserData = reinterpret_cast<T*>(::GetWindowLongPtr(hwnd, GWLP_USERDATA));
 #endif
 
         return pUserData;
@@ -92,7 +92,7 @@ namespace helper
     public:
         DynamicFnBase(const TCHAR* dllName, const char* fnName);
         ~DynamicFnBase();
-        bool isValid() const { return fnPtr != 0; }
+        bool isValid() const { return fnPtr != nullptr; }
 
     protected:
         void* fnPtr;
@@ -103,7 +103,7 @@ namespace helper
     {
     public:
         DynamicFn(const TCHAR* dllName, const char* fnName) : DynamicFnBase(dllName, fnName) {}
-        T operator*() const { return (T)fnPtr; };
+        T operator*() const { return static_cast<T>(fnPtr); }
     };
 
 }

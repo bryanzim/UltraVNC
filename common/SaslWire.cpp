@@ -102,7 +102,7 @@ namespace SaslWire
         {
             return false;
         }
-        out.assign((const char*)buf.data(), buf.size());
+        out.assign(reinterpret_cast<const char*>(buf.data()), buf.size());
         return true;
     }
 

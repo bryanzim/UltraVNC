@@ -47,10 +47,10 @@
 #include "SettingsManager.h"
 #include "UltraVNCService.h"
 
-#include <commctrl.h>
+#include <CommCtrl.h>
 #include <direct.h>
-#include <shlobj.h>
-#include <shlwapi.h>
+#include <ShlObj.h>
+#include <Shlwapi.h>
 
 #include <cctype>
 #include <cstdio>
@@ -127,7 +127,7 @@ u16 getCpuHash()
     std::array<int, 4U> cpuinfo{ 0, 0, 0, 0 };
     __cpuid(cpuinfo.data(), 0);
     u16 hash = 0;
-    u16* ptr = (u16*)(&cpuinfo[0U]);
+    u16* ptr = reinterpret_cast<u16*>((&cpuinfo[0U]));
     for (u32 i = 0; i < 8; ++i)
     {
         hash += ptr[i];
@@ -138,7 +138,7 @@ u16 getCpuHash()
 
 bool Myinit(const HINSTANCE hInstance)
 {
-    setbuf(stderr, 0);
+    setbuf(stderr, nullptr);
 
     // Note: Language DLL and localization already loaded early in WinMain
 
@@ -320,7 +320,7 @@ void extractConfig(char* szCmdLine)
                 const char* end = std::strchr(start, '"'); // Find the closing quote
                 if (end)
                 {
-                    pathLength = end - start;                           // Calculate the length of the path
+                    pathLength = static_cast<std::size_t>(end - start);                           // Calculate the length of the path
                     ::strncpy_s(configFile, MAX_PATH, start, pathLength); // Copy the path into the char array
                     configFile[pathLength] = '\0';                      // Null-terminate the path
                     i += pathLength + 1;                                // Move i past the closing quote
@@ -334,7 +334,7 @@ void extractConfig(char* szCmdLine)
                 const char* end = std::strchr(start, ' '); // Find the next space
                 if (end)
                 {
-                    pathLength = end - start;                           // Calculate the length of the path
+                    pathLength = static_cast<std::size_t>(end - start);                           // Calculate the length of the path
                     ::strncpy_s(configFile, MAX_PATH, start, pathLength); // Copy the path into the char array
                     configFile[pathLength] = '\0';                      // Null-terminate the path
                     i += pathLength;                                    // Move i past the path
@@ -508,7 +508,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE h
     if (hKernel32)
     {
         pSetProcessMitigationPolicy_t pSetProcessMitigationPolicy =
-            (pSetProcessMitigationPolicy_t)::GetProcAddress(hKernel32, "SetProcessMitigationPolicy");
+            reinterpret_cast<pSetProcessMitigationPolicy_t>(::GetProcAddress(hKernel32, "SetProcessMitigationPolicy"));
         if (pSetProcessMitigationPolicy)
         {
             PROCESS_MITIGATION_IMAGE_LOAD_POLICY policy{};
@@ -598,7 +598,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE h
         HMODULE hSHCore = ::LoadLibraryEx(_T("SHCore.dll"), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 
         HRESULT(WINAPI * _SetProcessDpiAwareness)(DWORD value);
-        _SetProcessDpiAwareness = (HRESULT(WINAPI*)(DWORD))::GetProcAddress(hSHCore, "SetProcessDpiAwareness");
+        _SetProcessDpiAwareness = reinterpret_cast<HRESULT(WINAPI*)(DWORD)>(::GetProcAddress(hSHCore, "SetProcessDpiAwareness"));
         if (_SetProcessDpiAwareness)
         {
             _SetProcessDpiAwareness(2);
@@ -606,7 +606,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE h
         else
         {
             BOOL(WINAPI * _SetProcessDPIAware)();
-            _SetProcessDPIAware = (BOOL(WINAPI*)())::GetProcAddress(hUser32, "SetProcessDPIAware");
+            _SetProcessDPIAware = reinterpret_cast<BOOL(WINAPI*)()>(::GetProcAddress(hUser32, "SetProcessDPIAware"));
             if (_SetProcessDPIAware)
             {
                 _SetProcessDPIAware();
@@ -640,7 +640,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE h
             ::strcat_s(logFile.data(), logFile.size(), "mslogon.log");
             settings->setLogFile(logFile.data());
         }
-        setbuf(stderr, 0);
+        setbuf(stderr, nullptr);
 
         // Note: Language DLL and localization already loaded early in WinMain
 
@@ -842,14 +842,14 @@ int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE h
             if (std::strncmp(&szCmdLine[i], winvncSecurityEditor, std::strlen(winvncSecurityEditor)) == 0)
             {
                 typedef void (*vncEditSecurityFn)(HWND hwnd, HINSTANCE hInstance);
-                vncEditSecurityFn vncEditSecurity = 0;
+                vncEditSecurityFn vncEditSecurity = nullptr;
                 std::array<char, MAX_PATH> szCurrentDir{};
                 ::strcpy_s(szCurrentDir.data(), szCurrentDir.size(), winvncFolder.data());
                 ::strcat_s(szCurrentDir.data(), szCurrentDir.size(), "\\authSSP.dll");
                 HMODULE hModule = ::LoadLibrary(szCurrentDir.data());
                 if (hModule)
                 {
-                    vncEditSecurity = (vncEditSecurityFn)::GetProcAddress(hModule, "vncEditSecurity");
+                    vncEditSecurity = reinterpret_cast<vncEditSecurityFn>(::GetProcAddress(hModule, "vncEditSecurity"));
                     ::CoInitialize(nullptr);
                     vncEditSecurity(nullptr, hAppInstance);
                     ::CoUninitialize();
@@ -906,13 +906,13 @@ int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE h
                 // rest of command line service name, if provided.
                 char* pServiceName = &szCmdLine[i];
                 // skip over command switch, find next whitepace
-                while (*pServiceName && !std::isspace(*(unsigned char*)pServiceName))
+                while (*pServiceName && !std::isspace(*reinterpret_cast<unsigned char*>(pServiceName)))
                 {
                     ++pServiceName;
                 }
 
                 // skip past whitespace to service name
-                while (*pServiceName && std::isspace(*(unsigned char*)pServiceName))
+                while (*pServiceName && std::isspace(*reinterpret_cast<unsigned char*>(pServiceName)))
                 {
                     ++pServiceName;
                 }
@@ -951,13 +951,13 @@ int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE h
                 // rest of command line service name, if provided.
                 char* pServiceName = &szCmdLine[i];
                 // skip over command switch, find next whitepace
-                while (*pServiceName && !std::isspace(*(unsigned char*)pServiceName))
+                while (*pServiceName && !std::isspace(*reinterpret_cast<unsigned char*>(pServiceName)))
                 {
                     ++pServiceName;
                 }
 
                 // skip past whitespace to service name
-                while (*pServiceName && std::isspace(*(unsigned char*)pServiceName))
+                while (*pServiceName && std::isspace(*reinterpret_cast<unsigned char*>(pServiceName)))
                 {
                     ++pServiceName;
                 }
@@ -998,7 +998,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE h
             if (std::strncmp(&szCmdLine[i], winvncConfig, std::strlen(winvncConfig)) == 0)
             {
                 i += std::strlen(winvncConfig);
-                i += configfileskip; // was already extracted, just skip chars
+                i += static_cast<std::size_t>(configfileskip); // was already extracted, just skip chars
                 continue;
             }
             if (std::strncmp(&szCmdLine[i], winvncRunService, std::strlen(winvncRunService)) == 0)
@@ -1157,7 +1157,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE h
                 if (end - start > 0)
                 {
                     pszId = new char[end - start + 1];
-                    if (pszId != 0)
+                    if (pszId != nullptr)
                     {
                         ::strncpy_s(pszId, end - start + 1, &(szCmdLine[start]), end - start);
                         pszId[end - start] = 0;
@@ -1216,7 +1216,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE h
                 {
                     char* name = new char[end - start + 1];
                     char* name2 = new char[end - start + 1];
-                    if (name != 0)
+                    if (name != nullptr)
                     {
                         ::strncpy_s(name, end - start + 1, &(szCmdLine[start]), end - start);
                         name[end - start] = 0;
@@ -1408,7 +1408,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE h
                         g_szRepeaterHost = nullptr;
                     }
                     g_szRepeaterHost = new char[end - start + 1];
-                    if (g_szRepeaterHost != 0)
+                    if (g_szRepeaterHost != nullptr)
                     {
                         ::strncpy_s(g_szRepeaterHost, end - start + 1, &(szCmdLine[start]), end - start);
                         g_szRepeaterHost[end - start] = 0;
@@ -1442,7 +1442,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE h
             // Show the usage dialog
             MessageBoxSecure(nullptr, winvncUsageText, sz_ID_WINVNC_USAGE.data(), MB_OK | MB_ICONINFORMATION);
             break;
-        };
+        }
 
         // If no arguments were given then just run
         if (!argfound)
@@ -1467,7 +1467,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE h
 
 DWORD WINAPI imp_desktop_thread(const LPVOID lpParam)
 {
-    vncServer* server = (vncServer*)lpParam;
+    vncServer* server = reinterpret_cast<vncServer*>(lpParam);
     HDESK desktop;
     //vnclog.Print(LL_INTERR, VNCLOG("SelectDesktop \n"));
     //vnclog.Print(LL_INTERR, VNCLOG("OpenInputdesktop2 NULL\n"));
@@ -1574,7 +1574,7 @@ DWORD WINAPI imp_desktop_thread(const LPVOID lpParam)
     }
     bool Runonce{ false };
     MSG msg;
-    while (::GetMessage(&msg, 0, 0, 0) != 0)
+    while (::GetMessage(&msg, nullptr, 0, 0) != 0)
     {
         ::TranslateMessage(&msg);
         ::DispatchMessage(&msg);

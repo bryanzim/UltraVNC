@@ -169,13 +169,13 @@ static void scrunch(outof, into)
 register unsigned char *outof;
 register unsigned long *into;
 {
-        *into    = (*outof++ & 0xffL) << 24;
-        *into   |= (*outof++ & 0xffL) << 16;
-        *into   |= (*outof++ & 0xffL) << 8;
+        *into    = (unsigned long)((*outof++ & 0xffL) << 24);
+        *into   |= (unsigned long)((*outof++ & 0xffL) << 16);
+        *into   |= (unsigned long)((*outof++ & 0xffL) << 8);
         *into++ |= (*outof++ & 0xffL);
-        *into    = (*outof++ & 0xffL) << 24;
-        *into   |= (*outof++ & 0xffL) << 16;
-        *into   |= (*outof++ & 0xffL) << 8;
+        *into    = (unsigned long)((*outof++ & 0xffL) << 24);
+        *into   |= (unsigned long)((*outof++ & 0xffL) << 16);
+        *into   |= (unsigned long)((*outof++ & 0xffL) << 8);
         *into   |= (*outof   & 0xffL);
         return;
         }

@@ -20,10 +20,10 @@ using namespace rdr;
 enum { DEFAULT_BUF_SIZE = 0x10000 };
 
 xzInStream::xzInStream(int bufSize_)
-  : underlying(0), bufSize(bufSize_ ? bufSize_ : DEFAULT_BUF_SIZE), offset(0),
-    bytesIn(0), ls(NULL)
+  : underlying(nullptr), bufSize(bufSize_ ? bufSize_ : DEFAULT_BUF_SIZE), offset(0),
+    bytesIn(0), ls(nullptr)
 {
-	ptr = end = start = new U8[bufSize];
+	ptr = end = start = new U8[static_cast<unsigned long long>(bufSize)];
 }
 
 xzInStream::~xzInStream()
@@ -46,7 +46,7 @@ void xzInStream::ensure_stream_codec()
 
 	rc = lzma_stream_decoder(ls, UINT64_MAX, LZMA_TELL_UNSUPPORTED_CHECK);
 	if (rc != LZMA_OK) {
-		fprintf (stderr, "lzma_stream_decoder error: %d\n", (int) rc);
+		fprintf (stderr, "lzma_stream_decoder error: %d\n", static_cast<int>(rc));
 		throw Exception("lzmaOutStream: lzma_stream_decoder failed");
 		return;
 	}
@@ -61,7 +61,7 @@ void xzInStream::setUnderlying(InStream* is, int bytesIn_)
 
 int xzInStream::pos()
 {
-  return (int)(offset + ptr - start);
+  return static_cast<int>((offset + ptr - start));
 }
 
 void xzInStream::reset()
@@ -75,7 +75,7 @@ void xzInStream::reset()
     decompress();
     end = start; // throw away any data
   }
-  underlying = 0;
+  underlying = nullptr;
 }
 
 int xzInStream::overrun(int itemSize, int nItems)
@@ -88,9 +88,9 @@ int xzInStream::overrun(int itemSize, int nItems)
     throw Exception("xzInStream overrun: no underlying stream");
 
   if (end - ptr != 0)
-    memmove(start, ptr, end - ptr);
+    memmove(start, ptr, static_cast<size_t>(end - ptr));
 
-  offset += (int)(ptr - start);
+  offset += static_cast<int>((ptr - start));
   end -= ptr - start;
   ptr = start;
 
@@ -99,7 +99,7 @@ int xzInStream::overrun(int itemSize, int nItems)
   }
 
   if (itemSize * nItems > end - ptr)
-    nItems = (int)((end - ptr) / itemSize);
+    nItems = static_cast<int>(((end - ptr) / itemSize));
 
   return nItems;
 }
@@ -109,26 +109,26 @@ int xzInStream::overrun(int itemSize, int nItems)
 
 void xzInStream::decompress()
 {
-	ls->next_out = (U8*)end;
-	ls->avail_out = start + bufSize - end;
+	ls->next_out = const_cast<U8*>(reinterpret_cast<const U8 *>(end));
+	ls->avail_out = static_cast<size_t>(start + bufSize - end);
 
 	if (bytesIn > 0) {
 		underlying->check(1);
 	} else {
 		assert(false);
 	}
-	ls->next_in = (U8*)underlying->getptr();
-	ls->avail_in = underlying->getend() - underlying->getptr();
-	if ((int)ls->avail_in > bytesIn)
-		ls->avail_in = bytesIn;
+	ls->next_in = const_cast<U8*>(reinterpret_cast<const U8 *>(underlying->getptr()));
+	ls->avail_in = static_cast<size_t>(underlying->getend() - underlying->getptr());
+	if (static_cast<int>(ls->avail_in) > bytesIn)
+		ls->avail_in = static_cast<size_t>(bytesIn);
 
 	lzma_ret rc = lzma_code(ls, LZMA_RUN);
 	if ((rc != LZMA_OK) && (rc != LZMA_STREAM_END)) {
-		fprintf (stderr, "lzma_code decompress error: %d\n", (int) rc);
+		fprintf (stderr, "lzma_code decompress error: %d\n", static_cast<int>(rc));
 		throw Exception("lzmaOutStream: decompress failed");
 	}
 
-	bytesIn -= (int)(ls->next_in - underlying->getptr());
+	bytesIn -= static_cast<int>((ls->next_in - underlying->getptr()));
 	end = ls->next_out;
 	underlying->setptr(ls->next_in);
 }

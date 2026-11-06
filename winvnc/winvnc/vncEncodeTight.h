@@ -17,8 +17,8 @@
 
 class vncEncodeTight;
 
-#if !defined(_WINVNC_ENCODETIGHT)
-#define _WINVNC_ENCODETIGHT
+#if !defined(WINVNC_ENCODETIGHT)
+#define WINVNC_ENCODETIGHT
 #pragma once
 
 #include "../../common/UltraVncZ.h"
@@ -144,4 +144,4 @@ protected:
     void PrepareRowForJpeg32(BYTE* dst, CARD32* src, int count);
 };
 
-#endif // _WINVNC_ENCODETIGHT
+#endif // WINVNC_ENCODETIGHT

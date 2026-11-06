@@ -18,8 +18,8 @@
 
 class vncEncodeHexT;
 
-#if !defined(_WINVNC_ENCODEHEXTILE)
-#define _WINVNC_ENCODEHEXTILE
+#if !defined(WINVNC_ENCODEHEXTILE)
+#define WINVNC_ENCODEHEXTILE
 #pragma once
 
 #include "vncencoder.h"
@@ -51,4 +51,4 @@ protected:
 protected:
 };
 
-#endif // _WINVNC_ENCODEHEXTILE
+#endif // WINVNC_ENCODEHEXTILE

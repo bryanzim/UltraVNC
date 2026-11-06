@@ -10,8 +10,8 @@
 //
 
 
-#ifndef _WINVNC_ENCODEZRLE
-#define _WINVNC_ENCODEZRLE
+#ifndef WINVNC_ENCODEZRLE
+#define WINVNC_ENCODEZRLE
 
 #include "vncencoder.h"
 

@@ -138,7 +138,7 @@ void Log::ReallyPrint(const LPCTSTR format, const va_list ap)
         DWORD charsWritten;
         ::WriteConsoleW(::GetStdHandle(STD_OUTPUT_HANDLE), line.data(), static_cast<DWORD>(std::wcslen(line.data())), &charsWritten,
                       nullptr);
-    };
+    }
 
     if (m_tofile && (hlogfile != nullptr))
     {

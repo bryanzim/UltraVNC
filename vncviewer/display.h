@@ -12,9 +12,9 @@
 #pragma once
 #ifndef tempdisplayH
 #define tempdisplayH
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <array>
 #include <list>

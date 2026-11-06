@@ -23,7 +23,7 @@ char* InStream::readString()
   if (len > maxStringLength)
     throw Exception("InStream max string length exceeded");
   char* str = new char[len+1];
-  readBytes(str, len);
+  readBytes(str, static_cast<int>(len));
   str[len] = 0;
   return str;
 }

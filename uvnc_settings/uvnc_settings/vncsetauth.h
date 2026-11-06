@@ -21,8 +21,8 @@
 #define MAXPATH 256
 class vncSetAuth;
 
-#if (!defined(_WINVNC_VNCSETAUTH))
-#define _WINVNC_VNCSETAUTH
+#if (!defined(WINVNC_VNCSETAUTH))
+#define WINVNC_VNCSETAUTH
 
 // The vncSetAuth class itself
 class vncSetAuth
@@ -38,7 +38,7 @@ public:
 
     // General
     void Show(BOOL show);
-    void SetTemp(char* const TempFile) { std::strcpy(m_Tempfile.data(), TempFile); };
+    void SetTemp(char* const TempFile) { std::strcpy(m_Tempfile.data(), TempFile); }
     std::array<char, MAXPATH> m_Tempfile;
 
     // Implementation

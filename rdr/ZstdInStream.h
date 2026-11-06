@@ -14,8 +14,8 @@
 // ZstdInStream streams from a compressed data stream ("underlying"),
 // decompressing with zlib or zstd on the fly.
 //
-#ifndef __RDR_ZSTDINSTREAM_H__
-#define __RDR_ZSTDINSTREAM_H__
+#ifndef RDR_ZSTDINSTREAM_H
+#define RDR_ZSTDINSTREAM_H
 
 #pragma once
 

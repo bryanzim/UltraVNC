@@ -27,9 +27,9 @@
 #include <rdr/ZlibInStream.h>
 #include <rdr/ZlibOutStream.h>
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <string>
 #include <vector>
@@ -89,7 +89,7 @@ const BYTE* ExtendedClipboardDataMessage::GetCurrentPos() { return m_pCurrentPos
 
 void ExtendedClipboardDataMessage::AppendInt(CARD32 val)
 {
-    EnsureBufferLength(GetDataLength() + sizeof(val));
+    EnsureBufferLength(static_cast<int>(GetDataLength() + sizeof(val)));
 
     val = Swap32IfLE(val);
 
@@ -101,7 +101,7 @@ void ExtendedClipboardDataMessage::AppendBytes(BYTE* const pData, const int leng
 {
     EnsureBufferLength(GetDataLength() + length, false);
 
-    std::memcpy(m_pCurrentPos, pData, length);
+    std::memcpy(m_pCurrentPos, pData, static_cast<size_t>(length));
     m_pCurrentPos += length;
 }
 
@@ -129,17 +129,17 @@ void ExtendedClipboardDataMessage::EnsureBufferLength(const int len, const bool 
         int nCurrentOffset = GetDataLength();
 
         int nNewLength = bGrowBeyond ? len * 2 : len;
-        BYTE* pNewBuffer = new BYTE[nNewLength];
-        ::ZeroMemory(pNewBuffer, nNewLength);
+        BYTE* pNewBuffer = new BYTE[static_cast<unsigned long long>(nNewLength)];
+        ::ZeroMemory(pNewBuffer, static_cast<size_t>(nNewLength));
 
         if (m_pData)
         {
-            std::memcpy(pNewBuffer, m_pData, GetDataLength());
+            std::memcpy(pNewBuffer, m_pData, static_cast<size_t>(GetDataLength()));
             delete[] m_pData;
         }
 
         m_pData = pNewBuffer;
-        m_pExtendedData = (rfbExtendedClipboardData*)m_pData;
+        m_pExtendedData = reinterpret_cast<rfbExtendedClipboardData*>(m_pData);
         m_pCurrentPos = m_pData + nCurrentOffset;
         m_nInternalLength = nNewLength;
     }
@@ -164,7 +164,7 @@ bool ExtendedClipboardDataMessage::IsValid()
     {
         return false;
     }
-    CARD32 action = GetFlags() & clipActionMask;
+    CARD32 action = GetFlags() & static_cast<CARD32>(clipActionMask);
     if (action & clipCaps)
     {
         return m_nReceivedLength == sz_rfbExtendedClipboardData + 4 * CountFormats();
@@ -237,7 +237,7 @@ void ClipboardSettings::PrepareCapsPacket(ExtendedClipboardDataMessage& extended
     {
         if (m_myCaps & (1u << i))
         {
-            extendedDataMessage.AppendInt(((i < 4) && (limits[i] > 0) ? limits[i] : 0));
+            extendedDataMessage.AppendInt(((i < 4) && (limits[i] > 0) ? static_cast<CARD32>(limits[i]) : 0));
         }
     }
 }
@@ -375,7 +375,7 @@ bool ClipboardData::Load(const HWND hwndOwner, const bool allowEmpty) // will re
             {
                 return false;
             }
-            BYTE* pData = (BYTE*)::GlobalLock(hText);
+            BYTE* pData = reinterpret_cast<BYTE*>(::GlobalLock(hText));
             if (allowEmpty && !pData)
             {
                 return false;
@@ -386,11 +386,11 @@ bool ClipboardData::Load(const HWND hwndOwner, const bool allowEmpty) // will re
             {
 
                 std::wstring normalized;
-                LPCWSTR text = (LPCWSTR)pData;
+                LPCWSTR text = reinterpret_cast<LPCWSTR>(pData);
                 if (allowEmpty)
                 {
-                    std::size_t count = wcsnlen_s(text, nLength / sizeof(wchar_t));
-                    if (count == nLength / sizeof(wchar_t))
+                    std::size_t count = wcsnlen_s(text, static_cast<unsigned long long>(nLength) / sizeof(wchar_t));
+                    if (count == static_cast<unsigned long long>(nLength) / sizeof(wchar_t))
                     {
                         ::GlobalUnlock(hText);
                         return false;
@@ -419,17 +419,17 @@ bool ClipboardData::Load(const HWND hwndOwner, const bool allowEmpty) // will re
 
                 if (nConvertedSize > 0)
                 {
-                    m_pDataText = new BYTE[nConvertedSize];
+                    m_pDataText = new BYTE[static_cast<unsigned long long>(nConvertedSize)];
                     //memcpy(m_pDataText, pData, nLength);
 
                     int nFinalConvertedSize =
-                        ::WideCharToMultiByte(CP_UTF8, 0, text, -1, (LPSTR)m_pDataText, nConvertedSize, nullptr, nullptr);
+                        ::WideCharToMultiByte(CP_UTF8, 0, text, -1, reinterpret_cast<LPSTR>(m_pDataText), nConvertedSize, nullptr, nullptr);
 
                     if (nFinalConvertedSize > 0)
                     {
                         m_lengthText = nFinalConvertedSize;
 
-                        m_crc = crc32(m_crc, m_pDataText, nFinalConvertedSize);
+                        m_crc = crc32(m_crc, m_pDataText, static_cast<uInt>(nFinalConvertedSize));
                     }
                     else
                     {
@@ -464,7 +464,7 @@ bool ClipboardData::Load(const HWND hwndOwner, const bool allowEmpty) // will re
             {
                 return false;
             }
-            BYTE* pData = (BYTE*)::GlobalLock(hRTF);
+            BYTE* pData = reinterpret_cast<BYTE*>(::GlobalLock(hRTF));
             if (allowEmpty && !pData)
             {
                 return false;
@@ -474,8 +474,8 @@ bool ClipboardData::Load(const HWND hwndOwner, const bool allowEmpty) // will re
             if ((pData != nullptr) && (nLength > 0))
             {
 
-                m_pDataRTF = new BYTE[nLength];
-                std::memcpy(m_pDataRTF, pData, nLength);
+                m_pDataRTF = new BYTE[static_cast<unsigned long long>(nLength)];
+                std::memcpy(m_pDataRTF, pData, static_cast<size_t>(nLength));
 
                 m_lengthRTF = nLength;
 
@@ -505,7 +505,7 @@ bool ClipboardData::Load(const HWND hwndOwner, const bool allowEmpty) // will re
             {
                 return false;
             }
-            BYTE* pData = (BYTE*)::GlobalLock(hHTML);
+            BYTE* pData = reinterpret_cast<BYTE*>(::GlobalLock(hHTML));
             if (allowEmpty && !pData)
             {
                 return false;
@@ -515,8 +515,8 @@ bool ClipboardData::Load(const HWND hwndOwner, const bool allowEmpty) // will re
             if ((pData != nullptr) && (nLength > 0))
             {
 
-                m_pDataHTML = new BYTE[nLength];
-                std::memcpy(m_pDataHTML, pData, nLength);
+                m_pDataHTML = new BYTE[static_cast<unsigned long long>(nLength)];
+                std::memcpy(m_pDataHTML, pData, static_cast<size_t>(nLength));
 
                 m_lengthHTML = nLength;
 
@@ -546,7 +546,7 @@ bool ClipboardData::Load(const HWND hwndOwner, const bool allowEmpty) // will re
             {
                 return false;
             }
-            BYTE* pData = (BYTE*)::GlobalLock(hDIB);
+            BYTE* pData = reinterpret_cast<BYTE*>(::GlobalLock(hDIB));
             if (allowEmpty && !pData)
             {
                 return false;
@@ -556,8 +556,8 @@ bool ClipboardData::Load(const HWND hwndOwner, const bool allowEmpty) // will re
             if ((pData != nullptr) && (nLength > 0))
             {
 
-                m_pDataDIB = new BYTE[nLength];
-                std::memcpy(m_pDataDIB, pData, nLength);
+                m_pDataDIB = new BYTE[static_cast<unsigned long long>(nLength)];
+                std::memcpy(m_pDataDIB, pData, static_cast<size_t>(nLength));
 
                 m_lengthDIB = nLength;
 
@@ -582,10 +582,10 @@ DWORD ClipboardData::ExtendedCRC() const
     DWORD crc = crc32(0L, Z_NULL, 0);
     for (int i{ 0 }; i < 4; ++i)
     {
-        crc = crc32(crc, (const BYTE*)&lengths[i], sizeof(lengths[i]));
+        crc = crc32(crc, reinterpret_cast<const BYTE*>(&lengths[i]), sizeof(lengths[i]));
         if (lengths[i] > 0)
         {
-            crc = crc32(crc, buffers[i], lengths[i]);
+            crc = crc32(crc, buffers[i], static_cast<uInt>(lengths[i]));
         }
     }
     return crc;
@@ -602,8 +602,8 @@ bool ClipboardData::Decode(ExtendedClipboardDataMessage& message)
     {
         return false;
     }
-    stream.next_in = (Bytef*)message.GetCurrentPos();
-    stream.avail_in = message.GetRemainingLength();
+    stream.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef *>(message.GetCurrentPos()));
+    stream.avail_in = static_cast<uInt>(message.GetRemainingLength());
     std::vector<BYTE> decoded;
     int result = Z_OK;
     do
@@ -657,7 +657,7 @@ bool ClipboardData::Decode(ExtendedClipboardDataMessage& message)
         {
             return false;
         }
-        CARD32 size = ((CARD32)decoded[offset] << 24) | ((CARD32)decoded[offset + 1] << 16) | ((CARD32)decoded[offset + 2] << 8) |
+        CARD32 size = (static_cast<CARD32>(decoded[offset]) << 24) | (static_cast<CARD32>(decoded[offset + 1]) << 16) | (static_cast<CARD32>(decoded[offset + 2]) << 8) |
                       decoded[offset + 3];
         offset += 4;
         if (size > decoded.size() - offset)
@@ -665,7 +665,7 @@ bool ClipboardData::Decode(ExtendedClipboardDataMessage& message)
             return false;
         }
         if ((i == 0) && (!size || (decoded[offset + size - 1] != 0) || std::memchr(decoded.data() + offset, 0, size - 1) ||
-                         !::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, (LPCSTR)decoded.data() + offset, size, nullptr, 0)))
+                         !::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, reinterpret_cast<LPCSTR>(decoded.data()) + offset, static_cast<int>(size), nullptr, 0)))
         {
             return false;
         }
@@ -680,7 +680,7 @@ bool ClipboardData::Decode(ExtendedClipboardDataMessage& message)
     m_crc = crc32(0L, Z_NULL, 0);
     if (m_lengthText)
     {
-        m_crc = crc32(m_crc, m_pDataText, m_lengthText);
+        m_crc = crc32(m_crc, m_pDataText, static_cast<uInt>(m_lengthText));
     }
     return offset == decoded.size();
 }
@@ -713,10 +713,10 @@ bool ClipboardData::Restore(const HWND hwndOwner, ExtendedClipboardDataMessage& 
         {
             // get the incoming UTF-8 text
             // now we have to translate to UTF-16
-            count = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, (LPCSTR)buffers[i], lengths[i], nullptr, 0);
+            count = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, reinterpret_cast<LPCSTR>(buffers[i]), lengths[i], nullptr, 0);
         }
-        handles[i] = ::GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE | GMEM_ZEROINIT, i == 0 ? count * sizeof(wchar_t) : count);
-        BYTE* target = handles[i] ? (BYTE*)::GlobalLock(handles[i]) : nullptr;
+        handles[static_cast<unsigned long long>(i)] = ::GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE | GMEM_ZEROINIT, i == 0 ? static_cast<unsigned long long>(count) * sizeof(wchar_t) : static_cast<unsigned long long>(count));
+        BYTE* target = handles[static_cast<unsigned long long>(i)] ? reinterpret_cast<BYTE*>(::GlobalLock(handles[i])) : nullptr;
         if (!target)
         {
             success = false;
@@ -725,13 +725,13 @@ bool ClipboardData::Restore(const HWND hwndOwner, ExtendedClipboardDataMessage& 
         if (i == 0)
         {
             success =
-                ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, (LPCSTR)buffers[i], lengths[i], (LPWSTR)target, count) == count;
+                ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, reinterpret_cast<LPCSTR>(buffers[i]), lengths[i], reinterpret_cast<LPWSTR>(target), count) == count;
         }
         else
         {
-            std::memcpy(target, buffers[i], lengths[i]);
+            std::memcpy(target, buffers[i], static_cast<size_t>(lengths[i]));
         }
-        ::GlobalUnlock(handles[i]);
+        ::GlobalUnlock(handles[static_cast<unsigned long long>(i)]);
     }
     // we can ignore everything else
     if (success)
@@ -740,21 +740,21 @@ bool ClipboardData::Restore(const HWND hwndOwner, ExtendedClipboardDataMessage& 
         success = holder.m_bIsOpen && EmptyClipboard();
         for (int i{ 0 }; (i < 4) && success; ++i)
         {
-            if (handles[i])
+            if (handles[static_cast<unsigned long long>(i)])
             {
-                success = ::SetClipboardData(formats[i], handles[i]) != nullptr;
+                success = ::SetClipboardData(formats[i], handles[static_cast<unsigned long long>(i)]) != nullptr;
                 if (success)
                 {
-                    handles[i] = nullptr;
+                    handles[static_cast<unsigned long long>(i)] = nullptr;
                 }
             }
         }
     }
     for (int i{ 0 }; i < 4; ++i)
     {
-        if (handles[i])
+        if (handles[static_cast<unsigned long long>(i)])
         {
-            ::GlobalFree(handles[i]);
+            ::GlobalFree(handles[static_cast<unsigned long long>(i)]);
         }
     }
     return success;
@@ -848,7 +848,7 @@ bool Clipboard::UpdateExtended(ClipboardData& data, const CARD32 overrideFlags)
     for (int i{ 0 }; i < 4; ++i)
     {
         CARD32 format = 1u << i;
-        if (!(selected & format) || (!requested && ((CARD32)lengths[i] > limits[i])))
+        if (!(selected & format) || (!requested && (static_cast<CARD32>(lengths[i]) > limits[i])))
         {
             continue;
         }
@@ -856,15 +856,15 @@ bool Clipboard::UpdateExtended(ClipboardData& data, const CARD32 overrideFlags)
         {
             continue;
         }
-        plain.writeU32(lengths[i]);
+        plain.writeU32(static_cast<rdr::U32>(lengths[i]));
         plain.writeBytes(buffers[i], lengths[i]);
         provided |= format;
     }
     if (provided || (requested && (settings.m_remoteCaps & clipProvide)))
     {
-        uLongf size = compressBound(plain.length());
+        uLongf size = compressBound(static_cast<uLong>(plain.length()));
         std::vector<BYTE> compressed(size);
-        if ((compress2(compressed.data(), &size, (const Bytef*)plain.data(), plain.length(), Z_BEST_COMPRESSION) == Z_OK) &&
+        if ((compress2(compressed.data(), &size, reinterpret_cast<const Bytef*>(plain.data()), static_cast<uLong>(plain.length()), Z_BEST_COMPRESSION) == Z_OK) &&
             (size <= ExtendedClipboardDataMessage::maxPayload - 4))
         {
             extendedClipboardDataMessage.AddFlag(provided);
@@ -943,7 +943,7 @@ bool Clipboard::UpdateClipTextEx(ClipboardData& clipboardData, CARD32 overrideFl
 
                 if ((clipboardData.m_lengthText <= settings.m_nLimitText) || (overrideFlags & clipText))
                 {
-                    compressedStream.writeU32(clipboardData.m_lengthText);
+                    compressedStream.writeU32(static_cast<rdr::U32>(clipboardData.m_lengthText));
                     compressedStream.writeBytes(clipboardData.m_pDataText, clipboardData.m_lengthText);
                     extendedClipboardDataMessage.AddFlag(clipText);
                     m_bNeedToProvide = true;
@@ -959,7 +959,7 @@ bool Clipboard::UpdateClipTextEx(ClipboardData& clipboardData, CARD32 overrideFl
 
                 if ((clipboardData.m_lengthRTF <= settings.m_nLimitRTF) || (overrideFlags & clipRTF))
                 {
-                    compressedStream.writeU32(clipboardData.m_lengthRTF);
+                    compressedStream.writeU32(static_cast<rdr::U32>(clipboardData.m_lengthRTF));
                     compressedStream.writeBytes(clipboardData.m_pDataRTF, clipboardData.m_lengthRTF);
                     extendedClipboardDataMessage.AddFlag(clipRTF);
                     m_bNeedToProvide = true;
@@ -975,7 +975,7 @@ bool Clipboard::UpdateClipTextEx(ClipboardData& clipboardData, CARD32 overrideFl
 
                 if ((clipboardData.m_lengthHTML <= settings.m_nLimitHTML) || (overrideFlags & clipHTML))
                 {
-                    compressedStream.writeU32(clipboardData.m_lengthHTML);
+                    compressedStream.writeU32(static_cast<rdr::U32>(clipboardData.m_lengthHTML));
                     compressedStream.writeBytes(clipboardData.m_pDataHTML, clipboardData.m_lengthHTML);
                     extendedClipboardDataMessage.AddFlag(clipHTML);
                     m_bNeedToProvide = true;
@@ -991,7 +991,7 @@ bool Clipboard::UpdateClipTextEx(ClipboardData& clipboardData, CARD32 overrideFl
 
                 if ((clipboardData.m_lengthDIB <= settings.m_nLimitDIB) || (overrideFlags & clipDIB))
                 {
-                    compressedStream.writeU32(clipboardData.m_lengthDIB);
+                    compressedStream.writeU32(static_cast<rdr::U32>(clipboardData.m_lengthDIB));
                     compressedStream.writeBytes(clipboardData.m_pDataDIB, clipboardData.m_lengthDIB);
                     extendedClipboardDataMessage.AddFlag(clipDIB);
                     m_bNeedToProvide = true;
@@ -1007,7 +1007,7 @@ bool Clipboard::UpdateClipTextEx(ClipboardData& clipboardData, CARD32 overrideFl
 
         if (m_bNeedToProvide)
         {
-            extendedClipboardDataMessage.AppendBytes((BYTE*)memStream.data(), memStream.length());
+            extendedClipboardDataMessage.AppendBytes(const_cast<BYTE*>(reinterpret_cast<const BYTE *>(memStream.data())), memStream.length());
             memStream.clear();
         }
 
@@ -1016,19 +1016,19 @@ bool Clipboard::UpdateClipTextEx(ClipboardData& clipboardData, CARD32 overrideFl
         {
             // Convert UTF-8 to UTF-16 and store directly (no CP_ACP conversion needed)
             int nConvertedSize =
-                ::MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)clipboardData.m_pDataText, clipboardData.m_lengthText, nullptr, 0);
+                ::MultiByteToWideChar(CP_UTF8, 0, reinterpret_cast<LPCSTR>(clipboardData.m_pDataText), clipboardData.m_lengthText, nullptr, 0);
 
             if (nConvertedSize > 0)
             {
-                wchar_t* clipStr = new wchar_t[nConvertedSize + 1];
-                int nFinalConvertedSize = ::MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)clipboardData.m_pDataText,
-                                                              clipboardData.m_lengthText, (LPWSTR)clipStr, nConvertedSize);
+                wchar_t* clipStr = new wchar_t[static_cast<unsigned long long>(nConvertedSize + 1)];
+                int nFinalConvertedSize = ::MultiByteToWideChar(CP_UTF8, 0, reinterpret_cast<LPCSTR>(clipboardData.m_pDataText),
+                                                              clipboardData.m_lengthText, reinterpret_cast<LPWSTR>(clipStr), nConvertedSize);
 
                 if (nFinalConvertedSize > 0)
                 {
                     clipStr[nFinalConvertedSize] = L'\0';
                     // Store Unicode directly - no CP_ACP conversion, preserves all characters
-                    m_strLastCutText.assign(clipStr, nFinalConvertedSize);
+                    m_strLastCutText.assign(clipStr, static_cast<unsigned long long>(nFinalConvertedSize));
                 }
 
                 delete[] clipStr;

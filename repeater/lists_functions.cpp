@@ -113,7 +113,7 @@ Find_server_list(mystruct* const Serverstruct)
             {
                 ::Sleep(1000);
             }
-            return i;
+            return static_cast<ULONG>(i);
         }
     }
     return MAX_LIST + 1;
@@ -128,7 +128,7 @@ Find_server_list_id(mystruct* const Serverstruct)
         {
             Serverstruct->waitingThread = Servers[i].waitingThread;
             Serverstruct->nummer = Servers[i].nummer;
-            return i;
+            return static_cast<ULONG>(i);
         }
     }
     return MAX_LIST + 1;
@@ -226,7 +226,7 @@ Find_viewer_list(mystruct* const Viewerstruct)
             {
                 ::Sleep(1000);
             }
-            return i;
+            return static_cast<ULONG>(i);
         }
     }
     return MAX_LIST + 1;
@@ -242,7 +242,7 @@ Find_viewer_list_id(mystruct* const Viewerstruct)
         {
             Viewerstruct->waitingThread = Viewers[i].waitingThread;
             Viewerstruct->nummer = Viewers[i].nummer;
-            return i;
+            return static_cast<ULONG>(i);
         }
     }
     return MAX_LIST + 1;

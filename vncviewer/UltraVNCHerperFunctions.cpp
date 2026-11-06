@@ -91,7 +91,7 @@ char* GetVersionFromResource(char* const version)
                 {
                     ::CopyMemory(pResCopy, pRes, dwSize);
 
-                    if (::VerQueryValue(pResCopy, _T("\\"), (LPVOID*)&lpFfi, &uLen))
+                    if (::VerQueryValue(pResCopy, _T("\\"), reinterpret_cast<LPVOID*>(&lpFfi), &uLen))
                     {
                         if (lpFfi != nullptr)
                         {

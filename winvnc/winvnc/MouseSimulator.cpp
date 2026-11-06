@@ -24,7 +24,7 @@ CursorColorManager::~CursorColorManager()
 {
     for (int i{ 1 }; i < 9; ++i)
     {
-        ::DestroyCursor(hCorsor[i]);
+        ::DestroyCursor(hCorsor[static_cast<unsigned long long>(i)]);
     }
 }
 
@@ -44,7 +44,7 @@ void CursorColorManager::Init(const HINSTANCE hInstIn)
         //hCorsor[8] = LoadCursor(hInst, MAKEINTRESOURCE(IDC_CURSOR9));
         for (int i{ 0 }; i < 7; ++i)
         {
-            usedCursor[i] = false;
+            usedCursor[static_cast<unsigned long long>(i)] = false;
         }
     }
 }
@@ -52,10 +52,10 @@ void CursorColorManager::Init(const HINSTANCE hInstIn)
 HICON CursorColorManager::getCursor()
 {
     for (int i{ 1 }; i < 7; ++i)
-        if (usedCursor[i] == false)
+        if (usedCursor[static_cast<unsigned long long>(i)] == false)
         {
-            usedCursor[i] = true;
-            return hCorsor[i];
+            usedCursor[static_cast<unsigned long long>(i)] = true;
+            return hCorsor[static_cast<unsigned long long>(i)];
         }
     return nullptr;
 }
@@ -64,9 +64,9 @@ void CursorColorManager::releaseCursor(const HICON icon)
 {
     for (int i{ 1 }; i < 7; ++i)
     {
-        if (hCorsor[i] == icon)
+        if (hCorsor[static_cast<unsigned long long>(i)] == icon)
         {
-            usedCursor[i] = false;
+            usedCursor[static_cast<unsigned long long>(i)] = false;
         }
     }
 }
@@ -75,7 +75,7 @@ HICON CursorColorManager::getEraser() { return hCorsor[0U]; }
 
 CursorColorManager* CursorColorManager::getInstance()
 {
-    if (instance == 0)
+    if (instance == nullptr)
     {
         instance = new CursorColorManager();
     }
@@ -86,7 +86,7 @@ CursorColorManager* CursorColorManager::getInstance()
 SimulateCursor::SimulateCursor(const HINSTANCE hInst)
 {
     this->hInst = hInst;
-    CursorColorManager::getInstance()->Init((HINSTANCE)hInst);
+    CursorColorManager::getInstance()->Init(reinterpret_cast<HINSTANCE>(hInst));
     hIconMouse = CursorColorManager::getInstance()->getCursor();
     hIconErase = CursorColorManager::getInstance()->getEraser();
     DWORD dwTId;
@@ -101,7 +101,7 @@ SimulateCursor::~SimulateCursor()
 
 DWORD WINAPI SimulateCursor::Start(const LPVOID lpParam)
 {
-    SimulateCursor* sc = (SimulateCursor*)lpParam;
+    SimulateCursor* sc = reinterpret_cast<SimulateCursor*>(lpParam);
     HDESK desktop;
     desktop = ::OpenInputDesktop(0, FALSE,
                                DESKTOP_CREATEMENU | DESKTOP_CREATEWINDOW | DESKTOP_ENUMERATE | DESKTOP_HOOKCONTROL |
@@ -114,7 +114,7 @@ DWORD WINAPI SimulateCursor::Start(const LPVOID lpParam)
 
     sc->hWnd = create_window(sc);
     MSG msg;
-    while (::GetMessage(&msg, 0, 0, 0) != 0)
+    while (::GetMessage(&msg, nullptr, 0, 0) != 0)
     {
         ::TranslateMessage(&msg);
         ::DispatchMessage(&msg);
@@ -138,12 +138,12 @@ HWND SimulateCursor::create_window(SimulateCursor* const simulateCursor)
     wcex.lpfnWndProc = WndProc;
     wcex.cbClsExtra = 0;
     wcex.cbWndExtra = 0;
-    wcex.hInstance = (HINSTANCE)sc->hInst;
+    wcex.hInstance = reinterpret_cast<HINSTANCE>(sc->hInst);
     wcex.hIcon = nullptr;
     wcex.hCursor = nullptr;
-    wcex.hbrBackground = (HBRUSH)::GetStockObject(HOLLOW_BRUSH);
-    wcex.lpszMenuName = 0;
-    ;
+    wcex.hbrBackground = reinterpret_cast<HBRUSH>(::GetStockObject(HOLLOW_BRUSH));
+    wcex.lpszMenuName = nullptr;
+    
     wcex.lpszClassName = "mouseSimulator";
     wcex.hIconSm = nullptr;
     ::RegisterClassEx(&wcex);
@@ -151,18 +151,18 @@ HWND SimulateCursor::create_window(SimulateCursor* const simulateCursor)
     RECT rcClient;
     if (!::GetClientRect(hWndDesktop, &rcClient))
     {
-        return 0;
+        return nullptr;
     }
 
     HWND hWnd = ::CreateWindowEx(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW, "mouseSimulator",
                                "mouseSimulator", WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER, rcClient.left,
                                rcClient.top, rcClient.right - rcClient.left, rcClient.bottom - rcClient.top, hWndDesktop, nullptr,
-                               (HINSTANCE)sc->hInst, nullptr);
+                               reinterpret_cast<HINSTANCE>(sc->hInst), nullptr);
 
 #if !defined(_WIN64)
     ::SetWindowLong(hWnd, GWL_USERDATA, static_cast<long>(sc));
 #else
-    ::SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)sc);
+    ::SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(sc));
 #endif
 
 #ifndef _X64

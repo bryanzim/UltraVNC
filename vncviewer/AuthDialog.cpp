@@ -79,30 +79,30 @@ int AuthDialog::DoDialog(const DialogType dialogTypeIn, TCHAR IN_host[MAX_HOST_N
     switch (dialogTypeIn)
     {
     case dtUserPass:
-        result = static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this));
+        result = static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG), nullptr, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this)));
         break;
     case dtPass:
         result =
-            static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG3), nullptr, (DLGPROC)DlgProc1, (LONG_PTR)this));
+            static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG3), nullptr, reinterpret_cast<DLGPROC>(DlgProc1), reinterpret_cast<LONG_PTR>(this)));
         break;
     case dtUserPassNotEncryption:
-        result = static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG2), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this));
+        result = static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG2), nullptr, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this)));
         break;
     case dtPassUpgrade:
         result =
-            static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG1), nullptr, (DLGPROC)DlgProc1, (LONG_PTR)this));
+            static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG1), nullptr, reinterpret_cast<DLGPROC>(DlgProc1), reinterpret_cast<LONG_PTR>(this)));
         break;
     case dtUserPassRSA:
         m_bPassphraseMode = true;
-        result = static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG4), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this));
+        result = static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG4), nullptr, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this)));
         break;
     case dtPassRSA:
         m_bPassphraseMode = true;
         result =
-            static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG5), nullptr, (DLGPROC)DlgProc1, (LONG_PTR)this));
+            static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG5), nullptr, reinterpret_cast<DLGPROC>(DlgProc1), reinterpret_cast<LONG_PTR>(this)));
         break;
     case dtUserToken:
-        result = static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this));
+        result = static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG), nullptr, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this)));
         break;
     }
 
@@ -130,7 +130,7 @@ BOOL CALLBACK AuthDialog::DlgProc(const HWND hwnd, const UINT uMsg, const WPARAM
     case WM_INITDIALOG: {
         helper::SafeSetWindowUserData(hwnd, lParam);
 
-        _this = (AuthDialog*)lParam;
+        _this = reinterpret_cast<AuthDialog*>(lParam);
 
         if (_this->dialogType == dtUserPassRSA)
         {
@@ -162,8 +162,8 @@ BOOL CALLBACK AuthDialog::DlgProc(const HWND hwnd, const UINT uMsg, const WPARAM
             ::SetDlgItemTextW(hwnd, IDC_SIGNATURE, _whx.data());
         }
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         return TRUE;
     }
     case WM_COMMAND:
@@ -203,7 +203,7 @@ BOOL CALLBACK AuthDialog::DlgProc1(const HWND hwnd, const UINT uMsg, const WPARA
     {
 
     case WM_INITDIALOG: {
-        _this = (AuthDialog*)lParam;
+        _this = reinterpret_cast<AuthDialog*>(lParam);
         helper::SafeSetWindowUserData(hwnd, lParam);
         //adzm 2010-05-12 - passphrase
         Edit_LimitText(::GetDlgItem(hwnd, IDC_PASSWD_EDIT), _this->m_bPassphraseMode ? 128 : 8);
@@ -224,8 +224,8 @@ BOOL CALLBACK AuthDialog::DlgProc1(const HWND hwnd, const UINT uMsg, const WPARA
             ::SetDlgItemTextW(hwnd, IDC_SIGNATURE, _whx.data());
         }
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         return TRUE;
     }
     case WM_COMMAND:

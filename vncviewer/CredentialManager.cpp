@@ -88,7 +88,7 @@ bool CredentialManager::WriteVncPassword(const wchar_t* const host, const int po
     cred.TargetName = target.data();
     cred.Persist = CRED_PERSIST_LOCAL_MACHINE;
     cred.CredentialBlobSize = static_cast<DWORD>(pwLen);
-    cred.CredentialBlob = (LPBYTE)password;
+    cred.CredentialBlob = reinterpret_cast<LPBYTE>(const_cast<char *>(password));
     cred.UserName = L"UltraVNC";
 
     return (::CredWriteW(&cred, 0) != FALSE);
@@ -151,7 +151,7 @@ bool CredentialManager::ReadMsLogonPassword(const wchar_t* const host, const int
                 const char* sep = std::strchr(userNameA.data(), '\\');
                 if (sep)
                 {
-                    std::size_t dLen = sep - userNameA.data();
+                    std::size_t dLen = static_cast<std::size_t>(sep - userNameA.data());
                     std::size_t uLen = std::strlen(sep + 1);
                     if ((dLen < domainSize) && (uLen < userSize))
                     {
@@ -229,7 +229,7 @@ bool CredentialManager::WriteMsLogonPassword(const wchar_t* const host, const in
     cred.TargetName = target.data();
     cred.Persist = CRED_PERSIST_LOCAL_MACHINE;
     cred.CredentialBlobSize = static_cast<DWORD>(pLen);
-    cred.CredentialBlob = (LPBYTE)password;
+    cred.CredentialBlob = reinterpret_cast<LPBYTE>(const_cast<char *>(password));
     cred.UserName = userNameW.data();
 
     return (::CredWriteW(&cred, 0) != FALSE);

@@ -16,8 +16,8 @@
 
 // Datatypes used by the VGUI system
 
-#if (!defined(_ATT_VTYPES_DEFINED))
-#define _ATT_VTYPES_DEFINED
+#if (!defined(ATT_VTYPES_DEFINED))
+#define ATT_VTYPES_DEFINED
 
 ////////////////////////////
 // Numeric data types
@@ -88,4 +88,4 @@ using VChar = char;
 // #include "rfbgui/VRect.h"
 using VString = VChar*;
 
-#endif // _ATT_VTYPES_DEFINED
+#endif // ATT_VTYPES_DEFINED

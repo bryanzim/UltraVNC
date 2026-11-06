@@ -10,7 +10,7 @@
 
 
 #pragma once
-#include <windows.h>
+#include <Windows.h>
 
 #include <iostream>
 #include <list>
@@ -43,7 +43,7 @@ typedef struct SW_DEVICE_CREATE_INFO_
     int CapabilityFlags;
 } SW_DEVICE_CREATE_INFO;
 #endif //__MINGW32__
-#include <aclapi.h>
+#include <AclAPI.h>
 
 #include <array>
 #include <map>

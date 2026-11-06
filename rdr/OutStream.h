@@ -15,8 +15,8 @@
 // Representation).
 //
 
-#ifndef __RDR_OUTSTREAM_H__
-#define __RDR_OUTSTREAM_H__
+#ifndef RDR_OUTSTREAM_H
+#define RDR_OUTSTREAM_H
 
 #pragma once
 
@@ -66,7 +66,7 @@ namespace rdr
         {
             check(2);
             *ptr++ = u >> 8;
-            *ptr++ = (U8)u;
+            *ptr++ = static_cast<U8>(u);
         }
         inline void writeU32(const U32 u)
         {
@@ -77,9 +77,9 @@ namespace rdr
             *ptr++ = static_cast<rdr::U8>(u);
         }
 
-        inline void writeS8(const S8 s) { writeU8((U8)s); }
-        inline void writeS16(const S16 s) { writeU16((U16)s); }
-        inline void writeS32(const S32 s) { writeU32((U32)s); }
+        inline void writeS8(const S8 s) { writeU8(static_cast<U8>(s)); }
+        inline void writeS16(const S16 s) { writeU16(static_cast<U16>(s)); }
+        inline void writeS32(const S32 s) { writeU32(static_cast<U32>(s)); }
 
         // writeString() writes a string - a U32 length followed by the data. The
         // given string should be null-terminated (but the terminating null is not
@@ -87,9 +87,9 @@ namespace rdr
 
         inline void writeString(const char* const str)
         {
-            U32 len = (U32)std::strlen(str);
+            U32 len = static_cast<U32>(std::strlen(str));
             writeU32(len);
-            writeBytes(str, len);
+            writeBytes(str, static_cast<int>(len));
         }
 
         inline void pad(int bytes)
@@ -114,12 +114,12 @@ namespace rdr
 
         virtual void writeBytes(const void* const data, const int length)
         {
-            const U8* dataPtr = (const U8*)data;
+            const U8* dataPtr = reinterpret_cast<const U8*>(data);
             const U8* dataEnd = dataPtr + length;
             while (dataPtr < dataEnd)
             {
                 int n = check(1, static_cast<int>((dataEnd - dataPtr)));
-                std::memcpy(ptr, dataPtr, n);
+                std::memcpy(ptr, dataPtr, static_cast<size_t>(n));
                 ptr += n;
                 dataPtr += n;
             }
@@ -131,30 +131,30 @@ namespace rdr
         inline void writeOpaque16(U16 u)
         {
             check(2);
-            *ptr++ = ((U8*)&u)[0U];
-            *ptr++ = ((U8*)&u)[1U];
+            *ptr++ = (reinterpret_cast<U8*>(&u))[0U];
+            *ptr++ = (reinterpret_cast<U8*>(&u))[1U];
         }
         inline void writeOpaque32(U32 u)
         {
             check(4);
-            *ptr++ = ((U8*)&u)[0U];
-            *ptr++ = ((U8*)&u)[1U];
-            *ptr++ = ((U8*)&u)[2U];
-            *ptr++ = ((U8*)&u)[3U];
+            *ptr++ = (reinterpret_cast<U8*>(&u))[0U];
+            *ptr++ = (reinterpret_cast<U8*>(&u))[1U];
+            *ptr++ = (reinterpret_cast<U8*>(&u))[2U];
+            *ptr++ = (reinterpret_cast<U8*>(&u))[3U];
         }
         inline void writeOpaque24A(U32 u)
         {
             check(3);
-            *ptr++ = ((U8*)&u)[0U];
-            *ptr++ = ((U8*)&u)[1U];
-            *ptr++ = ((U8*)&u)[2U];
+            *ptr++ = (reinterpret_cast<U8*>(&u))[0U];
+            *ptr++ = (reinterpret_cast<U8*>(&u))[1U];
+            *ptr++ = (reinterpret_cast<U8*>(&u))[2U];
         }
         inline void writeOpaque24B(U32 u)
         {
             check(3);
-            *ptr++ = ((U8*)&u)[1U];
-            *ptr++ = ((U8*)&u)[2U];
-            *ptr++ = ((U8*)&u)[3U];
+            *ptr++ = (reinterpret_cast<U8*>(&u))[1U];
+            *ptr++ = (reinterpret_cast<U8*>(&u))[2U];
+            *ptr++ = (reinterpret_cast<U8*>(&u))[3U];
         }
 
         // length() returns the length of the stream.

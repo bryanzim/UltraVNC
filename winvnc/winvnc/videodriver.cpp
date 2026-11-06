@@ -73,7 +73,7 @@ void VideoDriver::videoDriver_start(const int x, int y, const int w, const int h
             if (getDcMirror() != nullptr)
             {
                 pSharedMemory = videoMemory_GetSharedMemory();
-                pChangebuf = (PCHANGES_BUF)pSharedMemory;
+                pChangebuf = reinterpret_cast<PCHANGES_BUF>(pSharedMemory);
                 pFramebuffer = pSharedMemory + sizeof(CHANGES_BUF);
             }
             else
@@ -94,7 +94,7 @@ void VideoDriver::videoDriver_start(const int x, int y, const int w, const int h
             if (getDcMirror() != nullptr)
             {
                 pSharedMemory = videoMemory_GetSharedMemory();
-                pChangebuf = (PCHANGES_BUF)pSharedMemory;
+                pChangebuf = reinterpret_cast<PCHANGES_BUF>(pSharedMemory);
                 pFramebuffer = pSharedMemory + sizeof(CHANGES_BUF);
             }
             else
@@ -104,7 +104,7 @@ void VideoDriver::videoDriver_start(const int x, int y, const int w, const int h
                     if (getDcMirror() != nullptr)
                     {
                         pSharedMemory = videoMemory_GetSharedMemory();
-                        pChangebuf = (PCHANGES_BUF)pSharedMemory;
+                        pChangebuf = reinterpret_cast<PCHANGES_BUF>(pSharedMemory);
                         pFramebuffer = pSharedMemory + sizeof(CHANGES_BUF);
                     }
                     else
@@ -233,7 +233,7 @@ PCHAR VideoDriver::videoMemory_GetSharedMemory(void)
         hMapFile = ::CreateFileMapping(hFile, nullptr, PAGE_READWRITE, 0, 0, nullptr);
         if (hMapFile && (hMapFile != INVALID_HANDLE_VALUE))
         {
-            pVideoMemory = (char*)::MapViewOfFile(hMapFile, FILE_MAP_READ, 0, 0, 0);
+            pVideoMemory = reinterpret_cast<char*>(::MapViewOfFile(hMapFile, FILE_MAP_READ, 0, 0, 0));
             ::CloseHandle(hMapFile);
         }
         ::CloseHandle(hFile);
@@ -273,7 +273,7 @@ bool VideoDriver::mirror_driver_Vista(const DWORD dwAttach, int x, int y, const 
         DWORD cxPrimary{ 0xFFFFFFFFU };
         DWORD cyPrimary{ 0xFFFFFFFFU };
         // First enumerate for Primary display device:
-        while (result = ::EnumDisplayDevicesA(nullptr, devNum, &dispDevice, 0))
+        while (result = ::EnumDisplayDevicesA(nullptr, static_cast<DWORD>(devNum), &dispDevice, 0))
         {
             if (dispDevice.StateFlags & DISPLAY_DEVICE_PRIMARY_DEVICE)
             {
@@ -295,7 +295,7 @@ bool VideoDriver::mirror_driver_Vista(const DWORD dwAttach, int x, int y, const 
         {
             return false;
         }
-        shared_buffer_size = devmode.dmBitsPerPel / 8 * w * h + sizeof(CHANGES_BUF);
+        shared_buffer_size = devmode.dmBitsPerPel / 8 * static_cast<DWORD>(w) * static_cast<DWORD>(h) + sizeof(CHANGES_BUF);
         // error check
         if (!result)
         {
@@ -308,7 +308,7 @@ bool VideoDriver::mirror_driver_Vista(const DWORD dwAttach, int x, int y, const 
 
         // Enumerate again for the Mirror Driver:
         devNum = 0;
-        while (result = ::EnumDisplayDevicesA(nullptr, devNum, &dispDevice, 0))
+        while (result = ::EnumDisplayDevicesA(nullptr, static_cast<DWORD>(devNum), &dispDevice, 0))
         {
             if (std::strcmp(&dispDevice.DeviceString[0U], driverName) == 0)
             {
@@ -342,15 +342,15 @@ bool VideoDriver::mirror_driver_Vista(const DWORD dwAttach, int x, int y, const 
         }
 
         // Reset the devmode for Mirror Driver use:
-        const int depth = devmode.dmBitsPerPel;
+        const int depth = static_cast<int>(devmode.dmBitsPerPel);
         ::FillMemory(&devmode, sizeof(DEVMODE), 0);
         devmode.dmSize = sizeof(DEVMODE);
         devmode.dmDriverExtra = 0;
-        devmode.dmBitsPerPel = depth;
+        devmode.dmBitsPerPel = static_cast<DWORD>(depth);
         devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT | DM_POSITION;
 
-        ::StringCbCopy((LPSTR)&devmode.dmDeviceName[0U], sizeof(devmode.dmDeviceName), "mv2");
-        deviceName = (LPSTR)&dispDevice.DeviceName[0U];
+        ::StringCbCopy(reinterpret_cast<LPSTR>(&devmode.dmDeviceName[0U]), sizeof(devmode.dmDeviceName), "mv2");
+        deviceName = reinterpret_cast<LPSTR>(&dispDevice.DeviceName[0U]);
 
         if (bED)
         {
@@ -364,8 +364,8 @@ bool VideoDriver::mirror_driver_Vista(const DWORD dwAttach, int x, int y, const 
             }
             else
             {
-                devmode.dmPelsWidth = w;
-                devmode.dmPelsHeight = h;
+                devmode.dmPelsWidth = static_cast<DWORD>(w);
+                devmode.dmPelsHeight = static_cast<DWORD>(h);
                 devmode.dmPosition.x = x;
                 devmode.dmPosition.y = y;
             }
@@ -442,7 +442,7 @@ void VideoDriver::mirror_driver_detach_XP()
         devmode.dmDeviceName[0U] = '\0';
         INT devNum{ 0 };
         BOOL result;
-        while (result = ::EnumDisplayDevicesA(nullptr, devNum, &dispDevice, 0))
+        while (result = ::EnumDisplayDevicesA(nullptr, static_cast<DWORD>(devNum), &dispDevice, 0))
         {
             if (std::strcmp(&dispDevice.DeviceString[0U], driverName) == 0)
             {
@@ -480,20 +480,20 @@ void VideoDriver::mirror_driver_detach_XP()
         }
 
 
-        HKEY hKeyProfileMirror = (HKEY)0;
+        HKEY hKeyProfileMirror = static_cast<HKEY>(nullptr);
         if (::RegCreateKey(HKEY_LOCAL_MACHINE,
                          _T("SYSTEM\\CurrentControlSet\\Hardware Profiles\\Current\\System\\CurrentControlSet\\Services\\mv2"),
                          &hKeyProfileMirror) != ERROR_SUCCESS)
         {
             return;
         }
-        HKEY hKeyDevice = (HKEY)0;
+        HKEY hKeyDevice = static_cast<HKEY>(nullptr);
         if (::RegCreateKey(hKeyProfileMirror, _T(&deviceNum[0U]), &hKeyDevice) != ERROR_SUCCESS)
         {
             return;
         }
         DWORD one{ 0U };
-        if (::RegSetValueEx(hKeyDevice, _T("Attach.ToDesktop"), 0, REG_DWORD, (unsigned char*)&one, 4) != ERROR_SUCCESS)
+        if (::RegSetValueEx(hKeyDevice, _T("Attach.ToDesktop"), 0, REG_DWORD, reinterpret_cast<unsigned char*>(&one), 4) != ERROR_SUCCESS)
         {
             return;
         }
@@ -501,18 +501,18 @@ void VideoDriver::mirror_driver_detach_XP()
         ::RegCloseKey(hKeyDevice);
         deviceSub = strstr(&dispDevice.DeviceKey[0U], "SYSTEM");
 
-        HKEY hKeyProfileMirror2 = (HKEY)0;
+        HKEY hKeyProfileMirror2 = static_cast<HKEY>(nullptr);
         if (::RegCreateKey(HKEY_LOCAL_MACHINE, _T("SYSTEM\\CurrentControlSet\\Hardware Profiles\\Current"), &hKeyProfileMirror2) !=
             ERROR_SUCCESS)
         {
             return;
         }
-        HKEY hKeyDevice2 = (HKEY)0;
+        HKEY hKeyDevice2 = static_cast<HKEY>(nullptr);
         if (::RegCreateKey(hKeyProfileMirror2, _T(deviceSub), &hKeyDevice2) != ERROR_SUCCESS)
         {
             return;
         }
-        if (::RegSetValueEx(hKeyDevice2, _T("Attach.ToDesktop"), 0, REG_DWORD, (unsigned char*)&one, 4) != ERROR_SUCCESS)
+        if (::RegSetValueEx(hKeyDevice2, _T("Attach.ToDesktop"), 0, REG_DWORD, reinterpret_cast<unsigned char*>(&one), 4) != ERROR_SUCCESS)
         {
             return;
         }
@@ -522,8 +522,8 @@ void VideoDriver::mirror_driver_detach_XP()
         ::FillMemory(&devmode, sizeof(DEVMODE), 0);
         devmode.dmSize = sizeof(DEVMODE);
         devmode.dmDriverExtra = 0;
-        ::StringCbCopy((LPSTR)&devmode.dmDeviceName[0U], sizeof(devmode.dmDeviceName), "mv2");
-        deviceName = (LPSTR)&dispDevice.DeviceName[0U];
+        ::StringCbCopy(reinterpret_cast<LPSTR>(&devmode.dmDeviceName[0U]), sizeof(devmode.dmDeviceName), "mv2");
+        deviceName = reinterpret_cast<LPSTR>(&dispDevice.DeviceName[0U]);
         devmode.dmBitsPerPel = 32;
         // add 'Default.*' settings to the registry under above hKeyProfile\mirror\device
         hdeskCurrent = ::GetThreadDesktop(::GetCurrentThreadId());
@@ -564,7 +564,7 @@ bool VideoDriver::mirror_driver_attach_XP(int x, int y, const int w, int h)
     {
         return false;
     }
-    shared_buffer_size = devmode.dmBitsPerPel / 8 * w * h + sizeof(CHANGES_BUF);
+    shared_buffer_size = devmode.dmBitsPerPel / 8 * static_cast<DWORD>(w) * static_cast<DWORD>(h) + sizeof(CHANGES_BUF);
     if (change)
     {
         // query all display devices in the system until we hit
@@ -578,7 +578,7 @@ bool VideoDriver::mirror_driver_attach_XP(int x, int y, const int w, int h)
         devmode.dmDeviceName[0U] = '\0';
         INT devNum{ 0 };
         BOOL result;
-        while (result = ::EnumDisplayDevicesA(nullptr, devNum, &dispDevice, 0))
+        while (result = ::EnumDisplayDevicesA(nullptr, static_cast<DWORD>(devNum), &dispDevice, 0))
         {
             if (std::strcmp(&dispDevice.DeviceString[0U], driverName) == 0)
             {
@@ -613,7 +613,7 @@ bool VideoDriver::mirror_driver_attach_XP(int x, int y, const int w, int h)
             ::StringCbCopy(&deviceNum[0U], MAX_PATH, ++deviceSub);
         }
 
-        HKEY hKeyProfileMirror = (HKEY)0;
+        HKEY hKeyProfileMirror = static_cast<HKEY>(nullptr);
         if (::RegCreateKey(HKEY_LOCAL_MACHINE,
                          _T("SYSTEM\\CurrentControlSet\\Hardware Profiles\\Current\\System\\CurrentControlSet\\Services\\mv2"),
                          &hKeyProfileMirror) != ERROR_SUCCESS)
@@ -621,30 +621,30 @@ bool VideoDriver::mirror_driver_attach_XP(int x, int y, const int w, int h)
             return false;
         }
 
-        HKEY hKeyDevice = (HKEY)0;
+        HKEY hKeyDevice = static_cast<HKEY>(nullptr);
         if (::RegCreateKey(hKeyProfileMirror, _T(&deviceNum[0U]), &hKeyDevice) != ERROR_SUCCESS)
         {
             return false;
         }
 
         DWORD one{ 1U };
-        if (::RegSetValueEx(hKeyDevice, _T("Attach.ToDesktop"), 0, REG_DWORD, (unsigned char*)&one, 4) != ERROR_SUCCESS)
+        if (::RegSetValueEx(hKeyDevice, _T("Attach.ToDesktop"), 0, REG_DWORD, reinterpret_cast<unsigned char*>(&one), 4) != ERROR_SUCCESS)
         {
             return false;
         }
-        const int depth = devmode.dmBitsPerPel;
+        const int depth = static_cast<int>(devmode.dmBitsPerPel);
 
         ::FillMemory(&devmode, sizeof(DEVMODE), 0);
         devmode.dmSize = sizeof(DEVMODE);
         devmode.dmDriverExtra = 0;
-        ::StringCbCopy((LPSTR)&devmode.dmDeviceName[0U], 32, "mv2");
+        ::StringCbCopy(reinterpret_cast<LPSTR>(&devmode.dmDeviceName[0U]), 32, "mv2");
         devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_POSITION | DM_PELSHEIGHT;
-        deviceName = (LPSTR)&dispDevice.DeviceName[0U];
-        devmode.dmPelsWidth = w;
-        devmode.dmPelsHeight = h;
+        deviceName = reinterpret_cast<LPSTR>(&dispDevice.DeviceName[0U]);
+        devmode.dmPelsWidth = static_cast<DWORD>(w);
+        devmode.dmPelsHeight = static_cast<DWORD>(h);
         devmode.dmPosition.x = x;
         devmode.dmPosition.y = y;
-        devmode.dmBitsPerPel = depth;
+        devmode.dmBitsPerPel = static_cast<DWORD>(depth);
 
         hdeskCurrent = ::GetThreadDesktop(::GetCurrentThreadId());
         if (hdeskCurrent != nullptr)
@@ -700,9 +700,9 @@ HDC VideoDriver::getDcMirror()
     INT devNum{ 0 };
     BOOL result;
     DriverFound = false;
-    while (result = ::EnumDisplayDevicesA(nullptr, devNum, &dd, 0))
+    while (result = ::EnumDisplayDevicesA(nullptr, static_cast<DWORD>(devNum), &dd, 0))
     {
-        if (std::strcmp((const char*)&dd.DeviceString[0U], driverNameLocal) == 0)
+        if (std::strcmp(reinterpret_cast<const char*>(&dd.DeviceString[0U]), driverNameLocal) == 0)
         {
             DriverFound = true;
             break;
@@ -711,7 +711,7 @@ HDC VideoDriver::getDcMirror()
     }
     if (DriverFound)
     {
-        deviceName = (LPSTR)&dd.DeviceName[0U];
+        deviceName = reinterpret_cast<LPSTR>(&dd.DeviceName[0U]);
         m_hrootdc = ::CreateDC("DISPLAY", deviceName, nullptr, nullptr);
         if (m_hrootdc)
         {

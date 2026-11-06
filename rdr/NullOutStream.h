@@ -10,8 +10,8 @@
 //
 
 
-#ifndef __RDR_NULLOUTSTREAM_H__
-#define __RDR_NULLOUTSTREAM_H__
+#ifndef RDR_NULLOUTSTREAM_H
+#define RDR_NULLOUTSTREAM_H
 
 #include "OutStream.h"
 

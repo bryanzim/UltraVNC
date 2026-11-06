@@ -31,7 +31,7 @@
     rect.tl.y = ty;                                                                                                                \
     rect.br.x = tx + tw;                                                                                                           \
     rect.br.y = ty + th;                                                                                                           \
-    encoder->Translate(source, (BYTE*)buf, rect);
+    encoder->Translate(source, reinterpret_cast<BYTE*>(buf), rect);
 
 #define EXTRA_ARGS , BYTE *source, vncEncoder *encoder
 
@@ -108,7 +108,7 @@ vncEncodeZRLE::~vncEncodeZRLE()
     delete mos;
     delete zos;
     delete zstdos;
-    delete[] (rdr::U32*)beforeBuf;
+    delete[] reinterpret_cast<rdr::U32*>(beforeBuf);
 }
 
 void vncEncodeZRLE::Init() { vncEncoder::Init(); }
@@ -311,25 +311,25 @@ UINT vncEncodeZRLE::EncodeRect(BYTE* const source, BYTE* const dest, const rfb::
         }
     }
 
-    rfbFramebufferUpdateRectHeader* surh = (rfbFramebufferUpdateRectHeader*)dest;
+    rfbFramebufferUpdateRectHeader* surh = reinterpret_cast<rfbFramebufferUpdateRectHeader*>(dest);
     surh->r.x = Swap16IfLE(x - monitor_Offsetx);
     surh->r.y = Swap16IfLE(y - monitor_Offsety);
     surh->r.w = Swap16IfLE(w);
     surh->r.h = Swap16IfLE(h);
     if (m_use_zywrle)
     {
-        surh->encoding = Swap32IfLE(m_use_zstd ? rfbEncodingZSTDYWRLE : rfbEncodingZYWRLE);
+        surh->encoding = static_cast<unsigned int>(Swap32IfLE(m_use_zstd ? rfbEncodingZSTDYWRLE : rfbEncodingZYWRLE));
     }
     else
     {
-        surh->encoding = Swap32IfLE(m_use_zstd ? rfbEncodingZSTDRLE : rfbEncodingZRLE);
+        surh->encoding = static_cast<unsigned int>(Swap32IfLE(m_use_zstd ? rfbEncodingZSTDRLE : rfbEncodingZRLE));
     }
 
-    rfbZRLEHeader* hdr = (rfbZRLEHeader*)(dest + sz_rfbFramebufferUpdateRectHeader);
+    rfbZRLEHeader* hdr = reinterpret_cast<rfbZRLEHeader*>((dest + sz_rfbFramebufferUpdateRectHeader));
 
-    hdr->length = Swap32IfLE(mos->length());
+    hdr->length = static_cast<unsigned int>(Swap32IfLE(mos->length()));
 
-    std::memcpy(dest + sz_rfbFramebufferUpdateRectHeader + sz_rfbZRLEHeader, (rdr::U8*)mos->data(), mos->length());
+    std::memcpy(dest + sz_rfbFramebufferUpdateRectHeader + sz_rfbZRLEHeader, reinterpret_cast<rdr::U8*>(const_cast<void *>(mos->data())), static_cast<size_t>(mos->length()));
 
-    return sz_rfbFramebufferUpdateRectHeader + sz_rfbZRLEHeader + mos->length();
+    return sz_rfbFramebufferUpdateRectHeader + static_cast<UINT>(sz_rfbZRLEHeader + mos->length());
 }

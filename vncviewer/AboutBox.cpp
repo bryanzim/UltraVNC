@@ -37,15 +37,15 @@ DoGetBkGndBitmap(IN CONST UINT uBmpResId)
         hbmBkGnd = (HBITMAP)LoadImage( NULL, szFileName, IMAGE_BITMAP, 0, 0,
            LR_CREATEDIBSECTION | LR_DEFAULTSIZE | LR_LOADFROMFILE );*/
         hbmBkGnd =
-            (HBITMAP)::LoadImage(::GetModuleHandle(nullptr), MAKEINTRESOURCE(uBmpResId), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+            reinterpret_cast<HBITMAP>(::LoadImage(::GetModuleHandle(nullptr), MAKEINTRESOURCE(uBmpResId), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
 
 
         if (nullptr == hbmBkGnd)
         {
-            hbmBkGnd = (HBITMAP)-1;
+            hbmBkGnd = reinterpret_cast<HBITMAP>(-1);
         }
     }
-    return (hbmBkGnd == (HBITMAP)-1) ? nullptr : hbmBkGnd;
+    return (hbmBkGnd == reinterpret_cast<HBITMAP>(-1)) ? nullptr : hbmBkGnd;
 }
 BOOL DoSDKEraseBkGnd(IN CONST HDC hDC, IN CONST COLORREF crBkGndFill)
 {
@@ -136,8 +136,8 @@ static LRESULT CALLBACK AboutDlgProc(const HWND hwnd, const UINT iMsg, const WPA
         }
 
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
 
         return TRUE;
     }
@@ -151,7 +151,7 @@ static LRESULT CALLBACK AboutDlgProc(const HWND hwnd, const UINT iMsg, const WPA
         }
         if (LOWORD(wParam) == IDC_UVNCCOM)
         {
-            ::ShellExecute(::GetDesktopWindow(), _T("open"), _T("https://uvnc.com/"), _T(""), 0, SW_SHOWNORMAL);
+            ::ShellExecute(::GetDesktopWindow(), _T("open"), _T("https://uvnc.com/"), _T(""), nullptr, SW_SHOWNORMAL);
         }
     }
     return FALSE;
@@ -159,5 +159,5 @@ static LRESULT CALLBACK AboutDlgProc(const HWND hwnd, const UINT iMsg, const WPA
 
 void ShowAboutBox()
 {
-    [[maybe_unused]] const int res = static_cast<int>(::DialogBox(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_APP_ABOUT), nullptr, (DLGPROC)AboutDlgProc));
+    [[maybe_unused]] const int res = static_cast<int>(::DialogBox(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_APP_ABOUT), nullptr, reinterpret_cast<DLGPROC>(AboutDlgProc)));
 }

@@ -20,8 +20,8 @@
 
 class vncSockConnect;
 
-#if (!defined(_WINVNC_VNCSOCKCONNECT))
-#define _WINVNC_VNCSOCKCONNECT
+#if (!defined(WINVNC_VNCSOCKCONNECT))
+#define WINVNC_VNCSOCKCONNECT
 
 // Includes
 #include "stdhdrs.h"
@@ -55,4 +55,4 @@ protected:
     omni_thread* m_thread;
 };
 
-#endif // _WINVNC_VNCSOCKCONNECT
+#endif // WINVNC_VNCSOCKCONNECT

@@ -75,7 +75,7 @@ using namespace rdr;
 template <class myInStream>
 void ZRLE_DECODE_BPP(int x, int y, int w, int h, rdr::InStream* const is, myInStream* const zis, PIXEL_T* const buf)
 {
-    int length = is->readU32();
+    int length = static_cast<int>(is->readU32());
     zis->setUnderlying(is, length);
 
     for (int ty = y; ty < y + h; ty += rfbZRLETileHeight)
@@ -105,7 +105,7 @@ void ZRLE_DECODE_BPP(int x, int y, int w, int h, rdr::InStream* const is, myInSt
 
             for (int i{ 0 }; i < palSize; ++i)
             {
-                palette[i] = zis->READ_PIXEL();
+                palette[static_cast<unsigned long long>(i)] = zis->READ_PIXEL();
             }
 
             if (palSize == 1)
@@ -240,7 +240,7 @@ void ZRLE_DECODE_BPP(int x, int y, int w, int h, rdr::InStream* const is, myInSt
                         {
                             throw Exception("Invalid RLE palette index");
                         }
-                        PIXEL_T pix = palette[index];
+                        PIXEL_T pix = palette[static_cast<unsigned long long>(index)];
 
                         while (len-- > 0)
                         {
@@ -260,7 +260,7 @@ void ZRLE_DECODE_BPP(int x, int y, int w, int h, rdr::InStream* const is, myInSt
                 ZYWRLE_SYNTHESIZE(buf, buf, tw, th, tw, zywrle_level, zywrleBuf);
             }
 #endif
-            IMAGE_RECT(tx, ty, tw, th, buf);
+            IMAGE_RECT(tx, ty, tw, th, buf)
             if (initialupdate_counter < 4)
             {
                 if (!directx_used)

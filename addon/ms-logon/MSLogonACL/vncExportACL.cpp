@@ -37,21 +37,21 @@ bool vncExportACL::GetACL(PACL* pACL)
         // First call to RegQueryValueEx just gets the buffer length.
         if (ERROR_SUCCESS != RegQueryValueEx(hk,        // subkey handle
                                              _T("ACL"), // value name
-                                             0,         // must be zero
-                                             0,         // value type , not needed here
+                                             nullptr,         // must be zero
+                                             nullptr,         // value type , not needed here
                                              nullptr,   //
                                              &dwValueLength))
         { // length of value data
             _ftprintf(stderr, _T("== Error %d: RegQueryValueEx 1\tValueLength = %d\n"), ::GetLastError(), dwValueLength);
             __leave;
         }
-        *pACL = (PACL)::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, dwValueLength);
+        *pACL = reinterpret_cast<PACL>(::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, dwValueLength));
 
         if (ERROR_SUCCESS != RegQueryValueEx(hk,        // subkey handle
                                              _T("ACL"), // value name
-                                             0,         // must be zero
-                                             0,         // value type
-                                             (LPBYTE)*pACL, &dwValueLength))
+                                             nullptr,         // must be zero
+                                             nullptr,         // value type
+                                             reinterpret_cast<LPBYTE>(*pACL), &dwValueLength))
         { // length of value data
             _ftprintf(stderr, _T("== Error %d: RegQueryValueEx 2\n"), ::GetLastError());
             __leave;
@@ -88,13 +88,13 @@ const TCHAR* vncExportACL::SidToText(const PSID psid)
     psia = ::GetSidIdentifierAuthority(psid);
 
     p = buf.data();
-    p += _sntprintf(p, &buf[sizeof buf] - p, _T("S-%lu-"), 0x0f & *((byte*)psid));
+    p += _sntprintf(p, &buf[sizeof buf] - p, _T("S-%lu-"), 0x0f & *(reinterpret_cast<byte*>(psid)));
 
     if ((psia->Value[0U] != 0) || (psia->Value[1U] != 0))
     {
-        p += _sntprintf(p, &buf[sizeof buf] - p, _T("0x%02hx%02hx%02hx%02hx%02hx%02hx"), (USHORT)psia->Value[0U],
-                        (USHORT)psia->Value[1U], (USHORT)psia->Value[2U], (USHORT)psia->Value[3U], (USHORT)psia->Value[4U],
-                        (USHORT)psia->Value[5U]);
+        p += _sntprintf(p, &buf[sizeof buf] - p, _T("0x%02hx%02hx%02hx%02hx%02hx%02hx"), static_cast<USHORT>(psia->Value[0U]),
+                        static_cast<USHORT>(psia->Value[1U]), static_cast<USHORT>(psia->Value[2U]), static_cast<USHORT>(psia->Value[3U]), static_cast<USHORT>(psia->Value[4U]),
+                        static_cast<USHORT>(psia->Value[5U]));
     }
     else
     {
@@ -138,7 +138,7 @@ void vncExportACL::PrintSid(const PSID psid)
         std::array<TCHAR, MAXLEN> langroup;
         std::array<TCHAR, MAXLEN> computername;
 
-        nStatus = ::NetWkstaGetInfo(0, 100, (LPBYTE*)&wkstainfo);
+        nStatus = ::NetWkstaGetInfo(nullptr, 100, reinterpret_cast<LPBYTE*>(&wkstainfo));
         if (nStatus == NERR_Success)
         {
             _tcsncpy(langroup.data(), wkstainfo->wki100_langroup, MAXLEN);
@@ -166,12 +166,12 @@ void vncExportACL::PrintSid(const PSID psid)
         // If domain or username contains whitespace, print enclosing quotes
         if (::_tcschr(domain.data(), _T(' ')) || ::_tcschr(name.data(), _T(' ')))
         {
-            _tprintf(_T("\"%s%s%s\"\n"), domain.data(), ((domain.data() == 0) || (*domain.data() == _T('\0'))) ? _T("") : _T("\\"),
+            _tprintf(_T("\"%s%s%s\"\n"), domain.data(), ((domain.data() == nullptr) || (*domain.data() == _T('\0'))) ? _T("") : _T("\\"),
                      name.data());
         }
         else
         {
-            _tprintf(_T("%s%s%s\n"), domain.data(), ((domain.data() == 0) || (*domain.data() == _T('\0'))) ? _T("") : _T("\\"),
+            _tprintf(_T("%s%s%s\n"), domain.data(), ((domain.data() == nullptr) || (*domain.data() == _T('\0'))) ? _T("") : _T("\\"),
                      name.data());
         }
     }
@@ -189,7 +189,7 @@ void vncExportACL::PrintAce(const int index, const PACL acl)
     TCHAR* type;
     PSID psid;
 
-    if (!::GetAce(acl, index, (void**)&ace))
+    if (!::GetAce(acl, static_cast<DWORD>(index), reinterpret_cast<void**>(&ace)))
     {
         _tprintf(_T("DACL, entry %d: GetAce() failed, gle == %lu\n"), index, ::GetLastError());
         return;
@@ -199,20 +199,20 @@ void vncExportACL::PrintAce(const int index, const PACL acl)
     {
     case ACCESS_ALLOWED_ACE_TYPE:
         type = _T("allow");
-        psid = &((ACCESS_ALLOWED_ACE*)ace)->SidStart;
+        psid = &(reinterpret_cast<ACCESS_ALLOWED_ACE*>(ace))->SidStart;
         break;
     case ACCESS_DENIED_ACE_TYPE:
         type = _T("deny");
-        psid = &((ACCESS_DENIED_ACE*)ace)->SidStart;
+        psid = &(reinterpret_cast<ACCESS_DENIED_ACE*>(ace))->SidStart;
         break;
     default:
         type = _T("invalid");
-        psid = &((ACCESS_ALLOWED_ACE*)ace)->SidStart;
+        psid = &(reinterpret_cast<ACCESS_ALLOWED_ACE*>(ace))->SidStart;
         break;
     }
     _tprintf(_T("%s\t"), type);
 
-    _tprintf(_T("0x%08lX\t"), ((ACCESS_ALLOWED_ACE*)ace)->Mask);
+    _tprintf(_T("0x%08lX\t"), (reinterpret_cast<ACCESS_ALLOWED_ACE*>(ace))->Mask);
 
     PrintSid(psid);
 }
@@ -224,7 +224,7 @@ void vncExportACL::PrintAcl(const PACL acl)
     DWORD i;
     ACL_SIZE_INFORMATION aci;
 
-    if (acl == 0)
+    if (acl == nullptr)
     {
         return;
     }
@@ -237,6 +237,6 @@ void vncExportACL::PrintAcl(const PACL acl)
 
     for (i = 0; i < aci.AceCount; ++i)
     {
-        PrintAce(i, acl);
+        PrintAce(static_cast<int>(i), acl);
     }
 }

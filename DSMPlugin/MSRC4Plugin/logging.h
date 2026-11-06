@@ -10,13 +10,13 @@
 //
 
 
-#ifndef _LOGGING_H
-#define _LOGGING_H
+#ifndef LOGGING_H
+#define LOGGING_H
 
 #pragma once
 #include "utils.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <stdio.h>
 #include <time.h>

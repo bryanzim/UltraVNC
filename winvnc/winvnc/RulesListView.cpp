@@ -47,7 +47,7 @@ void RulesListView::init(const HWND hListViewIn)
 
         index = 0;
         char* authHost = _strdup(settings->getAuthhosts());
-        if (authHost != 0)
+        if (authHost != nullptr)
         {
             char* context{ nullptr };
             char* token = ::strtok_s(authHost, delimiter, &context);
@@ -80,8 +80,8 @@ void RulesListView::init(const HWND hListViewIn)
                 }
                 std::array<char, 1024U> restOfString;
                 ::strcpy_s(restOfString.data(), restOfString.size(), token + 1);
-                ListView_SetItemText(hListViewIn, index, 1, const_cast<char*>(restOfString.data()));
-                ListView_SetItemText(hListViewIn, index, 2, const_cast<char*>(token));
+                ListView_SetItemText(hListViewIn, index, 1, const_cast<char*>(restOfString.data()))
+                ListView_SetItemText(hListViewIn, index, 2, const_cast<char*>(token))
 
                 ++index;
                 token = ::strtok_s(nullptr, delimiter, &context);
@@ -116,8 +116,8 @@ void RulesListView::addItem(char* const caption)
     }
     std::array<char, 1024U> restOfString;
     ::strcpy_s(restOfString.data(), restOfString.size(), caption + 1);
-    ListView_SetItemText(hListView, index, 1, const_cast<char*>(restOfString.data()));
-    ListView_SetItemText(hListView, index, 2, const_cast<char*>(caption));
+    ListView_SetItemText(hListView, index, 1, const_cast<char*>(restOfString.data()))
+    ListView_SetItemText(hListView, index, 2, const_cast<char*>(caption))
     ++index;
 }
 
@@ -131,33 +131,33 @@ void RulesListView::updateItem(const int indexIn, char* const caption)
     {
     case '-':
         lvItem.pszText = "Refuse"; // Item text
-        ListView_SetItemText(hListView, indexIn, 0, "Refuse");
+        ListView_SetItemText(hListView, indexIn, 0, "Refuse")
         break;
     case '+':
         lvItem.pszText = "Allow"; // Item text
-        ListView_SetItemText(hListView, indexIn, 0, "Allow");
+        ListView_SetItemText(hListView, indexIn, 0, "Allow")
         break;
     case '?':
         lvItem.pszText = "Query"; // Item text
-        ListView_SetItemText(hListView, indexIn, 0, "Query");
+        ListView_SetItemText(hListView, indexIn, 0, "Query")
         break;
     default:
         lvItem.pszText = "Refuse"; // Item text
-        ListView_SetItemText(hListView, indexIn, 0, "Refuse");
+        ListView_SetItemText(hListView, indexIn, 0, "Refuse")
     }
     std::array<char, 1024U> restOfString;
     ::strcpy_s(restOfString.data(), restOfString.size(), caption + 1);
-    ListView_SetItemText(hListView, indexIn, 1, const_cast<char*>(restOfString.data()));
-    ListView_SetItemText(hListView, indexIn, 2, const_cast<char*>(caption));
+    ListView_SetItemText(hListView, indexIn, 1, const_cast<char*>(restOfString.data()))
+    ListView_SetItemText(hListView, indexIn, 2, const_cast<char*>(caption))
 }
 
 void RulesListView::selectItem(const int indexIn)
 {
-    WPARAM itemIndex = (WPARAM)indexIn;
-    ListView_SetItemState(hListView, -1, 0, LVIS_SELECTED);
+    WPARAM itemIndex = static_cast<WPARAM>(indexIn);
+    ListView_SetItemState(hListView, -1, 0, LVIS_SELECTED)
     ::SendMessage(hListView, LVM_ENSUREVISIBLE, itemIndex, FALSE);
-    ListView_SetItemState(hListView, itemIndex, LVIS_SELECTED, LVIS_SELECTED);
-    ListView_SetItemState(hListView, itemIndex, LVIS_FOCUSED, LVIS_FOCUSED);
+    ListView_SetItemState(hListView, itemIndex, LVIS_SELECTED, LVIS_SELECTED)
+    ListView_SetItemState(hListView, itemIndex, LVIS_FOCUSED, LVIS_FOCUSED)
     ::SetFocus(hListView);
 }
 
@@ -191,7 +191,7 @@ void RulesListView::moveUp()
     lv1.iItem = si;
     lv1.iSubItem = 2;
     std::array<char, 256U> accessRule;
-    lv1.pszText = (char*)&accessRule[0U];
+    lv1.pszText = reinterpret_cast<char*>(&accessRule[0U]);
     lv1.cchTextMax = 256;
     ListView_GetItem(hListView, &lv1);
 
@@ -200,7 +200,7 @@ void RulesListView::moveUp()
     lv2.iItem = si - 1;
     lv2.iSubItem = 2;
     std::array<char, 256U> accessRule2;
-    lv2.pszText = (char*)&accessRule2[0U];
+    lv2.pszText = reinterpret_cast<char*>(&accessRule2[0U]);
     lv2.cchTextMax = 256;
     ListView_GetItem(hListView, &lv2);
 
@@ -223,7 +223,7 @@ void RulesListView::moveDown()
     lv1.iItem = si;
     lv1.iSubItem = 2;
     std::array<char, 256U> accessRule;
-    lv1.pszText = (char*)&accessRule[0U];
+    lv1.pszText = reinterpret_cast<char*>(&accessRule[0U]);
     lv1.cchTextMax = 256;
     ListView_GetItem(hListView, &lv1);
 
@@ -232,7 +232,7 @@ void RulesListView::moveDown()
     lv2.iItem = si + 1;
     lv2.iSubItem = 2;
     std::array<char, 256U> accessRule2;
-    lv2.pszText = (char*)&accessRule2[0U];
+    lv2.pszText = reinterpret_cast<char*>(&accessRule2[0U]);
     lv2.cchTextMax = 256;
     ListView_GetItem(hListView, &lv2);
 
@@ -250,15 +250,15 @@ INT_PTR CALLBACK dialogProc(const HWND hwnd, const UINT uMsg, const WPARAM wPara
     bResult = FALSE;
     if (uMsg == WM_INITDIALOG)
     {
-        _this = (RulesListView*)lParam;
-        ::SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)_this);
+        _this = reinterpret_cast<RulesListView*>(lParam);
+        ::SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(_this));
         //_this->m_ctrlThis.setWindow(hwnd);
         //_this->updateIcon();
     }
     else
     {
-        _this = (RulesListView*)::GetWindowLongPtr(hwnd, GWLP_USERDATA);
-        if (_this == 0)
+        _this = reinterpret_cast<RulesListView*>(::GetWindowLongPtr(hwnd, GWLP_USERDATA));
+        if (_this == nullptr)
         {
             return FALSE;
         }
@@ -315,15 +315,15 @@ bool RulesListView::onInitDialog(const HWND hwnd)
         ::SetWindowText(hwnd, "UltraVNC Server - Add IPv4 Access Rule");
     }
     HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_WINVNC));
-    ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-    ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+    ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+    ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
     return true;
 }
 
 void RulesListView::add()
 {
     isEdit = false;
-    ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_EDIT_IP_ACESS_CONTROL), nullptr, (DLGPROC)dialogProc, (LONG_PTR)this);
+    ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_EDIT_IP_ACESS_CONTROL), nullptr, reinterpret_cast<DLGPROC>(dialogProc), reinterpret_cast<LONG_PTR>(this));
 }
 void RulesListView::edit()
 {
@@ -339,13 +339,13 @@ void RulesListView::edit()
     lv1.iItem = si;
     lv1.iSubItem = 2;
     std::array<char, 256U> accessRule;
-    lv1.pszText = (char*)&accessRule[0U];
+    lv1.pszText = reinterpret_cast<char*>(&accessRule[0U]);
     lv1.cchTextMax = 256;
     ListView_GetItem(hListView, &lv1);
 
     ::strcpy_s(oldrule.data(), oldrule.size(), accessRule.data());
     isEdit = true;
-    ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_EDIT_IP_ACESS_CONTROL), nullptr, (DLGPROC)dialogProc, (LONG_PTR)this);
+    ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_EDIT_IP_ACESS_CONTROL), nullptr, reinterpret_cast<DLGPROC>(dialogProc), reinterpret_cast<LONG_PTR>(this));
 }
 
 void RulesListView::onOkButtonClick(const HWND hwnd)

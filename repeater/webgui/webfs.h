@@ -33,8 +33,8 @@
  *
  */
 
-#ifndef _WEBFS_H_
-#define _WEBFS_H_ 1
+#ifndef WEBFS_H
+#define WEBFS_H 1
 
 #define WI_FIOSIZE 4096
 
@@ -149,4 +149,4 @@ typedef int(PUSH_ROUTINE)(wi_sess*, EOFILE*);
 #endif /* USE_EMFILES */
 
 
-#endif /* _WEBFS_H_ */
+#endif /* WEBFS_H */

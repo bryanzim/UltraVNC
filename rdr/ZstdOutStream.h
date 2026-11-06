@@ -15,8 +15,8 @@
 // with zlib or zstd on the fly.
 //
 
-#ifndef __RDR_ZSTDOUTSTREAM_H__
-#define __RDR_ZSTDOUTSTREAM_H__
+#ifndef RDR_ZSTDOUTSTREAM_H
+#define RDR_ZSTDOUTSTREAM_H
 
 #include "OutStream.h"
 
@@ -39,7 +39,7 @@ namespace rdr
 
     public:
         // adzm - 2010-07 - Custom compression level
-        explicit ZstdOutStream(OutStream* os = 0, int bufSize = 0, int compressionLevel = -1); // Z_DEFAULT_COMPRESSION
+        explicit ZstdOutStream(OutStream* os = nullptr, int bufSize = 0, int compressionLevel = -1); // Z_DEFAULT_COMPRESSION
         virtual ~ZstdOutStream();
 
         void setUnderlying(OutStream* os);

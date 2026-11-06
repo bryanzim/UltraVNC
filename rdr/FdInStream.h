@@ -14,8 +14,8 @@
 // FdInStream streams from a file descriptor.
 //
 
-#ifndef __RDR_FDINSTREAM_H__
-#define __RDR_FDINSTREAM_H__
+#ifndef RDR_FDINSTREAM_H
+#define RDR_FDINSTREAM_H
 
 #pragma once
 
@@ -29,7 +29,7 @@ namespace rdr
 
     public:
         explicit FdInStream(int fd, int timeout = 0, int bufSize = 0);
-        FdInStream(int fd, void (*blockCallback)(void*), void* blockCallbackArg = 0, int bufSize = 0);
+        FdInStream(int fd, void (*blockCallback)(void*), void* blockCallbackArg = nullptr, int bufSize = 0);
         virtual ~FdInStream();
 
         int getFd() { return fd; }
@@ -42,10 +42,10 @@ namespace rdr
         unsigned int kbitsPerSecond();
         unsigned int timeWaited() { return timeWaitedIn100us; }
 
-        void SetDSMMode(bool fDSMMode) { m_fDSMMode = fDSMMode; };            // sf@2002
+        void SetDSMMode(bool fDSMMode) { m_fDSMMode = fDSMMode; }            // sf@2002
         void SetReadFromMemoryBuffer(int nReadSize, char* pMemBuffer);        // sf@2002
-        bool GetReadFromMemoryBuffer(void) { return m_fReadFromNetRectBuf; }; // sf@2002
-        __int64 GetBytesRead() { return m_nBytesRead; };
+        bool GetReadFromMemoryBuffer(void) { return m_fReadFromNetRectBuf; } // sf@2002
+        __int64 GetBytesRead() { return m_nBytesRead; }
         int Check_if_buffer_has_data();
 
     protected:

@@ -17,7 +17,7 @@
 #include "vncviewer.h"
 
 #include <direct.h>
-#include <shlobj.h>
+#include <ShlObj.h>
 
 #include <array>
 #include <cstdio>
@@ -52,7 +52,7 @@ void SessionDialog::SaveConnection(const HWND hwnd, const bool saveAs)
         static wchar_t filter[] = L"VNC files (*.vnc)\0*.vnc\0"
                                   L"All files (*.*)\0*.*\0";
         OPENFILENAMEW ofnW;
-        std::memset((void*)&ofnW, 0, sizeof(OPENFILENAMEW));
+        std::memset(reinterpret_cast<void*>(&ofnW), 0, sizeof(OPENFILENAMEW));
         ofnW.lStructSize = OPENFILENAME_SIZE_VERSION_400;
         ofnW.lpstrFilter = filter;
         ofnW.nMaxFile = _MAX_PATH;
@@ -126,7 +126,7 @@ void SessionDialog::saveInt(wchar_t* const name, const int value, wchar_t* const
 }
 
 int SessionDialog::readInt(wchar_t* const name, const int defval, wchar_t* const fname)
-{ return ::GetPrivateProfileIntW(L"options", name, defval, fname); }
+{ return static_cast<int>(::GetPrivateProfileIntW(L"options", name, defval, fname)); }
 
 void SessionDialog::SaveToFile(wchar_t* const fname, const bool asDefault)
 {
@@ -149,7 +149,7 @@ void SessionDialog::SaveToFile(wchar_t* const fname, const bool asDefault)
     {
         std::array<wchar_t, 128U> bufInner;
         ::swprintf_s(bufInner.data(), 128, L"use_encoding_%d", i);
-        saveInt(bufInner.data(), UseEnc[i], fname);
+        saveInt(bufInner.data(), UseEnc[static_cast<unsigned long long>(i)], fname);
     }
     if (!PreferredEncodings.empty())
     {
@@ -208,7 +208,7 @@ void SessionDialog::SaveToFile(wchar_t* const fname, const bool asDefault)
     ::WritePrivateProfileStringW(L"options", L"folder", folder.data(), fname);
     ::WritePrivateProfileStringW(L"options", L"prefix", prefix, fname);
     ::WritePrivateProfileStringW(L"options", L"imageFormat", imageFormat.data(), fname);
-    ::WritePrivateProfileStringW(L"options", L"InfoMsg", (LPCWSTR)InfoMsg.data(), fname);
+    ::WritePrivateProfileStringW(L"options", L"InfoMsg", reinterpret_cast<LPCWSTR>(InfoMsg.data()), fname);
     saveInt(L"AutoReconnect", autoReconnect, fname);
     saveInt(L"FileTransferTimeout", FTTimeout, fname);
     saveInt(L"ListenPort", listenport, fname);
@@ -237,7 +237,7 @@ void SessionDialog::LoadFromFile(wchar_t* const fname)
     {
         std::array<wchar_t, 128U> buf;
         ::swprintf_s(buf.data(), 128, L"use_encoding_%d", i);
-        UseEnc[i] = readInt(buf.data(), UseEnc[i], fname) != 0;
+        UseEnc[static_cast<unsigned long long>(i)] = readInt(buf.data(), UseEnc[static_cast<unsigned long long>(i)], fname) != 0;
     }
     int nExistingPreferred = PreferredEncodings.empty() ? rfbEncodingZRLE : PreferredEncodings[0U];
     int nPreferredEncoding = readInt(L"preferred_encoding", nExistingPreferred, fname);
@@ -291,7 +291,7 @@ void SessionDialog::LoadFromFile(wchar_t* const fname)
     fEnableZstd = readInt(L"EnableZstd", fEnableZstd, fname);
     quickoption = readInt(L"QuickOption", quickoption, fname);
     fUseDSMPlugin = readInt(L"UseDSMPlugin", fUseDSMPlugin, fname) != 0;
-    m_connectionType = (ConnectionType)readInt(L"UseProxy", static_cast<int>(m_connectionType), fname);
+    m_connectionType = static_cast<ConnectionType>(readInt(L"UseProxy", static_cast<int>(m_connectionType), fname));
     allowMonitorSpanning = readInt(L"allowMonitorSpanning", allowMonitorSpanning, fname);
     changeServerRes = readInt(L"ChangeServerRes", changeServerRes, fname);
     extendDisplay = readInt(L"extendDisplay", extendDisplay, fname);
@@ -306,7 +306,7 @@ void SessionDialog::LoadFromFile(wchar_t* const fname)
     ::GetPrivateProfileStringW(L"options", L"folder", folder.data(), folder.data(), static_cast<DWORD>(folder.size()), fname);
     ::GetPrivateProfileStringW(L"options", L"prefix", prefix, prefix, 56, fname);
     ::GetPrivateProfileStringW(L"options", L"imageFormat", imageFormat.data(), imageFormat.data(), 56, fname);
-    ::GetPrivateProfileStringW(L"options", L"InfoMsg", (LPCWSTR)InfoMsg.data(), (LPWSTR)InfoMsg.data(), 254, fname);
+    ::GetPrivateProfileStringW(L"options", L"InfoMsg", reinterpret_cast<LPCWSTR>(InfoMsg.data()), reinterpret_cast<LPWSTR>(InfoMsg.data()), 254, fname);
     if (!g_disable_sponsor)
     {
         g_disable_sponsor = readInt(L"sponsor", g_disable_sponsor, fname) != 0;
@@ -334,21 +334,21 @@ void SessionDialog::LoadFromFile(wchar_t* const fname)
     preemptiveUpdates = readInt(L"PreemptiveUpdates", static_cast<int>(preemptiveUpdates), fname) ? true : false;
 
     ::GetPrivateProfileStringW(L"connection", L"proxyhost", L"", m_proxyhost.data(), static_cast<DWORD>(m_proxyhost.size()), fname);
-    m_proxyport = ::GetPrivateProfileIntW(L"connection", L"proxyport", 0, fname);
+    m_proxyport = static_cast<int>(::GetPrivateProfileIntW(L"connection", L"proxyport", 0, fname));
     overwriteCommandLine();
 }
 
 void SessionDialog::overwriteCommandLine()
 {
-    TCHAR* szCmdLine = (TCHAR*)m_pOpt->szCmdLine.data();
+    TCHAR* szCmdLine = reinterpret_cast<TCHAR*>(m_pOpt->szCmdLine.data());
     int cmdlinelen = static_cast<int>(::_tcslen(szCmdLine));
     if (cmdlinelen == 0)
     {
         return;
     }
 
-    TCHAR* cmd = new TCHAR[cmdlinelen + 1];
-    ::_tcscpy_s(cmd, cmdlinelen + 1, szCmdLine);
+    TCHAR* cmd = new TCHAR[static_cast<unsigned long long>(cmdlinelen + 1)];
+    ::_tcscpy_s(cmd, static_cast<rsize_t>(cmdlinelen + 1), szCmdLine);
 
     // Count the number of spaces
     // This may be more than the number of arguments, but that doesn't matter.
@@ -362,7 +362,7 @@ void SessionDialog::overwriteCommandLine()
     }
 
     // Create the array to hold pointers to each bit of string
-    TCHAR** args = new LPTSTR[nspaces + 1];
+    TCHAR** args = new LPTSTR[static_cast<unsigned long long>(nspaces + 1)];
 
     // replace spaces with nulls and
     // create an array of TCHAR*'s which points to start of each bit.
@@ -628,7 +628,7 @@ void SessionDialog::overwriteCommandLine()
             {
                 PreferredEncodings.clear();
                 PreferredEncodings.push_back(enc);
-                UseEnc[enc] = true;
+                UseEnc[static_cast<unsigned long long>(enc)] = true;
             }
         }
         else if (SwitchMatch(args[j], _T("encodings")))
@@ -656,7 +656,7 @@ void SessionDialog::overwriteCommandLine()
                     {
                         PreferredEncodings.clear();
                     }
-                    UseEnc[enc] = true;
+                    UseEnc[static_cast<unsigned long long>(enc)] = true;
                     if (PreferredEncodings.end() == std::find(PreferredEncodings.begin(), PreferredEncodings.end(), enc))
                     {
                         PreferredEncodings.push_back(enc);
@@ -840,7 +840,7 @@ void SessionDialog::IfHostExistLoadSettings(wchar_t* const hostname)
     {
         SetDefaults();
         LoadFromFile(m_pOpt->getDefaultOptionsFileName());
-        ;
+        
         fUseOnlyDefaultConfigFile =
             readInt(L"UseOnlyDefaultConfigFile", static_cast<int>(fUseOnlyDefaultConfigFile), m_pOpt->getDefaultOptionsFileName())
                 ? true
@@ -859,9 +859,9 @@ void SessionDialog::IfHostExistLoadSettings(wchar_t* const hostname)
         if ((std::wcslen(hostname) != 0) && fileExists)
         {
             m_connectionType =
-                (ConnectionType)::GetPrivateProfileIntW(L"options", L"UseProxy", static_cast<int>(m_connectionType), buffer.data());
+                static_cast<ConnectionType>(::GetPrivateProfileIntW(L"options", L"UseProxy", static_cast<int>(m_connectionType), buffer.data()));
             ::GetPrivateProfileStringW(L"connection", L"proxyhost", L"", m_proxyhost.data(), static_cast<DWORD>(m_proxyhost.size()), buffer.data());
-            m_proxyport = ::GetPrivateProfileIntW(L"connection", L"proxyport", 0, buffer.data());
+            m_proxyport = static_cast<int>(::GetPrivateProfileIntW(L"connection", L"proxyport", 0, buffer.data()));
         }
         ::SetWindowText(::GetDlgItem(hTabConfig, IDC_CUSTOMCONFIG), _T(""));
     }

@@ -19,7 +19,7 @@
 #include "Exception.h"
 
 #include <bcrypt.h>
-#include <commctrl.h>
+#include <CommCtrl.h>
 
 #include <array>
 #include <cstring>
@@ -104,13 +104,13 @@ struct AESCipher
         keyBlob.hdr.aiKeyAlg = (keySize == 128 ? CALG_AES_128 : CALG_AES_256);
         keyBlob.cbKeySize = minimum(keySize / 8, sizeof(keyBlob.key));
         std::memcpy(keyBlob.key, key, keyBlob.cbKeySize);
-        if (!::CryptImportKey(hProv, (BYTE*)&keyBlob, offsetof(SymKeyBlob, key) + keyBlob.cbKeySize, 0, 0, &hKey))
+        if (!::CryptImportKey(hProv, reinterpret_cast<BYTE*>(&keyBlob), offsetof(SymKeyBlob, key) + keyBlob.cbKeySize, 0, 0, &hKey))
         {
             ::swprintf_s(lastError, L"CryptImportKey failed (%d)", ::GetLastError());
             return SetLastError(lastError);
         }
         DWORD mode = CRYPT_MODE_ECB;
-        if (!::CryptSetKeyParam(hKey, KP_MODE, (BYTE*)&mode, 0))
+        if (!::CryptSetKeyParam(hKey, KP_MODE, reinterpret_cast<BYTE*>(&mode), 0))
         {
             ::swprintf_s(lastError, L"CryptSetKeyParam(KP_MODE) failed (%d)", ::GetLastError());
             return SetLastError(lastError);
@@ -120,7 +120,7 @@ struct AESCipher
 
     bool Encrypt(void* const buf, DWORD size = BlockSize)
     {
-        if (!::CryptEncrypt(hKey, 0, FALSE, 0, (BYTE*)buf, &size, size))
+        if (!::CryptEncrypt(hKey, 0, FALSE, 0, reinterpret_cast<BYTE*>(buf), &size, size))
         {
             ::swprintf_s(lastError, L"CryptEncrypt failed (%d)", ::GetLastError());
             return SetLastError(lastError);
@@ -177,7 +177,7 @@ struct CMACAuth
                 }
                 pos = 0;
             }
-            pad[pos++] ^= ((BYTE*)buf)[i];
+            pad[pos++] ^= (reinterpret_cast<BYTE*>(buf))[i];
         }
         return true;
     }
@@ -294,7 +294,7 @@ struct EAXMode
                 WrapIncr(ctr);
                 pos = 0;
             }
-            ((BYTE*)buf)[i] ^= pad[pos++];
+            (reinterpret_cast<BYTE*>(buf))[i] ^= pad[pos++];
         }
         if (encrypt && !auth.Process(buf, size))
         {
@@ -311,7 +311,7 @@ struct EAXMode
         }
         for (DWORD i{ 0U }; i < size; ++i)
         {
-            ((BYTE*)tag)[i] ^= tagNonce[i] ^ tagAad[i];
+            (reinterpret_cast<BYTE*>(tag))[i] ^= tagNonce[i] ^ tagAad[i];
         }
         pos = -1;
         return true;
@@ -358,7 +358,7 @@ struct AESEAXPlugin : IPlugin
         BYTE* buffer;
         DWORD pos, size, capacity;
 
-        explicit DynBuffer() : buffer(0), pos{ 0 }, size{ 0 }, capacity{ 0 } {}
+        explicit DynBuffer() : buffer(nullptr), pos{ 0 }, size{ 0 }, capacity{ 0 } {}
         ~DynBuffer() { delete[] buffer; }
 
         BYTE* EnsureFree(const DWORD avail)
@@ -375,7 +375,7 @@ struct AESEAXPlugin : IPlugin
             }
             if (size + avail > capacity)
             {
-                capacity = (size + avail + CapacityStep - 1) & -CapacityStep;
+                capacity = (size + avail + CapacityStep - 1) & static_cast<DWORD>(-CapacityStep);
                 BYTE* prev = buffer;
                 buffer = new BYTE[capacity];
                 std::memcpy(buffer, prev, size);
@@ -386,7 +386,7 @@ struct AESEAXPlugin : IPlugin
 
         inline BYTE* GetHead() { return buffer + pos; }
 
-        inline int GetAvailable() { return maximum(size - pos, 0); }
+        inline int GetAvailable() { return maximum(static_cast<int>(size - pos), 0); }
     };
 
     EAXMode encAead, decAead;
@@ -407,12 +407,12 @@ struct AESEAXPlugin : IPlugin
     {
         *pnTransformedDataLen = AadSize + nDataLen + MacSize;
         encBuffer.size = 0;
-        BYTE* dst = encBuffer.EnsureFree(*pnTransformedDataLen);
-        *((CARD16*)dst) = Swap16IfLE(nDataLen);
-        std::memcpy(dst + AadSize, pDataBuffer, nDataLen);
+        BYTE* dst = encBuffer.EnsureFree(static_cast<DWORD>(*pnTransformedDataLen));
+        *(reinterpret_cast<CARD16*>(dst)) = Swap16IfLE(nDataLen);
+        std::memcpy(dst + AadSize, pDataBuffer, static_cast<size_t>(nDataLen));
         encAead.SetNonce(encMsg++);
         encAead.SetAad(dst, AadSize);
-        if (!encAead.Process(dst + AadSize, nDataLen))
+        if (!encAead.Process(dst + AadSize, static_cast<DWORD>(nDataLen)))
         {
             SetLastError(L"Encryption failed");
         }
@@ -438,16 +438,16 @@ struct AESEAXPlugin : IPlugin
             }
             else
             {
-                int needed = AadSize + Swap16IfLE(*((CARD16*)decBuffer.GetHead())) + MacSize;
+                int needed = AadSize + Swap16IfLE(*(reinterpret_cast<CARD16*>(decBuffer.GetHead()))) + MacSize;
                 *pnRestoredDataLen = maximum(needed - decBuffer.GetAvailable(), 0);
             }
-            BYTE* dst = decBuffer.EnsureFree(*pnRestoredDataLen);
-            decBuffer.size += *pnRestoredDataLen;
+            BYTE* dst = decBuffer.EnsureFree(static_cast<DWORD>(*pnRestoredDataLen));
+            decBuffer.size += static_cast<DWORD>(*pnRestoredDataLen);
             return dst;
         }
         while (decBuffer.GetAvailable() >= AadSize)
         {
-            DWORD size = Swap16IfLE(*((CARD16*)decBuffer.GetHead()));
+            DWORD size = Swap16IfLE(*(reinterpret_cast<CARD16*>(decBuffer.GetHead())));
             if (AadSize + size + MacSize > static_cast<DWORD>(decBuffer.GetAvailable()))
             {
                 break;
@@ -475,8 +475,8 @@ struct AESEAXPlugin : IPlugin
         if (decPlain.GetAvailable() >= wanted)
         {
             *pnRestoredDataLen = wanted;
-            std::memcpy(pTransBuffer, decPlain.GetHead(), wanted);
-            decPlain.pos += wanted;
+            std::memcpy(pTransBuffer, decPlain.GetHead(), static_cast<size_t>(wanted));
+            decPlain.pos += static_cast<DWORD>(wanted);
         }
         else
         {
@@ -568,7 +568,7 @@ struct RSAKEX
     {
         PubKeyBlob keyBlob;
 
-        conn.ReadExact((char*)&serverKey.length, sizeof(serverKey.length));
+        conn.ReadExact(reinterpret_cast<char*>(&serverKey.length), sizeof(serverKey.length));
         serverKey.length = Swap32IfLE(serverKey.length);
         if (serverKey.length < MinRsaKeyLength)
         {
@@ -581,8 +581,8 @@ struct RSAKEX
             return false;
         }
         serverKey.bytes = (serverKey.length + 7) / 8;
-        conn.ReadExact((char*)serverKey.modulus, serverKey.bytes);
-        conn.ReadExact((char*)serverKey.exp, serverKey.bytes);
+        conn.ReadExact(reinterpret_cast<char*>(serverKey.modulus), static_cast<int>(serverKey.bytes));
+        conn.ReadExact(reinterpret_cast<char*>(serverKey.exp), static_cast<int>(serverKey.bytes));
         for (DWORD i{ 0U }; i < serverKey.bytes - 4; ++i)
         {
             if (serverKey.exp[i] != 0)
@@ -602,10 +602,10 @@ struct RSAKEX
         keyBlob.hdr.aiKeyAlg = CALG_RSA_KEYX;
         keyBlob.key.magic = BCRYPT_RSAPUBLIC_MAGIC; // RSA1
         keyBlob.key.bitlen = serverKey.length;
-        keyBlob.key.pubexp = Swap32IfLE(*((DWORD*)&serverKey.exp[serverKey.bytes - 4]));
+        keyBlob.key.pubexp = Swap32IfLE(*(reinterpret_cast<DWORD*>(&serverKey.exp[serverKey.bytes - 4])));
         std::memcpy(keyBlob.modulus, serverKey.modulus, serverKey.bytes);
         ArraySwap(keyBlob.modulus, serverKey.bytes);
-        if (!::CryptImportKey(hProv, (BYTE*)&keyBlob, offsetof(PubKeyBlob, modulus) + serverKey.bytes, 0, 0, &hServerKey))
+        if (!::CryptImportKey(hProv, reinterpret_cast<BYTE*>(&keyBlob), offsetof(PubKeyBlob, modulus) + serverKey.bytes, 0, 0, &hServerKey))
         {
             ::swprintf_s(lastError, L"Invalid server RSA key (%u)", ::GetLastError());
             return false;
@@ -672,7 +672,7 @@ struct RSAKEX
             ::swprintf_s(lastError, L"CryptExportKey failed (%u)", ::GetLastError());
             return false;
         }
-        PubKeyBlob* keyBlob = (PubKeyBlob*)keyData.data();
+        PubKeyBlob* keyBlob = reinterpret_cast<PubKeyBlob*>(keyData.data());
         if ((keyBlob->hdr.aiKeyAlg != CALG_RSA_KEYX) || (keyBlob->key.magic != BCRYPT_RSAPUBLIC_MAGIC))
         {
             ::swprintf_s(lastError, L"Invalid client key generated");
@@ -681,13 +681,13 @@ struct RSAKEX
         clientKey.length = keyBlob->key.bitlen;
         clientKey.bytes = (clientKey.length + 7) / 8;
         std::memset(clientKey.exp, 0, clientKey.bytes);
-        *((DWORD*)&clientKey.exp[clientKey.bytes - 4]) = Swap32IfLE(keyBlob->key.pubexp);
+        *(reinterpret_cast<DWORD*>(&clientKey.exp[clientKey.bytes - 4])) = Swap32IfLE(keyBlob->key.pubexp);
         std::memcpy(clientKey.modulus, keyBlob->modulus, clientKey.bytes);
         ArraySwap(clientKey.modulus, clientKey.bytes);
         DWORD keyLength = Swap32IfLE(clientKey.length);
-        conn.WriteExact((char*)&keyLength, 4);
-        conn.WriteExact((char*)clientKey.modulus, clientKey.bytes);
-        conn.WriteExact((char*)clientKey.exp, clientKey.bytes);
+        conn.WriteExact(reinterpret_cast<char*>(&keyLength), 4);
+        conn.WriteExact(reinterpret_cast<char*>(clientKey.modulus), static_cast<int>(clientKey.bytes));
+        conn.WriteExact(reinterpret_cast<char*>(clientKey.exp), static_cast<int>(clientKey.bytes));
         return true;
     }
 
@@ -696,7 +696,7 @@ struct RSAKEX
         BYTE buffer[MaxRsaKeyBytes];
         DWORD size = keySize / 8;
 
-        if (!::CryptGenRandom(hProv, size, (BYTE*)clientRandom.data()))
+        if (!::CryptGenRandom(hProv, size, reinterpret_cast<BYTE*>(clientRandom.data())))
         {
             ::swprintf_s(lastError, L"CryptGenRandom failed (%u)", ::GetLastError());
             return false;
@@ -713,9 +713,9 @@ struct RSAKEX
             return false;
         }
         DWORD bufSize = Swap16IfLE(size);
-        conn.WriteExact((char*)&bufSize, 2);
+        conn.WriteExact(reinterpret_cast<char*>(&bufSize), 2);
         ArraySwap(buffer, size);
-        conn.WriteExact((char*)buffer, size);
+        conn.WriteExact(reinterpret_cast<char*>(buffer), static_cast<int>(size));
         return true;
     }
 
@@ -724,16 +724,16 @@ struct RSAKEX
         BYTE buffer[MaxRsaKeyBytes];
         DWORD size{ 0U };
 
-        conn.ReadExact((char*)&size, 2);
+        conn.ReadExact(reinterpret_cast<char*>(&size), 2);
         size = Swap16IfLE(size);
         if (size != clientKey.bytes)
         {
             ::swprintf_s(lastError, L"Client key size doesn't match (%u vs %u)", size, clientKey.bytes);
             return false;
         }
-        conn.ReadExact((char*)buffer, size);
+        conn.ReadExact(reinterpret_cast<char*>(buffer), static_cast<int>(size));
         ArraySwap(buffer, size);
-        if (!::CryptDecrypt(hClientKey, 0, TRUE, 0, (BYTE*)buffer, &size))
+        if (!::CryptDecrypt(hClientKey, 0, TRUE, 0, reinterpret_cast<BYTE*>(buffer), &size))
         {
             ::swprintf_s(lastError, L"Cannot decrypt server random (%u)", ::GetLastError());
             return false;
@@ -778,7 +778,7 @@ struct RSAKEX
         {
             return false;
         }
-        conn.WriteExact((char*)calcHash, size);
+        conn.WriteExact(reinterpret_cast<char*>(calcHash), static_cast<int>(size));
         return true;
     }
 
@@ -791,7 +791,7 @@ struct RSAKEX
         {
             return false;
         }
-        conn.ReadExact((char*)hash, size);
+        conn.ReadExact(reinterpret_cast<char*>(hash), static_cast<int>(size));
         if (!ArrayEqual(hash, calcHash, size))
         {
             ::swprintf_s(lastError, L"Hash does not match");
@@ -803,7 +803,7 @@ struct RSAKEX
     bool ReadSubtype()
     {
         subtype = 0;
-        conn.ReadExact((char*)&subtype, 1);
+        conn.ReadExact(reinterpret_cast<char*>(&subtype), 1);
         if ((subtype != secTypeRA2UserPass) && (subtype != secTypeRA2Pass) && (subtype != secTypeRA2None))
         {
             ::swprintf_s(lastError, L"Invalid subtype (%d)", subtype);
@@ -835,11 +835,11 @@ struct RSAKEX
             ::strcpy_s(clearPasswd, 256, ad.m_passwd.data());
         }
         size = (subtype == secTypeRA2UserPass ? static_cast<DWORD>(std::strlen(cmdlnUser)) : 0);
-        conn.WriteExact((char*)&size, 1);
-        conn.WriteExact(cmdlnUser, size);
+        conn.WriteExact(reinterpret_cast<char*>(&size), 1);
+        conn.WriteExact(cmdlnUser, static_cast<int>(size));
         size = static_cast<DWORD>(std::strlen(clearPasswd));
-        conn.WriteExact((char*)&size, 1);
-        conn.WriteExact(clearPasswd, size);
+        conn.WriteExact(reinterpret_cast<char*>(&size), 1);
+        conn.WriteExact(clearPasswd, static_cast<int>(size));
         return true;
     }
 
@@ -874,7 +874,7 @@ private:
             ::swprintf_s(lastError, L"CryptCreateHash failed (%u)", ::GetLastError());
             return false;
         }
-        if (!::CryptHashData(hHash, (BYTE*)data, size, 0))
+        if (!::CryptHashData(hHash, reinterpret_cast<BYTE*>(data), size, 0))
         {
             ::swprintf_s(lastError, L"CryptHashData failed (%u)", ::GetLastError());
             return false;
@@ -887,7 +887,7 @@ private:
         std::array<BYTE, 256U> buffer;
         DWORD bufSize = sizeof(buffer);
 
-        if (!::CryptGetHashParam(hHash, HP_HASHVAL, (BYTE*)buffer.data(), &bufSize, 0))
+        if (!::CryptGetHashParam(hHash, HP_HASHVAL, reinterpret_cast<BYTE*>(buffer.data()), &bufSize, 0))
         {
             ::swprintf_s(lastError, L"CryptGetHashParam failed (%u)", ::GetLastError());
             return false;
@@ -917,10 +917,10 @@ struct KEXHost : public RSAKEX::IConnection
     {
         std::array<TCHAR, 32U> buf{ 0 };
         ::GetPrivateProfileString(FingerprintSection, key, nullptr, buf.data(), sizeof(buf), fname);
-        return ::_tcscmp((LPCTSTR)hexLocal, buf.data()) == 0;
+        return ::_tcscmp(reinterpret_cast<LPCTSTR>(hexLocal), buf.data()) == 0;
     }
 
-    virtual void SaveFingerprint(char* const hexLocal) { ::WritePrivateProfileString(FingerprintSection, key, (LPCTSTR)hexLocal, fname); }
+    virtual void SaveFingerprint(char* const hexLocal) { ::WritePrivateProfileString(FingerprintSection, key, reinterpret_cast<LPCTSTR>(hexLocal), fname); }
 };
 
 void ClientConnection::AuthRSAAES(const int keySize, const bool encrypted)
@@ -957,8 +957,8 @@ void ClientConnection::AuthRSAAES(const int keySize, const bool encrypted)
 void ClientConnection::AuthAppleDH()
 {
     CARD16 gen, keySize;
-    ReadExact((char*)&gen, 2);
-    ReadExact((char*)&keySize, 2);
+    ReadExact(reinterpret_cast<char*>(&gen), 2);
+    ReadExact(reinterpret_cast<char*>(&keySize), 2);
     gen = Swap16IfLE(gen);
     keySize = Swap16IfLE(keySize);
     if ((gen < 2) || (keySize < 64) || (keySize > 512))
@@ -966,8 +966,8 @@ void ClientConnection::AuthAppleDH()
         throw WarningException(L"AppleDH: invalid DH parameters from server");
     }
     std::vector<BYTE> modulus(keySize), serverPub(keySize);
-    ReadExact((char*)modulus.data(), keySize);
-    ReadExact((char*)serverPub.data(), keySize);
+    ReadExact(reinterpret_cast<char*>(modulus.data()), keySize);
+    ReadExact(reinterpret_cast<char*>(serverPub.data()), keySize);
 
     BCRYPT_ALG_HANDLE hAlg = nullptr;
     BCRYPT_KEY_HANDLE hKey = nullptr, hPeer = nullptr;
@@ -1016,7 +1016,7 @@ void ClientConnection::AuthAppleDH()
     // (modulus + generator, keySize bytes each, big-endian)
     {
         std::vector<BYTE> blob(sizeof(BCRYPT_DH_PARAMETER_HEADER) + 2 * keySize, 0);
-        BCRYPT_DH_PARAMETER_HEADER* hdr = (BCRYPT_DH_PARAMETER_HEADER*)blob.data();
+        BCRYPT_DH_PARAMETER_HEADER* hdr = reinterpret_cast<BCRYPT_DH_PARAMETER_HEADER*>(blob.data());
         hdr->cbLength = static_cast<ULONG>(blob.size());
         hdr->dwMagic = BCRYPT_DH_PARAMETERS_MAGIC;
         hdr->cbKeyLength = keySize;
@@ -1063,7 +1063,7 @@ void ClientConnection::AuthAppleDH()
     // Import the server's public key and derive the shared secret
     {
         std::vector<BYTE> blob(sizeof(BCRYPT_DH_KEY_BLOB) + 3 * keySize, 0);
-        BCRYPT_DH_KEY_BLOB* hdr = (BCRYPT_DH_KEY_BLOB*)blob.data();
+        BCRYPT_DH_KEY_BLOB* hdr = reinterpret_cast<BCRYPT_DH_KEY_BLOB*>(blob.data());
         hdr->dwMagic = BCRYPT_DH_PUBLIC_MAGIC;
         hdr->cbKey = keySize;
         BYTE* p = blob.data() + sizeof(BCRYPT_DH_KEY_BLOB);
@@ -1124,8 +1124,8 @@ void ClientConnection::AuthAppleDH()
 
     std::array<BYTE, 128U> cred;
     BcryptHelp::Random(cred.data(), sizeof(cred));
-    ::strncpy_s((char*)cred.data(), 64, user.data(), _TRUNCATE);
-    ::strncpy_s((char*)cred.data() + 64, 64, passwd.data(), _TRUNCATE);
+    ::strncpy_s(reinterpret_cast<char*>(cred.data()), 64, user.data(), _TRUNCATE);
+    ::strncpy_s(reinterpret_cast<char*>(cred.data()) + 64, 64, passwd.data(), _TRUNCATE);
     ::SecureZeroMemory(passwd.data(), sizeof(passwd));
 
     AESCipher aes;
@@ -1137,9 +1137,9 @@ void ClientConnection::AuthAppleDH()
     }
     ::SecureZeroMemory(aesKey.data(), sizeof(aesKey));
 
-    WriteExact((char*)cred.data(), sizeof(cred));
+    WriteExact(reinterpret_cast<char*>(cred.data()), sizeof(cred));
     ::SecureZeroMemory(cred.data(), sizeof(cred));
-    WriteExact((char*)clientPub.data(), keySize);
+    WriteExact(reinterpret_cast<char*>(clientPub.data()), keySize);
 
     vnclog.Print(0, _T("AppleDH: sent encrypted credentials for user '%hs' (%d-bit DH)\n"), user.data(), keySize * 8);
 }

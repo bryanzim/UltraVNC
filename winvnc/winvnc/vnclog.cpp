@@ -242,7 +242,7 @@ inline void VNCLog::ReallyPrintLine(const char* const line)
     {
         DWORD byteswritten;
         ::WriteConsole(::GetStdHandle(STD_OUTPUT_HANDLE), line, static_cast<DWORD>(std::strlen(line)), &byteswritten, nullptr);
-    };
+    }
     if (m_tofile && (hlogfile != nullptr))
     {
         DWORD byteswritten;
@@ -255,7 +255,7 @@ void VNCLog::ReallyPrint(const char* const format, const va_list ap)
 #ifdef SC_20
     return;
 #endif // SC_20
-    time_t current = std::time(0);
+    time_t current = std::time(nullptr);
     if (current != m_lastLogTime)
     {
         m_lastLogTime = current;
@@ -274,7 +274,7 @@ void VNCLog::ReallyPrint(const char* const format, const va_list ap)
     if (dwErrorCode != 0)
     {
         if (::FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, dwErrorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                          (char*)szErrorMsg.data(), static_cast<DWORD>(szErrorMsg.size()), nullptr) == 0)
+                          reinterpret_cast<char*>(szErrorMsg.data()), static_cast<DWORD>(szErrorMsg.size()), nullptr) == 0)
         {
             ::sprintf_s(szErrorMsg.data(), szErrorMsg.size(), "error code 0x%08X", dwErrorCode);
         }
@@ -286,7 +286,7 @@ void VNCLog::ReallyPrint(const char* const format, const va_list ap)
 
 void VNCLog::ReallyPrintScreen(const char* const format, const va_list ap)
 {
-    time_t current = std::time(0);
+    time_t current = std::time(nullptr);
     std::array<char, 20U> isoTime; // Buffer for ISO 8601 format: "YYYY-MM-DDTHH:MM:SS"
     std::strftime(isoTime.data(), sizeof(isoTime), "%Y-%m-%d %H:%M:%S", std::localtime(&current));
     std::array<TCHAR, (LINE_BUFFER_SIZE * 2) + 1> line;
@@ -316,7 +316,7 @@ void VNCLog::GetLastErrorMsg(LPSTR szErrorMsg) const
 
     // Format the error message.
     ::FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, nullptr, dwErrorCode,
-                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&szErrorMsg, 0, nullptr);
+                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPSTR>(&szErrorMsg), 0, nullptr);
 }
 
 void VNCLog::SetPath(char path[512U])

@@ -14,8 +14,8 @@
 #include <cstdint>
 
 #ifdef _Gii
-#ifndef VNCTOUCH_H__
-#define VNCTOUCH_H__
+#ifndef VNCTOUCH_H
+#define VNCTOUCH_H
 
 #include "ClientConnection.h"
 #include "vncviewer.h"
@@ -45,7 +45,7 @@ public:
     void OnTouch(HWND hWnd, WPARAM wParam, LPARAM lParam);
     int _handle_gii_message(HWND hwnd);
     void Set_ClientConnect(ClientConnection* IN_cc);
-    bool TouchActivated() { return IsTouchActivated; };
+    bool TouchActivated() { return IsTouchActivated; }
 
 private:
     void Activate_touch(HWND hWnd);

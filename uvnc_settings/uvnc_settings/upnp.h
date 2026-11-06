@@ -21,7 +21,7 @@
 #define _WIN32_WINNT 0x0501 // Change this to the appropriate value to target other versions of Windows.
 #endif
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <comutil.h>
 #include <natupnp.h>

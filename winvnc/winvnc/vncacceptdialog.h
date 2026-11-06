@@ -12,8 +12,8 @@
 
 class vncAcceptDialog;
 
-#if (!defined(_WINVNC_VNCACCEPTDIALOG))
-#define _WINVNC_VNCACCEPTDIALOG
+#if (!defined(WINVNC_VNCACCEPTDIALOG))
+#define WINVNC_VNCACCEPTDIALOG
 
 #pragma once
 

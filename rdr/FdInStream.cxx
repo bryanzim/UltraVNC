@@ -16,9 +16,9 @@
 #include <sys/types.h>
 #ifdef _WIN32
 // adzm 2010-08 - use winsock2
-#include <winsock2.h>
+#include <WinSock2.h>
 #include <sys/timeb.h>
-#define read(s,b,l) recv(s,(char*)b,l,0)
+#define read(s,b,l) recv(s,reinterpret_cast<char*>(b),l,0)
 #undef errno
 #define errno WSAGetLastError()
 #else
@@ -49,18 +49,18 @@ enum { DEFAULT_BUF_SIZE = 8192,
        MIN_BULK_SIZE = 1024 };
 
 FdInStream::FdInStream(int fd_, int timeout_, int bufSize_)
-  : fd(fd_), timeout(timeout_), blockCallback(0), blockCallbackArg(0),
+  : fd(fd_), timeout(timeout_), blockCallback(nullptr), blockCallbackArg(nullptr),
     timing(false), timeWaitedIn100us(5), timedKbits(0),
     bufSize(bufSize_ ? bufSize_ : DEFAULT_BUF_SIZE), offset(0)
 {
-	ptr = end = start = new U8[bufSize];
+	ptr = end = start = new U8[static_cast<unsigned long long>(bufSize)];
 
 	// sf@2002
 	m_fDSMMode = false;
 	m_fReadFromNetRectBuf = false;
 	m_nNetRectBufOffset = 0;
 	m_nReadSize = 0;
-	m_pNetRectSavePtr = m_pNetRectSaveEnd = m_pNetRectSaveStart = NULL;
+	m_pNetRectSavePtr = m_pNetRectSaveEnd = m_pNetRectSaveStart = nullptr;
 
 	m_nBytesRead = 0; // For stats
 }
@@ -72,14 +72,14 @@ FdInStream::FdInStream(int fd_, void (*blockCallback_)(void*),
     timing(false), timeWaitedIn100us(5), timedKbits(0),
     bufSize(bufSize_ ? bufSize_ : DEFAULT_BUF_SIZE), offset(0)
 {
-	ptr = end = start = new U8[bufSize];
+	ptr = end = start = new U8[static_cast<unsigned long long>(bufSize)];
 	
 	// sf@2002
 	m_fDSMMode = false;
 	m_fReadFromNetRectBuf = false;
 	m_nNetRectBufOffset = 0;
 	m_nReadSize = 0;
-	m_pNetRectSavePtr = m_pNetRectSaveEnd = m_pNetRectSaveStart = NULL;
+	m_pNetRectSavePtr = m_pNetRectSaveEnd = m_pNetRectSaveStart = nullptr;
 }
 
 FdInStream::~FdInStream()
@@ -90,7 +90,7 @@ FdInStream::~FdInStream()
 
 int FdInStream::pos()
 {
-  return (int)(offset + ptr - start);
+  return static_cast<int>((offset + ptr - start));
 }
 
 void FdInStream::readBytes(void* const data, const int length)
@@ -105,13 +105,13 @@ void FdInStream::readBytes(void* const data, const int length)
 		}
 	}
 	
-	U8* dataPtr = (U8*)data;
+	U8* dataPtr = reinterpret_cast<U8*>(data);
 	int remaining = length;
 	
-	int	n = (int)(end - ptr);
+	int	n = static_cast<int>((end - ptr));
 	if (n > remaining) n = remaining;
 	
-	memcpy(dataPtr, ptr, n);
+	memcpy(dataPtr, ptr, static_cast<size_t>(n));
 	dataPtr += n;
 	remaining -= n;
 	ptr += n;
@@ -136,23 +136,23 @@ int FdInStream::overrun(int itemSize, int nItems)
 	  ptr = m_pNetRectSavePtr;
 	  end = m_pNetRectSaveEnd;
 	  start = m_pNetRectSaveStart;
-	  m_pNetRectSavePtr = m_pNetRectSaveEnd = m_pNetRectSaveStart = NULL;
+	  m_pNetRectSavePtr = m_pNetRectSaveEnd = m_pNetRectSaveStart = nullptr;
   }
 
   if (end - ptr != 0)
-    memmove(start, ptr, end - ptr);
+    memmove(start, ptr, static_cast<size_t>(end - ptr));
 
-  offset += (int)(ptr - start);
+  offset += static_cast<int>((ptr - start));
   end -= ptr - start;
   ptr = start;
 
   while (end < start + itemSize) {
-    int n = readWithTimeoutOrCallback((U8*)end, (int)(start + bufSize - end));
+    int n = readWithTimeoutOrCallback(const_cast<U8*>(reinterpret_cast<const U8 *>(end)), static_cast<int>((start + bufSize - end)));
     end += n;
   }
 
   if (itemSize * nItems > end - ptr)
-    nItems = (int)((end - ptr) / itemSize);
+    nItems = static_cast<int>(((end - ptr) / itemSize));
 
   return nItems;
 }
@@ -175,7 +175,7 @@ int FdInStream::checkReadable(int fdIn, int timeoutIn)
 
     FD_ZERO(&rfds);
     FD_SET(fdIn, &rfds);
-    int n = select(fdIn+1, &rfds, 0, 0, &tv);
+    int n = select(fdIn+1, &rfds, nullptr, nullptr, &tv);
     if (n != -1 || errno != EINTR)
       return n;
     fprintf(stderr,"select returned EINTR\n");
@@ -223,7 +223,7 @@ Passedusecs()
       QueryPerformanceFrequency(&countsPerSec);
       usecPerCount = 1000000000000000000 / countsPerSec.QuadPart;
     }
-    usecs = (LONGLONG)(counts.QuadPart * usecPerCount /1000000000000);
+    usecs = static_cast<LONGLONG>((counts.QuadPart * usecPerCount /1000000000000));
 
   } else {
     struct timeb tb;
@@ -281,7 +281,7 @@ int FdInStream::readWithTimeoutOrCallback(void* buf, int len)
 	{
 		int nRem = m_nReadSize - m_nNetRectBufOffset;
 		int nRead = (len <= nRem) ? len : nRem;
-		memcpy(buf, m_pNetRectBuf + m_nNetRectBufOffset, nRead);
+		memcpy(buf, m_pNetRectBuf + m_nNetRectBufOffset, static_cast<size_t>(nRead));
 		m_nNetRectBufOffset += nRead;
 		if (m_nNetRectBufOffset == m_nReadSize)
 		{
@@ -294,7 +294,7 @@ int FdInStream::readWithTimeoutOrCallback(void* buf, int len)
 		fAlreadyCounted = true;
 	}
 	else
-		n = ::read(fd, buf, len);
+		n = ::read(static_cast<SOCKET>(fd), buf, len);
 
     if (n != -1 || errno != EINTR)
       break;
@@ -323,8 +323,8 @@ int FdInStream::readWithTimeoutOrCallback(void* buf, int len)
     if (newTimeWaited > newKbits*1000) newTimeWaited = newKbits*1000;
     if (newTimeWaited < newKbits/4)    newTimeWaited = newKbits/4;
 
-    timeWaitedIn100us += (unsigned int)newTimeWaited;
-    timedKbits += newKbits;
+    timeWaitedIn100us += static_cast<unsigned int>(newTimeWaited);
+    timedKbits += static_cast<unsigned int>(newKbits);
   }
 
 
@@ -403,7 +403,7 @@ void FdInStream::SetReadFromMemoryBuffer(int nReadSize, char* pMemBuffer)
 		m_pNetRectSavePtr = ptr;
 		m_pNetRectSaveEnd = end;
 		m_pNetRectSaveStart = start;
-		ptr = end = start = new U8[bufSize];
+		ptr = end = start = new U8[static_cast<unsigned long long>(bufSize)];
 	}
 }
 

@@ -110,54 +110,54 @@ wi_senderr(wi_sess * sess, int httpcode )
 
    /* Build a header — all writes bounded to remaining space in hdrbuf */
    remaining = HDRBUFSIZE;
-   snprintf(hdrbuf, remaining, "HTTP/1.1 %d %s\r\n", httpcode, errortext);
+   snprintf(hdrbuf, (unsigned long long)(remaining), "HTTP/1.1 %d %s\r\n", httpcode, errortext);
    cp = hdrbuf + strlen(hdrbuf);
 
    remaining = HDR_REMAINING(cp);
-   if(remaining > 1) snprintf(cp, remaining, "Date: %s GMT\r\n", wi_getdate(sess));
+   if(remaining > 1) snprintf(cp, (unsigned long long)(remaining), "Date: %s GMT\r\n", wi_getdate(sess));
    cp += strlen(cp);
 
    if(httpcode == 401)
    {
       remaining = HDR_REMAINING(cp);
-      if(remaining > 1) snprintf(cp, remaining, "WWW-Authenticate: Basic realm=\"%.200s\"\r\n", safe_uri);
+      if(remaining > 1) snprintf(cp, (unsigned long long)(remaining), "WWW-Authenticate: Basic realm=\"%.200s\"\r\n", safe_uri);
       cp += strlen(cp);
    }
 
    remaining = HDR_REMAINING(cp);
-   if(remaining > 1) snprintf(cp, remaining, "Server: %s\r\n", wi_servername);
+   if(remaining > 1) snprintf(cp, (unsigned long long)(remaining), "Server: %s\r\n", wi_servername);
    cp += strlen(cp);
 
    remaining = HDR_REMAINING(cp);
-   if(remaining > 1) snprintf(cp, remaining, "Connection: close\r\n\r\n");
+   if(remaining > 1) snprintf(cp, (unsigned long long)(remaining), "Connection: close\r\n\r\n");
    cp += strlen(cp);
 
    /* Add some text for browser to display */
    remaining = HDR_REMAINING(cp);
-   if(remaining > 1) snprintf(cp, remaining, "<html><head><title>Error %d</title></head>\r\n", httpcode);
+   if(remaining > 1) snprintf(cp, (unsigned long long)(remaining), "<html><head><title>Error %d</title></head>\r\n", httpcode);
    cp += strlen(cp);
 
    remaining = HDR_REMAINING(cp);
-   if(remaining > 1) snprintf(cp, remaining, "<body><h2>Error %d: %s<br></h2>\r\n", httpcode, errortext);
+   if(remaining > 1) snprintf(cp, (unsigned long long)(remaining), "<body><h2>Error %d: %s<br></h2>\r\n", httpcode, errortext);
    cp += strlen(cp);
 
    if(safe_uri[0])
    {
       remaining = HDR_REMAINING(cp);
-      if(remaining > 1) snprintf(cp, remaining, "File: %s<br>\r\n", safe_uri);
+      if(remaining > 1) snprintf(cp, (unsigned long long)(remaining), "File: %s<br>\r\n", safe_uri);
       cp += strlen(cp);
    }
 
    remaining = HDR_REMAINING(cp);
-   if(remaining > 1) snprintf(cp, remaining, "</body></html>\r\n");
+   if(remaining > 1) snprintf(cp, (unsigned long long)(remaining), "</body></html>\r\n");
    cp += strlen(cp);
 
 #undef HDR_REMAINING
 
-   send(sess->ws_socket, hdrbuf, (int)(cp - hdrbuf), 0);
+   send((SOCKET)(sess->ws_socket), hdrbuf, (int)(cp - hdrbuf), 0);
 
    /* Close socket and mark session for deletion */
-   closesocket(sess->ws_socket);
+   closesocket((SOCKET)(sess->ws_socket));
    sess->ws_socket = INVALID_SOCKET;
    sess->ws_state = WI_ENDING;
 
@@ -179,29 +179,29 @@ wi_replyhdr(wi_sess * sess, int contentlen)
    cp = hdrbuf + strlen(hdrbuf);
 
    remaining = REPLYHDR_REMAINING(cp);
-   if(remaining > 1) snprintf(cp, remaining, "Date: %s GMT\r\n", wi_getdate(sess));
+   if(remaining > 1) snprintf(cp, (unsigned long long)(remaining), "Date: %s GMT\r\n", wi_getdate(sess));
    cp += strlen(cp);
 
    remaining = REPLYHDR_REMAINING(cp);
-   if(remaining > 1) snprintf(cp, remaining, "Server: %s\r\n", wi_servername);
+   if(remaining > 1) snprintf(cp, (unsigned long long)(remaining), "Server: %s\r\n", wi_servername);
    cp += strlen(cp);
 
    remaining = REPLYHDR_REMAINING(cp);
-   if(remaining > 1) snprintf(cp, remaining, "Connection: close\r\n");
+   if(remaining > 1) snprintf(cp, (unsigned long long)(remaining), "Connection: close\r\n");
    cp += strlen(cp);
 
    remaining = REPLYHDR_REMAINING(cp);
-   if(remaining > 1) snprintf(cp, remaining, "Content-Type: %s\r\n", sess->ws_ftype);
+   if(remaining > 1) snprintf(cp, (unsigned long long)(remaining), "Content-Type: %s\r\n", sess->ws_ftype);
    cp += strlen(cp);
 
    remaining = REPLYHDR_REMAINING(cp);
-   if(remaining > 1) snprintf(cp, remaining, "Content-Length: %d\r\n\r\n", contentlen);
+   if(remaining > 1) snprintf(cp, (unsigned long long)(remaining), "Content-Length: %d\r\n\r\n", contentlen);
    cp += strlen(cp);
 
 #undef REPLYHDR_REMAINING
 
    hdrlen = (int)(cp - hdrbuf);
-   error = send(sess->ws_socket, hdrbuf, hdrlen, 0);
+   error = send((SOCKET)(sess->ws_socket), hdrbuf, hdrlen, 0);
    if(error < hdrlen)
    {
       dtrap();    /* Does this ever happen? */
@@ -249,7 +249,7 @@ wi_movebinary(wi_sess * sess, wi_file * fi)
          if(fi->wf_inbuf < 0)
             return WIE_BADFILE;
       }
-      error = send(sess->ws_socket, fi->wf_data, fi->wf_inbuf, 0);
+      error = send((SOCKET)(sess->ws_socket), fi->wf_data, fi->wf_inbuf, 0);
       if(error < 0)
       {
          error = errno;
@@ -302,7 +302,7 @@ wi_txdone(wi_sess * sess)
 	   /* done with normaal connection - close the socket and mark 
 	   * session for deletion; */
 
-      closesocket(sess->ws_socket);
+      closesocket((SOCKET)(sess->ws_socket));
       sess->ws_socket = INVALID_SOCKET;
       sess->ws_state = WI_ENDING;
    }
@@ -405,7 +405,7 @@ wi_getline( char * linetype, char * httphdr )
    {
       if(*cp == *linetype)    /* Got a match for first char? */
       {
-         if(_strnicmp(cp, linetype, typelen) == 0)
+         if(_strnicmp(cp, linetype, (size_t)(typelen)) == 0)
          {
             cp = wi_nextarg(cp);
             if(!cp)
@@ -541,7 +541,7 @@ wi_buildform(wi_sess * sess, char * pairs)
    /* get a buffer big enough for the form, including all the 
     * name/value pair pointers. 
     */
-   form = (wi_form*)wi_alloc( sizeof(wi_form) + (pairct * sizeof(wi_pair)));
+   form = (wi_form*)wi_alloc( (int)(sizeof(wi_form) + (pairct * sizeof(wi_pair))));
    if(!form)
       return WIE_MEMORY;
 
@@ -616,7 +616,7 @@ wi_setftype(wi_sess * sess)
       type <<= 8;
       /* get next char */
       type |= (u_long)((*lastdot) & 0x000000FF);     
-      type &= ~0x20;    /* Make uppercase */
+      type &= (u_long)(~0x20);    /* Make uppercase */
       if(*lastdot >= ' ')  /* bump pointer if not at end */
          lastdot++;
    }
@@ -628,7 +628,7 @@ wi_setftype(wi_sess * sess)
       {
          if(wi_ftypes[i].flags & FT_BINARY)
             sess->ws_flags |= WF_BINARY;
-         sess->ws_ftype = wi_ftypes[i].mimetype;;
+         sess->ws_ftype = wi_ftypes[i].mimetype;
          return TRUE;
       }
    }
@@ -923,8 +923,8 @@ wi_decode_auth(wi_sess * sess, char * name, int name_len, char * pass, int pass_
          return;
       }
       *divide++ = 0;    /* terminte name, point to password */
-      strncpy_s(name, 32, decode, name_len);
-      strncpy_s(pass, 32, divide, pass_len);
+      strncpy_s(name, 32, decode, (rsize_t)(name_len));
+      strncpy_s(pass, 32, divide, (rsize_t)(pass_len));
    }
    else  /* Add MD5 here later.... */
    {

@@ -110,10 +110,10 @@ UINT vncEncoder::NumCodedRects(RECT& rect)
 inline void vncEncoder::Translate(BYTE* const source, BYTE* const dest, const rfb::Rect& rect)
 {
     // Calculate where in the source rectangle to read from
-    BYTE* sourcepos = (BYTE*)(source + (m_bytesPerRow * rect.tl.y) + (rect.tl.x * (m_localformat.bitsPerPixel / 8)));
+    BYTE* sourcepos = reinterpret_cast<BYTE*>((source + (m_bytesPerRow * rect.tl.y) + (rect.tl.x * (m_localformat.bitsPerPixel / 8))));
 
     // Call the translation function
-    (*m_transfunc)(m_transtable, &m_localformat, &m_transformat, (char*)sourcepos, (char*)dest, m_bytesPerRow,
+    (*m_transfunc)(m_transtable, &m_localformat, &m_transformat, reinterpret_cast<char*>(sourcepos), reinterpret_cast<char*>(dest), m_bytesPerRow,
                    rect.br.x - rect.tl.x, rect.br.y - rect.tl.y);
 }
 
@@ -121,11 +121,11 @@ inline void vncEncoder::Translate(BYTE* const source, BYTE* const dest, const rf
 inline UINT vncEncoder::EncodeRect(BYTE* const source, BYTE* const dest, const rfb::Rect& rect)
 {
     // Create the header for the update in the destination area
-    rfbFramebufferUpdateRectHeader* surh = (rfbFramebufferUpdateRectHeader*)dest;
-    surh->r.x = (CARD16)(rect.tl.x - monitor_Offsetx);
-    surh->r.y = (CARD16)(rect.tl.y - monitor_Offsety);
-    surh->r.w = (CARD16)(rect.br.x - rect.tl.x);
-    surh->r.h = (CARD16)(rect.br.y - rect.tl.y);
+    rfbFramebufferUpdateRectHeader* surh = reinterpret_cast<rfbFramebufferUpdateRectHeader*>(dest);
+    surh->r.x = static_cast<CARD16>((rect.tl.x - monitor_Offsetx));
+    surh->r.y = static_cast<CARD16>((rect.tl.y - monitor_Offsety));
+    surh->r.w = static_cast<CARD16>((rect.br.x - rect.tl.x));
+    surh->r.h = static_cast<CARD16>((rect.br.y - rect.tl.y));
     surh->r.x = Swap16IfLE(surh->r.x);
     surh->r.y = Swap16IfLE(surh->r.y);
     surh->r.w = Swap16IfLE(surh->r.w);
@@ -196,11 +196,11 @@ BOOL vncEncoder::GetRemotePalette(RGBQUAD* const quadlist, const UINT ncolours)
         {
             std::free(m_localpalette);
         }
-        m_localpalette = (char*)std::malloc(ncolors * sizeof(RGBQUAD));
+        m_localpalette = reinterpret_cast<char*>(std::malloc(static_cast<unsigned long long>(ncolors) * sizeof(RGBQUAD)));
 
         if (m_localpalette != nullptr)
         {
-            RGBQUAD* colour = (RGBQUAD*)m_localpalette;
+            RGBQUAD* colour = reinterpret_cast<RGBQUAD*>(m_localpalette);
 
             for (int i{ 0 }; i < ncolors; ++i)
             {

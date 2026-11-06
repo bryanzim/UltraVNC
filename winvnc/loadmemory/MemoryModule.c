@@ -38,7 +38,7 @@
  * These portions are Copyright (C) 2013 Thomas Heller.
  */
 
-#include <windows.h>
+#include <Windows.h>
 #include <winnt.h>
 #include <stddef.h>
 #include <tchar.h>
@@ -134,7 +134,7 @@ AlignValueUp(size_t value, size_t alignment) {
 
 static inline void*
 OffsetPointer(void* data, ptrdiff_t offset) {
-    return (void*) ((uintptr_t) data + offset);
+    return (void*) ((uintptr_t) data + (uintptr_t)(offset));
 }
 
 static inline void
@@ -191,10 +191,10 @@ CopySections(const unsigned char *data, size_t size, PIMAGE_NT_HEADERS old_heade
         if (section->SizeOfRawData == 0) {
             // section doesn't contain data in the dll itself, but may define
             // uninitialized data
-            section_size = old_headers->OptionalHeader.SectionAlignment;
+            section_size = (int)(old_headers->OptionalHeader.SectionAlignment);
             if (section_size > 0) {
                 dest = (unsigned char *)module->alloc(codeBase + section->VirtualAddress,
-                    section_size,
+                    (SIZE_T)(section_size),
                     MEM_COMMIT,
                     PAGE_READWRITE,
                     module->userdata);
@@ -208,7 +208,7 @@ CopySections(const unsigned char *data, size_t size, PIMAGE_NT_HEADERS old_heade
                 // NOTE: On 64bit systems we truncate to 32bit here but expand
                 // again later when "PhysicalAddress" is used.
                 section->Misc.PhysicalAddress = (DWORD) ((uintptr_t) dest & 0xffffffff);
-                memset(dest, 0, section_size);
+                memset(dest, 0, (unsigned long long)(section_size));
             }
 
             // section is empty
@@ -295,7 +295,7 @@ FinalizeSection(PMEMORYMODULE module, PSECTIONFINALIZEDATA sectionData) {
     executable = (sectionData->characteristics & IMAGE_SCN_MEM_EXECUTE) != 0;
     readable =   (sectionData->characteristics & IMAGE_SCN_MEM_READ) != 0;
     writeable =  (sectionData->characteristics & IMAGE_SCN_MEM_WRITE) != 0;
-    protect = ProtectionFlags[executable][readable][writeable];
+    protect = (DWORD)(ProtectionFlags[executable][readable][writeable]);
     if (sectionData->characteristics & IMAGE_SCN_MEM_NOT_CACHED) {
         protect |= PAGE_NOCACHE;
     }
@@ -340,7 +340,7 @@ FinalizeSections(PMEMORYMODULE module)
         if (sectionData.alignedAddress == alignedAddress || (uintptr_t) sectionData.address + sectionData.size > (uintptr_t) alignedAddress) {
             // Section shares page with previous
             if ((section->Characteristics & IMAGE_SCN_MEM_DISCARDABLE) == 0 || (sectionData.characteristics & IMAGE_SCN_MEM_DISCARDABLE) == 0) {
-                sectionData.characteristics = (sectionData.characteristics | section->Characteristics) & ~IMAGE_SCN_MEM_DISCARDABLE;
+                sectionData.characteristics = (sectionData.characteristics | section->Characteristics) & (DWORD)(~IMAGE_SCN_MEM_DISCARDABLE);
             } else {
                 sectionData.characteristics |= section->Characteristics;
             }
@@ -467,7 +467,7 @@ BuildImportTable(PMEMORYMODULE module)
             break;
         }
 
-        tmp = (HCUSTOMMODULE *) realloc(module->modules, (module->numModules+1)*(sizeof(HCUSTOMMODULE)));
+        tmp = (HCUSTOMMODULE *) realloc(module->modules, ((unsigned long long)(module->numModules+1))*(sizeof(HCUSTOMMODULE)));
         if (tmp == NULL) {
             module->freeLibrary(handle, module->userdata);
             SetLastError(ERROR_OUTOFMEMORY);
@@ -581,7 +581,7 @@ HMEMORYMODULE MemoryLoadLibraryEx(const void *data, size_t size,
         return NULL;
     }
 
-    if (!CheckSize(size, dos_header->e_lfanew + sizeof(IMAGE_NT_HEADERS))) {
+    if (!CheckSize(size, (unsigned long long)(dos_header->e_lfanew) + sizeof(IMAGE_NT_HEADERS))) {
         return NULL;
     }
     old_header = (PIMAGE_NT_HEADERS)&((const unsigned char *)(data))[dos_header->e_lfanew];
@@ -1134,7 +1134,7 @@ MemoryLoadStringEx(HMEMORYMODULE module, UINT id, LPTSTR buffer, int maxsize, WO
 
     size = data->Length;
     if (size >= (DWORD) maxsize) {
-        size = maxsize;
+        size = (DWORD)(maxsize);
     } else {
         buffer[size] = 0;
     }
@@ -1143,7 +1143,7 @@ MemoryLoadStringEx(HMEMORYMODULE module, UINT id, LPTSTR buffer, int maxsize, WO
 #else
     wcstombs(buffer, data->NameString, size);
 #endif
-    return size;
+    return (int)(size);
 }
 
 #ifdef TESTSUITE

@@ -113,7 +113,7 @@ class _internal_omni_thread_helper;
 class _internal_omni_thread_dummy : public omni_thread
 {
 public:
-    inline explicit _internal_omni_thread_dummy() : next{ 0 } {}
+    inline explicit _internal_omni_thread_dummy() : next{ nullptr } {}
     inline ~_internal_omni_thread_dummy() {}
     friend class _internal_omni_thread_helper;
 
@@ -126,7 +126,7 @@ class _internal_omni_thread_helper
 public:
     inline explicit _internal_omni_thread_helper()
     {
-        d = 0;
+        d = nullptr;
         t = omni_thread::self();
         if (!t)
         {
@@ -163,7 +163,7 @@ private:
     omni_thread* t;
 };
 
-_internal_omni_thread_dummy* _internal_omni_thread_helper::cache = 0;
+_internal_omni_thread_dummy* _internal_omni_thread_helper::cache = nullptr;
 omni_mutex _internal_omni_thread_helper::cachelock;
 
 
@@ -213,7 +213,7 @@ bool omni_condition::wait(const DWORD dwTimeout)
 
     if ((result != WAIT_OBJECT_0) && (result != WAIT_TIMEOUT))
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 
     return result == WAIT_TIMEOUT ? FALSE : TRUE;
@@ -298,7 +298,7 @@ int omni_condition::timedwait(const unsigned long abs_sec, const unsigned long a
 
     if (result != WAIT_OBJECT_0)
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 
     mutex->lock();
@@ -326,7 +326,7 @@ void omni_condition::signal(void)
 
         if (!::ReleaseSemaphore(t->cond_semaphore, 1, nullptr))
         {
-            int rc = ::GetLastError();
+            int rc = static_cast<int>(::GetLastError());
             ::LeaveCriticalSection(&crit);
             throw omni_thread_fatal(rc);
         }
@@ -356,7 +356,7 @@ void omni_condition::broadcast(void)
 
         if (!::ReleaseSemaphore(t->cond_semaphore, 1, nullptr))
         {
-            int rc = ::GetLastError();
+            int rc = static_cast<int>(::GetLastError());
             ::LeaveCriticalSection(&crit);
             throw omni_thread_fatal(rc);
         }
@@ -379,12 +379,12 @@ void omni_condition::broadcast(void)
 
 omni_semaphore::omni_semaphore(const unsigned int initial)
 {
-    nt_sem = ::CreateSemaphore(nullptr, initial, SEMAPHORE_MAX, nullptr);
+    nt_sem = ::CreateSemaphore(nullptr, static_cast<LONG>(initial), SEMAPHORE_MAX, nullptr);
 
     if (nt_sem == nullptr)
     {
         DB(cerr << "omni_semaphore::omni_semaphore: CreateSemaphore error " << ::GetLastError() << endl);
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 }
 
@@ -403,7 +403,7 @@ void omni_semaphore::wait(void)
 {
     if (::WaitForSingleObject(nt_sem, INFINITE) != WAIT_OBJECT_0)
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 }
 
@@ -419,7 +419,7 @@ int omni_semaphore::trywait(void)
         return 0;
     }
 
-    throw omni_thread_fatal(::GetLastError());
+    throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     return 0; /* keep msvc++ happy */
 }
 
@@ -428,7 +428,7 @@ void omni_semaphore::post(void)
 {
     if (!::ReleaseSemaphore(nt_sem, 1, nullptr))
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 }
 
@@ -468,7 +468,7 @@ omni_thread::init_t::init_t(void)
 
     if (self_tls_index == 0xffffffff)
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 
     next_id_mutex = new omni_mutex;
@@ -483,21 +483,21 @@ omni_thread::init_t::init_t(void)
 
     if (!::DuplicateHandle(::GetCurrentProcess(), ::GetCurrentThread(), ::GetCurrentProcess(), &t->handle, 0, FALSE, DUPLICATE_SAME_ACCESS))
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 
     t->nt_id = ::GetCurrentThreadId();
 
     DB(cerr << "initial thread " << t->id() << " NT thread id " << t->nt_id << endl);
 
-    if (!::TlsSetValue(self_tls_index, (LPVOID)t))
+    if (!::TlsSetValue(self_tls_index, reinterpret_cast<LPVOID>(t)))
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 
     if (!::SetThreadPriority(t->handle, nt_priority(PRIORITY_NORMAL)))
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 }
 
@@ -514,13 +514,13 @@ extern "C"
 
     omni_thread_wrapper(void* const ptr)
 {
-    omni_thread* me = (omni_thread*)ptr;
+    omni_thread* me = reinterpret_cast<omni_thread*>(ptr);
 
     DB(cerr << "omni_thread_wrapper: thread " << me->id() << " started\n");
 
-    if (!::TlsSetValue(self_tls_index, (LPVOID)me))
+    if (!::TlsSetValue(self_tls_index, reinterpret_cast<LPVOID>(me)))
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 
     //
@@ -607,7 +607,7 @@ void omni_thread::common_constructor(void* arg, const priority_t pri, const int 
 
     if (cond_semaphore == nullptr)
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 
     cond_next = cond_prev = nullptr;
@@ -656,11 +656,11 @@ void omni_thread::start(void)
 #ifndef __BCPLUSPLUS__
     // MSVC++ or compatiable
     unsigned int t;
-    handle = (HANDLE)_beginthreadex(nullptr, 0, omni_thread_wrapper, (LPVOID)this, CREATE_SUSPENDED, &t);
+    handle = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, omni_thread_wrapper, static_cast<LPVOID>(this), CREATE_SUSPENDED, &t));
     nt_id = t;
     if (handle == nullptr)
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 #else
     // Borland C++
@@ -672,12 +672,12 @@ void omni_thread::start(void)
 #endif
     if (!::SetThreadPriority(handle, _priority))
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 
     if (::ResumeThread(handle) == 0xffffffff)
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 
     _state = STATE_RUNNING;
@@ -730,7 +730,7 @@ void omni_thread::join(void** status)
 
     if (::WaitForSingleObject(handle, INFINITE) != WAIT_OBJECT_0)
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 
     DB(cerr << "omni_thread::join: WaitForSingleObject succeeded\n");
@@ -761,7 +761,7 @@ void omni_thread::set_priority(const priority_t pri)
 
     if (!::SetThreadPriority(handle, nt_priority(pri)))
     {
-        throw omni_thread_fatal(::GetLastError());
+        throw omni_thread_fatal(static_cast<int>(::GetLastError()));
     }
 }
 
@@ -855,7 +855,7 @@ omni_thread* omni_thread::self(void)
     {
         DB(cerr << "omni_thread::self: called with a non-ominthread. NULL is returned." << endl);
     }
-    return (omni_thread*)me;
+    return reinterpret_cast<omni_thread*>(me);
 }
 
 
@@ -927,7 +927,7 @@ static void get_time_now(unsigned long* abs_sec, unsigned long* abs_nsec)
 
     const DWORD days =
         ((st.wYear - 1970) * 365 + (st.wYear - 1969) / 4 +
-         ((st.wYear % 4) ? days_in_preceding_months[st.wMonth - 1] : days_in_preceding_months_leap[st.wMonth - 1]) + st.wDay - 1);
+         ((st.wYear % 4) ? days_in_preceding_months[st.wMonth - 1] : days_in_preceding_months_leap[st.wMonth - 1]) + static_cast<DWORD>(st.wDay - 1));
 
     *abs_sec = st.wSecond + 60 * (st.wMinute + 60 * (st.wHour + 24 * days));
 }

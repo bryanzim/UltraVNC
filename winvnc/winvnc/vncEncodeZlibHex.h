@@ -22,8 +22,8 @@
 
 class vncEncodeZlibHex;
 
-#if !defined(_WINVNC_ENCODEZLIBHEX)
-#define _WINVNC_ENCODEZLIBHEX
+#if !defined(WINVNC_ENCODEZLIBHEX)
+#define WINVNC_ENCODEZLIBHEX
 #pragma once
 
 #include "lzo/minilzo.h"
@@ -83,4 +83,4 @@ protected:
     UltraVncZ* ultraVncZEncoded;
 };
 
-#endif // _WINVNC_ENCODEHEXTILE
+#endif // WINVNC_ENCODEHEXTILE

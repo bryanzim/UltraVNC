@@ -284,7 +284,7 @@ int vnctouch::gettimeofday(struct timeval* const p, [[maybe_unused]] void* const
 
 std::uint64_t swap64ifle(std::uint64_t arg)
 {
-    std::uint32_t* ptr = (std::uint32_t*)&arg;
+    std::uint32_t* ptr = reinterpret_cast<std::uint32_t*>(&arg);
     std::uint32_t tmp = Swap32IfLE(ptr[0U]);
     ptr[0U] = Swap32IfLE(ptr[1U]);
     ptr[1U] = tmp;
@@ -295,8 +295,8 @@ void vnctouch::rfb_gii_init_timestamps(DWORD* time_msec, DWORD64* time_usec)
     //int endianTest = 1;
     struct timeval t_tmp;
     gettimeofday(&t_tmp, nullptr);
-    *time_msec = Swap32IfLE(((t_tmp.tv_sec - start_time.tv_sec) * 1000) + (t_tmp.tv_usec / 1000));
-    DWORD64 t = (((t_tmp.tv_sec - start_time.tv_sec) * 1000000) + t_tmp.tv_usec);
+    *time_msec = static_cast<unsigned long>(Swap32IfLE(((t_tmp.tv_sec - start_time.tv_sec) * 1000) + (t_tmp.tv_usec / 1000)));
+    DWORD64 t = (static_cast<DWORD64>(((t_tmp.tv_sec - start_time.tv_sec) * 1000000) + t_tmp.tv_usec));
     t = swap64ifle(t);
     *time_usec = swap64ifle(static_cast<std::int64_t>((((t_tmp.tv_sec - start_time.tv_sec) * 1000000) + t_tmp.tv_usec)));
 }
@@ -387,9 +387,9 @@ void vnctouch::Initialize_Vars()
     {
         delete pMyTouchInfo;
     }
-    pMyTouchInfo = new MyTouchINfo[MAXPOINTS];
-    idLookup = new int[MAXPOINTS];
-    point_down = new bool[MAXPOINTS];
+    pMyTouchInfo = new MyTouchINfo[static_cast<unsigned long long>(MAXPOINTS)];
+    idLookup = new int[static_cast<unsigned long long>(MAXPOINTS)];
+    point_down = new bool[static_cast<unsigned long long>(MAXPOINTS)];
     for (int i{ 0 }; i < MAXPOINTS; ++i)
     {
         pMyTouchInfo[i].X = -1;
@@ -436,21 +436,21 @@ int vnctouch::_handle_gii_message(const HWND hwnd)
     rfbGIIMsg msg;
 
     msg.h.messageType = rfbGIIMessage;
-    cc->ReadExact((char*)&msg.h.subType, 1);
+    cc->ReadExact(reinterpret_cast<char*>(&msg.h.subType), 1);
     gii_bigendian = msg.h.subType & rfbGIIEndianType;
     msg.h.subType |= rfbGIIEndianType;
 
     switch (msg.h.subType)
     {
     case rfbGIIVersionMessage:
-        cc->ReadExact(((char*)&msg.sv) + 2, sz_rfbGIIServerVersionMsg - 2);
+        cc->ReadExact((reinterpret_cast<char*>(&msg.sv)) + 2, sz_rfbGIIServerVersionMsg - 2);
         if (_handle_gii_version_message(&msg, gii_bigendian))
         {
             _handle_gii_device_creation();
         }
         break;
     case rfbGIIDeviceCreation:
-        cc->ReadExact(((char*)&msg.sdc) + 2, sz_rfbGIIServerDeviceCreationMsg - 2);
+        cc->ReadExact((reinterpret_cast<char*>(&msg.sdc)) + 2, sz_rfbGIIServerDeviceCreationMsg - 2);
         gii_deviceOrigin = (gii_bigendian) ? Swap32IfLE(msg.sdc.deviceOrigin) : msg.sdc.deviceOrigin;
         if (gii_deviceOrigin)
         {
@@ -480,7 +480,7 @@ int vnctouch::_handle_gii_device_creation(void)
     // numValuators und laenge dynamisch machen
     msg.dc.header.length = Swap16IfLE(172);
     std::memset(msg.dc.deviceName, 0, 31);
-    std::strcpy((char*)msg.dc.deviceName, "TCVNC-MT");
+    std::strcpy(reinterpret_cast<char*>(msg.dc.deviceName), "TCVNC-MT");
     msg.dc.DNTerm = 0;
     msg.dc.vendorID = Swap32IfLE(0x0908);
     msg.dc.productID = Swap32IfLE(0x000b);
@@ -498,17 +498,17 @@ int vnctouch::_handle_gii_device_creation(void)
     {
         MAXPOINTS = GetSystemMetrics(SM_MAXIMUMTOUCHES);
     }
-    msg.dc.numButtons = MAXPOINTS;
+    msg.dc.numButtons = static_cast<uint32_t>(MAXPOINTS);
     msg.dc.numButtons = Swap32IfLE(msg.dc.numButtons);
     //}
     //else msg.dc.numButtons = 0;
 
     msg.v.index = 0;
     std::memset(msg.v.longName, 0, 74);
-    std::strcpy((char*)msg.v.longName, "TCVNC Multitouch Device");
+    std::strcpy(reinterpret_cast<char*>(msg.v.longName), "TCVNC Multitouch Device");
     msg.v.LNTerm = 0;
     std::memset(msg.v.shortName, 0, 4);
-    std::strcpy((char*)msg.v.shortName, "TMD");
+    std::strcpy(reinterpret_cast<char*>(msg.v.shortName), "TMD");
     msg.v.SNTerm = 0;
     msg.v.rangeMin = 0;
     msg.v.rangeCenter = 0;
@@ -518,7 +518,7 @@ int vnctouch::_handle_gii_device_creation(void)
     msg.v.SIMul = 0;
     msg.v.SIDiv = 0;
     msg.v.SIShift = 0;
-    cc->WriteExact((char*)&msg, sz_rfbGIIMTCreationMsg);
+    cc->WriteExact(reinterpret_cast<char*>(&msg), sz_rfbGIIMTCreationMsg);
     return 0;
 }
 
@@ -562,7 +562,7 @@ int vnctouch::_handle_gii_version_message(rfbGIIMsg* const msg, const int gii_bi
     }
     serverVersion = cmsg.version;
     cmsg.version = Swap16IfLE(cmsg.version);
-    cc->WriteExact((char*)&cmsg, sz_rfbGIIClientVersionMsg);
+    cc->WriteExact(reinterpret_cast<char*>(&cmsg), sz_rfbGIIClientVersionMsg);
     cc->m_opts->m_giiEnable = 1;
     return 1;
 }
@@ -582,10 +582,10 @@ int vnctouch::rfb_send_gii_mt_empty_event(rfbGIIValuatorEventMsg* const val, DWO
     val->header.length = Swap16IfLE(32);               // not used
     val->eventSize = (sz_rfbGIIValuatorEventMsg + 12); // not used
     val->count = Swap32IfLE(4);                        //(DWORD+DWORD+LONG)
-    cc->WriteExact((char*)val, sz_rfbGIIValuatorEventMsg);
-    cc->WriteExact((char*)&flag, sizeof(DWORD));
-    cc->WriteExact((char*)&time_msec, sizeof(DWORD));
-    cc->WriteExact((char*)&time_usec, sizeof(DWORD64));
+    cc->WriteExact(reinterpret_cast<char*>(val), sz_rfbGIIValuatorEventMsg);
+    cc->WriteExact(reinterpret_cast<char*>(&flag), sizeof(DWORD));
+    cc->WriteExact(reinterpret_cast<char*>(&time_msec), sizeof(DWORD));
+    cc->WriteExact(reinterpret_cast<char*>(&time_usec), sizeof(DWORD64));
     return 1;
 }
 
@@ -601,8 +601,8 @@ void vnctouch::rfb_gii_init_valuator(rfbGIIValuatorEventMsg* const val, const in
     val->eventType = 12;                                 // not used
     val->padding = 0;
     val->deviceOrigin = Swap32IfLE(gii_deviceOrigin);
-    val->first = Swap32IfLE(cnt);     //# points
-    val->count = Swap32IfLE(6 * cnt); //ERROR size is not always 6
+    val->first = static_cast<unsigned int>(Swap32IfLE(cnt));     //# points
+    val->count = static_cast<unsigned int>(Swap32IfLE(6 * cnt)); //ERROR size is not always 6
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -664,7 +664,7 @@ int vnctouch::rfb_send_gii_mt_event()
         return rfb_send_gii_mt_empty_event(&ValuatorEventMsg, ValuatorTime_msec, ValuatorTime_usec);
     }
     rfb_gii_init_valuator(&ValuatorEventMsg, num_cts);
-    cc->WriteExact((char*)&ValuatorEventMsg, sz_rfbGIIValuatorEventMsg);
+    cc->WriteExact(reinterpret_cast<char*>(&ValuatorEventMsg), sz_rfbGIIValuatorEventMsg);
 
 
     //Send array of DWORDS
@@ -696,33 +696,33 @@ int vnctouch::rfb_send_gii_mt_event()
             }
             //if (IsFlagSet(pMyTouchInfo[i].pointerflag, POINTER_FLAG_INRANGE)) AddFlag(&ValuatorFlag, IR_flag);
             ValuatorFlag = Swap32IfLE(ValuatorFlag);
-            cc->WriteExact((char*)&ValuatorFlag, sizeof(DWORD));
+            cc->WriteExact(reinterpret_cast<char*>(&ValuatorFlag), sizeof(DWORD));
             ValuatorFlag = Swap32IfLE(ValuatorFlag); // revert back for reading
             ValuatorTouch_Id = Swap32IfLE(pMyTouchInfo[i].TouchId);
-            cc->WriteExact((char*)&ValuatorTouch_Id, sizeof(DWORD));
+            cc->WriteExact(reinterpret_cast<char*>(&ValuatorTouch_Id), sizeof(DWORD));
             scale_coordinates(pMyTouchInfo[i].X, pMyTouchInfo[i].Y, &x, &y);
             if (IsFlagSet(ValuatorFlag, LANGE_16_flag))
             {
-                ValuatorTouch_Position16XY = Swap32IfLE((x << 16) | (y));
-                cc->WriteExact((char*)&ValuatorTouch_Position16XY, sizeof(DWORD));
+                ValuatorTouch_Position16XY = static_cast<unsigned int>(Swap32IfLE((x << 16) | (y)));
+                cc->WriteExact(reinterpret_cast<char*>(&ValuatorTouch_Position16XY), sizeof(DWORD));
             }
             if (IsFlagSet(ValuatorFlag, S1_flag))
             {
-                ValuatorTouch_Area = Swap32IfLE((pMyTouchInfo[i].ContactWidth << 16) | (pMyTouchInfo[i].ContactHeight));
-                cc->WriteExact((char*)&ValuatorTouch_Area, sizeof(DWORD));
+                ValuatorTouch_Area = static_cast<unsigned int>(Swap32IfLE((pMyTouchInfo[i].ContactWidth << 16) | (pMyTouchInfo[i].ContactHeight)));
+                cc->WriteExact(reinterpret_cast<char*>(&ValuatorTouch_Area), sizeof(DWORD));
             }
             if (IsFlagSet(ValuatorFlag, PR_flag))
             {
                 ValuatorTouch_Pressure = Swap32IfLE(ValuatorTouch_Pressure);
-                cc->WriteExact((char*)&ValuatorTouch_Pressure, sizeof(DWORD));
+                cc->WriteExact(reinterpret_cast<char*>(&ValuatorTouch_Pressure), sizeof(DWORD));
             }
             if (IsFlagSet(ValuatorFlag, TI_flag))
             {
-                cc->WriteExact((char*)&ValuatorTime_msec, sizeof(DWORD));
+                cc->WriteExact(reinterpret_cast<char*>(&ValuatorTime_msec), sizeof(DWORD));
             }
             if (IsFlagSet(ValuatorFlag, HC_flag))
             {
-                cc->WriteExact((char*)&ValuatorTime_usec, sizeof(DWORD64));
+                cc->WriteExact(reinterpret_cast<char*>(&ValuatorTime_usec), sizeof(DWORD64));
             }
         }
     }
@@ -752,12 +752,12 @@ void vnctouch::OnTouch(const HWND hWnd, const WPARAM wParam, const LPARAM lParam
 
     if (pInputs)
     {
-        if (::GetTouchInputInfo((HTOUCHINPUT)lParam, cInputs, pInputs, sizeof(TOUCHINPUT)))
+        if (::GetTouchInputInfo(reinterpret_cast<HTOUCHINPUT>(lParam), cInputs, pInputs, sizeof(TOUCHINPUT)))
         {
             for (UINT i{ 0U }; i < cInputs; ++i)
             {
                 TOUCHINPUT ti = pInputs[i];
-                index = GetContactIndex(ti.dwID);
+                index = GetContactIndex(static_cast<int>(ti.dwID));
                 if ((ti.dwID != 0) && (index < MAXPOINTS) && (index != -1))
                 {
                     ptInput.x = TOUCH_COORD_TO_PIXEL(ti.x);
@@ -767,14 +767,14 @@ void vnctouch::OnTouch(const HWND hWnd, const WPARAM wParam, const LPARAM lParam
                     //clear entry
                     pMyTouchInfo[index].X = ptInput.x;
                     pMyTouchInfo[index].Y = ptInput.y;
-                    pMyTouchInfo[index].TouchId = index;
+                    pMyTouchInfo[index].TouchId = static_cast<DWORD>(index);
                     pMyTouchInfo[index].touchmask = TOUCH_MASK_NONE;
                     pMyTouchInfo[index].pointerflag = POINTER_FLAG_NONE;
                     if (ti.dwMask & TOUCHINPUTMASKF_CONTACTAREA)
                     {
                         pMyTouchInfo[index].touchmask = TOUCH_MASK_CONTACTAREA;
-                        pMyTouchInfo[index].ContactWidth = ti.cxContact;
-                        pMyTouchInfo[index].ContactHeight = ti.cyContact;
+                        pMyTouchInfo[index].ContactWidth = static_cast<int>(ti.cxContact);
+                        pMyTouchInfo[index].ContactHeight = static_cast<int>(ti.cyContact);
                     }
                     if (ti.dwFlags & TOUCHEVENTF_INRANGE)
                     {
@@ -806,7 +806,7 @@ void vnctouch::OnTouch(const HWND hWnd, const WPARAM wParam, const LPARAM lParam
 
     if (bHandled)
     {
-        ::CloseTouchInputHandle((HTOUCHINPUT)lParam);
+        ::CloseTouchInputHandle(reinterpret_cast<HTOUCHINPUT>(lParam));
     }
     if (pInputs)
     {

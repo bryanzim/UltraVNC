@@ -9,9 +9,9 @@
 //
 
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include "Localization.h"
 #include "vncdesktopthread.h"
@@ -48,7 +48,7 @@ inline bool ClipRect(int* x, int* y, int* w, int* h, const int cx, const int cy,
 
 DWORD WINAPI hookwatch(const LPVOID lpParam)
 {
-    vncDesktopThread* dt = (vncDesktopThread*)lpParam;
+    vncDesktopThread* dt = reinterpret_cast<vncDesktopThread*>(lpParam);
 
     while (!stop_hookwatch)
     {
@@ -83,8 +83,8 @@ bool vncDesktopThread::Handle_Ringbuffer(mystruct* const ringbuffer, rfb::Region
             if (ringbuffer->type[i] == 0)
             {
                 rfb::Rect rect;
-                rect.tl = rfb::Point(ringbuffer->rect1[i].left, ringbuffer->rect1[i].top);
-                rect.br = rfb::Point(ringbuffer->rect1[i].right, ringbuffer->rect1[i].bottom);
+                rect.tl = rfb::Point(ringbuffer->rect1[static_cast<unsigned long long>(i)].left, ringbuffer->rect1[static_cast<unsigned long long>(i)].top);
+                rect.br = rfb::Point(ringbuffer->rect1[static_cast<unsigned long long>(i)].right, ringbuffer->rect1[static_cast<unsigned long long>(i)].bottom);
                 //Buffer coordinates
                 rect.tl.x -= m_desktop->m_ScreenOffsetx;
                 rect.br.x -= m_desktop->m_ScreenOffsetx;
@@ -111,8 +111,8 @@ bool vncDesktopThread::Handle_Ringbuffer(mystruct* const ringbuffer, rfb::Region
             if (ringbuffer->type[i] == 0)
             {
                 rfb::Rect rect;
-                rect.tl = rfb::Point(ringbuffer->rect1[i].left, ringbuffer->rect1[i].top);
-                rect.br = rfb::Point(ringbuffer->rect1[i].right, ringbuffer->rect1[i].bottom);
+                rect.tl = rfb::Point(ringbuffer->rect1[static_cast<unsigned long long>(i)].left, ringbuffer->rect1[static_cast<unsigned long long>(i)].top);
+                rect.br = rfb::Point(ringbuffer->rect1[static_cast<unsigned long long>(i)].right, ringbuffer->rect1[static_cast<unsigned long long>(i)].bottom);
                 //Buffer coordinates
                 rect.tl.x -= m_desktop->m_ScreenOffsetx;
                 rect.br.x -= m_desktop->m_ScreenOffsetx;
@@ -135,8 +135,8 @@ bool vncDesktopThread::Handle_Ringbuffer(mystruct* const ringbuffer, rfb::Region
             if (ringbuffer->type[i] == 0)
             {
                 rfb::Rect rect;
-                rect.tl = rfb::Point(ringbuffer->rect1[i].left, ringbuffer->rect1[i].top);
-                rect.br = rfb::Point(ringbuffer->rect1[i].right, ringbuffer->rect1[i].bottom);
+                rect.tl = rfb::Point(ringbuffer->rect1[static_cast<unsigned long long>(i)].left, ringbuffer->rect1[static_cast<unsigned long long>(i)].top);
+                rect.br = rfb::Point(ringbuffer->rect1[static_cast<unsigned long long>(i)].right, ringbuffer->rect1[static_cast<unsigned long long>(i)].bottom);
                 //Buffer coordinates
                 rect.tl.x -= m_desktop->m_ScreenOffsetx;
                 rect.br.x -= m_desktop->m_ScreenOffsetx;

@@ -18,8 +18,8 @@
 
 class vncEncodeCoRRE;
 
-#if !defined(_WINVNC_ENCODECORRRE)
-#define _WINVNC_ENCODECORRE
+#if !defined(WINVNC_ENCODECORRRE)
+#define WINVNC_ENCODECORRE
 #pragma once
 
 #include "vncencoder.h"
@@ -64,4 +64,4 @@ protected:
     BOOL m_statsready;
 };
 
-#endif // _WINVNC_ENCODECORRE
+#endif // WINVNC_ENCODECORRE

@@ -17,7 +17,7 @@
 #include "vncOSVersion.h"
 
 #include <lmcons.h>
-#include <wtsapi32.h>
+#include <WtsApi32.h>
 
 #include <array>
 #include <cstring>
@@ -35,7 +35,7 @@ DWORD Credentials::GetCurrentUserToken(HANDLE& process, HANDLE& Token, const boo
         return 2;
     }
 
-    HWND tray = ::FindWindow(("Shell_TrayWnd"), 0);
+    HWND tray = ::FindWindow(("Shell_TrayWnd"), nullptr);
     if (!tray)
     {
         return 0;
@@ -86,7 +86,7 @@ bool Credentials::RunningAsAdministrator(const bool RunningFromExternalService)
     }
 
     // Allocate memory for group information
-    ptg = (TOKEN_GROUPS*)_malloca(cbTokenGroups);
+    ptg = reinterpret_cast<TOKEN_GROUPS*>(_malloca(cbTokenGroups));
     if (!ptg)
     {
         return false;
@@ -235,7 +235,7 @@ bool DesktopUsersToken::GetConsoleUser(char* const buffer, UINT size)
     // token user
     TOKEN_USER* ptu;
     DWORD needed;
-    ptu = (TOKEN_USER*)aa.data();
+    ptu = reinterpret_cast<TOKEN_USER*>(aa.data());
     if (::GetTokenInformation(hPTokenIn, TokenUser, ptu, 16384, &needed))
     {
         std::array<char, 64U> DomainName;

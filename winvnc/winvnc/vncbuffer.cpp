@@ -114,14 +114,14 @@ UINT vncBuffer::GetScale() { return m_nScale; }
 
 BOOL vncBuffer::SetScale(int nScale)
 {
-    m_nScale = nScale;
+    m_nScale = static_cast<UINT>(nScale);
     {
         if (!CheckBuffer())
         { //added to create scaled buffer
             return FALSE;
         }
-        ::ZeroMemory(m_ScaledBuff, m_desktop->ScreenBuffSize());
-        ::ZeroMemory(m_backbuff, m_desktop->ScreenBuffSize());
+        ::ZeroMemory(m_ScaledBuff, static_cast<size_t>(m_desktop->ScreenBuffSize()));
+        ::ZeroMemory(m_backbuff, static_cast<size_t>(m_desktop->ScreenBuffSize()));
     }
 
     return TRUE;
@@ -131,7 +131,7 @@ rfb::Rect vncBuffer::GetViewerSize()
 {
     rfb::Rect rect;
     rect = m_desktop->GetSize();
-    return rfb::Rect(rect.tl.x, rect.tl.y, rect.br.x / m_nScale, rect.br.y / m_nScale);
+    return rfb::Rect(rect.tl.x, rect.tl.y, static_cast<int>(rect.br.x / m_nScale), static_cast<int>(rect.br.y / m_nScale));
 }
 
 rfbPixelFormat vncBuffer::GetLocalFormat() { return m_scrinfo.format; }
@@ -168,7 +168,7 @@ BOOL vncBuffer::CheckBuffer()
         // Check whether or not the vncDesktop is using fast blits
         // Modif rdv@2002 - v1.1.x - VideoDriver
 
-        m_mainbuff = (BYTE*)m_desktop->OptimisedBlitBuffer();
+        m_mainbuff = reinterpret_cast<BYTE*>(m_desktop->OptimisedBlitBuffer());
         if (m_mainbuff)
         {
             // Prevent us from freeing the DIBsection buffer
@@ -179,12 +179,12 @@ BOOL vncBuffer::CheckBuffer()
         {
             // Create our own buffer to copy blits through
             m_freemainbuff = TRUE;
-            if ((m_mainbuff = new BYTE[m_desktop->ScreenBuffSize()]) == nullptr)
+            if ((m_mainbuff = new BYTE[static_cast<unsigned long long>(m_desktop->ScreenBuffSize())]) == nullptr)
             {
                 vnclog.Print(LL_INTERR, VNCLOG("unable to allocate main buffer[%d]\n"), m_desktop->ScreenBuffSize());
                 return FALSE;
             }
-            std::memset(m_mainbuff, 0, m_desktop->ScreenBuffSize());
+            std::memset(m_mainbuff, 0, static_cast<size_t>(m_desktop->ScreenBuffSize()));
         }
 
         // Always create a back buffer
@@ -197,18 +197,18 @@ BOOL vncBuffer::CheckBuffer()
                 m_backbuffsize = 0;
             }
 
-            if ((m_backbuff = new BYTE[m_desktop->ScreenBuffSize()]) == nullptr)
+            if ((m_backbuff = new BYTE[static_cast<unsigned long long>(m_desktop->ScreenBuffSize())]) == nullptr)
             {
                 vnclog.Print(LL_INTERR, VNCLOG("unable to allocate back buffer[%d]\n"), m_desktop->ScreenBuffSize());
                 return FALSE;
             }
-            m_backbuffsize = m_desktop->ScreenBuffSize();
-            std::memset(m_backbuff, 0, m_desktop->ScreenBuffSize());
+            m_backbuffsize = static_cast<UINT>(m_desktop->ScreenBuffSize());
+            std::memset(m_backbuff, 0, static_cast<size_t>(m_desktop->ScreenBuffSize()));
         }
 
         if (m_use_cache)
         {
-            if ((m_cachebuff = new BYTE[m_desktop->ScreenBuffSize()]) == nullptr)
+            if ((m_cachebuff = new BYTE[static_cast<unsigned long long>(m_desktop->ScreenBuffSize())]) == nullptr)
             {
                 vnclog.Print(LL_INTERR, VNCLOG("unable to allocate cache buffer[%d]\n"), m_desktop->ScreenBuffSize());
                 return FALSE;
@@ -227,13 +227,13 @@ BOOL vncBuffer::CheckBuffer()
             }
 
             // Modif sf@2002 - Scaling
-            if ((m_ScaledBuff = new BYTE[m_desktop->ScreenBuffSize()]) == nullptr)
+            if ((m_ScaledBuff = new BYTE[static_cast<unsigned long long>(m_desktop->ScreenBuffSize())]) == nullptr)
             {
                 vnclog.Print(LL_INTERR, VNCLOG("unable to allocate scaled buffer[%d]\n"), m_desktop->ScreenBuffSize());
                 return FALSE;
             }
-            m_ScaledSize = m_desktop->ScreenBuffSize();
-            std::memset(m_ScaledBuff, 0, m_desktop->ScreenBuffSize());
+            m_ScaledSize = static_cast<UINT>(m_desktop->ScreenBuffSize());
+            std::memset(m_ScaledBuff, 0, static_cast<size_t>(m_desktop->ScreenBuffSize()));
         }
     }
 
@@ -287,11 +287,11 @@ void vncBuffer::CheckRect(rfb::Region2D& dest, rfb::Region2D& cacheRgn, const rf
 
     // Modif sf@2002 - Scaling
     rfb::Rect ScaledRect;
-    ScaledRect.tl.x = ((srect.tl.x < 0) ? 0 : srect.tl.x) / m_nScale;
-    ScaledRect.tl.y = ((srect.tl.y < 0) ? 0 : srect.tl.y) / m_nScale;
+    ScaledRect.tl.x = static_cast<int>(((srect.tl.x < 0) ? 0 : srect.tl.x) / m_nScale);
+    ScaledRect.tl.y = static_cast<int>(((srect.tl.y < 0) ? 0 : srect.tl.y) / m_nScale);
 
-    ScaledRect.br.x = ((srect.br.x < 0) ? 0 : srect.br.x) / m_nScale;
-    ScaledRect.br.y = ((srect.br.y < 0) ? 0 : srect.br.y) / m_nScale;
+    ScaledRect.br.x = static_cast<int>(((srect.br.x < 0) ? 0 : srect.br.x) / m_nScale);
+    ScaledRect.br.y = static_cast<int>(((srect.br.y < 0) ? 0 : srect.br.y) / m_nScale);
 
     int x, y;
     UINT ay, by;
@@ -340,7 +340,7 @@ void vncBuffer::CheckRect(rfb::Region2D& dest, rfb::Region2D& cacheRgn, const rf
     } // was BLOCK_SIZE*2 (64px): a single changed pixel
       // dirtied a 4096-pixel block; 32px = 4x less waste
 
-    ptrdiff_t ptrBlockOffset = (ScaledRect.tl.y * m_bytesPerRow) + (ScaledRect.tl.x * bytesPerPixel);
+    ptrdiff_t ptrBlockOffset = (static_cast<UINT>(ScaledRect.tl.y) * m_bytesPerRow) + (static_cast<UINT>(ScaledRect.tl.x) * bytesPerPixel);
 
     if (m_use_cache && !m_desktop->m_UltraEncoder_used && m_cachebuff)
     {
@@ -356,7 +356,7 @@ void vncBuffer::CheckRect(rfb::Region2D& dest, rfb::Region2D& cacheRgn, const rf
             unsigned char* n_row_ptr = n_topleft_ptr;
             unsigned char* c_row_ptr = c_topleft_ptr;
 
-            const UINT blockbottom = std::min(y + nOptimizedBlockSize, ScaledRect.br.y);
+            const UINT blockbottom = static_cast<UINT>(std::min(y + nOptimizedBlockSize, ScaledRect.br.y));
             for (x = ScaledRect.tl.x, last_x = ScaledRect.br.x; x < last_x; x += nOptimizedBlockSize)
             {
                 // Work our way across the row
@@ -364,41 +364,41 @@ void vncBuffer::CheckRect(rfb::Region2D& dest, rfb::Region2D& cacheRgn, const rf
                 unsigned char* o_block_ptr = o_row_ptr;
                 unsigned char* c_block_ptr = c_row_ptr;
 
-                const UINT blockright = std::min(x + nOptimizedBlockSize, ScaledRect.br.x);
-                const UINT bytesPerBlockRow = (blockright - x) * bytesPerPixel;
+                const UINT blockright = static_cast<UINT>(std::min(x + nOptimizedBlockSize, ScaledRect.br.x));
+                const UINT bytesPerBlockRow = (blockright - static_cast<UINT>(x)) * bytesPerPixel;
 
                 bool fCache{ true }; // RDV@2002
                 // Modif sf@2002 - v1.1.0
                 // int nRowIndex = 0; // We don't reinit nRowIndex for each rect -> we don't always miss the same changed pixels
-                int nOffset = static_cast<int>((bytesPerBlockRow / m_nAccuracyDiv));
+                int nOffset = static_cast<int>((bytesPerBlockRow / static_cast<UINT>(m_nAccuracyDiv)));
 
                 unsigned char* y_o_ptr = o_block_ptr;
                 unsigned char* y_n_ptr = n_block_ptr;
                 unsigned char* y_c_ptr = c_block_ptr;
 
                 // Scan this block
-                for (ay = y; ay < blockbottom; ++ay)
+                for (ay = static_cast<UINT>(y); ay < blockbottom; ++ay)
                 {
                     int nBlockOffset = nRowIndex * nOffset;
-                    if (std::memcmp(n_block_ptr + nBlockOffset, o_block_ptr + nBlockOffset, nOffset) != 0)
+                    if (std::memcmp(n_block_ptr + nBlockOffset, o_block_ptr + nBlockOffset, static_cast<size_t>(nOffset)) != 0)
                     {
                         // A pixel has changed, so this block needs updating
                         if (fSmallRect) // Ignore unchanged first rows (samll rect : less chance to miss changes when using
                                         // nAccuracy div)
                         {
-                            new_rect.tl.y = ay * m_nScale;
-                            y_n_ptr += ((ay - y) * m_bytesPerRow);
-                            y_o_ptr += ((ay - y) * m_bytesPerRow);
+                            new_rect.tl.y = static_cast<int>(ay * m_nScale);
+                            y_n_ptr += ((ay - static_cast<UINT>(y)) * m_bytesPerRow);
+                            y_o_ptr += ((ay - static_cast<UINT>(y)) * m_bytesPerRow);
                         }
                         else
                         {
-                            new_rect.tl.y = y * m_nScale;
+                            new_rect.tl.y = static_cast<int>(y * m_nScale);
                         }
-                        new_rect.tl.x = x * m_nScale;
-                        new_rect.br.x = blockright * m_nScale;
-                        new_rect.br.y = blockbottom * m_nScale;
+                        new_rect.tl.x = static_cast<int>(x * m_nScale);
+                        new_rect.br.x = static_cast<int>(blockright * m_nScale);
+                        new_rect.br.y = static_cast<int>(blockbottom * m_nScale);
 
-                        for (by = ((fSmallRect) ? ay : y); by < blockbottom; ++by)
+                        for (by = ((fSmallRect) ? ay : static_cast<UINT>(y)); by < blockbottom; ++by)
                         {
                             // Until then, new rect and cached rect are equal.
                             // So test the next row
@@ -440,9 +440,9 @@ void vncBuffer::CheckRect(rfb::Region2D& dest, rfb::Region2D& cacheRgn, const rf
                 c_row_ptr += bytesPerBlockRow;
             }
 
-            o_topleft_ptr += m_bytesPerRow * nOptimizedBlockSize;
-            n_topleft_ptr += m_bytesPerRow * nOptimizedBlockSize;
-            c_topleft_ptr += m_bytesPerRow * nOptimizedBlockSize;
+            o_topleft_ptr += m_bytesPerRow * static_cast<UINT>(nOptimizedBlockSize);
+            n_topleft_ptr += m_bytesPerRow * static_cast<UINT>(nOptimizedBlockSize);
+            c_topleft_ptr += m_bytesPerRow * static_cast<UINT>(nOptimizedBlockSize);
         }
     }
     else
@@ -456,49 +456,49 @@ void vncBuffer::CheckRect(rfb::Region2D& dest, rfb::Region2D& cacheRgn, const rf
             unsigned char* o_row_ptr = o_topleft_ptr;
             unsigned char* n_row_ptr = n_topleft_ptr;
 
-            const UINT blockbottom = std::min(y + nOptimizedBlockSize, ScaledRect.br.y);
+            const UINT blockbottom = static_cast<UINT>(std::min(y + nOptimizedBlockSize, ScaledRect.br.y));
             for (x = ScaledRect.tl.x; x < ScaledRect.br.x; x += nOptimizedBlockSize)
             {
                 // Work our way across the row
                 unsigned char* n_block_ptr = n_row_ptr;
                 unsigned char* o_block_ptr = o_row_ptr;
 
-                const UINT blockright = std::min(x + nOptimizedBlockSize, ScaledRect.br.x);
-                const UINT bytesPerBlockRow = (blockright - x) * bytesPerPixel;
+                const UINT blockright = static_cast<UINT>(std::min(x + nOptimizedBlockSize, ScaledRect.br.x));
+                const UINT bytesPerBlockRow = (blockright - static_cast<UINT>(x)) * bytesPerPixel;
 
                 // Modif sf@2002
                 unsigned char* y_o_ptr = o_block_ptr;
                 unsigned char* y_n_ptr = n_block_ptr;
 
                 // int nRowIndex = 0;
-                int nOffset = static_cast<int>((bytesPerBlockRow / m_nAccuracyDiv));
+                int nOffset = static_cast<int>((bytesPerBlockRow / static_cast<UINT>(m_nAccuracyDiv)));
 
                 // Scan this block
-                for (ay = y; ay < blockbottom; ++ay)
+                for (ay = static_cast<UINT>(y); ay < blockbottom; ++ay)
                 {
                     int nBlockOffset = nRowIndex * nOffset;
-                    if (full || (std::memcmp(n_block_ptr + nBlockOffset, o_block_ptr + nBlockOffset, nOffset) != 0))
+                    if (full || (std::memcmp(n_block_ptr + nBlockOffset, o_block_ptr + nBlockOffset, static_cast<size_t>(nOffset)) != 0))
                     {
                         // A pixel has changed, so this block needs updating
                         if (fSmallRect) // Ignore unchanged first rows (samll rect : less chance to miss changes when using
                                         // nAccuracy div)
                         {
-                            new_rect.tl.y = ay * m_nScale;
-                            y_n_ptr += ((ay - y) * m_bytesPerRow);
-                            y_o_ptr += ((ay - y) * m_bytesPerRow);
+                            new_rect.tl.y = static_cast<int>(ay * m_nScale);
+                            y_n_ptr += ((ay - static_cast<UINT>(y)) * m_bytesPerRow);
+                            y_o_ptr += ((ay - static_cast<UINT>(y)) * m_bytesPerRow);
                         }
                         else
                         {
-                            new_rect.tl.y = y * m_nScale;
+                            new_rect.tl.y = static_cast<int>(y * m_nScale);
                         }
-                        new_rect.tl.x = x * m_nScale;
-                        new_rect.br.x = (blockright * m_nScale);
-                        new_rect.br.y = (blockbottom * m_nScale);
+                        new_rect.tl.x = static_cast<int>(x * m_nScale);
+                        new_rect.br.x = (static_cast<int>(blockright * m_nScale));
+                        new_rect.br.y = (static_cast<int>(blockbottom * m_nScale));
                         dest.assign_union(new_rect);
 
                         // Copy the changes to the back buffer
                         //  HOTSPOT
-                        for (by = ((fSmallRect) ? ay : y); by < blockbottom; ++by)
+                        for (by = ((fSmallRect) ? ay : static_cast<UINT>(y)); by < blockbottom; ++by)
                         {
                             std::memcpy(y_o_ptr, y_n_ptr, bytesPerBlockRow);
                             y_n_ptr += m_bytesPerRow;
@@ -524,8 +524,8 @@ void vncBuffer::CheckRect(rfb::Region2D& dest, rfb::Region2D& cacheRgn, const rf
             }
             if (y != ScaledRect.br.y - 1)
             {
-                o_topleft_ptr += m_bytesPerRow * nOptimizedBlockSize;
-                n_topleft_ptr += m_bytesPerRow * nOptimizedBlockSize;
+                o_topleft_ptr += m_bytesPerRow * static_cast<UINT>(nOptimizedBlockSize);
+                n_topleft_ptr += m_bytesPerRow * static_cast<UINT>(nOptimizedBlockSize);
             }
         }
     }
@@ -715,21 +715,21 @@ void vncBuffer::ScaleRect(rfb::Rect& rect)
         return;
     }
     ///////////
-    rect.tl.y = (rect.tl.y - (rect.tl.y % m_nScale));
-    rect.br.y = (rect.br.y - (rect.br.y % m_nScale)) + m_nScale - 1;
-    rect.tl.x = (rect.tl.x - (rect.tl.x % m_nScale));
-    rect.br.x = (rect.br.x - (rect.br.x % m_nScale)) + m_nScale - 1;
+    rect.tl.y = (static_cast<int>(rect.tl.y - (rect.tl.y % m_nScale)));
+    rect.br.y = (static_cast<UINT>(rect.br.y) - (static_cast<UINT>(rect.br.y) % m_nScale)) + static_cast<int>(m_nScale - 1);
+    rect.tl.x = (static_cast<int>(rect.tl.x - (rect.tl.x % m_nScale)));
+    rect.br.x = (static_cast<UINT>(rect.br.x) - (static_cast<UINT>(rect.br.x) % m_nScale)) + static_cast<int>(m_nScale - 1);
 
     rfb::Rect ScaledRect;
 
-    ScaledRect.tl.y = ((rect.tl.y < 0) ? 0 : rect.tl.y) / m_nScale;
-    ScaledRect.br.y = ((rect.br.y < 0) ? 0 : rect.br.y) / m_nScale;
-    ScaledRect.tl.x = ((rect.tl.x < 0) ? 0 : rect.tl.x) / m_nScale;
-    ScaledRect.br.x = ((rect.br.x < 0) ? 0 : rect.br.x) / m_nScale;
+    ScaledRect.tl.y = static_cast<int>(((rect.tl.y < 0) ? 0 : rect.tl.y) / m_nScale);
+    ScaledRect.br.y = static_cast<int>(((rect.br.y < 0) ? 0 : rect.br.y) / m_nScale);
+    ScaledRect.tl.x = static_cast<int>(((rect.tl.x < 0) ? 0 : rect.tl.x) / m_nScale);
+    ScaledRect.br.x = static_cast<int>(((rect.br.x < 0) ? 0 : rect.br.x) / m_nScale);
 
     // Copy and scale data from screen Main buffer to Scaled buffer
-    BYTE* pMain = m_mainbuff + (rect.tl.y * m_bytesPerRow) + (rect.tl.x * m_scrinfo.format.bitsPerPixel / 8);
-    BYTE* pScaled = m_ScaledBuff + (ScaledRect.tl.y * m_bytesPerRow) + (ScaledRect.tl.x * m_scrinfo.format.bitsPerPixel / 8);
+    BYTE* pMain = m_mainbuff + (static_cast<UINT>(rect.tl.y) * m_bytesPerRow) + (rect.tl.x * m_scrinfo.format.bitsPerPixel / 8);
+    BYTE* pScaled = m_ScaledBuff + (static_cast<UINT>(ScaledRect.tl.y) * m_bytesPerRow) + (ScaledRect.tl.x * m_scrinfo.format.bitsPerPixel / 8);
 
     // We keep one pixel for m_Scale*m_nScale pixels in the Main buffer
     // and copy it in the Scaled Buffer
@@ -762,7 +762,7 @@ void vncBuffer::ScaleRect(rfb::Rect& rect)
             // 32bpp fast path: replace byte-assembly loops with direct DWORD read/write.
             // Old code: 4 inner iterations to assemble each pixel + 4 to write it.
             // New code: single DWORD load/store — same bit pattern, little-endian.
-            const int srcBlockStride = m_nScale * 4; // bytes between block-column starts
+            const int srcBlockStride = static_cast<int>(m_nScale * 4); // bytes between block-column starts
             for (int y = ScaledRect.tl.y; y < ScaledRect.br.y; ++y)
             {
                 for (int x{ 0 }; x < (ScaledRect.br.x - ScaledRect.tl.x); ++x)
@@ -787,7 +787,7 @@ void vncBuffer::ScaleRect(rfb::Rect& rect)
                     // JK 26th Jan, 2005: Reduce possible colors to 8 shades of gray
                     if (fCanReduceColors)
                     {
-                        result = To8GreyColors(lRed, lGreen, lBlue);
+                        result = static_cast<DWORD>(To8GreyColors(lRed, lGreen, lBlue));
                     }
                     else
                     {
@@ -821,7 +821,7 @@ void vncBuffer::ScaleRect(rfb::Rect& rect)
                             lScaledPixel = 0;
                             for (UINT b{ 0U }; b < nBytesPerPixel; ++b)
                             {
-                                lScaledPixel += (pMain[(((x * m_nScale) + c) * nBytesPerPixel) + (r * m_bytesPerRow) + b])
+                                lScaledPixel += (pMain[(((static_cast<UINT>(x) * m_nScale) + c) * nBytesPerPixel) + (r * m_bytesPerRow) + b])
                                                 << (8 * b);
                             }
                             lRed += (lScaledPixel >> redShift) & redMax;
@@ -836,7 +836,7 @@ void vncBuffer::ScaleRect(rfb::Rect& rect)
                     // JK 26th Jan, 2005: Reduce possible colors to 8 shades of gray
                     if (fCanReduceColors)
                     {
-                        lScaledPixel = To8GreyColors(lRed, lGreen, lBlue);
+                        lScaledPixel = static_cast<unsigned long>(To8GreyColors(lRed, lGreen, lBlue));
                     }
                     else
                     {
@@ -847,7 +847,7 @@ void vncBuffer::ScaleRect(rfb::Rect& rect)
                     // Copy the resulting pixel in the Scaled Buffer
                     for (UINT b{ 0U }; b < nBytesPerPixel; ++b)
                     {
-                        pScaled[(x * nBytesPerPixel) + b] = (lScaledPixel >> (8 * b)) & 0xFF;
+                        pScaled[(static_cast<UINT>(x) * nBytesPerPixel) + b] = (lScaledPixel >> (8 * b)) & 0xFF;
                     }
                 }
                 // Move the buffers' pointers to their next "line"
@@ -867,7 +867,7 @@ void vncBuffer::ScaleRect(rfb::Rect& rect)
             {
                 memcpy(&pScaled[x * nBytesPerPixel], &pMain[x * m_nScale * nBytesPerPixel], nBytesPerPixel);
             }*/
-            std::memcpy(&pScaled[0U], &pMain[0U], nBytesPerPixel * (ScaledRect.br.x - ScaledRect.tl.x));
+            std::memcpy(&pScaled[0U], &pMain[0U], nBytesPerPixel * (static_cast<UINT>(ScaledRect.br.x - ScaledRect.tl.x)));
             // Move the buffers' pointers to their next "line"
             pMain += (m_bytesPerRow * m_nScale); // Skip m_nScale lines of the mainbuffer's Rect
             pScaled += m_bytesPerRow;
@@ -911,20 +911,20 @@ bool vncBuffer::GreyScaleRect(rfb::Rect& rect)
         return false;
     }
     ///////////
-    rect.tl.y = (rect.tl.y - (rect.tl.y % m_nScale));
-    rect.br.y = (rect.br.y - (rect.br.y % m_nScale)) + m_nScale - 1;
-    rect.tl.x = (rect.tl.x - (rect.tl.x % m_nScale));
-    rect.br.x = (rect.br.x - (rect.br.x % m_nScale)) + m_nScale - 1;
+    rect.tl.y = (static_cast<int>(rect.tl.y - (rect.tl.y % m_nScale)));
+    rect.br.y = (static_cast<UINT>(rect.br.y) - (static_cast<UINT>(rect.br.y) % m_nScale)) + static_cast<int>(m_nScale - 1);
+    rect.tl.x = (static_cast<int>(rect.tl.x - (rect.tl.x % m_nScale)));
+    rect.br.x = (static_cast<UINT>(rect.br.x) - (static_cast<UINT>(rect.br.x) % m_nScale)) + static_cast<int>(m_nScale - 1);
 
     rfb::Rect ScaledRect;
-    ScaledRect.tl.y = rect.tl.y / m_nScale;
-    ScaledRect.br.y = rect.br.y / m_nScale;
-    ScaledRect.tl.x = rect.tl.x / m_nScale;
-    ScaledRect.br.x = rect.br.x / m_nScale;
+    ScaledRect.tl.y = static_cast<int>(rect.tl.y / m_nScale);
+    ScaledRect.br.y = static_cast<int>(rect.br.y / m_nScale);
+    ScaledRect.tl.x = static_cast<int>(rect.tl.x / m_nScale);
+    ScaledRect.br.x = static_cast<int>(rect.br.x / m_nScale);
 
     // Copy and scale data from screen Main buffer to Scaled buffer
-    BYTE* pMain = m_mainbuff + (rect.tl.y * m_bytesPerRow) + (rect.tl.x * m_scrinfo.format.bitsPerPixel / 8);
-    BYTE* pScaled = m_ScaledBuff + (ScaledRect.tl.y * m_bytesPerRow) + (ScaledRect.tl.x * m_scrinfo.format.bitsPerPixel / 8);
+    BYTE* pMain = m_mainbuff + (static_cast<UINT>(rect.tl.y) * m_bytesPerRow) + (rect.tl.x * m_scrinfo.format.bitsPerPixel / 8);
+    BYTE* pScaled = m_ScaledBuff + (static_cast<UINT>(ScaledRect.tl.y) * m_bytesPerRow) + (ScaledRect.tl.x * m_scrinfo.format.bitsPerPixel / 8);
 
     const UINT nBytesPerPixel = (m_scrinfo.format.bitsPerPixel / 8);
 
@@ -940,17 +940,17 @@ bool vncBuffer::GreyScaleRect(rfb::Rect& rect)
             lPixel = 0;
             for (UINT b{ 0U }; b < nBytesPerPixel; ++b)
             {
-                lPixel += ((pMain[(x * nBytesPerPixel) + b]) << (8 * b));
+                lPixel += (static_cast<unsigned long>((pMain[(x * nBytesPerPixel) + b]) << (8 * b)));
             }
 
             lRed = (lPixel >> m_scrinfo.format.redShift) & m_scrinfo.format.redMax;
             lGreen = (lPixel >> m_scrinfo.format.greenShift) & m_scrinfo.format.greenMax;
             lBlue = (lPixel >> m_scrinfo.format.blueShift) & m_scrinfo.format.blueMax;
-            lPixel = To8GreyColors(lRed, lGreen, lBlue);
+            lPixel = static_cast<unsigned long>(To8GreyColors(lRed, lGreen, lBlue));
 
             for (UINT bb{ 0U }; bb < nBytesPerPixel; ++bb)
             {
-                pScaled[(x * nBytesPerPixel) + bb] = (lPixel >> (8 * bb)) & 0xFF;
+                pScaled[(static_cast<UINT>(x) * nBytesPerPixel) + bb] = (lPixel >> (8 * bb)) & 0xFF;
             }
         }
         // Move the buffers' pointers to their next "line"
@@ -1001,24 +1001,24 @@ void vncBuffer::CopyRect(const rfb::Rect& dest, const rfb::Point& delta)
     rfb::Rect src = dest.translate(delta.negate());
 
     // Modif sf@2002 - Scaling
-    ScaledDest.tl.y = dest.tl.y / m_nScale;
-    ScaledDest.br.y = dest.br.y / m_nScale;
-    ScaledDest.tl.x = dest.tl.x / m_nScale;
-    ScaledDest.br.x = dest.br.x / m_nScale;
-    ScaledSource.tl.y = src.tl.y / m_nScale;
-    ScaledSource.br.y = src.br.y / m_nScale;
-    ScaledSource.tl.x = src.tl.x / m_nScale;
-    ScaledSource.br.x = src.br.x / m_nScale;
+    ScaledDest.tl.y = static_cast<int>(dest.tl.y / m_nScale);
+    ScaledDest.br.y = static_cast<int>(dest.br.y / m_nScale);
+    ScaledDest.tl.x = static_cast<int>(dest.tl.x / m_nScale);
+    ScaledDest.br.x = static_cast<int>(dest.br.x / m_nScale);
+    ScaledSource.tl.y = static_cast<int>(src.tl.y / m_nScale);
+    ScaledSource.br.y = static_cast<int>(src.br.y / m_nScale);
+    ScaledSource.tl.x = static_cast<int>(src.tl.x / m_nScale);
+    ScaledSource.br.x = static_cast<int>(src.br.x / m_nScale);
 
     ClearCacheRect(ScaledSource);
     ClearCacheRect(ScaledDest);
 
     // Copy the data from one part of the back-buffer to another!
     const UINT bytesPerPixel = m_scrinfo.format.bitsPerPixel / 8;
-    const UINT bytesPerLine = (ScaledDest.br.x - ScaledDest.tl.x) * bytesPerPixel;
-    BYTE* srcptr = m_backbuff + (ScaledSource.tl.y * m_bytesPerRow) + (ScaledSource.tl.x * bytesPerPixel);
+    const UINT bytesPerLine = (static_cast<UINT>(ScaledDest.br.x - ScaledDest.tl.x)) * bytesPerPixel;
+    BYTE* srcptr = m_backbuff + (static_cast<UINT>(ScaledSource.tl.y) * m_bytesPerRow) + (static_cast<UINT>(ScaledSource.tl.x) * bytesPerPixel);
 
-    BYTE* destptr = m_backbuff + (ScaledDest.tl.y * m_bytesPerRow) + (ScaledDest.tl.x * bytesPerPixel);
+    BYTE* destptr = m_backbuff + (static_cast<UINT>(ScaledDest.tl.y) * m_bytesPerRow) + (static_cast<UINT>(ScaledDest.tl.x) * bytesPerPixel);
     // Copy the data around in the right order
     if (ScaledDest.tl.y < ScaledSource.tl.y)
     {
@@ -1031,8 +1031,8 @@ void vncBuffer::CopyRect(const rfb::Rect& dest, const rfb::Point& delta)
     }
     else
     {
-        srcptr += (m_bytesPerRow * ((ScaledDest.br.y - ScaledDest.tl.y) - 1));
-        destptr += (m_bytesPerRow * ((ScaledDest.br.y - ScaledDest.tl.y) - 1));
+        srcptr += (m_bytesPerRow * (static_cast<UINT>((ScaledDest.br.y - ScaledDest.tl.y) - 1)));
+        destptr += (m_bytesPerRow * (static_cast<UINT>((ScaledDest.br.y - ScaledDest.tl.y) - 1)));
         for (int y = ScaledDest.br.y; y > ScaledDest.tl.y; --y)
         {
             std::memmove(destptr, srcptr, bytesPerLine);
@@ -1055,9 +1055,9 @@ void vncBuffer::ClearCache()
         dest.bottom = m_scrinfo.framebufferHeight;
         // Modif sf@2002 - v1.1.0 - Scramble the cache
         int nValue{ 0 };
-        BYTE* cacheptr = m_cachebuff + (dest.top * m_bytesPerRow) + (dest.left * m_scrinfo.format.bitsPerPixel / 8);
+        BYTE* cacheptr = m_cachebuff + (static_cast<unsigned long>(dest.top) * m_bytesPerRow) + (dest.left * m_scrinfo.format.bitsPerPixel / 8);
 
-        const UINT bytesPerLine = (dest.right - dest.left) * (m_scrinfo.format.bitsPerPixel / 8);
+        const UINT bytesPerLine = static_cast<UINT>((dest.right - dest.left) * (m_scrinfo.format.bitsPerPixel / 8));
 
         for (int y = dest.top; y < dest.bottom; ++y)
         {
@@ -1077,9 +1077,9 @@ void vncBuffer::ClearCacheRect(const rfb::Rect& dest)
     if (m_use_cache && m_cachebuff)
     {
         int nValue{ 0 };
-        BYTE* cacheptr = m_cachebuff + (dest.tl.y * m_bytesPerRow) + (dest.tl.x * m_scrinfo.format.bitsPerPixel / 8);
+        BYTE* cacheptr = m_cachebuff + (static_cast<UINT>(dest.tl.y) * m_bytesPerRow) + (dest.tl.x * m_scrinfo.format.bitsPerPixel / 8);
 
-        const UINT bytesPerLine = (dest.br.x - dest.tl.x) * (m_scrinfo.format.bitsPerPixel / 8);
+        const UINT bytesPerLine = static_cast<UINT>((dest.br.x - dest.tl.x) * (m_scrinfo.format.bitsPerPixel / 8));
 
         for (int y = dest.tl.y; y < dest.br.y; ++y)
         {
@@ -1106,7 +1106,7 @@ void vncBuffer::ClearBack()
             m_freemainbuff = false;
         }
     }
-    m_mainbuff = (BYTE*)m_desktop->OptimisedBlitBuffer();
+    m_mainbuff = reinterpret_cast<BYTE*>(m_desktop->OptimisedBlitBuffer());
 
     if (m_mainbuff)
     {
@@ -1115,18 +1115,18 @@ void vncBuffer::ClearBack()
     else
     {
         m_freemainbuff = TRUE;
-        if ((m_mainbuff = new BYTE[m_desktop->ScreenBuffSize()]) == nullptr)
+        if ((m_mainbuff = new BYTE[static_cast<unsigned long long>(m_desktop->ScreenBuffSize())]) == nullptr)
         {
             return;
         }
-        std::memset(m_mainbuff, 0, m_desktop->ScreenBuffSize());
+        std::memset(m_mainbuff, 0, static_cast<size_t>(m_desktop->ScreenBuffSize()));
     }
 
     if (m_videodriverused)
     {
         if (m_mainbuff)
         {
-            std::memcpy(m_backbuff, m_mainbuff, m_desktop->ScreenBuffSize());
+            std::memcpy(m_backbuff, m_mainbuff, static_cast<size_t>(m_desktop->ScreenBuffSize()));
         }
     }
     else
@@ -1152,9 +1152,9 @@ void vncBuffer::BlackBack()
     dest.right = m_scrinfo.framebufferWidth;
     dest.bottom = m_scrinfo.framebufferHeight;
     int nValue{ 1 };
-    BYTE* backptr = m_backbuff + (dest.top * m_bytesPerRow) + (dest.left * m_scrinfo.format.bitsPerPixel / 8);
+    BYTE* backptr = m_backbuff + (static_cast<unsigned long>(dest.top) * m_bytesPerRow) + (dest.left * m_scrinfo.format.bitsPerPixel / 8);
 
-    const UINT bytesPerLine = (dest.right - dest.left) * (m_scrinfo.format.bitsPerPixel / 8);
+    const UINT bytesPerLine = static_cast<UINT>((dest.right - dest.left) * (m_scrinfo.format.bitsPerPixel / 8));
 
     for (int y = dest.top; y < dest.bottom; ++y)
     {
@@ -1222,7 +1222,7 @@ void vncBuffer::EnableCache(const BOOL enable)
             delete[] m_cachebuff;
             m_cachebuff = nullptr;
         }
-        if ((m_cachebuff = new BYTE[m_desktop->ScreenBuffSize()]) == nullptr)
+        if ((m_cachebuff = new BYTE[static_cast<unsigned long long>(m_desktop->ScreenBuffSize())]) == nullptr)
         {
             vnclog.Print(LL_INTERR, VNCLOG("unable to allocate cache buffer[%d]\n"), m_desktop->ScreenBuffSize());
             return;

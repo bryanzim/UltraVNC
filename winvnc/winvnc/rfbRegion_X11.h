@@ -12,8 +12,8 @@
 
 // Cross-platform Region class based on the X11 region implementation
 
-#ifndef __RFB_REGION_X11_INCLUDED__
-#define __RFB_REGION_X11_INCLUDED__
+#ifndef RFB_REGION_X11_INCLUDED
+#define RFB_REGION_X11_INCLUDED
 
 #include "rfbRect.h"
 
@@ -78,4 +78,4 @@ namespace rfb
 
 }
 
-#endif // __RFB_REGION_X11_INCLUDED__
+#endif // RFB_REGION_X11_INCLUDED

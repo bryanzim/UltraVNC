@@ -42,7 +42,7 @@
 #include "uvncUiAccess.h"
 
 //	[v1.0.2-jp1 fix] IOport's patch (Include "ime.h" for IME control)
-#include <ime.h>
+#include <Ime.h>
 
 #include <map>
 #include <vector>
@@ -552,7 +552,7 @@ public:
     {
         if (!(::GetAsyncKeyState(vkCode) & 0x8000))
         {
-            doKeyboardEvent(static_cast<BYTE>(vkCode), flags);
+            doKeyboardEvent(static_cast<BYTE>(vkCode), static_cast<DWORD>(flags));
             vnclog.Print(LL_INTINFO, "fake %d down\n", vkCode);
             pressed = true;
         }
@@ -561,7 +561,7 @@ public:
     {
         if (::GetAsyncKeyState(vkCode) & 0x8000)
         {
-            doKeyboardEvent(static_cast<BYTE>(vkCode), flags | KEYEVENTF_KEYUP);
+            doKeyboardEvent(static_cast<BYTE>(vkCode), static_cast<DWORD>(flags | KEYEVENTF_KEYUP));
             vnclog.Print(LL_INTINFO, "fake %d up\n", vkCode);
             released = true;
         }
@@ -570,12 +570,12 @@ public:
     {
         if (pressed)
         {
-            doKeyboardEvent(static_cast<BYTE>(vkCode), flags | KEYEVENTF_KEYUP);
+            doKeyboardEvent(static_cast<BYTE>(vkCode), static_cast<DWORD>(flags | KEYEVENTF_KEYUP));
             vnclog.Print(LL_INTINFO, "fake %d up\n", vkCode);
         }
         else if (released)
         {
-            doKeyboardEvent(static_cast<BYTE>(vkCode), flags);
+            doKeyboardEvent(static_cast<BYTE>(vkCode), static_cast<DWORD>(flags));
             vnclog.Print(LL_INTINFO, "fake %d down\n", vkCode);
         }
     }
@@ -973,7 +973,7 @@ public:
         std::memset(keystate.data(), 0, 256);
         for (int j{ 0 }; j < sizeof(latin1DeadChars); ++j)
         {
-            SHORT s = ::VkKeyScan(latin1DeadChars[j]);
+            SHORT s = ::VkKeyScan(static_cast<CHAR>(latin1DeadChars[j]));
             if (s != -1)
             {
                 BYTE vkCode = LOBYTE(s);
@@ -982,12 +982,12 @@ public:
                 keystate[VK_CONTROL] = (modifierState & 2) ? 0x80 : 0;
                 keystate[VK_MENU] = (modifierState & 4) ? 0x80 : 0;
                 std::array<rdr::U8, 2U> chars;
-                int nchars = ::ToAscii(vkCode, 0, keystate.data(), (WORD*)chars.data(), 0);
+                int nchars = ::ToAscii(vkCode, 0, keystate.data(), reinterpret_cast<WORD*>(chars.data()), 0);
                 if (nchars < 0)
                 {
                     vnclog.Print(LL_INTWARN, "Found dead key 0x%x '%c'", latin1DeadChars[j], latin1DeadChars[j]);
                     deadChars.push_back(latin1DeadChars[j]);
-                    ::ToAscii(vkCode, 0, keystate.data(), (WORD*)chars.data(), 0);
+                    ::ToAscii(vkCode, 0, keystate.data(), reinterpret_cast<WORD*>(chars.data()), 0);
                 }
             }
         }
@@ -1244,7 +1244,7 @@ public:
 				  }
 			  }
 #endif
-                        ascii = keysym;
+                        ascii = static_cast<int>(keysym);
                         if (ascii <= 255)
                         {
 

@@ -14,8 +14,8 @@
 // FdOutStream streams to a file descriptor.
 //
 
-#ifndef __RDR_FDOUTSTREAM_H__
-#define __RDR_FDOUTSTREAM_H__
+#ifndef RDR_FDOUTSTREAM_H
+#define RDR_FDOUTSTREAM_H
 
 #include "OutStream.h"
 

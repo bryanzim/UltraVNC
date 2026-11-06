@@ -16,8 +16,8 @@
 
 class vncMenu;
 
-#if (!defined(_WINVNC_VNCMENU))
-#define _WINVNC_VNCMENU
+#if (!defined(WINVNC_VNCMENU))
+#define WINVNC_VNCMENU
 
 #include "stdhdrs.h"
 

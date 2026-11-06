@@ -10,8 +10,8 @@
 //
 
 
-#ifndef _UTILS_H
-#define _UTILS_H
+#ifndef UTILS_H
+#define UTILS_H
 
 #pragma once
 #include "EnvReg.h"

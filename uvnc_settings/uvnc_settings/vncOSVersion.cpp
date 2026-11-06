@@ -11,7 +11,7 @@
 #pragma warning(disable : 4996)
 #include "stdafx.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 int OSTYPE{ 4 };
 void SetOSVersion()

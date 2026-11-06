@@ -13,10 +13,10 @@
 
 #include "../3rdparty/qrcodegen/qrcodegen.hpp"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <accctrl.h>
-#include <aclapi.h>
+#include <AclAPI.h>
 #include <bcrypt.h>
 #include <dpapi.h>
 #include <wincred.h>

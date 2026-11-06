@@ -12,9 +12,9 @@
 
 #define _CRT_NON_CONFORMING_SWPRINTFS 1
 
-#include <windows.h>
+#include <Windows.h>
 
-#include <lm.h>
+#include <LM.h>
 #include <lmcons.h>
 #include <tchar.h>
 

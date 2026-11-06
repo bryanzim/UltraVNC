@@ -11,8 +11,8 @@
 
 class vncListDlg;
 
-#if (!defined(_WINVNC_VNCLISTDLG))
-#define _WINVNC_VNCLISTDLG
+#if (!defined(WINVNC_VNCLISTDLG))
+#define WINVNC_VNCLISTDLG
 
 #include "stdhdrs.h"
 

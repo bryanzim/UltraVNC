@@ -13,9 +13,9 @@
 
 #include "vnclog.h"
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <array>
 #include <cstdlib>
@@ -83,7 +83,7 @@ void testBench()
     m_bminfo.bmi.bmiHeader.biWidth = testRect.right;
     m_bminfo.bmi.bmiHeader.biHeight = testRect.bottom;
     m_bminfo.bmi.bmiHeader.biSizeImage =
-        std::abs((m_bminfo.bmi.bmiHeader.biWidth * m_bminfo.bmi.bmiHeader.biHeight * m_bminfo.bmi.bmiHeader.biBitCount) / 8);
+        static_cast<DWORD>(std::abs((m_bminfo.bmi.bmiHeader.biWidth * m_bminfo.bmi.bmiHeader.biHeight * m_bminfo.bmi.bmiHeader.biBitCount) / 8));
     m_bminfo.bmi.bmiHeader.biHeight = -std::abs(m_bminfo.bmi.bmiHeader.biHeight);
 
     // Is the bitmap palette-based or truecolour?
@@ -118,7 +118,7 @@ void testBench()
         DWORD start = GetTimeFunction();
 
         {
-            if ((m_oldbitmap = (HBITMAP)::SelectObject(m_hmemdc, m_membitmap)) == nullptr)
+            if ((m_oldbitmap = reinterpret_cast<HBITMAP>(::SelectObject(m_hmemdc, m_membitmap))) == nullptr)
             {
                 return;
             }
@@ -129,8 +129,8 @@ void testBench()
         for (int xx{ 0 }; xx < testRect.right / 32; ++xx)
             for (int yy{ 0 }; yy < testRect.bottom / 32; ++yy)
             {
-                unsigned int index = (m_bytesPerRow * yy) + (m_bytesPerPixel * xx);
-                std::memcpy(&cr, ((char*)m_DIBbits) + index, m_bytesPerPixel);
+                unsigned int index = static_cast<unsigned int>((m_bytesPerRow * yy) + (m_bytesPerPixel * xx));
+                std::memcpy(&cr, (reinterpret_cast<char*>(m_DIBbits)) + index, static_cast<size_t>(m_bytesPerPixel));
             }
 
 

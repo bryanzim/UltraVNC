@@ -20,12 +20,12 @@
 #include "Localization.h"
 #include "SettingsManager.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <direct.h>
-#include <shlobj.h>
-#include <userenv.h>
-#include <wtsapi32.h>
+#include <ShlObj.h>
+#include <UserEnv.h>
+#include <WtsApi32.h>
 
 #include <array>
 #include <cstddef>
@@ -154,7 +154,7 @@ void WINAPI UltraVNCService::service_main([[maybe_unused]] const DWORD argc, LPT
     if (hKernel32)
     {
         pSetProcessMitigationPolicy_t pSetProcessMitigationPolicy =
-            (pSetProcessMitigationPolicy_t)::GetProcAddress(hKernel32, "SetProcessMitigationPolicy");
+            reinterpret_cast<pSetProcessMitigationPolicy_t>(::GetProcAddress(hKernel32, "SetProcessMitigationPolicy"));
         if (pSetProcessMitigationPolicy)
         {
             PROCESS_MITIGATION_IMAGE_LOAD_POLICY policy{};
@@ -232,7 +232,7 @@ void WINAPI UltraVNCService::service_main([[maybe_unused]] const DWORD argc, LPT
 
     if (pRegisterServiceCtrlHandlerEx.isValid())
     {
-        serviceStatusHandle = (*pRegisterServiceCtrlHandlerEx)(service_name.data(), control_handler_ex, 0);
+        serviceStatusHandle = (*pRegisterServiceCtrlHandlerEx)(service_name.data(), control_handler_ex, nullptr);
     }
     else
     {
@@ -266,13 +266,13 @@ void WINAPI UltraVNCService::service_main([[maybe_unused]] const DWORD argc, LPT
         ::SetServiceStatus(serviceStatusHandle, &serviceStatus);
 
         /* service is now stopped */
-        serviceStatus.dwControlsAccepted &= ~(SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN);
+        serviceStatus.dwControlsAccepted &= static_cast<DWORD>(~(SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN));
         serviceStatus.dwCurrentState = SERVICE_STOPPED;
         ::SetServiceStatus(serviceStatusHandle, &serviceStatus);
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
-void WINAPI UltraVNCService::control_handler(const DWORD controlCode) { control_handler_ex(controlCode, 0, 0, 0); }
+void WINAPI UltraVNCService::control_handler(const DWORD controlCode) { control_handler_ex(controlCode, 0, nullptr, nullptr); }
 DWORD WINAPI UltraVNCService::control_handler_ex(DWORD controlCode, const DWORD dwEventType, [[maybe_unused]] const LPVOID lpEventData,
                                                  [[maybe_unused]] const LPVOID lpContext)
 {
@@ -325,7 +325,7 @@ DWORD WINAPI UltraVNCService::control_handler_ex(DWORD controlCode, const DWORD 
 int UltraVNCService::start_service(char* const cmd)
 {
     ::strcpy_s(cmdtext.data(), 256, cmd);
-    SERVICE_TABLE_ENTRY serviceTable[] = { { service_name.data(), service_main }, { 0, 0 } };
+    SERVICE_TABLE_ENTRY serviceTable[] = { { service_name.data(), service_main }, { nullptr, nullptr } };
 
     if (!::StartServiceCtrlDispatcher(serviceTable))
     {
@@ -344,7 +344,7 @@ void UltraVNCService::set_service_description()
     ::_snprintf_s(tempName.data(), tempName.size(), sizeof tempName, "SYSTEM\\CurrentControlSet\\Services\\%s", service_name.data());
     ::RegCreateKeyEx(HKEY_LOCAL_MACHINE, tempName.data(), 0, REG_NONE, REG_OPTION_NON_VOLATILE, KEY_READ | KEY_WRITE, nullptr, &hKey,
                    &dw);
-    ::RegSetValueEx(hKey, "Description", 0, REG_SZ, (const BYTE*)desc, static_cast<DWORD>(std::strlen(desc) + 1));
+    ::RegSetValueEx(hKey, "Description", 0, REG_SZ, reinterpret_cast<const BYTE*>(desc), static_cast<DWORD>(std::strlen(desc) + 1));
 
 
     ::RegCloseKey(hKey);
@@ -362,7 +362,7 @@ int UltraVNCService::install_service(void)
     SC_HANDLE scm, service;
     pad();
 
-    scm = ::OpenSCManager(0, 0, SC_MANAGER_CREATE_SERVICE);
+    scm = ::OpenSCManager(nullptr, nullptr, SC_MANAGER_CREATE_SERVICE);
     if (!scm)
     {
         MessageBoxSecure(nullptr, sz_ID_FAILED_OPEN_SVC_MGR.data(), app_name, MB_ICONERROR);
@@ -404,7 +404,7 @@ int UltraVNCService::uninstall_service(void)
     SC_HANDLE scm, service;
     SERVICE_STATUS serviceStatusIn;
 
-    scm = ::OpenSCManager(0, 0, SC_MANAGER_CONNECT);
+    scm = ::OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
     if (!scm)
     {
         MessageBoxSecure(nullptr, sz_ID_FAILED_OPEN_SVC_MGR.data(), app_name, MB_ICONERROR);
@@ -467,7 +467,7 @@ int UltraVNCService::pad()
     std::array<char, MAX_PATH> dir;
     char* ptr;
     std::array<char, MAX_PATH> exe_file_name;
-    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+    ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     /* set current directory */
     ::strcpy_s(dir.data(), dir.size(), exe_file_name.data());
     ptr = std::strrchr(dir.data(), '\\'); /* last backslash */
@@ -499,7 +499,7 @@ BOOL UltraVNCService::CreateServiceSafeBootKey()
                               &hKey, &dwDisp);
     if (lSuccess == ERROR_SUCCESS)
     {
-        ::RegSetValueEx(hKey, nullptr, 0, REG_SZ, (unsigned char*)"Service", 8);
+        ::RegSetValueEx(hKey, nullptr, 0, REG_SZ, const_cast<unsigned char*>(reinterpret_cast<const unsigned char *>("Service")), 8);
         ::RegCloseKey(hKey);
         return TRUE;
     }
@@ -651,7 +651,7 @@ BOOL UltraVNCService::reboot()
         ::LookupPrivilegeValue(nullptr, SE_SHUTDOWN_NAME, &tkp.Privileges[0U].Luid);
         tkp.PrivilegeCount = 1;
         tkp.Privileges[0U].Attributes = SE_PRIVILEGE_ENABLED;
-        if (::AdjustTokenPrivileges(hToken, FALSE, &tkp, 0, (PTOKEN_PRIVILEGES) nullptr, 0))
+        if (::AdjustTokenPrivileges(hToken, FALSE, &tkp, 0, static_cast<PTOKEN_PRIVILEGES>(nullptr), nullptr))
         {
             ::ExitWindowsEx(EWX_REBOOT, 0);
         }
@@ -668,7 +668,7 @@ BOOL UltraVNCService::Force_reboot()
         ::LookupPrivilegeValue(nullptr, SE_SHUTDOWN_NAME, &tkp.Privileges[0U].Luid);
         tkp.PrivilegeCount = 1;
         tkp.Privileges[0U].Attributes = SE_PRIVILEGE_ENABLED;
-        if (::AdjustTokenPrivileges(hToken, FALSE, &tkp, 0, (PTOKEN_PRIVILEGES) nullptr, 0))
+        if (::AdjustTokenPrivileges(hToken, FALSE, &tkp, 0, static_cast<PTOKEN_PRIVILEGES>(nullptr), nullptr))
         {
             OSVERSIONINFO OSversion;
             OSversion.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
@@ -691,7 +691,7 @@ void UltraVNCService::Reboot_with_force_reboot() { Force_reboot(); }
 void UltraVNCService::Reboot_with_force_reboot_elevated()
 {
     std::array<char, MAX_PATH> exe_file_name;
-    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+    ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     SHELLEXECUTEINFO shExecInfo;
     shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
     shExecInfo.fMask = 0;
@@ -717,7 +717,7 @@ void UltraVNCService::Reboot_in_safemode()
 void UltraVNCService::Reboot_in_safemode_elevated()
 {
     std::array<char, MAX_PATH> exe_file_name;
-    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+    ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     SHELLEXECUTEINFO shExecInfo;
     shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
     shExecInfo.fMask = 0;
@@ -903,12 +903,12 @@ void UltraVNCService::disconnect_remote_sessions()
     }
     if (hlibwinsta)
     {
-        WinStationConnectF = (pWinStationConnect)::GetProcAddress(hlibwinsta, "WinStationConnectW");
+        WinStationConnectF = reinterpret_cast<pWinStationConnect>(::GetProcAddress(hlibwinsta, "WinStationConnectW"));
     }
     if (WinStationConnectF != nullptr)
     {
         DWORD ID = ::WTSGetActiveConsoleSessionId();
-        WinStationConnectF(0, 0, ID, L"", 0);
+        WinStationConnectF(nullptr, 0, ID, L"", 0);
         // sleep to allow the system to finish the connect/disconnect process. If we don't
         // then the workstation won't get locked every time.
         ::Sleep(3000);
@@ -928,7 +928,7 @@ void UltraVNCService::disconnect_remote_sessions()
 
 bool UltraVNCService::IsAnyRDPSessionActive()
 {
-    WTS_SESSION_INFO* pSessions = 0;
+    WTS_SESSION_INFO* pSessions = nullptr;
     DWORD nSessions(0U);
     DWORD rdpSessionExists = false;
 
@@ -959,7 +959,7 @@ bool UltraVNCService::IsAnyRDPSessionActive()
 int UltraVNCService::createWinvncExeCall(const bool preconnect, const bool rdpselect)
 {
     std::array<char, MAX_PATH> exe_file_name;
-    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+    ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     OSVERSIONINFO OSversion;
     OSversion.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
     GetVersionEx(&OSversion);
@@ -1017,7 +1017,7 @@ void UltraVNCService::monitorSessions()
     DWORD requestedSessionID{ 0U };
     DWORD dwSessionId{ 0U };
     DWORD OlddwSessionId{ 99U };
-    ProcessInfo.hProcess = 0;
+    ProcessInfo.hProcess = nullptr;
     std::array<HANDLE, 3U> testevent3;
     std::array<HANDLE, 2U> testevent2;
     IsShutdown = false;
@@ -1041,7 +1041,7 @@ void UltraVNCService::monitorSessions()
         data = ::MapViewOfFile(hMapFile, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
     }
     ::Sleep(3000);
-    int* a = (int*)data;
+    int* a = reinterpret_cast<int*>(data);
     testevent3[0U] = hEndSessionEvent;
     testevent3[1U] = hEventcad;
     testevent3[2U] = hEventPreConnect;
@@ -1068,7 +1068,7 @@ void UltraVNCService::monitorSessions()
         case WAIT_OBJECT_0 + 2: {
             //Tell UltraVNC Server to stop
             ::SetEvent(hEventIn);
-            requestedSessionID = *a;
+            requestedSessionID = static_cast<DWORD>(*a);
             //We always have a process handle, else we could not get the signal from it.
             DWORD dwCode = STILL_ACTIVE;
             while ((dwCode == STILL_ACTIVE) && (ProcessInfo.hProcess != nullptr) && !IsShutdown)
@@ -1119,7 +1119,7 @@ void UltraVNCService::monitorSessions()
         case WAIT_OBJECT_0 + 1: {
             typedef VOID(WINAPI * SendSas)(BOOL asUser);
             HINSTANCE Inst = ::LoadLibraryEx("sas.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-            SendSas sendSas = (SendSas)::GetProcAddress(Inst, "SendSAS");
+            SendSas sendSas = reinterpret_cast<SendSas>(::GetProcAddress(Inst, "SendSAS"));
             if (sendSas)
             {
                 sendSas(FALSE);
@@ -1141,7 +1141,7 @@ void UltraVNCService::monitorSessions()
                 ::strcat_s(mycommand.data(), mycommand.size(), WORKDIR.data()); //set the directory
                 ::strcat_s(mycommand.data(), mycommand.size(), "\\");
                 ::strcat_s(mycommand.data(), mycommand.size(), "cad.exe");
-                (void)::ShellExecute(::GetDesktopWindow(), "open", mycommand.data(), "", 0, SW_SHOWNORMAL);
+                (void)::ShellExecute(::GetDesktopWindow(), "open", mycommand.data(), "", nullptr, SW_SHOWNORMAL);
             }
             if (Inst)
             {
@@ -1186,7 +1186,7 @@ void UltraVNCService::monitorSessions()
 
                 if (preconnect_start == true)
                 {
-                    if (!IsSessionStillActive(OlddwSessionId))
+                    if (!IsSessionStillActive(static_cast<int>(OlddwSessionId)))
                     {
                         ::SetEvent(hEventIn);
                     }
@@ -1423,12 +1423,12 @@ BOOL UltraVNCService::LaunchProcessWin(const DWORD dwSessionId, const bool preco
                         pWinStationConnect WinStationConnectF = nullptr;
                         if (hlibwinsta)
                         {
-                            WinStationConnectF = (pWinStationConnect)::GetProcAddress(hlibwinsta, "WinStationConnectW");
+                            WinStationConnectF = reinterpret_cast<pWinStationConnect>(::GetProcAddress(hlibwinsta, "WinStationConnectW"));
                         }
                         if (WinStationConnectF != nullptr)
                         {
                             DWORD ID = ::WTSGetActiveConsoleSessionId();
-                            WinStationConnectF(0, 0, ID, L"", 0);
+                            WinStationConnectF(nullptr, 0, ID, L"", 0);
                             ::LockWorkStation();
                         }
                         ::Sleep(3000);
@@ -1490,13 +1490,13 @@ BOOL UltraVNCService::LaunchProcessWin(const DWORD dwSessionId, const bool preco
                         pWinStationConnect WinStationConnectF = nullptr;
                         if (hlibwinsta)
                         {
-                            WinStationConnectF = (pWinStationConnect)::GetProcAddress(hlibwinsta, "WinStationConnectW");
+                            WinStationConnectF = reinterpret_cast<pWinStationConnect>(::GetProcAddress(hlibwinsta, "WinStationConnectW"));
                         }
 
                         if (WinStationConnectF != nullptr)
                         {
                             DWORD ID = ::WTSGetActiveConsoleSessionId();
-                            WinStationConnectF(0, 0, ID, L"", 0);
+                            WinStationConnectF(nullptr, 0, ID, L"", 0);
                             ::LockWorkStation();
                         }
                         ::Sleep(3000);
@@ -1553,7 +1553,7 @@ BOOL UltraVNCService::CreateRemoteSessionProcess(const IN DWORD dwSessionId, IN 
     };
     CPAU_RET_PARAM cpauRetData;
     DWORD dwUsedBytes = sizeof(cpauData);
-    LPBYTE pBuffer = (LPBYTE)(&cpauData + 1);
+    LPBYTE pBuffer = reinterpret_cast<LPBYTE>((&cpauData + 1));
     ::GetSystemDirectoryW(szWinStaPath.data(), static_cast<UINT>(szWinStaPath.size()));
     lstrcatW(szWinStaPath.data(), L"\\winsta.dll");
     hInstWinSta = ::LoadLibraryW(szWinStaPath.data());
@@ -1561,10 +1561,10 @@ BOOL UltraVNCService::CreateRemoteSessionProcess(const IN DWORD dwSessionId, IN 
     if (hInstWinSta)
     {
         pWinStationQueryInformationW pfWinStationQueryInformationW =
-            (pWinStationQueryInformationW)::GetProcAddress(hInstWinSta, "WinStationQueryInformationW");
+            reinterpret_cast<pWinStationQueryInformationW>(::GetProcAddress(hInstWinSta, "WinStationQueryInformationW"));
         if (pfWinStationQueryInformationW)
         {
-            bGetNPName = pfWinStationQueryInformationW(0, dwSessionId, 0x21, szNamedPipeName.data(), sizeof(szNamedPipeName), &dwNameLen);
+            bGetNPName = pfWinStationQueryInformationW(nullptr, dwSessionId, 0x21, szNamedPipeName.data(), sizeof(szNamedPipeName), &dwNameLen);
         }
         ::FreeLibrary(hInstWinSta);
     }
@@ -1575,7 +1575,7 @@ BOOL UltraVNCService::CreateRemoteSessionProcess(const IN DWORD dwSessionId, IN 
 
     do
     {
-        hNamedPipe = ::CreateFileW(szNamedPipeName.data(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, 0);
+        hNamedPipe = ::CreateFileW(szNamedPipeName.data(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
         if (hNamedPipe == INVALID_HANDLE_VALUE)
         {
             if (::GetLastError() == ERROR_PIPE_BUSY)
@@ -1598,13 +1598,13 @@ BOOL UltraVNCService::CreateRemoteSessionProcess(const IN DWORD dwSessionId, IN 
     cpauData.dwCreationFlags = dwCreationFlags;
     cpauData.dwProcessId = ::GetCurrentProcessId();
     cpauData.hToken = hToken;
-    cpauData.lpApplicationName = (LPWSTR)MarshallString(lpApplicationName, &cpauData, sizeof(bDump), &pBuffer, &dwUsedBytes);
-    cpauData.lpCommandLine = (LPWSTR)MarshallString(lpCommandLine.data(), &cpauData, sizeof(bDump), &pBuffer, &dwUsedBytes);
+    cpauData.lpApplicationName = reinterpret_cast<LPWSTR>(MarshallString(lpApplicationName, &cpauData, sizeof(bDump), &pBuffer, &dwUsedBytes));
+    cpauData.lpCommandLine = reinterpret_cast<LPWSTR>(MarshallString(lpCommandLine.data(), &cpauData, sizeof(bDump), &pBuffer, &dwUsedBytes));
     cpauData.StartupInfo = StartupInfo;
     cpauData.StartupInfo.lpDesktop =
-        (LPWSTR)MarshallString(cpauData.StartupInfo.lpDesktop, &cpauData, sizeof(bDump), &pBuffer, &dwUsedBytes);
+        reinterpret_cast<LPWSTR>(MarshallString(cpauData.StartupInfo.lpDesktop, &cpauData, sizeof(bDump), &pBuffer, &dwUsedBytes));
     cpauData.StartupInfo.lpTitle =
-        (LPWSTR)MarshallString(cpauData.StartupInfo.lpTitle, &cpauData, sizeof(bDump), &pBuffer, &dwUsedBytes);
+        reinterpret_cast<LPWSTR>(MarshallString(cpauData.StartupInfo.lpTitle, &cpauData, sizeof(bDump), &pBuffer, &dwUsedBytes));
 
     if (lpEnvironment)
     {
@@ -1612,7 +1612,7 @@ BOOL UltraVNCService::CreateRemoteSessionProcess(const IN DWORD dwSessionId, IN 
         {
             while ((dwEnvLen + dwUsedBytes <= sizeof(bDump)))
             {
-                if ((((LPWSTR)lpEnvironment)[dwEnvLen / 2] == '\0') && (((LPWSTR)lpEnvironment)[dwEnvLen / 2 + 1] == '\0'))
+                if (((reinterpret_cast<LPWSTR>(lpEnvironment))[dwEnvLen / 2] == '\0') && ((reinterpret_cast<LPWSTR>(lpEnvironment))[dwEnvLen / 2 + 1] == '\0'))
                 {
                     dwEnvLen += 2 * sizeof(WCHAR);
                     break;
@@ -1624,7 +1624,7 @@ BOOL UltraVNCService::CreateRemoteSessionProcess(const IN DWORD dwSessionId, IN 
         {
             while (dwEnvLen + dwUsedBytes <= sizeof(bDump))
             {
-                if ((((LPSTR)lpEnvironment)[dwEnvLen] == '\0') && (((LPSTR)lpEnvironment)[dwEnvLen + 1] == '\0'))
+                if (((reinterpret_cast<LPSTR>(lpEnvironment))[dwEnvLen] == '\0') && ((reinterpret_cast<LPSTR>(lpEnvironment))[dwEnvLen + 1] == '\0'))
                 {
                     dwEnvLen += 2;
                     break;
@@ -1635,7 +1635,7 @@ BOOL UltraVNCService::CreateRemoteSessionProcess(const IN DWORD dwSessionId, IN 
         if (dwEnvLen + dwUsedBytes <= sizeof(bDump))
         {
             std::memmove(pBuffer, lpEnvironment, dwEnvLen);
-            cpauData.lpEnvironment = (LPVOID)dwUsedBytes;
+            cpauData.lpEnvironment = reinterpret_cast<LPVOID>(dwUsedBytes);
             pBuffer += dwEnvLen;
             dwUsedBytes += dwEnvLen;
         }
@@ -1678,12 +1678,12 @@ BOOL UltraVNCService::CreateRemoteSessionProcess(const IN DWORD dwSessionId, IN 
         bRet = FALSE;
     }
     // function sometimes fail, the use processid to get hprocess... bug MS
-    if (lpProcessInformation->hProcess == 0)
+    if (lpProcessInformation->hProcess == nullptr)
     {
         lpProcessInformation->hProcess = hProcess;
     }
     //this should never happen, looping connections
-    if (lpProcessInformation->hProcess == 0)
+    if (lpProcessInformation->hProcess == nullptr)
     {
         ::Sleep(5000);
     }
@@ -1733,12 +1733,12 @@ BOOL UltraVNCService::Char2Wchar(WCHAR* const pDest, char* const pSrc, int nDest
     {
         return FALSE;
     }
-    std::memset(pDest, 0, sizeof(TCHAR) * nDestStrLen);
+    std::memset(pDest, 0, sizeof(TCHAR) * static_cast<unsigned long long>(nDestStrLen));
     nOutputBuffLen = ::MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pSrc, nSrcStrLen, pDest, nDestStrLen);
 
     if (nOutputBuffLen == 0)
     {
-        retcode = ::GetLastError();
+        retcode = static_cast<int>(::GetLastError());
         return FALSE;
     }
 
@@ -1904,14 +1904,14 @@ void UltraVNCService::wait_for_existing_process()
 bool UltraVNCService::IsSessionStillActive(const int ID)
 {
     typedef BOOL(WINAPI * pfnWTSEnumerateSessions)(HANDLE, DWORD, DWORD, PWTS_SESSION_INFO*, DWORD*);
-    ;
+    
     typedef VOID(WINAPI * pfnWTSFreeMemory)(PVOID);
 
     helper::DynamicFn<pfnWTSEnumerateSessions> pWTSEnumerateSessions("wtsapi32", "WTSEnumerateSessionsA");
     helper::DynamicFn<pfnWTSFreeMemory> pWTSFreeMemory("wtsapi32", "WTSFreeMemory");
     if (pWTSEnumerateSessions.isValid() && pWTSFreeMemory.isValid())
     {
-        WTS_SESSION_INFO* pSessions = 0;
+        WTS_SESSION_INFO* pSessions = nullptr;
         DWORD nSessions(0U);
         DWORD rdpSessionExists = false;
         if ((*pWTSEnumerateSessions)(WTS_CURRENT_SERVER_HANDLE, 0, 1, &pSessions, &nSessions))

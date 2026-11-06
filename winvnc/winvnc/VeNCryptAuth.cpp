@@ -17,7 +17,7 @@
 #include "SettingsManager.h"
 #include "vnclog.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <wincrypt.h>
 
@@ -52,9 +52,9 @@ namespace
     public:
         explicit SocketTransport(VSocket* socket) : m_socket(socket) {}
         bool SendAll(const void* const data, const std::size_t len) override
-        { return m_socket->SendExact((const char*)data, (const VCard)len) != VFalse; }
+        { return m_socket->SendExact(reinterpret_cast<const char*>(data), static_cast<const VCard>(len)) != VFalse; }
         bool RecvAll(void* const data, const std::size_t len) override
-        { return m_socket->ReadExact((char*)data, (const VCard)len) != VFalse; }
+        { return m_socket->ReadExact(reinterpret_cast<char*>(data), static_cast<const VCard>(len)) != VFalse; }
 
     private:
         VSocket* m_socket;
@@ -111,7 +111,7 @@ namespace
         {
             return nullptr;
         }
-        return (SaslLookupFn)::GetProcAddress(hModule, "sasl_lookup");
+        return reinterpret_cast<SaslLookupFn>(::GetProcAddress(hModule, "sasl_lookup"));
     }
 
     bool IsTLSVeNCryptSubtype(const std::uint32_t type)
@@ -188,7 +188,7 @@ bool VeNCryptAuth::Authenticate(std::string& outFailureMessage)
     bool subtypeAllowed{ false };
     for (int i{ 0 }; i < m_offeredCount; ++i)
     {
-        if (m_offeredTypes[i] == m_chosenType)
+        if (m_offeredTypes[static_cast<unsigned long long>(i)] == m_chosenType)
         {
             subtypeAllowed = true;
             break;
@@ -282,7 +282,7 @@ bool VeNCryptAuth::IssueAndSendSessionToken(std::string& outFailureMessage)
 {
     auto sendResponse = [this](std::uint8_t flags, const char* token, std::uint16_t len) -> bool {
         std::array<std::uint8_t, 3U> header{ flags, static_cast<std::uint8_t>((len >> 8)), static_cast<std::uint8_t>(len) };
-        return SendExact((const char*)header.data(), sizeof(header)) && ((len == 0) || SendExact(token, len));
+        return SendExact(reinterpret_cast<const char*>(header.data()), sizeof(header)) && ((len == 0) || SendExact(token, len));
     };
     auto fail = [&sendResponse, &outFailureMessage](const char* message) -> bool {
         sendResponse(0, nullptr, 0);
@@ -301,7 +301,7 @@ bool VeNCryptAuth::IssueAndSendSessionToken(std::string& outFailureMessage)
         return fail("Failed to load token validation DLL");
     }
 
-    IssueSessionTokenFn fn = (IssueSessionTokenFn)::GetProcAddress(hModule, "issue_session_token");
+    IssueSessionTokenFn fn = reinterpret_cast<IssueSessionTokenFn>(::GetProcAddress(hModule, "issue_session_token"));
     if (!fn)
     {
         return fail("Token validation DLL does not export issue_session_token");
@@ -381,7 +381,7 @@ bool VeNCryptAuth::SendSubTypes()
             }
             if ((v >= 0) && (v < 1024))
             {
-                allowed[v] = true;
+                allowed[static_cast<unsigned long long>(v)] = true;
                 cfgEmpty = false;
             }
             p = end;
@@ -410,8 +410,8 @@ bool VeNCryptAuth::SendSubTypes()
     // these; the UltraVNC viewer picks its own preferred type from the list.
     const bool saslAvailable = (GetSaslLookup() != nullptr);
     auto offer = [&](const std::uint32_t t) {
-        m_offeredTypes[n] = t;
-        subTypes[n++] = Swap32IfLE(t);
+        m_offeredTypes[static_cast<unsigned long long>(n)] = t;
+        subTypes[static_cast<unsigned long long>(n++)] = Swap32IfLE(t);
     };
 
     // MS-Logon is an exclusive server authentication policy. Updated clients
@@ -424,7 +424,7 @@ bool VeNCryptAuth::SendSubTypes()
         }
         m_offeredCount = n;
         std::uint8_t count = static_cast<std::uint8_t>(n);
-        return SendU8(count) && SendExact((char*)subTypes.data(), static_cast<int>((sizeof(CARD32) * n)));
+        return SendU8(count) && SendExact(reinterpret_cast<char*>(subTypes.data()), static_cast<int>((sizeof(CARD32) * static_cast<unsigned long long>(n))));
     }
 
     if (isAllowed(secTypeTokenTLS))
@@ -446,13 +446,13 @@ bool VeNCryptAuth::SendSubTypes()
 
     m_offeredCount = n;
     std::uint8_t count = static_cast<std::uint8_t>(n);
-    return SendU8(count) && SendExact((char*)subTypes.data(), static_cast<int>((sizeof(CARD32) * n)));
+    return SendU8(count) && SendExact(reinterpret_cast<char*>(subTypes.data()), static_cast<int>((sizeof(CARD32) * static_cast<unsigned long long>(n))));
 }
 
 bool VeNCryptAuth::ReadChosenType(std::uint32_t& outType)
 {
     CARD32 value = 0;
-    if (!ReadExact((char*)&value, sizeof(value)))
+    if (!ReadExact(reinterpret_cast<char*>(&value), sizeof(value)))
     {
         return false;
     }
@@ -526,7 +526,7 @@ bool VeNCryptAuth::ReadCredentials(std::string& outUsername, std::string& outTok
     if (m_chosenType == secTypeTokenTLS)
     {
         std::array<std::uint8_t, 8U> header{};
-        if (!ReadExact((char*)header.data(), sizeof(header)))
+        if (!ReadExact(reinterpret_cast<char*>(header.data()), sizeof(header)))
         {
             return false;
         }
@@ -554,7 +554,7 @@ bool VeNCryptAuth::ReadCredentials(std::string& outUsername, std::string& outTok
     }
 
     CARD32 userLenBE = 0, tokenLenBE = 0;
-    if (!ReadExact((char*)&userLenBE, sizeof(userLenBE)))
+    if (!ReadExact(reinterpret_cast<char*>(&userLenBE), sizeof(userLenBE)))
     {
         return false;
     }
@@ -565,7 +565,7 @@ bool VeNCryptAuth::ReadCredentials(std::string& outUsername, std::string& outTok
         return false;
     }
 
-    if (!ReadExact((char*)&tokenLenBE, sizeof(tokenLenBE)))
+    if (!ReadExact(reinterpret_cast<char*>(&tokenLenBE), sizeof(tokenLenBE)))
     {
         return false;
     }
@@ -575,7 +575,7 @@ bool VeNCryptAuth::ReadCredentials(std::string& outUsername, std::string& outTok
     // libvncclient) can't know about the token limit, so only a generous
     // sanity bound applies there and the validator DLL decides validity.
     const bool tokenSubtype = (m_chosenType == secTypeTokenTLS);
-    const CARD32 maxLen = tokenSubtype ? (CARD32)MaxTokenLen : 1024;
+    const CARD32 maxLen = tokenSubtype ? static_cast<CARD32>(MaxTokenLen) : 1024;
     const CARD32 minLen = tokenSubtype ? 6u : 0u;
     if ((tokenLen < minLen) || (tokenLen > maxLen))
     {
@@ -612,7 +612,7 @@ bool VeNCryptAuth::ValidateToken(const char* const username, const char* const t
         return false;
     }
 
-    ValidateTokenFn fn = (ValidateTokenFn)::GetProcAddress(hModule, "validate_token");
+    ValidateTokenFn fn = reinterpret_cast<ValidateTokenFn>(::GetProcAddress(hModule, "validate_token"));
     if (!fn)
     {
         outFailureMessage = "Token validation DLL does not export validate_token";
@@ -795,20 +795,20 @@ bool VeNCryptAuth::RunSaslAuth(std::string& outFailureMessage)
     return true;
 }
 
-bool VeNCryptAuth::SendU8(std::uint8_t value) { return SendExact((char*)&value, sizeof(value)); }
+bool VeNCryptAuth::SendU8(std::uint8_t value) { return SendExact(reinterpret_cast<char*>(&value), sizeof(value)); }
 
 bool VeNCryptAuth::SendU32(const std::uint32_t value)
 {
     CARD32 be = Swap32IfLE(value);
-    return SendExact((char*)&be, sizeof(be));
+    return SendExact(reinterpret_cast<char*>(&be), sizeof(be));
 }
 
-bool VeNCryptAuth::ReadU8(std::uint8_t& value) { return ReadExact((char*)&value, sizeof(value)); }
+bool VeNCryptAuth::ReadU8(std::uint8_t& value) { return ReadExact(reinterpret_cast<char*>(&value), sizeof(value)); }
 
 bool VeNCryptAuth::ReadU32(std::uint32_t& value)
 {
     CARD32 be = 0;
-    if (!ReadExact((char*)&be, sizeof(be)))
+    if (!ReadExact(reinterpret_cast<char*>(&be), sizeof(be)))
     {
         return false;
     }
@@ -819,12 +819,12 @@ bool VeNCryptAuth::ReadU32(std::uint32_t& value)
 bool VeNCryptAuth::ReadExact(char* const buf, const int len)
 {
     // VSocket functions return 1 on success while VTrue is -1: compare to VFalse.
-    return m_socket->ReadExact(buf, (const VCard)len) != VFalse;
+    return m_socket->ReadExact(buf, static_cast<const VCard>(len)) != VFalse;
 }
 
 bool VeNCryptAuth::SendExact(const char* const buf, const int len)
 {
-    bool ok = m_socket->SendExact(buf, (const VCard)len) != VFalse;
+    bool ok = m_socket->SendExact(buf, static_cast<const VCard>(len)) != VFalse;
     if (!ok)
     {
         vnclog.Print(LL_CONNERR, VNCLOG("VeNCrypt: SendExact failed len=%d wsa=%d\n"), len, ::WSAGetLastError());

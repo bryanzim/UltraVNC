@@ -54,7 +54,7 @@ namespace ChannelBinding
         // For MD5/SHA-1 or unknown algorithms, fall back to SHA-256 per
         // RFC 5929 section 4.1. CryptFindOIDInfo is only used as a last resort
         // and still defaults to SHA-256 if it cannot determine a secure hash.
-        PCCRYPT_OID_INFO info = ::CryptFindOIDInfo(CRYPT_OID_INFO_OID_KEY, (void*)oid, 0);
+        PCCRYPT_OID_INFO info = ::CryptFindOIDInfo(CRYPT_OID_INFO_OID_KEY, const_cast<void*>(reinterpret_cast<const void *>(oid)), 0);
         if (info)
         {
             switch (info->Algid)

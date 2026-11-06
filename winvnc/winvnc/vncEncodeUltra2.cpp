@@ -52,7 +52,7 @@ vncEncodeUltra2::~vncEncodeUltra2()
     {
         delete[] m_buffer;
     }
-    if (destbuffer != 0)
+    if (destbuffer != nullptr)
     {
         std::free(destbuffer);
     }
@@ -81,7 +81,7 @@ UINT vncEncodeUltra2::RequiredBuffSize(const UINT width, const UINT height)
     // to cover the Ultra header space.
     result = vncEncoder::RequiredBuffSize(width, height);
     result += result / 64 + 16 + 3 + sz_rfbZlibHeader + sz_rfbFramebufferUpdateRectHeader + sz_rfbZlibHeader;
-    return result;
+    return static_cast<UINT>(result);
 }
 
 
@@ -108,12 +108,12 @@ inline UINT vncEncodeUltra2::EncodeRect(BYTE* const source, [[maybe_unused]] VSo
         return 0;
     }
 
-    rfbFramebufferUpdateRectHeader* surh = (rfbFramebufferUpdateRectHeader*)dest;
+    rfbFramebufferUpdateRectHeader* surh = reinterpret_cast<rfbFramebufferUpdateRectHeader*>(dest);
     // Modif rdv@2002 - v1.1.x - Application Resize
-    surh->r.x = static_cast<CARD16>((CARD16)rect.tl.x - monitor_Offsetx);
-    surh->r.y = static_cast<CARD16>((CARD16)rect.tl.y - monitor_Offsety);
-    surh->r.w = (CARD16)(rectW);
-    surh->r.h = (CARD16)(rectH);
+    surh->r.x = static_cast<CARD16>(static_cast<CARD16>(rect.tl.x) - monitor_Offsetx);
+    surh->r.y = static_cast<CARD16>(static_cast<CARD16>(rect.tl.y) - monitor_Offsety);
+    surh->r.w = static_cast<CARD16>((rectW));
+    surh->r.h = static_cast<CARD16>((rectH));
     surh->r.x = Swap16IfLE(surh->r.x);
     surh->r.y = Swap16IfLE(surh->r.y);
     surh->r.w = Swap16IfLE(surh->r.w);
@@ -128,7 +128,7 @@ inline UINT vncEncodeUltra2::EncodeRect(BYTE* const source, [[maybe_unused]] VSo
             delete[] m_buffer;
             m_buffer = nullptr;
         }
-        m_buffer = new BYTE[rawDataSize + 1000];
+        m_buffer = new BYTE[static_cast<unsigned long long>(rawDataSize + 1000)];
         if (m_buffer == nullptr)
         {
             return vncEncoder::EncodeRect(source, dest, rect);
@@ -137,13 +137,13 @@ inline UINT vncEncodeUltra2::EncodeRect(BYTE* const source, [[maybe_unused]] VSo
     }
     // Translate the data into our new buffer
     Translate(source, m_buffer, rect);
-    rfbZlibHeader* zlibh = (rfbZlibHeader*)(dest + sz_rfbFramebufferUpdateRectHeader);
+    rfbZlibHeader* zlibh = reinterpret_cast<rfbZlibHeader*>((dest + sz_rfbFramebufferUpdateRectHeader));
     size = 0;
     if ((rectW >= 8) && (rectH >= 8))
     {
         size = SendJpegRect(m_buffer, dest + sz_rfbFramebufferUpdateRectHeader + sz_rfbZlibHeader, rawDataSize + 1000, rectW, rectH,
                             m_qualitylevel * 10, m_remoteformat);
-        zlibh->nBytes = Swap32IfLE(size);
+        zlibh->nBytes = static_cast<unsigned int>(Swap32IfLE(size));
     }
     // jpeg failed
     if (size == 0)
@@ -157,8 +157,8 @@ inline UINT vncEncodeUltra2::EncodeRect(BYTE* const source, [[maybe_unused]] VSo
         {
             lzo = true;
         }
-        lzo1x_1_compress(m_buffer, rawDataSize, dest + sz_rfbFramebufferUpdateRectHeader + sz_rfbZlibHeader, &out_len, wrkmem);
-        if (out_len > (lzo_uint)rawDataSize)
+        lzo1x_1_compress(m_buffer, static_cast<lzo_uint>(rawDataSize), dest + sz_rfbFramebufferUpdateRectHeader + sz_rfbZlibHeader, &out_len, wrkmem);
+        if (out_len > static_cast<lzo_uint>(rawDataSize))
         {
             return vncEncoder::EncodeRect(source, dest, rect);
         }
@@ -167,7 +167,7 @@ inline UINT vncEncodeUltra2::EncodeRect(BYTE* const source, [[maybe_unused]] VSo
         size = static_cast<int>(out_len);
     }
     transmittedSize += sz_rfbFramebufferUpdateRectHeader + sz_rfbZlibHeader + size;
-    return sz_rfbFramebufferUpdateRectHeader + sz_rfbZlibHeader + size;
+    return sz_rfbFramebufferUpdateRectHeader + static_cast<UINT>(sz_rfbZlibHeader + size);
 }
 
 void vncEncodeUltra2::checkRowPointer(const int h)
@@ -178,7 +178,7 @@ void vncEncodeUltra2::checkRowPointer(const int h)
         {
             delete[] m_rowPointer;
         }
-        m_rowPointer = new JSAMPROW[h];
+        m_rowPointer = new JSAMPROW[static_cast<unsigned long long>(h)];
         m_rowPointerSize = h;
     }
 }
@@ -188,8 +188,8 @@ int vncEncodeUltra2::SendJpegRect(BYTE* const src, BYTE* const dst, const int ds
 {
     BYTE* srcBuf = src;
 
-    cinfo.image_width = w;
-    cinfo.image_height = h;
+    cinfo.image_width = static_cast<JDIMENSION>(w);
+    cinfo.image_height = static_cast<JDIMENSION>(h);
     cinfo.in_color_space = JCS_RGB;
     cinfo.input_components = 3;
 
@@ -264,12 +264,12 @@ int vncEncodeUltra2::SendJpegRect(BYTE* const src, BYTE* const dst, const int ds
         m_quality = quality;
     }
 
-    JpegSetDstManager(&cinfo, dst, dst_size);
+    JpegSetDstManager(&cinfo, dst, static_cast<std::size_t>(dst_size));
 
     checkRowPointer(h);
     for (int dy{ 0 }; dy < h; ++dy)
     {
-        m_rowPointer[dy] = (JSAMPROW)(&srcBuf[dy * w * 4]);
+        m_rowPointer[dy] = static_cast<JSAMPROW>((&srcBuf[dy * w * 4]));
     }
 
     jpeg_start_compress(&cinfo, TRUE);

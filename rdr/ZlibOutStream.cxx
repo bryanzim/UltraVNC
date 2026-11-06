@@ -35,7 +35,7 @@ ZlibOutStream::ZlibOutStream(OutStream* os, int bufSize_, int compressionLevel)
     delete zs;
     throw Exception("ZlibOutStream: deflateInit failed");
   }
-  ptr = start = new U8[bufSize];
+  ptr = start = new U8[static_cast<unsigned long long>(bufSize)];
   end = start + bufSize;
 }
 
@@ -57,13 +57,13 @@ void ZlibOutStream::setUnderlying(OutStream* os)
 
 int ZlibOutStream::length()
 {
-  return (int)(offset + ptr - start);
+  return static_cast<int>((offset + ptr - start));
 }
 
 void ZlibOutStream::flush()
 {
   zs->next_in = start;
-  zs->avail_in = (uInt)(ptr - start);
+  zs->avail_in = static_cast<uInt>((ptr - start));
 
 //    fprintf(stderr,"zos flush: avail_in %d\n",zs->avail_in);
 
@@ -72,7 +72,7 @@ void ZlibOutStream::flush()
     do {
       underlying->check(1);
       zs->next_out = underlying->getptr();
-      zs->avail_out = (uInt)(underlying->getend() - underlying->getptr());
+      zs->avail_out = static_cast<uInt>((underlying->getend() - underlying->getptr()));
 
 //        fprintf(stderr,"zos flush: calling deflate, avail_in %d, avail_out %d\n",
 //                zs->avail_in,zs->avail_out);
@@ -86,7 +86,7 @@ void ZlibOutStream::flush()
     } while (zs->avail_out == 0);
   }
 
-  offset += (int)(ptr - start);
+  offset += static_cast<int>((ptr - start));
   ptr = start;
 }
 
@@ -99,12 +99,12 @@ int ZlibOutStream::overrun(int itemSize, int nItems)
 
   while (end - ptr < itemSize) {
     zs->next_in = start;
-    zs->avail_in = (uInt)(ptr - start);
+    zs->avail_in = static_cast<uInt>((ptr - start));
 
     do {
       underlying->check(1);
       zs->next_out = underlying->getptr();
-      zs->avail_out = (uInt)(underlying->getend() - underlying->getptr());
+      zs->avail_out = static_cast<uInt>((underlying->getend() - underlying->getptr()));
 
 //        fprintf(stderr,"zos overrun: calling deflate, avail_in %d, avail_out %d\n",
 //                zs->avail_in,zs->avail_out);
@@ -121,20 +121,20 @@ int ZlibOutStream::overrun(int itemSize, int nItems)
     // output buffer not full
 
     if (zs->avail_in == 0) {
-      offset += (int)(ptr - start);
+      offset += static_cast<int>((ptr - start));
       ptr = start;
     } else {
       // but didn't consume all the data?  try shifting what's left to the
       // start of the buffer.
       fprintf(stderr,"z out buf not full, but in data not consumed\n");
-      memmove(start, zs->next_in, ptr - zs->next_in);
-      offset += (int)(zs->next_in - start);
+      memmove(start, zs->next_in, static_cast<size_t>(ptr - zs->next_in));
+      offset += static_cast<int>((zs->next_in - start));
       ptr -= zs->next_in - start;
     }
   }
 
   if (itemSize * nItems > end - ptr)
-    nItems = (int)((end - ptr) / itemSize);
+    nItems = static_cast<int>(((end - ptr) / itemSize));
 
   return nItems;
 }

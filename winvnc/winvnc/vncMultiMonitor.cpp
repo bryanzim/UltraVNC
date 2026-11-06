@@ -41,7 +41,7 @@ void vncDesktop::Checkmonitors()
     DISPLAY_DEVICE dd;
     ::ZeroMemory(&dd, sizeof(dd));
     dd.cb = sizeof(dd);
-    for (int i{ 0 }; ::EnumDisplayDevicesA(nullptr, i, &dd, 0); ++i)
+    for (int i{ 0 }; ::EnumDisplayDevicesA(nullptr, static_cast<DWORD>(i), &dd, 0); ++i)
     {
         if ((dd.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP) && !(dd.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER))
         {
@@ -53,19 +53,19 @@ void vncDesktop::Checkmonitors()
             {
                 mymonitor[MULTI_MON_PRIMARY].offsetx = devMode.dmPosition.x;
                 mymonitor[MULTI_MON_PRIMARY].offsety = devMode.dmPosition.y;
-                mymonitor[MULTI_MON_PRIMARY].Width = devMode.dmPelsWidth;
-                mymonitor[MULTI_MON_PRIMARY].Height = devMode.dmPelsHeight;
-                mymonitor[MULTI_MON_PRIMARY].Depth = devMode.dmBitsPerPel;
+                mymonitor[MULTI_MON_PRIMARY].Width = static_cast<int>(devMode.dmPelsWidth);
+                mymonitor[MULTI_MON_PRIMARY].Height = static_cast<int>(devMode.dmPelsHeight);
+                mymonitor[MULTI_MON_PRIMARY].Depth = static_cast<int>(devMode.dmBitsPerPel);
                 devicenaamToPosMap.insert(std::pair<std::string, monitor>(dd.DeviceName, mymonitor[MULTI_MON_PRIMARY]));
             }
             else
             {
-                mymonitor[nr].offsetx = devMode.dmPosition.x;
-                mymonitor[nr].offsety = devMode.dmPosition.y;
-                mymonitor[nr].Width = devMode.dmPelsWidth;
-                mymonitor[nr].Height = devMode.dmPelsHeight;
-                mymonitor[nr].Depth = devMode.dmBitsPerPel;
-                devicenaamToPosMap.insert(std::pair<std::string, monitor>(dd.DeviceName, mymonitor[nr]));
+                mymonitor[static_cast<unsigned long long>(nr)].offsetx = devMode.dmPosition.x;
+                mymonitor[static_cast<unsigned long long>(nr)].offsety = devMode.dmPosition.y;
+                mymonitor[static_cast<unsigned long long>(nr)].Width = static_cast<int>(devMode.dmPelsWidth);
+                mymonitor[static_cast<unsigned long long>(nr)].Height = static_cast<int>(devMode.dmPelsHeight);
+                mymonitor[static_cast<unsigned long long>(nr)].Depth = static_cast<int>(devMode.dmBitsPerPel);
+                devicenaamToPosMap.insert(std::pair<std::string, monitor>(dd.DeviceName, mymonitor[static_cast<unsigned long long>(nr)]));
                 ++nr;
             }
         }

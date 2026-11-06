@@ -37,7 +37,7 @@ vncEncodeZlibHex::vncEncodeZlibHex()
     m_Queuebuffer = nullptr;
     m_Queuelen = 0;
     MaxQueuebufflen = 128 * 1024;
-    m_Queuebuffer = new BYTE[MaxQueuebufflen + 1];
+    m_Queuebuffer = new BYTE[static_cast<unsigned long long>(MaxQueuebufflen + 1)];
     if (m_Queuebuffer == nullptr)
     {
         vnclog.Print(LL_INTINFO, VNCLOG("Memory error"));
@@ -83,7 +83,7 @@ UINT vncEncodeZlibHex::RequiredBuffSize(const UINT width, const UINT height)
     accumSize += ((accumSize / 100) + 8);
     // Add zlib/other subencoding overhead, worst case.
     accumSize += (((width / 16) + 1) * ((height / 16) + 1) * ((3 * m_remoteformat.bitsPerPixel / 8) + 2));
-    return accumSize;
+    return static_cast<UINT>(accumSize);
 }
 
 UINT vncEncodeZlibHex::NumCodedRects([[maybe_unused]] RECT& rect)
@@ -112,23 +112,23 @@ UINT vncEncodeZlibHex::EncodeRect(BYTE* const source, VSocket* const outConn, BY
     const int rectH = rect.bottom - rect.top;
 
     // Create the rectangle header
-    rfbFramebufferUpdateRectHeader* surh = (rfbFramebufferUpdateRectHeader*)dest;
-    surh->r.x = (CARD16)(rect.left - monitor_Offsetx);
-    surh->r.y = (CARD16)(rect.top - monitor_Offsety);
-    surh->r.w = (CARD16)(rectW);
-    surh->r.h = (CARD16)(rectH);
+    rfbFramebufferUpdateRectHeader* surh = reinterpret_cast<rfbFramebufferUpdateRectHeader*>(dest);
+    surh->r.x = static_cast<CARD16>((rect.left - monitor_Offsetx));
+    surh->r.y = static_cast<CARD16>((rect.top - monitor_Offsety));
+    surh->r.w = static_cast<CARD16>((rectW));
+    surh->r.h = static_cast<CARD16>((rectH));
     surh->r.x = Swap16IfLE(surh->r.x);
     surh->r.y = Swap16IfLE(surh->r.y);
     surh->r.w = Swap16IfLE(surh->r.w);
     surh->r.h = Swap16IfLE(surh->r.h);
-    surh->encoding = Swap32IfLE(m_use_zstd ? rfbEncodingZstdHex : rfbEncodingZlibHex);
+    surh->encoding = static_cast<unsigned int>(Swap32IfLE(m_use_zstd ? rfbEncodingZstdHex : rfbEncodingZlibHex));
 
     rectangleOverhead += sz_rfbFramebufferUpdateRectHeader;
     dataSize += (rectW * rectH * m_remoteformat.bitsPerPixel) / 8;
 
     // Go ahead and send the RFB update header, in case partial updates
     // are send in EncodeHextiles#() below.
-    outConn->SendExactQueue((char*)dest, sz_rfbFramebufferUpdateRectHeader);
+    outConn->SendExactQueue(reinterpret_cast<char*>(dest), sz_rfbFramebufferUpdateRectHeader);
     //	AddToQueu((BYTE *)dest,sz_rfbFramebufferUpdateRectHeader,outConn);
 
     transmittedSize += sz_rfbFramebufferUpdateRectHeader;
@@ -155,12 +155,12 @@ UINT vncEncodeZlibHex::EncodeRect(BYTE* const source, VSocket* const outConn, BY
 
 UINT vncEncodeZlibHex::zlibCompress(BYTE* const from_buf, BYTE* const to_buf, const UINT length, UltraVncZ* const compressor)
 {
-    int totalCompDataLen = compressor->compress(m_compresslevel, length, (2 * length), from_buf, to_buf);
+    int totalCompDataLen = static_cast<int>(compressor->compress(m_compresslevel, length, (2 * length), from_buf, to_buf));
     if (totalCompDataLen == 0)
     {
         return static_cast<UINT>(-1);
     }
-    return totalCompDataLen;
+    return static_cast<UINT>(totalCompDataLen);
 }
 
 
@@ -217,7 +217,7 @@ UINT vncEncodeZlibHex::zlibCompress(BYTE* const from_buf, BYTE* const to_buf, co
                 hexrect.top = y;                                                                                                   \
                 hexrect.right = x + w;                                                                                             \
                 hexrect.bottom = y + h;                                                                                            \
-                Translate(source, (BYTE*)clientPixelData, hexrect);                                                                \
+                Translate(source, reinterpret_cast<BYTE*>(clientPixelData), hexrect);                                                                \
                                                                                                                                    \
                 rectoffset = destoffset;                                                                                           \
                 dest[rectoffset] = 0;                                                                                              \
@@ -268,13 +268,13 @@ UINT vncEncodeZlibHex::zlibCompress(BYTE* const from_buf, BYTE* const to_buf, co
                         destoffset = rectoffset;                                                                                   \
                         dest[destoffset++] = rfbHextileZlibRaw;                                                                    \
                                                                                                                                    \
-                        Translate(source, (BYTE*)clientPixelData, hexrect);                                                        \
+                        Translate(source, reinterpret_cast<BYTE*>(clientPixelData), hexrect);                                                        \
                                                                                                                                    \
                         compressedSize =                                                                                           \
-                            zlibCompress((BYTE*)clientPixelData, dest + destoffset + 2, (w * h * (bpp / 8)), ultraVncZRaw);        \
+                            zlibCompress(reinterpret_cast<BYTE*>(clientPixelData), dest + destoffset + 2, (w * h * (bpp / 8)), ultraVncZRaw);        \
                                                                                                                                    \
                                                                                                                                    \
-                        card16ptr = (CARD16*)(dest + destoffset);                                                                  \
+                        card16ptr = reinterpret_cast<CARD16*>((dest + destoffset));                                                                  \
                         *card16ptr = Swap16IfLE(compressedSize);                                                                   \
                         destoffset += compressedSize + 2;                                                                          \
                     }                                                                                                              \
@@ -304,10 +304,10 @@ UINT vncEncodeZlibHex::zlibCompress(BYTE* const from_buf, BYTE* const to_buf, co
                         dest[rectoffset] |= rfbHextileZlibHex;                                                                     \
                                                                                                                                    \
                         compressedSize =                                                                                           \
-                            zlibCompress((BYTE*)clientPixelData, dest + destoffset + 2, subEncodedLen, ultraVncZEncoded);          \
+                            zlibCompress(reinterpret_cast<BYTE*>(clientPixelData), dest + destoffset + 2, subEncodedLen, ultraVncZEncoded);          \
                                                                                                                                    \
                                                                                                                                    \
-                        card16ptr = (CARD16*)(dest + destoffset);                                                                  \
+                        card16ptr = reinterpret_cast<CARD16*>((dest + destoffset));                                                                  \
                         *card16ptr = Swap16IfLE(compressedSize);                                                                   \
                         destoffset += compressedSize + 2;                                                                          \
                     }                                                                                                              \
@@ -322,7 +322,7 @@ UINT vncEncodeZlibHex::zlibCompress(BYTE* const from_buf, BYTE* const to_buf, co
             if (destoffset > VNC_ENCODE_ZLIBHEX_MIN_DATAXFER)                                                                      \
             {                                                                                                                      \
                 /* Send the encoded data as partial update */                                                                      \
-                AddToQueu((BYTE*)dest, destoffset, outConn);                                                                       \
+                AddToQueu(reinterpret_cast<BYTE*>(dest), destoffset, outConn);                                                                       \
                 transmittedSize += destoffset;                                                                                     \
                 encodedSize += destoffset;                                                                                         \
                 destoffset = 0;                                                                                                    \
@@ -520,11 +520,11 @@ void vncEncodeZlibHex::AddToQueu(BYTE* const source, const int sizerect, VSocket
     }
     if (sizerect > (MaxQueuebufflen))
     {
-        outConn->SendExactQueue((char*)source, sizerect);
+        outConn->SendExactQueue(reinterpret_cast<char*>(source), static_cast<VCard>(sizerect));
         return;
     }
     //	vnclog.Print(LL_INTINFO, VNCLOG("Add %i %i \n"),sizerect,m_Queuelen);
-    std::memcpy(m_Queuebuffer + m_Queuelen, source, sizerect);
+    std::memcpy(m_Queuebuffer + m_Queuelen, source, static_cast<size_t>(sizerect));
     m_Queuelen += sizerect;
 }
 
@@ -534,7 +534,7 @@ void vncEncodeZlibHex::SendZlibHexrects(VSocket* const outConn)
     {
         return;
     } // NO update
-    outConn->SendExactQueue((char*)m_Queuebuffer, m_Queuelen); // 1 Small update
+    outConn->SendExactQueue(reinterpret_cast<char*>(m_Queuebuffer), static_cast<VCard>(m_Queuelen)); // 1 Small update
     m_Queuelen = 0;
     encodedSize += m_Queuelen - sz_rfbFramebufferUpdateRectHeader;
     return;

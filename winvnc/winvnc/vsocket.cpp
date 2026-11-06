@@ -33,7 +33,7 @@ class VSocket;
 
 #ifdef __WIN32__
 #include <mstcpip.h>
-#include <winsock2.h>
+#include <WinSock2.h>
 
 #include <in6addr.h>
 #include <io.h>
@@ -180,7 +180,7 @@ VBool VSocket::CreateConnect(const VString address, const VCard port)
     Hints.ai_family = AF_UNSPEC;
     Hints.ai_socktype = SOCK_STREAM;
     std::array<char, 10U> temp;
-    ::_itoa_s(port, temp.data(), 10, 10);
+    ::_itoa_s(static_cast<int>(port), temp.data(), 10, 10);
     RetVal = getaddrinfo(address, temp.data(), &Hints, &AddrInfo);
     if (RetVal != 0)
     {
@@ -196,7 +196,7 @@ VBool VSocket::CreateConnect(const VString address, const VCard port)
             {
                 continue;
             }
-            setsockopt(sock4, SOL_SOCKET, SO_REUSEADDR, (char*)&one, sizeof(one));
+            setsockopt(sock4, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(const_cast<int*>(&one)), sizeof(one));
             SetDefaultSocketOptions4();
             if (connect(sock4, AI->ai_addr, static_cast<int>(AI->ai_addrlen)) != SOCKET_ERROR)
             {
@@ -216,7 +216,7 @@ VBool VSocket::CreateConnect(const VString address, const VCard port)
             {
                 continue;
             }
-            setsockopt(sock6, SOL_SOCKET, SO_REUSEADDR, (char*)&one, sizeof(one));
+            setsockopt(sock6, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(const_cast<int*>(&one)), sizeof(one));
             SetDefaultSocketOptions6();
             if (connect(sock6, AI->ai_addr, static_cast<int>(AI->ai_addrlen)) != SOCKET_ERROR)
             {
@@ -255,7 +255,7 @@ VBool VSocket::CreateBindConnect(const VString address, const VCard port)
     Hints.ai_family = PF_UNSPEC;
     Hints.ai_socktype = SOCK_STREAM;
     std::array<char, 10U> temp;
-    ::_itoa_s(port, temp.data(), 10, 10);
+    ::_itoa_s(static_cast<int>(port), temp.data(), 10, 10);
     RetVal = getaddrinfo(address, temp.data(), &Hints, &AddrInfo);
     if (RetVal != 0)
     {
@@ -271,7 +271,7 @@ VBool VSocket::CreateBindConnect(const VString address, const VCard port)
             {
                 continue;
             }
-            setsockopt(sock4, SOL_SOCKET, SO_REUSEADDR, (char*)&one, sizeof(one));
+            setsockopt(sock4, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(const_cast<int*>(&one)), sizeof(one));
             SetDefaultSocketOptions4();
             Bind4(0);
             if (connect(sock4, AI->ai_addr, static_cast<int>(AI->ai_addrlen)) != SOCKET_ERROR)
@@ -292,7 +292,7 @@ VBool VSocket::CreateBindConnect(const VString address, const VCard port)
             {
                 continue;
             }
-            setsockopt(sock6, SOL_SOCKET, SO_REUSEADDR, (char*)&one, sizeof(one));
+            setsockopt(sock6, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(const_cast<int*>(&one)), sizeof(one));
             SetDefaultSocketOptions6();
             Bind6(0);
             if (connect(sock6, AI->ai_addr, static_cast<int>(AI->ai_addrlen)) != SOCKET_ERROR)
@@ -329,7 +329,7 @@ VBool VSocket::CreateBindListen(const VCard port, const VBool localOnly)
     int RetVal, i;
     ADDRINFO Hints, *AddrInfo, *AI;
     std::array<char, 10U> temp;
-    ::_itoa_s(port, temp.data(), 10, 10);
+    ::_itoa_s(static_cast<int>(port), temp.data(), 10, 10);
 
     std::memset(&Hints, 0, sizeof(Hints));
     Hints.ai_family = PF_UNSPEC;
@@ -359,7 +359,7 @@ VBool VSocket::CreateBindListen(const VCard port, const VBool localOnly)
             {
                 continue;
             }
-            setsockopt(sock4, SOL_SOCKET, SO_REUSEADDR, (char*)&one, sizeof(one));
+            setsockopt(sock4, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(const_cast<int*>(&one)), sizeof(one));
             SetDefaultSocketOptions4();
             if (!Bind4(port, localOnly))
             {
@@ -383,7 +383,7 @@ VBool VSocket::CreateBindListen(const VCard port, const VBool localOnly)
             {
                 continue;
             }
-            setsockopt(sock6, SOL_SOCKET, SO_REUSEADDR, (char*)&one, sizeof(one));
+            setsockopt(sock6, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(const_cast<int*>(&one)), sizeof(one));
             SetDefaultSocketOptions6();
             if (!Bind6(port, localOnly))
             {
@@ -424,7 +424,7 @@ VBool VSocket::Create()
     {
         return VFalse;
     }
-    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&one, sizeof(one)))
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(const_cast<int*>(&one)), sizeof(one)))
     {
         return VFalse;
     }
@@ -601,7 +601,7 @@ VBool VSocket::Bind4(const VCard port, const VBool localOnly)
     }
 
     // And do the binding
-    if (bind(sock4, (struct sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR)
+    if (bind(sock4, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == SOCKET_ERROR)
     {
         return VFalse;
     }
@@ -631,9 +631,9 @@ VBool VSocket::Bind6(const VCard port, const VBool localOnly)
     }
 
     // And do the binding
-    if (bind(sock6, (struct sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR)
+    if (bind(sock6, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == SOCKET_ERROR)
     {
-        [[maybe_unused]] DWORD lerror = ::WSAGetLastError();
+        [[maybe_unused]] DWORD lerror = static_cast<DWORD>(::WSAGetLastError());
         return VFalse;
     }
 
@@ -663,7 +663,7 @@ VBool VSocket::Bind(const VCard port, const VBool localOnly)
     }
 
     // And do the binding
-    if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR)
+    if (bind(sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == SOCKET_ERROR)
     {
         return VFalse;
     }
@@ -701,7 +701,7 @@ VBool VSocket::Connect(const VString address, const VCard port)
             {
                 return VFalse;
             }
-            addr.sin_addr.s_addr = ((struct in_addr*)pHost->h_addr)->s_addr;
+            addr.sin_addr.s_addr = (reinterpret_cast<struct in_addr*>(pHost->h_addr))->s_addr;
         }
         else
         {
@@ -713,7 +713,7 @@ VBool VSocket::Connect(const VString address, const VCard port)
     addr.sin_port = htons(static_cast<u_short>(port));
 
     // Actually connect the socket
-    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) != 0)
+    if (connect(sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) != 0)
     {
         return VFalse;
     }
@@ -785,7 +785,7 @@ VSocket* VSocket::AcceptIPV6()
         {
             FD_SET(sock4, &SockSet);
             FD_SET(sock6, &SockSet);
-            int result = select(2, &SockSet, 0, 0, 0);
+            int result = select(2, &SockSet, nullptr, nullptr, nullptr);
             if (result == SOCKET_ERROR)
             {
                 return nullptr;
@@ -827,12 +827,12 @@ VSocket* VSocket::Accept4()
 
     int optVal;
     int optLen = sizeof(int);
-    getsockopt(sock4, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen);
+    getsockopt(sock4, SOL_SOCKET, SO_SNDBUF, reinterpret_cast<char*>(&optVal), &optLen);
     optVal = 32 * 1024;
-    setsockopt(sock4, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen);
+    setsockopt(sock4, SOL_SOCKET, SO_SNDBUF, reinterpret_cast<char*>(&optVal), optLen);
 
     // Accept an incoming connection
-    if ((new_socket_id = accept(sock4, nullptr, 0)) == INVALID_SOCKET)
+    if ((new_socket_id = accept(sock4, nullptr, nullptr)) == INVALID_SOCKET)
     {
         return nullptr;
     }
@@ -841,12 +841,12 @@ VSocket* VSocket::Accept4()
     new_socket = new VSocket;
     if (new_socket != nullptr)
     {
-        new_socket->sock4 = new_socket_id;
+        new_socket->sock4 = static_cast<SOCKET>(new_socket_id);
     }
     else
     {
-        shutdown(new_socket_id, SD_BOTH);
-        closesocket(new_socket_id);
+        shutdown(static_cast<SOCKET>(new_socket_id), SD_BOTH);
+        closesocket(static_cast<SOCKET>(new_socket_id));
         return nullptr;
     }
     // adzm 2010-08
@@ -868,12 +868,12 @@ VSocket* VSocket::Accept6()
 
     int optVal;
     int optLen = sizeof(int);
-    getsockopt(sock6, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen);
+    getsockopt(sock6, SOL_SOCKET, SO_SNDBUF, reinterpret_cast<char*>(&optVal), &optLen);
     optVal = 32 * 1024;
-    setsockopt(sock6, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen);
+    setsockopt(sock6, SOL_SOCKET, SO_SNDBUF, reinterpret_cast<char*>(&optVal), optLen);
 
     // Accept an incoming connection
-    if ((new_socket_id = accept(sock6, nullptr, 0)) == INVALID_SOCKET)
+    if ((new_socket_id = accept(sock6, nullptr, nullptr)) == INVALID_SOCKET)
     {
         return nullptr;
     }
@@ -882,12 +882,12 @@ VSocket* VSocket::Accept6()
     new_socket = new VSocket;
     if (new_socket != nullptr)
     {
-        new_socket->sock6 = new_socket_id;
+        new_socket->sock6 = static_cast<SOCKET>(new_socket_id);
     }
     else
     {
-        shutdown(new_socket_id, SD_BOTH);
-        closesocket(new_socket_id);
+        shutdown(static_cast<SOCKET>(new_socket_id), SD_BOTH);
+        closesocket(static_cast<SOCKET>(new_socket_id));
         return nullptr;
     }
     // adzm 2010-08
@@ -910,12 +910,12 @@ VSocket* VSocket::AcceptIPV4()
 
     int optVal;
     int optLen = sizeof(int);
-    getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, &optLen);
+    getsockopt(sock, SOL_SOCKET, SO_SNDBUF, reinterpret_cast<char*>(&optVal), &optLen);
     optVal = 32 * 1024;
-    setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen);
+    setsockopt(sock, SOL_SOCKET, SO_SNDBUF, reinterpret_cast<char*>(&optVal), optLen);
 
     // Accept an incoming connection
-    if ((new_socket_id = accept(sock, nullptr, 0)) == INVALID_SOCKET)
+    if ((new_socket_id = accept(sock, nullptr, nullptr)) == INVALID_SOCKET)
     {
         return nullptr;
     }
@@ -974,7 +974,7 @@ VString VSocket::GetPeerName4([[maybe_unused]] const bool naam)
     VString name;
 
     // Get the peer address for the client socket
-    getpeername(sock4, (struct sockaddr*)&sockinfo, &sockinfosize);
+    getpeername(sock4, reinterpret_cast<struct sockaddr*>(&sockinfo), &sockinfosize);
     std::memcpy(&address, &sockinfo.sin_addr, sizeof(address));
 
     name = inet_ntoa(address);
@@ -998,7 +998,7 @@ VString VSocket::GetPeerName6([[maybe_unused]] const bool naam)
     std::memset(&sockinfo, 0, sizeof(sockinfo));
     std::memset(&address, 0, sizeof(address));
     // Get the peer address for the client socket
-    getpeername(sock6, (struct sockaddr*)&sockinfo, &sockinfosize);
+    getpeername(sock6, reinterpret_cast<struct sockaddr*>(&sockinfo), &sockinfosize);
     std::memcpy(&address, &sockinfo.sin6_addr, sizeof(address));
     inet_ntop(AF_INET6, &address, straddr.data(), sizeof(straddr));
     if (std::strlen(straddr.data()) == 0)
@@ -1021,14 +1021,14 @@ VString VSocket::GetPeerNameIPV4(bool naam)
     VString name{};
 
     // Get the peer address for the client socket
-    getpeername(sock, (struct sockaddr*)&sockinfo, &sockinfosize);
+    getpeername(sock, reinterpret_cast<struct sockaddr*>(&sockinfo), &sockinfosize);
     std::memcpy(&address, &sockinfo.sin_addr, sizeof(address));
 
 
 
     if (naam)
     {
-        struct hostent* remoteHost = gethostbyaddr((char*)&address, sizeof(address), AF_INET);
+        struct hostent* remoteHost = gethostbyaddr(reinterpret_cast<char*>(&address), sizeof(address), AF_INET);
         if (remoteHost != nullptr)
         {
             name = remoteHost->h_name;
@@ -1037,7 +1037,7 @@ VString VSocket::GetPeerNameIPV4(bool naam)
     }
 
     name = inet_ntoa(address);
-    ;
+    
     if (name == nullptr)
     {
         return "<unavailable>";
@@ -1082,7 +1082,7 @@ VString VSocket::GetSockName4()
     VString name;
 
     // Get the peer address for the client socket
-    getsockname(sock4, (struct sockaddr*)&sockinfo, &sockinfosize);
+    getsockname(sock4, reinterpret_cast<struct sockaddr*>(&sockinfo), &sockinfosize);
     std::memcpy(&address, &sockinfo.sin_addr, sizeof(address));
 
     name = inet_ntoa(address);
@@ -1106,7 +1106,7 @@ VString VSocket::GetSockName6()
     std::memset(&sockinfo, 0, sizeof(sockinfo));
     std::memset(&address, 0, sizeof(address));
     // Get the peer address for the client socket
-    getsockname(sock6, (struct sockaddr*)&sockinfo, &sockinfosize);
+    getsockname(sock6, reinterpret_cast<struct sockaddr*>(&sockinfo), &sockinfosize);
     std::memcpy(&address, &sockinfo.sin6_addr, sizeof(address));
     inet_ntop(AF_INET6, &address, straddr2.data(), sizeof(straddr2));
 
@@ -1128,7 +1128,7 @@ VString VSocket::GetSockNameIPV4()
     VString name;
 
     // Get the peer address for the client socket
-    getsockname(sock, (struct sockaddr*)&sockinfo, &sockinfosize);
+    getsockname(sock, reinterpret_cast<struct sockaddr*>(&sockinfo), &sockinfosize);
     std::memcpy(&address, &sockinfo.sin_addr, sizeof(address));
 
     name = inet_ntoa(address);
@@ -1165,12 +1165,12 @@ bool VSocket::GetPeerAddress4(char* const address, int size)
         return false;
     }
 
-    if (getpeername(sock4, (struct sockaddr*)&addr, &addrsize) != 0)
+    if (getpeername(sock4, reinterpret_cast<struct sockaddr*>(&addr), &addrsize) != 0)
     {
         return false;
     }
 
-    ::_snprintf_s(address, size, size, "%s:%d", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+    ::_snprintf_s(address, static_cast<size_t>(size), static_cast<size_t>(size), "%s:%d", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 
     return true;
 }
@@ -1185,12 +1185,12 @@ bool VSocket::GetPeerAddress6(char* const address, int size)
     {
         return false;
     }
-    if (getpeername(sock6, (struct sockaddr*)&addr, &addrsize) != 0)
+    if (getpeername(sock6, reinterpret_cast<struct sockaddr*>(&addr), &addrsize) != 0)
     {
         return false;
     }
     inet_ntop(AF_INET6, &addr.sin6_addr, straddrLocal.data(), sizeof(straddrLocal));
-    ::_snprintf_s(address, size, size, "%s:%d", straddrLocal.data(), ntohs(addr.sin6_port));
+    ::_snprintf_s(address, static_cast<size_t>(size), static_cast<size_t>(size), "%s:%d", straddrLocal.data(), ntohs(addr.sin6_port));
 
     return true;
 }
@@ -1205,12 +1205,12 @@ bool VSocket::GetPeerAddress(char* const address, int size)
         return false;
     }
 
-    if (getpeername(sock, (struct sockaddr*)&addr, &addrsize) != 0)
+    if (getpeername(sock, reinterpret_cast<struct sockaddr*>(&addr), &addrsize) != 0)
     {
         return false;
     }
 
-    ::_snprintf_s(address, size, size, "%s:%d", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+    ::_snprintf_s(address, static_cast<size_t>(size), static_cast<size_t>(size), "%s:%d", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
 
     return true;
 }
@@ -1236,7 +1236,7 @@ VCard32 VSocket::Resolve4(const VString address)
             {
                 return 0;
             }
-            addr = ((struct in_addr*)pHost->h_addr)->s_addr;
+            addr = (reinterpret_cast<struct in_addr*>(pHost->h_addr))->s_addr;
         }
         else
         {
@@ -1249,13 +1249,13 @@ VCard32 VSocket::Resolve4(const VString address)
 }
 bool VSocket::Resolve6(const VString address, in6_addr* const addr)
 {
-    struct addrinfo hint, *info = 0;
+    struct addrinfo hint, *info = nullptr;
     std::memset(&hint, 0, sizeof(hint));
 
     hint.ai_family = AF_UNSPEC;
     hint.ai_flags = AI_NUMERICHOST;
     bool IsIpv6{ false };
-    if (getaddrinfo(address, 0, &hint, &info) == 0)
+    if (getaddrinfo(address, nullptr, &hint, &info) == 0)
     {
         if (info->ai_family == AF_INET6)
         {
@@ -1267,13 +1267,13 @@ bool VSocket::Resolve6(const VString address, in6_addr* const addr)
 
     if (!IsIpv6)
     {
-        struct addrinfo* serverinfo = 0;
+        struct addrinfo* serverinfo = nullptr;
         std::memset(&hint, 0, sizeof(hint));
         hint.ai_family = AF_UNSPEC;
         hint.ai_socktype = SOCK_STREAM;
         hint.ai_protocol = IPPROTO_TCP;
         struct sockaddr_in6* pIpv6Addr;
-        if (getaddrinfo(address, 0, &hint, &serverinfo) == 0)
+        if (getaddrinfo(address, nullptr, &hint, &serverinfo) == 0)
         {
             struct addrinfo* p;
             for (p = serverinfo; p != nullptr; p = p->ai_next)
@@ -1282,7 +1282,7 @@ bool VSocket::Resolve6(const VString address, in6_addr* const addr)
                 {
                 case AF_INET6:
                     IsIpv6 = true;
-                    pIpv6Addr = (struct sockaddr_in6*)p->ai_addr;
+                    pIpv6Addr = reinterpret_cast<struct sockaddr_in6*>(p->ai_addr);
                     std::memcpy(addr, &(pIpv6Addr->sin6_addr), sizeof(in6_addr));
                     break;
                 default:
@@ -1315,7 +1315,7 @@ VCard32 VSocket::Resolve(const VString address)
             {
                 return 0;
             }
-            addr = ((struct in_addr*)pHost->h_addr)->s_addr;
+            addr = (reinterpret_cast<struct in_addr*>(pHost->h_addr))->s_addr;
         }
         else
         {
@@ -1335,7 +1335,7 @@ VBool VSocket::SetDefaultSocketOptions4()
 
     const int one{ 1 };
 
-    if (setsockopt(sock4, IPPROTO_TCP, TCP_NODELAY, (const char*)&one, sizeof(one)))
+    if (setsockopt(sock4, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&one), sizeof(one)))
     {
         result = VFalse;
     }
@@ -1343,7 +1343,7 @@ VBool VSocket::SetDefaultSocketOptions4()
     int defaultSocketKeepAliveTimeout = m_defaultSocketKeepAliveTimeout;
     if (defaultSocketKeepAliveTimeout > 0)
     {
-        if (setsockopt(sock4, SOL_SOCKET, SO_KEEPALIVE, (const char*)&one, sizeof(one)))
+        if (setsockopt(sock4, SOL_SOCKET, SO_KEEPALIVE, reinterpret_cast<const char*>(&one), sizeof(one)))
         {
             result = VFalse;
         }
@@ -1356,7 +1356,7 @@ VBool VSocket::SetDefaultSocketOptions4()
             ::ZeroMemory(&keepalive_returned, sizeof(keepalive_returned));
 
             keepalive_requested.onoff = 1;
-            keepalive_requested.keepalivetime = defaultSocketKeepAliveTimeout;
+            keepalive_requested.keepalivetime = static_cast<ULONG>(defaultSocketKeepAliveTimeout);
             keepalive_requested.keepaliveinterval = 1000;
             // 10 probes always used by default in Windows Vista+; not changeable.
 
@@ -1377,7 +1377,7 @@ VBool VSocket::SetDefaultSocketOptions6()
 
     const int one{ 1 };
 
-    if (setsockopt(sock6, IPPROTO_TCP, TCP_NODELAY, (const char*)&one, sizeof(one)))
+    if (setsockopt(sock6, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&one), sizeof(one)))
     {
         result = VFalse;
     }
@@ -1385,7 +1385,7 @@ VBool VSocket::SetDefaultSocketOptions6()
     int defaultSocketKeepAliveTimeout = m_defaultSocketKeepAliveTimeout;
     if (defaultSocketKeepAliveTimeout > 0)
     {
-        if (setsockopt(sock6, SOL_SOCKET, SO_KEEPALIVE, (const char*)&one, sizeof(one)))
+        if (setsockopt(sock6, SOL_SOCKET, SO_KEEPALIVE, reinterpret_cast<const char*>(&one), sizeof(one)))
         {
             result = VFalse;
         }
@@ -1398,7 +1398,7 @@ VBool VSocket::SetDefaultSocketOptions6()
             ::ZeroMemory(&keepalive_returned, sizeof(keepalive_returned));
 
             keepalive_requested.onoff = 1;
-            keepalive_requested.keepalivetime = defaultSocketKeepAliveTimeout;
+            keepalive_requested.keepalivetime = static_cast<ULONG>(defaultSocketKeepAliveTimeout);
             keepalive_requested.keepaliveinterval = 1000;
             // 10 probes always used by default in Windows Vista+; not changeable.
 
@@ -1420,7 +1420,7 @@ VBool VSocket::SetDefaultSocketOptions()
 
     const int one{ 1 };
 
-    if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&one, sizeof(one)))
+    if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&one), sizeof(one)))
     {
         result = VFalse;
     }
@@ -1428,7 +1428,7 @@ VBool VSocket::SetDefaultSocketOptions()
     int defaultSocketKeepAliveTimeout = m_defaultSocketKeepAliveTimeout;
     if (defaultSocketKeepAliveTimeout > 0)
     {
-        if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, (const char*)&one, sizeof(one)))
+        if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, reinterpret_cast<const char*>(&one), sizeof(one)))
         {
             result = VFalse;
         }
@@ -1441,7 +1441,7 @@ VBool VSocket::SetDefaultSocketOptions()
             ::ZeroMemory(&keepalive_returned, sizeof(keepalive_returned));
 
             keepalive_requested.onoff = 1;
-            keepalive_requested.keepalivetime = defaultSocketKeepAliveTimeout;
+            keepalive_requested.keepalivetime = static_cast<ULONG>(defaultSocketKeepAliveTimeout);
             keepalive_requested.keepaliveinterval = 1000;
             // 10 probes always used by default in Windows Vista+; not changeable.
 
@@ -1475,12 +1475,12 @@ VBool VSocket::SetTimeout4(const VCard32 msecs)
     {
         return VFalse;
     }
-    int timeout = msecs;
-    if (setsockopt(sock4, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout)) == SOCKET_ERROR)
+    int timeout = static_cast<int>(msecs);
+    if (setsockopt(sock4, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&timeout), sizeof(timeout)) == SOCKET_ERROR)
     {
         return VFalse;
     }
-    if (setsockopt(sock4, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout)) == SOCKET_ERROR)
+    if (setsockopt(sock4, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&timeout), sizeof(timeout)) == SOCKET_ERROR)
     {
         return VFalse;
     }
@@ -1523,12 +1523,12 @@ VBool VSocket::SetTimeout6(const VCard32 msecs)
     {
         return VFalse;
     }
-    int timeout = msecs;
-    if (setsockopt(sock6, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout)) == SOCKET_ERROR)
+    int timeout = static_cast<int>(msecs);
+    if (setsockopt(sock6, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&timeout), sizeof(timeout)) == SOCKET_ERROR)
     {
         return VFalse;
     }
-    if (setsockopt(sock6, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout)) == SOCKET_ERROR)
+    if (setsockopt(sock6, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&timeout), sizeof(timeout)) == SOCKET_ERROR)
     {
         return VFalse;
     }
@@ -1546,11 +1546,11 @@ VBool VSocket::SetTimeoutIPV4(const VCard32 msecs)
         return VFalse;
     }
     DWORD timeout = msecs;
-    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout)) == SOCKET_ERROR)
+    if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&timeout), sizeof(timeout)) == SOCKET_ERROR)
     {
         return VFalse;
     }
-    if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout)) == SOCKET_ERROR)
+    if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&timeout), sizeof(timeout)) == SOCKET_ERROR)
     {
         return VFalse;
     }
@@ -1618,7 +1618,7 @@ VInt VSocket::SendSock(const char* const buff, const VCard bufflen, const SOCKET
 
     unsigned int newsize = queuebuffersize + bufflen;
     char* buff2;
-    buff2 = (char*)buff;
+    buff2 = const_cast<char*>(buff);
     unsigned int bufflen2 = bufflen;
 
     // adzm 2010-09 - flush as soon as we have a full buffer, not if we have exceeded it.
@@ -1656,7 +1656,7 @@ VInt VSocket::SendSock(const char* const buff, const VCard bufflen, const SOCKET
     }
     //	vnclog.Print(LL_SOCKERR, VNCLOG("SEND 2 %i\n") ,queuebuffersize);
     queuebuffersize = 0;
-    return bufflen;
+    return static_cast<VInt>(bufflen);
 }
 
 VInt VSocket::SendIPV4(const char* const buff, const VCard bufflen)
@@ -1666,7 +1666,7 @@ VInt VSocket::SendIPV4(const char* const buff, const VCard bufflen)
 
     unsigned int newsize = queuebuffersize + bufflen;
     char* buff2;
-    buff2 = (char*)buff;
+    buff2 = const_cast<char*>(buff);
     unsigned int bufflen2 = bufflen;
 
     // adzm 2010-09 - flush as soon as we have a full buffer, not if we have exceeded it.
@@ -1704,7 +1704,7 @@ VInt VSocket::SendIPV4(const char* const buff, const VCard bufflen)
     }
     //	vnclog.Print(LL_SOCKERR, VNCLOG("SEND 2 %i\n") ,queuebuffersize);
     queuebuffersize = 0;
-    return bufflen;
+    return static_cast<VInt>(bufflen);
 }
 
 
@@ -1738,7 +1738,7 @@ VInt VSocket::SendQueuedSock(const char* const buff, const VCard bufflen, const 
 {
     unsigned int newsize = queuebuffersize + bufflen;
     char* buff2;
-    buff2 = (char*)buff;
+    buff2 = const_cast<char*>(buff);
     unsigned int bufflen2 = bufflen;
 
     // adzm 2010-09 - flush as soon as we have a full buffer, not if we have exceeded it.
@@ -1773,14 +1773,14 @@ VInt VSocket::SendQueuedSock(const char* const buff, const VCard bufflen, const 
     }
     std::memcpy(queuebuffer.data() + queuebuffersize, buff2, bufflen2);
     queuebuffersize += bufflen2;
-    return bufflen;
+    return static_cast<VInt>(bufflen);
 }
 
 VInt VSocket::SendQueuedIPV4(const char* const buff, const VCard bufflen)
 {
     unsigned int newsize = queuebuffersize + bufflen;
     char* buff2;
-    buff2 = (char*)buff;
+    buff2 = const_cast<char*>(buff);
     unsigned int bufflen2 = bufflen;
 
     // adzm 2010-09 - flush as soon as we have a full buffer, not if we have exceeded it.
@@ -1815,7 +1815,7 @@ VInt VSocket::SendQueuedIPV4(const char* const buff, const VCard bufflen)
     }
     std::memcpy(queuebuffer.data() + queuebuffersize, buff2, bufflen2);
     queuebuffersize += bufflen2;
-    return bufflen;
+    return static_cast<VInt>(bufflen);
 }
 
 
@@ -2023,7 +2023,7 @@ VBool VSocket::SendExactSock(const char* const buff, const VCard bufflen, const 
         // If required to store data into memory
         if (m_fWriteToNetRectBuf)
         {
-            std::memcpy((char*)(m_pNetRectBuf + m_nNetRectBufOffset), buff, bufflen);
+            std::memcpy(reinterpret_cast<char*>((m_pNetRectBuf + m_nNetRectBufOffset)), buff, bufflen);
             m_nNetRectBufOffset += bufflen;
             return VTrue;
         }
@@ -2031,21 +2031,21 @@ VBool VSocket::SendExactSock(const char* const buff, const VCard bufflen, const 
         {
             int nTransDataLen{ 0 };
             //adzm 2009-06-20
-            pBuffer = (char*)(TransformBuffer((BYTE*)buff, bufflen, &nTransDataLen));
+            pBuffer = reinterpret_cast<char*>(TransformBuffer(reinterpret_cast<BYTE*>(const_cast<char*>(buff)), static_cast<int>(bufflen), &nTransDataLen));
             if ((pBuffer == nullptr) || ((bufflen > 0) && (nTransDataLen == 0)))
             {
                 // throw WarningException("SendExact: DSMPlugin-TransformBuffer Error.");
             }
-            nBufflen = nTransDataLen;
+            nBufflen = static_cast<VCard>(nTransDataLen);
         }
     }
     else
     {
-        pBuffer = (char*)buff;
+        pBuffer = const_cast<char*>(buff);
     }
 
     VInt result = Send(pBuffer, nBufflen);
-    return result == (VInt)nBufflen;
+    return result == static_cast<VInt>(nBufflen);
 }
 
 VBool VSocket::SendExactIPV4(const char* const buff, const VCard bufflen)
@@ -2075,7 +2075,7 @@ VBool VSocket::SendExactIPV4(const char* const buff, const VCard bufflen)
         // If required to store data into memory
         if (m_fWriteToNetRectBuf)
         {
-            std::memcpy((char*)(m_pNetRectBuf + m_nNetRectBufOffset), buff, bufflen);
+            std::memcpy(reinterpret_cast<char*>((m_pNetRectBuf + m_nNetRectBufOffset)), buff, bufflen);
             m_nNetRectBufOffset += bufflen;
             return VTrue;
         }
@@ -2083,21 +2083,21 @@ VBool VSocket::SendExactIPV4(const char* const buff, const VCard bufflen)
         {
             int nTransDataLen{ 0 };
             //adzm 2009-06-20
-            pBuffer = (char*)(TransformBuffer((BYTE*)buff, bufflen, &nTransDataLen));
+            pBuffer = reinterpret_cast<char*>(TransformBuffer(reinterpret_cast<BYTE*>(const_cast<char*>(buff)), static_cast<int>(bufflen), &nTransDataLen));
             if ((pBuffer == nullptr) || ((bufflen > 0) && (nTransDataLen == 0)))
             {
                 // throw WarningException("SendExact: DSMPlugin-TransformBuffer Error.");
             }
-            nBufflen = nTransDataLen;
+            nBufflen = static_cast<VCard>(nTransDataLen);
         }
     }
     else
     {
-        pBuffer = (char*)buff;
+        pBuffer = const_cast<char*>(buff);
     }
 
     VInt result = Send(pBuffer, nBufflen);
-    return result == (VInt)nBufflen;
+    return result == static_cast<VInt>(nBufflen);
 }
 
 
@@ -2157,7 +2157,7 @@ VBool VSocket::SendExactQueueSock(const char* const buff, const VCard bufflen, c
         // If required to store data into memory
         if (m_fWriteToNetRectBuf)
         {
-            std::memcpy((char*)(m_pNetRectBuf + m_nNetRectBufOffset), buff, bufflen);
+            std::memcpy(reinterpret_cast<char*>((m_pNetRectBuf + m_nNetRectBufOffset)), buff, bufflen);
             m_nNetRectBufOffset += bufflen;
             return VTrue;
         }
@@ -2165,21 +2165,21 @@ VBool VSocket::SendExactQueueSock(const char* const buff, const VCard bufflen, c
         {
             int nTransDataLen{ 0 };
             //adzm 2009-06-20
-            pBuffer = (char*)(TransformBuffer((BYTE*)buff, bufflen, &nTransDataLen));
+            pBuffer = reinterpret_cast<char*>(TransformBuffer(reinterpret_cast<BYTE*>(const_cast<char*>(buff)), static_cast<int>(bufflen), &nTransDataLen));
             if ((pBuffer == nullptr) || ((bufflen > 0) && (nTransDataLen == 0)))
             {
                 // throw WarningException("SendExact: DSMPlugin-TransformBuffer Error.");
             }
-            nBufflen = nTransDataLen;
+            nBufflen = static_cast<VCard>(nTransDataLen);
         }
     }
     else
     {
-        pBuffer = (char*)buff;
+        pBuffer = const_cast<char*>(buff);
     }
 
     VInt result = SendQueued(pBuffer, nBufflen);
-    return result == (VInt)nBufflen;
+    return result == static_cast<VInt>(nBufflen);
 }
 
 VBool VSocket::SendExactQueueIPV4(const char* const buff, const VCard bufflen)
@@ -2210,7 +2210,7 @@ VBool VSocket::SendExactQueueIPV4(const char* const buff, const VCard bufflen)
         // If required to store data into memory
         if (m_fWriteToNetRectBuf)
         {
-            std::memcpy((char*)(m_pNetRectBuf + m_nNetRectBufOffset), buff, bufflen);
+            std::memcpy(reinterpret_cast<char*>((m_pNetRectBuf + m_nNetRectBufOffset)), buff, bufflen);
             m_nNetRectBufOffset += bufflen;
             return VTrue;
         }
@@ -2218,21 +2218,21 @@ VBool VSocket::SendExactQueueIPV4(const char* const buff, const VCard bufflen)
         {
             int nTransDataLen{ 0 };
             //adzm 2009-06-20
-            pBuffer = (char*)(TransformBuffer((BYTE*)buff, bufflen, &nTransDataLen));
+            pBuffer = reinterpret_cast<char*>(TransformBuffer(reinterpret_cast<BYTE*>(const_cast<char*>(buff)), static_cast<int>(bufflen), &nTransDataLen));
             if ((pBuffer == nullptr) || ((bufflen > 0) && (nTransDataLen == 0)))
             {
                 // throw WarningException("SendExact: DSMPlugin-TransformBuffer Error.");
             }
-            nBufflen = nTransDataLen;
+            nBufflen = static_cast<VCard>(nTransDataLen);
         }
     }
     else
     {
-        pBuffer = (char*)buff;
+        pBuffer = const_cast<char*>(buff);
     }
 
     VInt result = SendQueued(pBuffer, nBufflen);
-    return result == (VInt)nBufflen;
+    return result == static_cast<VInt>(nBufflen);
 }
 
 VInt VSocket::SendExactQueue(const char* const buff, const VCard bufflen)
@@ -2333,7 +2333,7 @@ VInt VSocket::ReadSock(char* const buff, const VCard bufflen, const SOCKET allso
     }
     [[maybe_unused]] const int counter{ 0 };
     int s{ 0 };
-    s = recv(allsock, buff, bufflen, 0);
+    s = recv(allsock, buff, static_cast<int>(bufflen), 0);
     return s;
 }
 
@@ -2344,7 +2344,7 @@ VInt VSocket::ReadIPV4(char* const buff, const VCard bufflen)
         return -1;
     }
     int s{ 0 };
-    s = recv(sock, buff, bufflen, 0);
+    s = recv(sock, buff, static_cast<int>(bufflen), 0);
     return s;
 }
 
@@ -2379,7 +2379,7 @@ VBool VSocket::ReadExactIPV6(char* buff, const VCard bufflen)
                 return VFalse;
             }
             buff += got;
-            remaining -= got;
+            remaining -= static_cast<VCard>(got);
         }
         return VTrue;
     }
@@ -2418,7 +2418,7 @@ VBool VSocket::ReadExactSock(char* buff, const VCard bufflen, const SOCKET allso
         // The number of bytes to read calculated from bufflen is given back in nTransDataLen
         int nTransDataLen{ 0 };
         //adzm 2009-06-20
-        BYTE* pTransBuffer = RestoreBufferStep1(nullptr, bufflen, &nTransDataLen);
+        BYTE* pTransBuffer = RestoreBufferStep1(nullptr, static_cast<int>(bufflen), &nTransDataLen);
         if (pTransBuffer == nullptr)
         {
             // m_pDSMPlugin->RestoreBufferUnlock();
@@ -2432,7 +2432,7 @@ VBool VSocket::ReadExactSock(char* buff, const VCard bufflen, const SOCKET allso
         while (nTransDataLen > 0)
         {
             // Try to read some data in
-            n = Read((char*)pTransBuffer, nTransDataLen);
+            n = Read(reinterpret_cast<char*>(pTransBuffer), static_cast<VCard>(nTransDataLen));
             if (n > 0)
             {
                 // Adjust the buffer position and size
@@ -2460,10 +2460,10 @@ VBool VSocket::ReadExactSock(char* buff, const VCard bufflen, const SOCKET allso
         int nRestDataLen{ 0 };
         nTransDataLen = nTransDataLenSave;
         //adzm 2009-06-20
-        [[maybe_unused]] BYTE* pPipo = RestoreBufferStep2((BYTE*)buff, nTransDataLen, &nRestDataLen);
+        [[maybe_unused]] BYTE* pPipo = RestoreBufferStep2(reinterpret_cast<BYTE*>(buff), nTransDataLen, &nRestDataLen);
 
         // Check if we actually get the real original data length
-        if ((VCard)nRestDataLen != bufflen)
+        if (static_cast<VCard>(nRestDataLen) != bufflen)
         {
             // throw WarningException("WriteExact: DSMPlugin-RestoreBuffer Error.");
         }
@@ -2479,7 +2479,7 @@ VBool VSocket::ReadExactSock(char* buff, const VCard bufflen, const SOCKET allso
             {
                 // Adjust the buffer position and size
                 buff += n;
-                currlen -= n;
+                currlen -= static_cast<VCard>(n);
             }
             else if (n == 0)
             {
@@ -2528,7 +2528,7 @@ VBool VSocket::ReadExactIPV4(char* buff, const VCard bufflen)
                 return VFalse;
             }
             buff += got;
-            remaining -= got;
+            remaining -= static_cast<VCard>(got);
         }
         return VTrue;
     }
@@ -2546,7 +2546,7 @@ VBool VSocket::ReadExactIPV4(char* buff, const VCard bufflen)
         // The number of bytes to read calculated from bufflen is given back in nTransDataLen
         int nTransDataLen{ 0 };
         //adzm 2009-06-20
-        BYTE* pTransBuffer = RestoreBufferStep1(nullptr, bufflen, &nTransDataLen);
+        BYTE* pTransBuffer = RestoreBufferStep1(nullptr, static_cast<int>(bufflen), &nTransDataLen);
         if (pTransBuffer == nullptr)
         {
             // m_pDSMPlugin->RestoreBufferUnlock();
@@ -2560,7 +2560,7 @@ VBool VSocket::ReadExactIPV4(char* buff, const VCard bufflen)
         while (nTransDataLen > 0)
         {
             // Try to read some data in
-            n = Read((char*)pTransBuffer, nTransDataLen);
+            n = Read(reinterpret_cast<char*>(pTransBuffer), static_cast<VCard>(nTransDataLen));
             if (n > 0)
             {
                 // Adjust the buffer position and size
@@ -2588,10 +2588,10 @@ VBool VSocket::ReadExactIPV4(char* buff, const VCard bufflen)
         int nRestDataLen{ 0 };
         nTransDataLen = nTransDataLenSave;
         //adzm 2009-06-20
-        RestoreBufferStep2((BYTE*)buff, nTransDataLen, &nRestDataLen);
+        RestoreBufferStep2(reinterpret_cast<BYTE*>(buff), nTransDataLen, &nRestDataLen);
 
         // Check if we actually get the real original data length
-        if ((VCard)nRestDataLen != bufflen)
+        if (static_cast<VCard>(nRestDataLen) != bufflen)
         {
             // throw WarningException("WriteExact: DSMPlugin-RestoreBuffer Error.");
         }
@@ -2607,7 +2607,7 @@ VBool VSocket::ReadExactIPV4(char* buff, const VCard bufflen)
             {
                 // Adjust the buffer position and size
                 buff += n;
-                currlen -= n;
+                currlen -= static_cast<VCard>(n);
             }
             else if (n == 0)
             {
@@ -2749,7 +2749,7 @@ void VSocket::CheckNetRectBufferSize(const int nBufSize)
         return;
     }
 
-    BYTE* newbuf = new BYTE[nBufSize + 256];
+    BYTE* newbuf = new BYTE[static_cast<unsigned long long>(nBufSize + 256)];
     if (newbuf == nullptr)
     {
         // throw ErrorException("Insufficient memory to allocate network crypt buffer.");
@@ -2776,7 +2776,7 @@ VBool VSocket::SendExactHTTP(const char* const buff, const VCard bufflen)
     {
         return m_tlsCallbacks->send(buff, static_cast<int>(bufflen)) ? VTrue : VFalse;
     }
-    return Send(buff, bufflen) == (VInt)bufflen;
+    return Send(buff, bufflen) == static_cast<VInt>(bufflen);
 }
 
 
@@ -2795,7 +2795,7 @@ VBool VSocket::ReadExactHTTP(char* buff, const VCard bufflen)
                 return VFalse;
             }
             buff += got;
-            remaining -= got;
+            remaining -= static_cast<VCard>(got);
         }
         return VTrue;
     }
@@ -2812,7 +2812,7 @@ VBool VSocket::ReadExactHTTP(char* buff, const VCard bufflen)
         {
             // Adjust the buffer position and size
             buff += n;
-            currlen -= n;
+            currlen -= static_cast<VCard>(n);
         }
         else if (n == 0)
         {
@@ -2854,7 +2854,7 @@ VBool VSocket::ReadSelectSock(const VCard to, const SOCKET allsock)
     struct timeval tv;
     tv.tv_sec = to / 1000;
     tv.tv_usec = (to % 1000) * 1000;
-    int rc = select(static_cast<int>(allsock + 1), &fds, 0, 0, &tv);
+    int rc = select(static_cast<int>(allsock + 1), &fds, nullptr, nullptr, &tv);
     if (rc > 0)
     {
         return true;
@@ -2870,7 +2870,7 @@ VBool VSocket::ReadSelectIPV4(const VCard to)
     struct timeval tv;
     tv.tv_sec = to / 1000;
     tv.tv_usec = (to % 1000) * 1000;
-    int rc = select(static_cast<int>((sock + 1)), &fds, 0, 0, &tv);
+    int rc = select(static_cast<int>((sock + 1)), &fds, nullptr, nullptr, &tv);
     if (rc > 0)
     {
         return true;
@@ -2926,7 +2926,7 @@ bool sendall(const SOCKET RemoteSocket, char* const buff, const unsigned int buf
         }
         if (FD_ISSET(RemoteSocket, &write_fds))
         {
-            val = send(RemoteSocket, buff + totsend, bufflen - totsend, 0);
+            val = send(RemoteSocket, buff + totsend, static_cast<int>(bufflen - totsend), 0);
         }
         if (val == 0)
         {
@@ -2936,7 +2936,7 @@ bool sendall(const SOCKET RemoteSocket, char* const buff, const unsigned int buf
         {
             return false;
         }
-        totsend += val;
+        totsend += static_cast<unsigned int>(val);
     }
     return 1;
 }

@@ -41,16 +41,16 @@ BOOL CALLBACK DlgProcCAP(const HWND hwnd, const UINT uMsg, const WPARAM wParam, 
 
     case WM_INITDIALOG: {
         initdone5 = false;
-        ::SendMessage(::GetDlgItem(hwnd, IDC_TURBOMODE), BM_SETCHECK, TurboMode, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_DRIVER), BM_SETCHECK, Driver, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_HOOK), BM_SETCHECK, Hook, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_FULLSCREEN), BM_SETCHECK, PollFullScreen, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_FOREGROUND), BM_SETCHECK, PollForeground, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR), BM_SETCHECK, PollUnderCursor, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_CONSOLE_ONLY), BM_SETCHECK, PollConsoleOnly, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_REMOVE_WALLPAPER), BM_SETCHECK, RemoveWallpaper, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_REMOVE_Aero), BM_SETCHECK, RemoveAero, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_ONEVENT_ONLY), BM_SETCHECK, PollOnEventOnly, 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_TURBOMODE), BM_SETCHECK, static_cast<WPARAM>(TurboMode), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_DRIVER), BM_SETCHECK, static_cast<WPARAM>(Driver), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_HOOK), BM_SETCHECK, static_cast<WPARAM>(Hook), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_FULLSCREEN), BM_SETCHECK, static_cast<WPARAM>(PollFullScreen), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_FOREGROUND), BM_SETCHECK, static_cast<WPARAM>(PollForeground), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR), BM_SETCHECK, static_cast<WPARAM>(PollUnderCursor), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_CONSOLE_ONLY), BM_SETCHECK, static_cast<WPARAM>(PollConsoleOnly), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_REMOVE_WALLPAPER), BM_SETCHECK, static_cast<WPARAM>(RemoveWallpaper), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_REMOVE_Aero), BM_SETCHECK, static_cast<WPARAM>(RemoveAero), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ONEVENT_ONLY), BM_SETCHECK, static_cast<WPARAM>(PollOnEventOnly), 0);
 
         if (ddEngine)
         {
@@ -69,10 +69,10 @@ BOOL CALLBACK DlgProcCAP(const HWND hwnd, const UINT uMsg, const WPARAM wParam, 
         ::EnableWindow(::GetDlgItem(hwnd, IDC_CONSOLE_ONLY), (PollUnderCursor || PollForeground));
         ::EnableWindow(::GetDlgItem(hwnd, IDC_ONEVENT_ONLY), (PollUnderCursor || PollForeground));
 
-        ::SendMessage(::GetDlgItem(hwnd, IDC_PRIM), BM_SETCHECK, Primary, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_SEC), BM_SETCHECK, Secondary, 0);
-        ::SetDlgItemInt(hwnd, IDC_MAXCPU, MaxCpu, false);
-        ::SetDlgItemInt(hwnd, IDC_MAXFPS, MaxFps, false);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_PRIM), BM_SETCHECK, static_cast<WPARAM>(Primary), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_SEC), BM_SETCHECK, static_cast<WPARAM>(Secondary), 0);
+        ::SetDlgItemInt(hwnd, IDC_MAXCPU, static_cast<UINT>(MaxCpu), false);
+        ::SetDlgItemInt(hwnd, IDC_MAXFPS, static_cast<UINT>(MaxFps), false);
         initdone5 = true;
         return TRUE;
     }
@@ -87,24 +87,24 @@ BOOL CALLBACK DlgProcCAP(const HWND hwnd, const UINT uMsg, const WPARAM wParam, 
                 std::strcpy(link.data(), "https://uvnc.com/webhelp/");
                 std::strcat(link.data(), "screencapture");
                 std::strcat(link.data(), ".html");
-                ::ShellExecute(::GetDesktopWindow(), "open", link.data(), "", 0, SW_SHOWNORMAL);
+                ::ShellExecute(::GetDesktopWindow(), "open", link.data(), "", nullptr, SW_SHOWNORMAL);
             }
             break;
         case IDOK: {
-            TurboMode = (LONG)::SendDlgItemMessage(hwnd, IDC_TURBOMODE, BM_GETCHECK, 0, 0);
-            PollUnderCursor = (LONG)::SendDlgItemMessage(hwnd, IDC_POLL_UNDER_CURSOR, BM_GETCHECK, 0, 0);
-            PollForeground = (LONG)::SendDlgItemMessage(hwnd, IDC_POLL_FOREGROUND, BM_GETCHECK, 0, 0);
-            PollFullScreen = (LONG)::SendDlgItemMessage(hwnd, IDC_POLL_FULLSCREEN, BM_GETCHECK, 0, 0);
-            PollConsoleOnly = (LONG)::SendDlgItemMessage(hwnd, IDC_CONSOLE_ONLY, BM_GETCHECK, 0, 0);
-            PollOnEventOnly = (LONG)::SendDlgItemMessage(hwnd, IDC_ONEVENT_ONLY, BM_GETCHECK, 0, 0);
-            Driver = (LONG)::SendDlgItemMessage(hwnd, IDC_DRIVER, BM_GETCHECK, 0, 0);
-            Primary = (LONG)::SendDlgItemMessage(hwnd, IDC_PRIM, BM_GETCHECK, 0, 0);
-            Secondary = (LONG)::SendDlgItemMessage(hwnd, IDC_SEC, BM_GETCHECK, 0, 0);
-            Hook = (LONG)::SendDlgItemMessage(hwnd, IDC_HOOK, BM_GETCHECK, 0, 0);
-            RemoveWallpaper = (LONG)::SendDlgItemMessage(hwnd, IDC_REMOVE_WALLPAPER, BM_GETCHECK, 0, 0);
-            RemoveAero = (LONG)::SendDlgItemMessage(hwnd, IDC_REMOVE_Aero, BM_GETCHECK, 0, 0);
-            MaxCpu = ::GetDlgItemInt(hwnd, IDC_MAXCPU, nullptr, FALSE);
-            MaxFps = ::GetDlgItemInt(hwnd, IDC_MAXFPS, nullptr, FALSE);
+            TurboMode = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_TURBOMODE, BM_GETCHECK, 0, 0));
+            PollUnderCursor = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_POLL_UNDER_CURSOR, BM_GETCHECK, 0, 0));
+            PollForeground = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_POLL_FOREGROUND, BM_GETCHECK, 0, 0));
+            PollFullScreen = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_POLL_FULLSCREEN, BM_GETCHECK, 0, 0));
+            PollConsoleOnly = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_CONSOLE_ONLY, BM_GETCHECK, 0, 0));
+            PollOnEventOnly = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_ONEVENT_ONLY, BM_GETCHECK, 0, 0));
+            Driver = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_DRIVER, BM_GETCHECK, 0, 0));
+            Primary = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_PRIM, BM_GETCHECK, 0, 0));
+            Secondary = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_SEC, BM_GETCHECK, 0, 0));
+            Hook = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_HOOK, BM_GETCHECK, 0, 0));
+            RemoveWallpaper = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_REMOVE_WALLPAPER, BM_GETCHECK, 0, 0));
+            RemoveAero = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_REMOVE_Aero, BM_GETCHECK, 0, 0));
+            MaxCpu = static_cast<LONG>(::GetDlgItemInt(hwnd, IDC_MAXCPU, nullptr, FALSE));
+            MaxFps = static_cast<LONG>(::GetDlgItemInt(hwnd, IDC_MAXFPS, nullptr, FALSE));
         }
         break;
         case IDCANCEL:

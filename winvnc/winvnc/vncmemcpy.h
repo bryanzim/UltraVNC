@@ -9,8 +9,8 @@
 // SPDX-FileCopyrightText: Copyright (C) 1999-2002 Vdacc-VNC & eSVNC Projects. All Rights Reserved.
 //
 
-#ifndef __CPU_H__
-#define __CPU_H__
+#ifndef CPU_H
+#define CPU_H
 #define CPUID_STD_FPU 0x00000001
 #define CPUID_STD_VME 0x00000002
 #define CPUID_STD_DEBUGEXT 0x00000004

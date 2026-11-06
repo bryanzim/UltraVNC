@@ -20,7 +20,7 @@
 #include "inifile.h"
 #include "resource.h"
 
-#include <commctrl.h>
+#include <CommCtrl.h>
 
 #include <array>
 #include <cstring>
@@ -141,13 +141,13 @@ INT_PTR CALLBACK PasswdProc(const HWND hDlg, const UINT message, const WPARAM wP
     switch (message)
     {
     case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
+        return static_cast<INT_PTR>(TRUE);
 
     case WM_COMMAND:
         if ((LOWORD(wParam) == IDOK) || (LOWORD(wParam) == IDCANCEL))
         {
             std::array<char, MAXPWLEN + 1> plaintext1;                                                   //PGM
-            int len = ::GetDlgItemText(hDlg, IDC_SFXPASSWD, (LPSTR)plaintext1.data(), static_cast<int>(plaintext1.size())); //PGM
+            int len = static_cast<int>(::GetDlgItemText(hDlg, IDC_SFXPASSWD, static_cast<LPSTR>(plaintext1.data()), static_cast<int>(plaintext1.size()))); //PGM
             if (len == 0)
             {
                 std::strcpy(passwd, "");
@@ -158,11 +158,11 @@ INT_PTR CALLBACK PasswdProc(const HWND hDlg, const UINT message, const WPARAM wP
             }
 
             ::EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
+            return static_cast<INT_PTR>(TRUE);
         }
         break;
     }
-    return (INT_PTR)FALSE;
+    return static_cast<INT_PTR>(FALSE);
 }
 
 void Save_settings()
@@ -290,7 +290,7 @@ void Save_settings_sfx(char* const myfile)
     myIniFile_Out.WriteInt("admin", "primary", Primary);
     myIniFile_Out.WriteInt("admin", "secondary", Secondary);
 
-    ::DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_PASSWD), nullptr, (DLGPROC)PasswdProc, 0);
+    ::DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_PASSWD), nullptr, reinterpret_cast<DLGPROC>(PasswdProc), 0);
     myIniFile_Out.WritePassword(passwd);
     myIniFile_Out.WritePassword2(passwd2); //PGM
 
@@ -447,7 +447,7 @@ int APIENTRY WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, c
     ::LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     ::LoadString(hInstance, IDC_UVNC_SETTINGS, szWindowClass.data(), static_cast<int>(szWindowClass.size()));
     Read_Settings_from_ini();
-    ::DialogBoxParam(hInstance, MAKEINTRESOURCE(IDD_PARENT), nullptr, (DLGPROC)DlgProc, 0);
+    ::DialogBoxParam(hInstance, MAKEINTRESOURCE(IDD_PARENT), nullptr, reinterpret_cast<DLGPROC>(DlgProc), 0);
 
     return 1;
 }
@@ -460,17 +460,17 @@ INT_PTR CALLBACK About(const HWND hDlg, const UINT message, const WPARAM wParam,
     switch (message)
     {
     case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
+        return static_cast<INT_PTR>(TRUE);
 
     case WM_COMMAND:
         if ((LOWORD(wParam) == IDOK) || (LOWORD(wParam) == IDCANCEL))
         {
             ::EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
+            return static_cast<INT_PTR>(TRUE);
         }
         break;
     }
-    return (INT_PTR)FALSE;
+    return static_cast<INT_PTR>(FALSE);
 }
 
 BOOL CALLBACK DlgProc(const HWND hwndDlg, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
@@ -503,18 +503,18 @@ BOOL CALLBACK DlgProc(const HWND hwndDlg, const UINT uMsg, const WPARAM wParam, 
         item.pszText = "Service";
         TabCtrl_InsertItem(m_hTab, 6, &item);
 
-        hTab0dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_INCOMING), hwndDlg, (DLGPROC)DlgProcOptions1, 0);
+        hTab0dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_INCOMING), hwndDlg, reinterpret_cast<DLGPROC>(DlgProcOptions1), 0);
 
-        hTab1dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_SECURITY), hwndDlg, (DLGPROC)security, 0);
+        hTab1dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_SECURITY), hwndDlg, reinterpret_cast<DLGPROC>(security), 0);
 
-        hTab2dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_FILETRANSFER), hwndDlg, (DLGPROC)DlgProcOFT, 0);
-        hTab3dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_CONNECTION), hwndDlg, (DLGPROC)DlgProcCON, 0);
+        hTab2dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_FILETRANSFER), hwndDlg, reinterpret_cast<DLGPROC>(DlgProcOFT), 0);
+        hTab3dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_CONNECTION), hwndDlg, reinterpret_cast<DLGPROC>(DlgProcCON), 0);
 
-        hTab4dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_CAPTURE), hwndDlg, (DLGPROC)DlgProcCAP, 0);
+        hTab4dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_CAPTURE), hwndDlg, reinterpret_cast<DLGPROC>(DlgProcCAP), 0);
 
-        hTab5dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_MISC), hwndDlg, (DLGPROC)DlgProcMISC, 0);
+        hTab5dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_MISC), hwndDlg, reinterpret_cast<DLGPROC>(DlgProcMISC), 0);
 
-        hTab6dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_SERVICE), hwndDlg, (DLGPROC)DlgProcService, 0);
+        hTab6dialog = ::CreateDialogParam(hInst, MAKEINTRESOURCE(IDD_SERVICE), hwndDlg, reinterpret_cast<DLGPROC>(DlgProcService), 0);
 
         /*hTab7dialog = CreateDialogParam(hInst,
             MAKEINTRESOURCE(IDD_OPTION9),
@@ -525,7 +525,7 @@ BOOL CALLBACK DlgProc(const HWND hwndDlg, const UINT uMsg, const WPARAM wParam, 
         // Position child dialogs, to fit the Tab control's display area
         RECT rc;
         ::GetWindowRect(m_hTab, &rc);
-        ::MapWindowPoints(nullptr, hwndDlg, (POINT*)&rc, 2);
+        ::MapWindowPoints(nullptr, hwndDlg, reinterpret_cast<POINT*>(&rc), 2);
         TabCtrl_AdjustRect(m_hTab, FALSE, &rc);
         ::SetWindowPos(hTab0dialog, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_SHOWWINDOW);
         ::SetWindowPos(hTab1dialog, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
@@ -602,7 +602,7 @@ BOOL CALLBACK DlgProc(const HWND hwndDlg, const UINT uMsg, const WPARAM wParam, 
         return FALSE;
 
     case WM_NOTIFY: {
-        LPNMHDR pn = (LPNMHDR)lParam;
+        LPNMHDR pn = reinterpret_cast<LPNMHDR>(lParam);
         switch (pn->code)
         {
         case TCN_SELCHANGE:

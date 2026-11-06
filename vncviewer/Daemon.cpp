@@ -165,12 +165,12 @@ static bool DaemonAcceptPeer(const struct sockaddr* const addr)
     std::array<char, INET6_ADDRSTRLEN> host{ 0 };
     if (addr->sa_family == AF_INET)
     {
-        const struct sockaddr_in* a4 = (const struct sockaddr_in*)addr;
+        const struct sockaddr_in* a4 = reinterpret_cast<const struct sockaddr_in*>(addr);
         inet_ntop(AF_INET, &a4->sin_addr, host.data(), sizeof(host));
     }
     else if (addr->sa_family == AF_INET6)
     {
-        const struct sockaddr_in6* a6 = (const struct sockaddr_in6*)addr;
+        const struct sockaddr_in6* a6 = reinterpret_cast<const struct sockaddr_in6*>(addr);
         inet_ntop(AF_INET6, &a6->sin6_addr, host.data(), sizeof(host));
     }
     if (host[0U] == '\0')
@@ -199,8 +199,8 @@ Daemon::Daemon(int port, const bool ipv6)
     wndclass.hInstance = m_hInstResDLL;
     wndclass.hIcon = ::LoadIcon(nullptr, IDI_APPLICATION);
     wndclass.hCursor = ::LoadCursor(nullptr, IDC_ARROW);
-    wndclass.hbrBackground = (HBRUSH)::GetStockObject(WHITE_BRUSH);
-    wndclass.lpszMenuName = (const TCHAR*)nullptr;
+    wndclass.hbrBackground = reinterpret_cast<HBRUSH>(::GetStockObject(WHITE_BRUSH));
+    wndclass.lpszMenuName = static_cast<const TCHAR*>(nullptr);
     wndclass.lpszClassName = DAEMON_CLASS_NAME;
     wndclass.hIconSm = ::LoadIcon(nullptr, IDI_APPLICATION);
 
@@ -210,7 +210,7 @@ Daemon::Daemon(int port, const bool ipv6)
                           nullptr, nullptr, m_hInstResDLL, nullptr);
 
     // record which client created this window
-    helper::SafeSetWindowUserData(m_hwnd, (LONG_PTR)this);
+    helper::SafeSetWindowUserData(m_hwnd, reinterpret_cast<LONG_PTR>(this));
 
     // Load a popup menu
     m_hmenu = ::LoadMenu(m_hInstResDLL, MAKEINTRESOURCE(IDR_TRAYMENU));
@@ -244,7 +244,7 @@ Daemon::Daemon(int port, const bool ipv6)
             try
             {
                 int res4{ 0 };
-                res4 = bind(m_deamon_sock4, (struct sockaddr*)&addr4, sizeof(addr4));
+                res4 = bind(m_deamon_sock4, reinterpret_cast<struct sockaddr*>(&addr4), sizeof(addr4));
                 if (res4 == SOCKET_ERROR)
                 {
                     throw WarningException(sz_I2.data());
@@ -267,8 +267,8 @@ Daemon::Daemon(int port, const bool ipv6)
             {
                 int res4{ 0 };
                 int res6{ 0 };
-                res4 = bind(m_deamon_sock4, (struct sockaddr*)&addr4, sizeof(addr4));
-                res6 = bind(m_deamon_sock6, (struct sockaddr*)&addr6, sizeof(addr6));
+                res4 = bind(m_deamon_sock4, reinterpret_cast<struct sockaddr*>(&addr4), sizeof(addr4));
+                res6 = bind(m_deamon_sock6, reinterpret_cast<struct sockaddr*>(&addr6), sizeof(addr6));
                 if ((res4 == SOCKET_ERROR) && (res6 == SOCKET_ERROR))
                 {
                     throw WarningException(sz_I2.data());
@@ -323,7 +323,7 @@ Daemon::Daemon(int port, const bool ipv6)
         try
         {
             int res{ 0 };
-            res = bind(m_deamon_sock, (struct sockaddr*)&addr, sizeof(addr));
+            res = bind(m_deamon_sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
             if (res == SOCKET_ERROR)
             {
                 throw WarningException(sz_I2.data());
@@ -367,7 +367,7 @@ void Daemon::CheckTrayIcon()
     {
         vnclog.Print(4, _T("Tray icon not there - reinstalling\n"));
         AddTrayIcon();
-    };
+    }
 }
 
 void Daemon::RemoveTrayIcon()
@@ -443,12 +443,12 @@ LRESULT CALLBACK Daemon::WndProc(const HWND hwnd, const UINT iMsg, const WPARAM 
             std::memset(&incoming, 0, sizeof(incoming));
 
             SOCKET hNewSock;
-            hNewSock = accept(_this->m_deamon_sock4, (struct sockaddr*)&incoming, &size_incoming);
+            hNewSock = accept(_this->m_deamon_sock4, reinterpret_cast<struct sockaddr*>(&incoming), &size_incoming);
             ::WSAAsyncSelect(hNewSock, hwnd, 0, 0);
             unsigned long nbarg{ 0U };
-            ioctlsocket(hNewSock, FIONBIO, &nbarg);
+            ioctlsocket(hNewSock, static_cast<long>(FIONBIO), &nbarg);
             // Phil Money @ Advantig, LLC 7-9-2005
-            if (ListenMode && DaemonAcceptPeer((struct sockaddr*)&incoming))
+            if (ListenMode && DaemonAcceptPeer(reinterpret_cast<struct sockaddr*>(&incoming)))
             {
 
                 pApp->NewConnection(true, hNewSock);
@@ -464,7 +464,7 @@ LRESULT CALLBACK Daemon::WndProc(const HWND hwnd, const UINT iMsg, const WPARAM 
         case FD_READ: {
             unsigned long numbytes{ 0U };
             ioctlsocket(_this->m_deamon_sock4, FIONREAD, &numbytes);
-            recv(_this->m_deamon_sock4, _this->netbuf.data(), numbytes, 0);
+            recv(_this->m_deamon_sock4, _this->netbuf.data(), static_cast<int>(numbytes), 0);
             break;
         }
         case FD_CLOSE:
@@ -494,12 +494,12 @@ LRESULT CALLBACK Daemon::WndProc(const HWND hwnd, const UINT iMsg, const WPARAM 
 
 
             SOCKET hNewSock;
-            hNewSock = accept(_this->m_deamon_sock6, (struct sockaddr*)&incoming, &size_incoming);
+            hNewSock = accept(_this->m_deamon_sock6, reinterpret_cast<struct sockaddr*>(&incoming), &size_incoming);
             ::WSAAsyncSelect(hNewSock, hwnd, 0, 0);
             unsigned long nbarg{ 0U };
-            ioctlsocket(hNewSock, FIONBIO, &nbarg);
+            ioctlsocket(hNewSock, static_cast<long>(FIONBIO), &nbarg);
             // Phil Money @ Advantig, LLC 7-9-2005
-            if (ListenMode && DaemonAcceptPeer((struct sockaddr*)&incoming))
+            if (ListenMode && DaemonAcceptPeer(reinterpret_cast<struct sockaddr*>(&incoming)))
             {
 
                 pApp->NewConnection(true, hNewSock);
@@ -515,7 +515,7 @@ LRESULT CALLBACK Daemon::WndProc(const HWND hwnd, const UINT iMsg, const WPARAM 
         case FD_READ: {
             unsigned long numbytes{ 0U };
             ioctlsocket(_this->m_deamon_sock6, FIONREAD, &numbytes);
-            recv(_this->m_deamon_sock6, _this->netbuf.data(), numbytes, 0);
+            recv(_this->m_deamon_sock6, _this->netbuf.data(), static_cast<int>(numbytes), 0);
             break;
         }
         case FD_CLOSE:
@@ -545,12 +545,12 @@ LRESULT CALLBACK Daemon::WndProc(const HWND hwnd, const UINT iMsg, const WPARAM 
 
 
             SOCKET hNewSock;
-            hNewSock = accept(_this->m_deamon_sock, (struct sockaddr*)&incoming, &size_incoming);
+            hNewSock = accept(_this->m_deamon_sock, reinterpret_cast<struct sockaddr*>(&incoming), &size_incoming);
             ::WSAAsyncSelect(hNewSock, hwnd, 0, 0);
             unsigned long nbarg{ 0U };
-            ioctlsocket(hNewSock, FIONBIO, &nbarg);
+            ioctlsocket(hNewSock, static_cast<long>(FIONBIO), &nbarg);
             // Phil Money @ Advantig, LLC 7-9-2005
-            if (ListenMode && DaemonAcceptPeer((struct sockaddr*)&incoming))
+            if (ListenMode && DaemonAcceptPeer(reinterpret_cast<struct sockaddr*>(&incoming)))
             {
 
                 pApp->NewConnection(true, hNewSock);
@@ -566,7 +566,7 @@ LRESULT CALLBACK Daemon::WndProc(const HWND hwnd, const UINT iMsg, const WPARAM 
         case FD_READ: {
             unsigned long numbytes{ 0U };
             ioctlsocket(_this->m_deamon_sock, FIONREAD, &numbytes);
-            recv(_this->m_deamon_sock, _this->netbuf.data(), numbytes, 0);
+            recv(_this->m_deamon_sock, _this->netbuf.data(), static_cast<int>(numbytes), 0);
             break;
         }
         case FD_CLOSE:

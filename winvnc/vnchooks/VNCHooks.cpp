@@ -153,7 +153,7 @@ BOOL WINAPI DllMain(const HANDLE hInst, const ULONG ul_reason_for_call, const LP
                the pages in a file mapping object
                backed by the paging file are 0
                (zero)." */
-            g_shdata = (shared_variables*)::MapViewOfFile(filemappingLocal, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+            g_shdata = reinterpret_cast<shared_variables*>(::MapViewOfFile(filemappingLocal, FILE_MAP_ALL_ACCESS, 0, 0, 0));
         }
         if (!filemappingLocal || !g_shdata)
         {
@@ -170,7 +170,7 @@ BOOL WINAPI DllMain(const HANDLE hInst, const ULONG ul_reason_for_call, const LP
         }
 
         // Save the instance handle
-        hInstance = (HINSTANCE)hInst;
+        hInstance = reinterpret_cast<HINSTANCE>(hInst);
 
         // Call the initialisation function
         appHookedOK = InitInstance();
@@ -238,7 +238,7 @@ DllExport BOOL SetHooks(DWORD thread_id, const UINT UpdateMsg, const UINT CopyMs
     }
     // Add the CallWnd hook
     hCallWndHook = ::SetWindowsHookEx(WH_CALLWNDPROC,        // Hook in before msg reaches app
-                                    (HOOKPROC)CallWndProc, // Hook procedure
+                                    reinterpret_cast<HOOKPROC>(CallWndProc), // Hook procedure
                                     hInstance,             // This DLL instance
                                     0L                     // Hook in to all apps
                                                            //					GetCurrentThreadId()			// DEBUG : HOOK ONLY WinVNC
@@ -246,7 +246,7 @@ DllExport BOOL SetHooks(DWORD thread_id, const UINT UpdateMsg, const UINT CopyMs
 
     // Add the GetMessage hook
     hGetMsgHook = ::SetWindowsHookEx(WH_GETMESSAGE,            // Hook in before msg reaches app
-                                   (HOOKPROC)GetMessageProc, // Hook procedure
+                                   reinterpret_cast<HOOKPROC>(GetMessageProc), // Hook procedure
                                    hInstance,                // This DLL instance
                                    0L                        // Hook in to all apps
                                                              //					GetCurrentThreadId()			// DEBUG : HOOK ONLY WinVNC
@@ -254,7 +254,7 @@ DllExport BOOL SetHooks(DWORD thread_id, const UINT UpdateMsg, const UINT CopyMs
 
     // Add the GetMessage hook
     hDialogMsgHook = ::SetWindowsHookEx(WH_SYSMSGFILTER,             // Hook in dialogs, menus and scrollbars
-                                      (HOOKPROC)DialogMessageProc, // Hook procedure
+                                      reinterpret_cast<HOOKPROC>(DialogMessageProc), // Hook procedure
                                       hInstance,                   // This DLL instance
                                       0L                           // Hook in to all apps
     );
@@ -314,7 +314,7 @@ DllExport BOOL SetHooks(DWORD thread_id, const UINT UpdateMsg, const UINT CopyMs
 BOOL CALLBACK KillPropsProc(const HWND hwnd, [[maybe_unused]] const LPARAM lParam)
 {
     // Remove our custom property...
-    ::RemoveProp(hwnd, (LPCTSTR)MAKELONG(VNC_POPUPSELN_ATOM, 0));
+    ::RemoveProp(hwnd, reinterpret_cast<LPCTSTR>(MAKELONG(VNC_POPUPSELN_ATOM, 0)));
     return TRUE;
 }
 
@@ -326,7 +326,7 @@ DllExport BOOL UnSetHooks(DWORD thread_id)
     BOOL unHooked = TRUE;
 
     // Remove the extra property value from all local windows
-    ::EnumWindows((WNDENUMPROC)&KillPropsProc, 0);
+    ::EnumWindows(reinterpret_cast<WNDENUMPROC>(&KillPropsProc), 0);
 
     // Stop the keyboard & mouse hooks
     unHooked = unHooked && SetKeyboardFilterHook(FALSE);
@@ -377,7 +377,7 @@ DllExport BOOL SetKeyboardFilterHook(const BOOL activate)
         {
             // Start up the hook...
             hLLKeyboardHook = ::SetWindowsHookEx(WH_KEYBOARD_LL,                       // Hook in before msg reaches app
-                                               (HOOKPROC)LowLevelKeyboardFilterProc, // Hook procedure
+                                               reinterpret_cast<HOOKPROC>(LowLevelKeyboardFilterProc), // Hook procedure
                                                hInstance,                            // This DLL instance
                                                0L                                    // Hook in to all apps
             );
@@ -417,7 +417,7 @@ DllExport BOOL SetMouseFilterHook(const BOOL activate)
         {
             // Start up the hook...
             hLLMouseHook = ::SetWindowsHookEx(WH_MOUSE_LL,                       // Hook in before msg reaches app
-                                            (HOOKPROC)LowLevelMouseFilterProc, // Hook procedure
+                                            reinterpret_cast<HOOKPROC>(LowLevelMouseFilterProc), // Hook procedure
                                             hInstance,                         // This DLL instance
                                             0L                                 // Hook in to all apps
             );
@@ -481,7 +481,7 @@ inline void SendUpdateRect(const SHORT x, const SHORT y, const SHORT x2, const S
     WPARAM vwParam;
     LPARAM vlParam;
 
-    vwParam = MAKELONG(x, y);
+    vwParam = static_cast<WPARAM>(MAKELONG(x, y));
     vlParam = MAKELONG(x2, y2);
 
     // Send the update to WinVNC
@@ -503,7 +503,7 @@ inline void SendWindowRect(const HWND hWnd)
     if (::IsWindowVisible(hWnd) && GetWindowRect(hWnd, &wrect))
     {
         // Send the position
-        SendUpdateRect((SHORT)wrect.left, (SHORT)wrect.top, (SHORT)wrect.right, (SHORT)wrect.bottom);
+        SendUpdateRect(static_cast<SHORT>(wrect.left), static_cast<SHORT>(wrect.top), static_cast<SHORT>(wrect.right), static_cast<SHORT>(wrect.bottom));
     }
 }
 
@@ -516,7 +516,7 @@ inline void SendDeferredUpdateRect(const HWND hWnd, const SHORT x, const SHORT y
     WPARAM vwParam;
     LPARAM vlParam;
 
-    vwParam = MAKELONG(x, y);
+    vwParam = static_cast<WPARAM>(MAKELONG(x, y));
     vlParam = MAKELONG(x2, y2);
 
     if (prf_use_Deferral)
@@ -539,7 +539,7 @@ inline void SendDeferredWindowRect(const HWND hWnd)
     if (::IsWindowVisible(hWnd) && GetWindowRect(hWnd, &wrect))
     {
         // Send the position
-        SendDeferredUpdateRect(hWnd, (SHORT)wrect.left, (SHORT)wrect.top, (SHORT)wrect.right, (SHORT)wrect.bottom);
+        SendDeferredUpdateRect(hWnd, static_cast<SHORT>(wrect.left), static_cast<SHORT>(wrect.top), static_cast<SHORT>(wrect.right), static_cast<SHORT>(wrect.bottom));
     }
 }
 
@@ -555,10 +555,10 @@ inline void SendDeferredBorderRect(const HWND hWnd)
         if (GetAbsoluteClientRect(hWnd, &crect))
         {
             // Send the four border rectangles
-            SendDeferredUpdateRect(hWnd, (SHORT)wrect.left, (SHORT)wrect.top, (SHORT)wrect.right, (SHORT)crect.top);
-            SendDeferredUpdateRect(hWnd, (SHORT)wrect.left, (SHORT)wrect.top, (SHORT)crect.left, (SHORT)wrect.bottom);
-            SendDeferredUpdateRect(hWnd, (SHORT)wrect.left, (SHORT)crect.bottom, (SHORT)wrect.right, (SHORT)wrect.bottom);
-            SendDeferredUpdateRect(hWnd, (SHORT)crect.right, (SHORT)wrect.top, (SHORT)wrect.right, (SHORT)wrect.bottom);
+            SendDeferredUpdateRect(hWnd, static_cast<SHORT>(wrect.left), static_cast<SHORT>(wrect.top), static_cast<SHORT>(wrect.right), static_cast<SHORT>(crect.top));
+            SendDeferredUpdateRect(hWnd, static_cast<SHORT>(wrect.left), static_cast<SHORT>(wrect.top), static_cast<SHORT>(crect.left), static_cast<SHORT>(wrect.bottom));
+            SendDeferredUpdateRect(hWnd, static_cast<SHORT>(wrect.left), static_cast<SHORT>(crect.bottom), static_cast<SHORT>(wrect.right), static_cast<SHORT>(wrect.bottom));
+            SendDeferredUpdateRect(hWnd, static_cast<SHORT>(crect.right), static_cast<SHORT>(wrect.top), static_cast<SHORT>(wrect.right), static_cast<SHORT>(wrect.bottom));
         }
     }
 }
@@ -574,7 +574,7 @@ inline BOOL HookHandleddi(const UINT MessageId, [[maybe_unused]] const HWND hWnd
             HICON new_cursor = GetCursor();
             if (new_cursor != old_cursor)
             {
-                ::PostThreadMessage(g_shdata->vnc_thread_id, g_shdata->MouseMoveMessage, (ULONG_PTR)new_cursor, 0);
+                ::PostThreadMessage(g_shdata->vnc_thread_id, g_shdata->MouseMoveMessage, reinterpret_cast<ULONG_PTR>(new_cursor), 0);
                 old_cursor = new_cursor;
             }
         }
@@ -678,12 +678,12 @@ inline BOOL HookHandle(const UINT MessageId, const HWND hWnd, const WPARAM wPara
     case 485: // HACK to handle popup menus
     {
         // Get the old popup menu selection value
-        HANDLE prop = ::GetProp(hWnd, (LPCTSTR)MAKELONG(VNC_POPUPSELN_ATOM, 0));
-        if (prop != (HANDLE)wParam)
+        HANDLE prop = ::GetProp(hWnd, reinterpret_cast<LPCTSTR>(MAKELONG(VNC_POPUPSELN_ATOM, 0)));
+        if (prop != reinterpret_cast<HANDLE>(wParam))
         {
             // It did, so update the menu & the selection value
             SendDeferredWindowRect(hWnd);
-            ::SetProp(hWnd, (LPCTSTR)MAKELONG(VNC_POPUPSELN_ATOM, 0), (HANDLE)wParam);
+            ::SetProp(hWnd, reinterpret_cast<LPCTSTR>(MAKELONG(VNC_POPUPSELN_ATOM, 0)), reinterpret_cast<HANDLE>(wParam));
         }
     }
     break;
@@ -727,24 +727,24 @@ inline BOOL HookHandle(const UINT MessageId, const HWND hWnd, const WPARAM wPara
                 }
 
                 // Get the size of buffer required
-                buffsize = ::GetRegionData(region, 0, 0);
+                buffsize = static_cast<int>(::GetRegionData(region, 0, nullptr));
                 if (buffsize != 0)
                 {
-                    buff = (RGNDATA*)new BYTE[buffsize];
+                    buff = reinterpret_cast<RGNDATA*>(new BYTE[static_cast<unsigned long long>(buffsize)]);
                     if (buff == nullptr)
                     {
                         break;
                     }
 
                     // Now get the region data
-                    if (::GetRegionData(region, buffsize, buff))
+                    if (::GetRegionData(region, static_cast<DWORD>(buffsize), buff))
                     {
                         for (x = 0; x < (buff->rdh.nCount); ++x)
                         {
                             // Obtain the rectangles from the list
-                            RECT* urect = (RECT*)(((BYTE*)buff) + sizeof(RGNDATAHEADER) + (x * sizeof(RECT)));
-                            SendDeferredUpdateRect(hWnd, (SHORT)(TopLeft.x + urect->left), (SHORT)(TopLeft.y + urect->top),
-                                                   (SHORT)(TopLeft.x + urect->right), (SHORT)(TopLeft.y + urect->bottom));
+                            RECT* urect = reinterpret_cast<RECT*>(reinterpret_cast<BYTE*>(buff) + sizeof(RGNDATAHEADER) + (x * sizeof(RECT)));
+                            SendDeferredUpdateRect(hWnd, static_cast<SHORT>((TopLeft.x + urect->left)), static_cast<SHORT>((TopLeft.y + urect->top)),
+                                                   static_cast<SHORT>((TopLeft.x + urect->right)), static_cast<SHORT>((TopLeft.y + urect->bottom)));
 
                             // Modified by mws for VNC ver. 3.3.6
                             // We yield this thread so our PostMessages and socket commands
@@ -796,7 +796,7 @@ inline BOOL HookHandle(const UINT MessageId, const HWND hWnd, const WPARAM wPara
             HICON new_cursor = GetCursor();
             if (new_cursor != old_cursor)
             {
-                ::PostThreadMessage(g_shdata->vnc_thread_id, g_shdata->MouseMoveMessage, (ULONG_PTR)new_cursor, 0);
+                ::PostThreadMessage(g_shdata->vnc_thread_id, g_shdata->MouseMoveMessage, reinterpret_cast<ULONG_PTR>(new_cursor), 0);
                 old_cursor = new_cursor;
             }
         }
@@ -809,7 +809,7 @@ inline BOOL HookHandle(const UINT MessageId, const HWND hWnd, const WPARAM wPara
         ////////////////////////////////////////////////////////////////
         // VNCHOOKS PROPERTIES HANDLING WINDOWS
     case WM_DESTROY:
-        ::RemoveProp(hWnd, (LPCTSTR)MAKELONG(VNC_POPUPSELN_ATOM, 0));
+        ::RemoveProp(hWnd, reinterpret_cast<LPCTSTR>(MAKELONG(VNC_POPUPSELN_ATOM, 0)));
         break;
     }
 
@@ -828,7 +828,7 @@ LRESULT CALLBACK CallWndProc(const int nCode, const WPARAM wParam, const LPARAM 
             // Process the hook if the WinVNC thread ID is valid
             if (g_shdata->vnc_thread_id)
             {
-                CWPSTRUCT* cwpStruct = (CWPSTRUCT*)lParam;
+                CWPSTRUCT* cwpStruct = reinterpret_cast<CWPSTRUCT*>(lParam);
                 HookHandle(cwpStruct->message, cwpStruct->hwnd, cwpStruct->wParam, cwpStruct->lParam);
             }
         }
@@ -850,7 +850,7 @@ LRESULT CALLBACK GetMessageProc(const int nCode, const WPARAM wParam, const LPAR
             // Process the hook only if the WinVNC thread id is valid
             if (g_shdata->vnc_thread_id)
             {
-                MSG* msg = (MSG*)lParam;
+                MSG* msg = reinterpret_cast<MSG*>(lParam);
 
                 // Only handle application messages if they're being removed:
                 if (wParam & PM_REMOVE)
@@ -886,7 +886,7 @@ LRESULT CALLBACK DialogMessageProc(const int nCode, const WPARAM wParam, const L
             // Process the hook only if the WinVNC thread ID is valid
             if (g_shdata->vnc_thread_id)
             {
-                MSG* msg = (MSG*)lParam;
+                MSG* msg = reinterpret_cast<MSG*>(lParam);
 
                 // Handle the message
                 HookHandle(msg->message, msg->hwnd, msg->wParam, msg->lParam);
@@ -910,7 +910,7 @@ LRESULT CALLBACK LowLevelKeyboardFilterProc(const int nCode, const WPARAM wParam
         {
             // Is this keyboard event "real" or "injected"
             // i.e. hardware or software-produced?
-            KBDLLHOOKSTRUCT* hookStruct = (KBDLLHOOKSTRUCT*)lParam;
+            KBDLLHOOKSTRUCT* hookStruct = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
             if (!(hookStruct->flags & LLKHF_INJECTED))
             {
                 // Message was not injected - reject it!
@@ -938,7 +938,7 @@ LRESULT CALLBACK LowLevelMouseFilterProc(const int nCode, const WPARAM wParam, c
         {
             // Is this mouse event "real" or "injected"
             // i.e. hardware or software-produced?
-            MSLLHOOKSTRUCT* hookStruct = (MSLLHOOKSTRUCT*)lParam;
+            MSLLHOOKSTRUCT* hookStruct = reinterpret_cast<MSLLHOOKSTRUCT*>(lParam);
             if ((hookStruct->dwExtraInfo & MOUSEEVENTF_FROMTOUCH) == MOUSEEVENTF_FROMTOUCH)
             {
                 return TRUE;
@@ -1014,14 +1014,14 @@ HKEY OpenKey(const HKEY basekey, const char* path[], const bool writable, const 
 #ifdef _MSC_VER
             _RPT2(_CRT_WARN, "vncHooks : creating %s from %x\n", path[i], key);
 #endif
-            result = ::RegCreateKeyEx(key, path[i], 0, REG_NONE, REG_OPTION_NON_VOLATILE, flags, nullptr, &newkey, &dw);
+            result = static_cast<DWORD>(::RegCreateKeyEx(key, path[i], 0, REG_NONE, REG_OPTION_NON_VOLATILE, flags, nullptr, &newkey, &dw));
         }
         else
         {
 #ifdef _MSC_VER
             _RPT2(_CRT_WARN, "vncHooks : opening %s from %x\n", path[i], key);
 #endif
-            result = ::RegOpenKeyEx(key, path[i], 0, flags, &newkey);
+            result = static_cast<DWORD>(::RegOpenKeyEx(key, path[i], 0, flags, &newkey));
         }
         if (key && (key != basekey))
         {
@@ -1051,7 +1051,7 @@ HKEY GetModuleKey(const HKEY basekey, const char* const proc_name, const bool wr
     // Work out the registry key to save this under
     if (!sModulePrefs)
     {
-        sModulePrefs = (char*)std::malloc(std::strlen(proc_name) + 1);
+        sModulePrefs = reinterpret_cast<char*>(std::malloc(std::strlen(proc_name) + 1));
         if (sModulePrefs == nullptr)
         {
             return FALSE;
@@ -1060,7 +1060,7 @@ HKEY GetModuleKey(const HKEY basekey, const char* const proc_name, const bool wr
     }
 
     // Check whether the library's entry exists!
-    const char* appPath[] = { szSoftware, szCompany, szProfile, 0 };
+    const char* appPath[] = { szSoftware, szCompany, szProfile, nullptr };
     HKEY appKey = OpenKey(basekey, appPath, writable, create);
     if (!appKey)
     {
@@ -1068,7 +1068,7 @@ HKEY GetModuleKey(const HKEY basekey, const char* const proc_name, const bool wr
     }
 
     // Attempt to open the registry section for the application
-    const char* modPath[] = { sPrefSegment, sModulePrefs, 0 };
+    const char* modPath[] = { sPrefSegment, sModulePrefs, nullptr };
     HKEY modKey = OpenKey(appKey, modPath, writable, false);
     if (!modKey)
     {
@@ -1086,7 +1086,7 @@ HKEY GetModuleKey(const HKEY basekey, const char* const proc_name, const bool wr
         std::free(file_name);
 
         // Now get the module key again
-        const char* modPath2[] = { sPrefSegment, sModulePrefs, 0 };
+        const char* modPath2[] = { sPrefSegment, sModulePrefs, nullptr };
         modKey = OpenKey(appKey, modPath2, writable, create);
     }
 
@@ -1101,7 +1101,7 @@ int GetProfileInt(const LPTSTR key, const int def)
     DWORD value;
     ULONG size = sizeof(value);
 
-    if (RegQueryValueEx(hModuleKey, key, nullptr, &type, (unsigned char*)&value, &size) == ERROR_SUCCESS)
+    if (RegQueryValueEx(hModuleKey, key, nullptr, &type, reinterpret_cast<unsigned char*>(&value), &size) == ERROR_SUCCESS)
     {
         // Is the value of the right type?
         if (type != REG_DWORD)
@@ -1110,7 +1110,7 @@ int GetProfileInt(const LPTSTR key, const int def)
         }
         else
         {
-            return value;
+            return static_cast<int>(value);
         }
     }
     else
@@ -1120,7 +1120,7 @@ int GetProfileInt(const LPTSTR key, const int def)
 }
 
 void WriteProfileInt(const LPTSTR key, int value)
-{ ::RegSetValueEx(hModuleKey, key, 0, REG_DWORD, (unsigned char*)&value, sizeof(value)); }
+{ ::RegSetValueEx(hModuleKey, key, 0, REG_DWORD, reinterpret_cast<unsigned char*>(&value), sizeof(value)); }
 
 void ReadSettings()
 {
@@ -1152,7 +1152,7 @@ BOOL InitInstance()
     DWORD size;
 
     // Attempt to get the program/module name
-    if ((size = ::GetModuleFileName(::GetModuleHandle(nullptr), (char*)proc_name.data(), static_cast<DWORD>(proc_name.size()))) == 0)
+    if ((size = ::GetModuleFileName(::GetModuleHandle(nullptr), reinterpret_cast<char*>(proc_name.data()), static_cast<DWORD>(proc_name.size()))) == 0)
     {
         return FALSE;
     }
@@ -1201,7 +1201,7 @@ BOOL ExitInstance()
         DWORD size;
 
         // Attempt to get the program/module name
-        if ((size = ::GetModuleFileName(::GetModuleHandle(nullptr), (char*)proc_name.data(), static_cast<DWORD>(proc_name.size()))) == 0)
+        if ((size = ::GetModuleFileName(::GetModuleHandle(nullptr), reinterpret_cast<char*>(proc_name.data()), static_cast<DWORD>(proc_name.size()))) == 0)
         {
             return FALSE;
         }

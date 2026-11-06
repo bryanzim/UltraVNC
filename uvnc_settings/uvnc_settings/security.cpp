@@ -11,7 +11,7 @@
 
 #include "stdafx.h"
 
-#include "DSMPlugin.h"
+#include "dsmplugin.h"
 #include "resource.h"
 #include "vncsetauth.h"
 
@@ -194,9 +194,9 @@ void deskey(unsigned char* const key, const int edf) /* Thanks to James Gillogly
 
     for (j = 0; j < 56; ++j)
     {
-        l = pc1[j];
+        l = pc1[static_cast<unsigned long long>(j)];
         m = l & 07;
-        pc1m[j] = (key[l >> 3] & bytebit[m]) ? 1 : 0;
+        pc1m[static_cast<unsigned long long>(j)] = (key[l >> 3] & bytebit[static_cast<unsigned long long>(m)]) ? 1 : 0;
     }
     for (i = 0; i < 16; ++i)
     {
@@ -209,40 +209,40 @@ void deskey(unsigned char* const key, const int edf) /* Thanks to James Gillogly
             m = i << 1;
         }
         n = m + 1;
-        kn[m] = kn[n] = 0L;
+        kn[static_cast<unsigned long long>(m)] = kn[static_cast<unsigned long long>(n)] = 0L;
         for (j = 0; j < 28; ++j)
         {
-            l = j + totrot[i];
+            l = j + totrot[static_cast<unsigned long long>(i)];
             if (l < 28)
             {
-                pcr[j] = pc1m[l];
+                pcr[static_cast<unsigned long long>(j)] = pc1m[static_cast<unsigned long long>(l)];
             }
             else
             {
-                pcr[j] = pc1m[l - 28];
+                pcr[static_cast<unsigned long long>(j)] = pc1m[static_cast<unsigned long long>(l - 28)];
             }
         }
         for (j = 28; j < 56; ++j)
         {
-            l = j + totrot[i];
+            l = j + totrot[static_cast<unsigned long long>(i)];
             if (l < 56)
             {
-                pcr[j] = pc1m[l];
+                pcr[static_cast<unsigned long long>(j)] = pc1m[static_cast<unsigned long long>(l)];
             }
             else
             {
-                pcr[j] = pc1m[l - 28];
+                pcr[static_cast<unsigned long long>(j)] = pc1m[static_cast<unsigned long long>(l - 28)];
             }
         }
         for (j = 0; j < 24; ++j)
         {
-            if (pcr[pc2[j]])
+            if (pcr[pc2[static_cast<unsigned long long>(j)]])
             {
-                kn[m] |= bigbyte[j];
+                kn[static_cast<unsigned long long>(m)] |= bigbyte[static_cast<unsigned long long>(j)];
             }
-            if (pcr[pc2[j + 24]])
+            if (pcr[pc2[static_cast<unsigned long long>(j + 24)]])
             {
-                kn[n] |= bigbyte[j];
+                kn[static_cast<unsigned long long>(n)] |= bigbyte[static_cast<unsigned long long>(j)];
             }
         }
     }
@@ -251,13 +251,13 @@ void deskey(unsigned char* const key, const int edf) /* Thanks to James Gillogly
 }
 static void scrunch(register unsigned char* outof, register unsigned long* into)
 {
-    *into = (*outof++ & 0xffL) << 24;
-    *into |= (*outof++ & 0xffL) << 16;
-    *into |= (*outof++ & 0xffL) << 8;
+    *into = static_cast<unsigned long>((*outof++ & 0xffL) << 24);
+    *into |= static_cast<unsigned long>((*outof++ & 0xffL) << 16);
+    *into |= static_cast<unsigned long>((*outof++ & 0xffL) << 8);
     *into++ |= (*outof++ & 0xffL);
-    *into = (*outof++ & 0xffL) << 24;
-    *into |= (*outof++ & 0xffL) << 16;
-    *into |= (*outof++ & 0xffL) << 8;
+    *into = static_cast<unsigned long>((*outof++ & 0xffL) << 24);
+    *into |= static_cast<unsigned long>((*outof++ & 0xffL) << 16);
+    *into |= static_cast<unsigned long>((*outof++ & 0xffL) << 8);
     *into |= (*outof & 0xffL);
     return;
 }
@@ -381,21 +381,21 @@ int vncEncryptPasswd(char* const passwdLocal, char* const encryptedPasswd)
        password */
 
     deskey(fixedkey.data(), EN0);
-    des((unsigned char*)encryptedPasswd, (unsigned char*)encryptedPasswd);
+    des(reinterpret_cast<unsigned char*>(encryptedPasswd), reinterpret_cast<unsigned char*>(encryptedPasswd));
 
     return 8;
 }
 
 char* vncDecryptPasswd(char* const inouttext)
 {
-    unsigned char* passwdLocal = (unsigned char*)std::malloc(9);
+    unsigned char* passwdLocal = reinterpret_cast<unsigned char*>(std::malloc(9));
 
     deskey(fixedkey.data(), DE1);
-    des((unsigned char*)inouttext, passwdLocal);
+    des(reinterpret_cast<unsigned char*>(inouttext), passwdLocal);
 
     passwdLocal[8U] = 0;
 
-    return (char*)passwdLocal;
+    return reinterpret_cast<char*>(passwdLocal);
 }
 
 BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
@@ -408,13 +408,13 @@ BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, co
         m_pDSMPlugin = new CDSMPlugin();
         plaintext = vncDecryptPasswd(passwd);
         plaintext2 = vncDecryptPasswd(passwd2); //PGM
-        ::SendMessage(::GetDlgItem(hwnd, IDC_MSLOGON_CHECKD), BM_SETCHECK, MSLogonRequired, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_NEW_MSLOGON), BM_SETCHECK, NewMSLogon, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_PASSRECK), BM_SETCHECK, AuthRequired, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWSHUTDOWN), BM_SETCHECK, AllowShutdown, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWEDIT), BM_SETCHECK, AllowEditClients, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWPROP), BM_SETCHECK, AllowProperties, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_SETCHECK, UseDSMPlugin, 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_MSLOGON_CHECKD), BM_SETCHECK, static_cast<WPARAM>(MSLogonRequired), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_NEW_MSLOGON), BM_SETCHECK, static_cast<WPARAM>(NewMSLogon), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_PASSRECK), BM_SETCHECK, static_cast<WPARAM>(AuthRequired), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWSHUTDOWN), BM_SETCHECK, static_cast<WPARAM>(AllowShutdown), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWEDIT), BM_SETCHECK, static_cast<WPARAM>(AllowEditClients), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWPROP), BM_SETCHECK, static_cast<WPARAM>(AllowProperties), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_SETCHECK, static_cast<WPARAM>(UseDSMPlugin), 0);
         ::SetDlgItemText(hwnd, IDC_PASSWORD, plaintext);
         ::SetDlgItemText(hwnd, IDC_PASSWORD2, plaintext2); //PGM
         BOOL bMSLogonChecked = (::SendDlgItemMessage(hwnd, IDC_MSLOGON_CHECKD, BM_GETCHECK, 0, 0) == BST_CHECKED);
@@ -426,13 +426,13 @@ BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, co
         int nPlugins = GetDSMPluginPointer()->ListPlugins(hPlugins);
         if (!nPlugins)
         {
-            ::SendMessage(hPlugins, CB_ADDSTRING, 0, (LPARAM) "No Plugin Detected");
+            ::SendMessage(hPlugins, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>("No Plugin Detected"));
             ::SendMessage(hPlugins, CB_SETCURSEL, 0, 0);
         }
         else
         {
             //PGM				SendMessage(hPlugins, CB_SELECTSTRING, 0, (LPARAM)GetDSMPluginName());
-            ::SendMessage(hPlugins, CB_SELECTSTRING, 0, (LPARAM)DSMPlugin.data());
+            ::SendMessage(hPlugins, CB_SELECTSTRING, 0, reinterpret_cast<LPARAM>(DSMPlugin.data()));
         } //PGM
 
         initdone2 = true;
@@ -512,7 +512,7 @@ BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, co
             if (bNewMSLogonChecked)
             {
                 typedef void (*vncEditSecurityFn)(HWND hwnd, HINSTANCE hInstance);
-                vncEditSecurityFn vncEditSecurity = 0;
+                vncEditSecurityFn vncEditSecurity = nullptr;
                 std::array<char, MAX_PATH> szCurrentDir;
                 if (::GetModuleFileName(nullptr, szCurrentDir.data(), static_cast<DWORD>(szCurrentDir.size())))
                 {
@@ -523,7 +523,7 @@ BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, co
                 HMODULE hModule = ::LoadLibrary(szCurrentDir.data());
                 if (hModule)
                 {
-                    vncEditSecurity = (vncEditSecurityFn)::GetProcAddress(hModule, "vncEditSecurity");
+                    vncEditSecurity = reinterpret_cast<vncEditSecurityFn>(::GetProcAddress(hModule, "vncEditSecurity"));
                     [[maybe_unused]] HRESULT hr = ::CoInitialize(nullptr);
                     vncEditSecurity(nullptr, hInst);
                     ::CoUninitialize();
@@ -553,7 +553,7 @@ BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, co
                 std::strcpy(link.data(), "https://uvnc.com/webhelp/");
                 std::strcat(link.data(), "security");
                 std::strcat(link.data(), ".html");
-                ::ShellExecute(::GetDesktopWindow(), "open", link.data(), "", 0, SW_SHOWNORMAL);
+                ::ShellExecute(::GetDesktopWindow(), "open", link.data(), "", nullptr, SW_SHOWNORMAL);
             }
             break;
         case IDOK:
@@ -566,7 +566,7 @@ BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, co
             UseDSMPlugin = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_PLUGIN_CHECK, BM_GETCHECK, 0, 0));
             ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, DSMPlugin.data(), 128);                        //PGM
             std::array<char, MAXPWLEN + 1> plaintext1;                                                  //PGM
-            int len = ::GetDlgItemText(hwnd, IDC_PASSWORD, (LPSTR)plaintext1.data(), static_cast<int>(plaintext1.size())); //PGM
+            int len = static_cast<int>(::GetDlgItemText(hwnd, IDC_PASSWORD, static_cast<LPSTR>(plaintext1.data()), static_cast<int>(plaintext1.size()))); //PGM
             if (len == 0)
             {
                 std::strcpy(passwd, "");
@@ -578,7 +578,7 @@ BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, co
 
             std::memset(plaintext1.data(), '\0', 9);                                            //PGM
             len = 0;                                                                     //PGM
-            len = ::GetDlgItemText(hwnd, IDC_PASSWORD2, (LPSTR)plaintext1.data(), static_cast<int>(plaintext1.size())); //PGM
+            len = static_cast<int>(::GetDlgItemText(hwnd, IDC_PASSWORD2, static_cast<LPSTR>(plaintext1.data()), static_cast<int>(plaintext1.size()))); //PGM
             if (len == 0)                                                                //PGM
             {                                                                            //PGM
                 std::strcpy(passwd2, "");                                                //PGM
@@ -591,5 +591,5 @@ BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, co
             return TRUE;
         }
     }
-    return (INT_PTR)FALSE;
+    return static_cast<INT_PTR>(FALSE);
 }

@@ -53,7 +53,7 @@ public:
     void MoveToMonitor(HMONITOR hmon);                       // 7 May 2008 jdp
 
     //Returns the window - This is stored in the header cause of it size :)
-    HWND GetSafeHwnd() { return m_hWnd; };
+    HWND GetSafeHwnd() { return m_hWnd; }
 
 private:
     //Init if default variables

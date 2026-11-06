@@ -296,8 +296,8 @@ em_fread(char * buf, unsigned size1, unsigned size2, void * fd)
    }
 
    datalen = size1 * size2;
-   if(datalen > (emf->em_size - eofile->eo_position))
-      datalen =  emf->em_size - eofile->eo_position;
+   if(datalen > ((u_long)(emf->em_size) - eofile->eo_position))
+      datalen =  (u_long)(emf->em_size) - eofile->eo_position;
 
    /* Check for position at End of File - EOF */
    if(datalen == 0)
@@ -306,7 +306,7 @@ em_fread(char * buf, unsigned size1, unsigned size2, void * fd)
    memcpy(buf, &emf->em_data[eofile->eo_position], datalen);
    eofile->eo_position += datalen;
 
-   return datalen;
+   return (int)(datalen);
 }
 
 
@@ -385,7 +385,7 @@ em_fseek(void * fd, long offset, int mode)
       newpos = size + offset;
       break;
    case SEEK_CUR:
-      newpos = emf->eo_position + offset;
+      newpos = (int)(emf->eo_position + offset);
       break;
    default:
       //panic("em_fseek");
@@ -397,7 +397,7 @@ em_fseek(void * fd, long offset, int mode)
    if((newpos < 0) || (newpos > size))
       return WIE_BADPARM;
 
-   emf->eo_position = newpos;
+   emf->eo_position = (u_long)(newpos);
    return 0;
 }
 
@@ -412,7 +412,7 @@ em_ftell(void * fd)
    if(error)
       return -1;
    
-   return(emf->eo_position);
+   return((int)(emf->eo_position));
 }
 
 int

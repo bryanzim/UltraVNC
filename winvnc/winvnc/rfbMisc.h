@@ -16,8 +16,8 @@
 #undef min
 #undef max
 
-#ifndef __RFB_MISC_INCLUDED__
-#define __RFB_MISC_INCLUDED__
+#ifndef RFB_MISC_INCLUDED
+#define RFB_MISC_INCLUDED
 
 // Some platforms (e.g. Windows) include max() and min() functions
 // in their standard headers.
@@ -76,8 +76,8 @@ namespace rfb
         inline explicit CpuTimer(CpuTime& ct) : cputime(ct)
         {
             FILETIME create_time{}, end_time{};
-            if (!::GetThreadTimes(::GetCurrentThread(), &create_time, &end_time, (LPFILETIME)&start_kernel_time,
-                                (LPFILETIME)&start_user_time))
+            if (!::GetThreadTimes(::GetCurrentThread(), &create_time, &end_time, reinterpret_cast<LPFILETIME>(&start_kernel_time),
+                                reinterpret_cast<LPFILETIME>(&start_user_time)))
             {
                 std::abort();
             }
@@ -86,8 +86,8 @@ namespace rfb
         {
             FILETIME create_time{}, end_time{};
             __int64 end_kernel_time{}, end_user_time{};
-            if (!::GetThreadTimes(::GetCurrentThread(), &create_time, &end_time, (LPFILETIME)&end_kernel_time,
-                                (LPFILETIME)&end_user_time))
+            if (!::GetThreadTimes(::GetCurrentThread(), &create_time, &end_time, reinterpret_cast<LPFILETIME>(&end_kernel_time),
+                                reinterpret_cast<LPFILETIME>(&end_user_time)))
             {
                 std::abort();
             }
@@ -109,4 +109,4 @@ namespace rfb
 
 #endif
 
-#endif // __RFB_MISC_INCLUDED__
+#endif // RFB_MISC_INCLUDED

@@ -52,7 +52,7 @@ public:
         {
             delete[] info;
         }
-    };
+    }
 };
 
 Except::Except(const char* const info_)
@@ -64,10 +64,10 @@ Except::Except(const char* const info_)
     }
 }
 
-DH::DH() : maxNum(((const unsigned __int64)1) << DH_MAX_BITS) { std::srand((unsigned)std::time(nullptr)); }
+DH::DH() : maxNum((static_cast<const unsigned __int64>(1)) << DH_MAX_BITS) { std::srand(static_cast<unsigned>(std::time(nullptr))); }
 
 DH::DH(unsigned __int64 generator, unsigned __int64 modulus)
-    : gen(generator), mod(modulus), maxNum(((const unsigned __int64)1) << DH_MAX_BITS)
+    : gen(generator), mod(modulus), maxNum((static_cast<const unsigned __int64>(1)) << DH_MAX_BITS)
 {
     if ((gen > maxNum) || (mod > maxNum))
     {
@@ -77,12 +77,12 @@ DH::DH(unsigned __int64 generator, unsigned __int64 modulus)
     {
         throw Except("Generator is larger than modulus");
     }
-    std::srand((unsigned)std::time(nullptr));
+    std::srand(static_cast<unsigned>(std::time(nullptr)));
 }
 
 DH::~DH() { cleanMem(); }
 
-unsigned __int64 rng(const unsigned __int64 limit) { return ((((unsigned __int64)std::rand()) * std::rand() * std::rand()) % limit); }
+unsigned __int64 rng(const unsigned __int64 limit) { return (((static_cast<unsigned __int64>(std::rand())) * static_cast<unsigned long long>(std::rand()) * static_cast<unsigned long long>(std::rand())) % limit); }
 
 //Performs the miller-rabin primality test on a guessed prime n.
 //trials is the number of attempts to verify this, because the function
@@ -146,7 +146,7 @@ unsigned __int64 DH::tryToGeneratePrime(unsigned __int64 prime)
 unsigned __int64 DH::XpowYmodN(const unsigned __int64 x, unsigned __int64 y, const unsigned __int64 N)
 {
     unsigned __int64 result{ 1U };
-    const unsigned __int64 oneShift63 = ((unsigned __int64)1) << 63;
+    const unsigned __int64 oneShift63 = (static_cast<unsigned __int64>(1)) << 63;
 
     for (int i{ 0 }; i < 64; y <<= 1, ++i)
     {
@@ -215,7 +215,7 @@ unsigned __int64 DH::getValue(const DWORD flags)
     case DH_KEY:
         return key;
     default:
-        return (unsigned __int64)0;
+        return static_cast<unsigned __int64>(0);
     }
 }
 
@@ -226,7 +226,7 @@ int bits(__int64 number)
         number /= 2;
         if (number < 2)
         {
-            return i;
+            return static_cast<int>(i);
         }
     }
     return 0;
@@ -257,7 +257,7 @@ bool vncWc2Mb(char* const multibyte, WCHAR* const widechar, const int length, co
     multibyte[0U] = '\0';
     /* Security fix: use wcsnlen with max length to prevent OOB read
      * if widechar is not properly null-terminated (FINDING-004) */
-    int origlen = static_cast<int>(wcsnlen(widechar, widechar_count));
+    int origlen = static_cast<int>(wcsnlen(widechar, static_cast<size_t>(widechar_count)));
     if (origlen > length)
     {
         return false;

@@ -33,8 +33,8 @@
  *
  */
 
-#ifndef _WEBIO_H_
-#define _WEBIO_H_ 1
+#ifndef WEBIO_H
+#define WEBIO_H 1
 
 struct wi_sess_s; /* predecl */
 
@@ -230,4 +230,4 @@ extern int wi_formbool(wi_sess* sess, char* name);
 /* Optional "exec" routine */
 extern int (*wi_execfunc)(wi_sess* sess, char* args);
 
-#endif /* _WEBIO_H_ */
+#endif /* WEBIO_H */

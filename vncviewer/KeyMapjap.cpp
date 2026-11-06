@@ -17,7 +17,7 @@
 #include "vncviewer.h"
 
 // [v1.0.2-jp1 fix]
-#include <ime.h>
+#include <Ime.h>
 
 #include <array>
 #include <cstring>
@@ -145,7 +145,7 @@ int KeyMapJap::ToAsciiJp(const UINT virtkey)
     {
         keystate_dummy[VK_KANA] = table[i].bKana;
         keystate_dummy[VK_SHIFT] = table[i].bShift;
-        ret = ::ToAscii('0', 0, keystate_dummy.data(), (WORD*)buf, 0);
+        ret = ::ToAscii('0', 0, keystate_dummy.data(), reinterpret_cast<WORD*>(buf), 0);
         if ((ret != table[i].ret) || (ret == 1) && (buf[0U] != table[i].buf))
         {
             is_japanese_keyboard = 0;
@@ -180,7 +180,7 @@ int KeyMapJap::ToAsciiJp(const UINT virtkey)
     /* Otherwise, normal conversion is done */
     if (ret == 0)
     {
-        ret = ::ToAscii(virtkey, 0, keystate, (WORD*)buf, 0);
+        ret = ::ToAscii(virtkey, 0, keystate, reinterpret_cast<WORD*>(buf), 0);
     }
     return ret;
 }

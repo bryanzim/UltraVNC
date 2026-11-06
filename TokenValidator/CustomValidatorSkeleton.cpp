@@ -17,7 +17,7 @@
 // The exported names must match exactly and use __cdecl.
 // TokenValidatorPlugin.h contains the same function signatures.
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <bcrypt.h>
 

@@ -10,14 +10,14 @@
 //
 
 
-#ifndef _MAIN_H
-#define _MAIN_H
+#ifndef MAIN_H
+#define MAIN_H
 
 
 #pragma once
 #include "EnvReg.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <array>
 

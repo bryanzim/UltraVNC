@@ -8,10 +8,10 @@
 // SPDX-FileCopyrightText: Copyright (C) 1999-2002 Vdacc-VNC & eSVNC Projects. All Rights Reserved.
 //
 #define _WINSOCK_DEPRECATED_NO_WARNINGS 1
-#include <winsock2.h>
-#include <ws2tcpip.h>
+#include <WinSock2.h>
+#include <WS2tcpip.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <array>
 #include <cstring>
@@ -888,7 +888,7 @@ int getinfo(char mytext[1024U])
         bool IsIpv4{ false };
         bool IsIpv6{ false };
         struct addrinfo hint;
-        struct addrinfo* serverinfo = 0;
+        struct addrinfo* serverinfo = nullptr;
         std::memset(&hint, 0, sizeof(hint));
         hint.ai_family = AF_UNSPEC;
         hint.ai_socktype = SOCK_STREAM;
@@ -900,7 +900,7 @@ int getinfo(char mytext[1024U])
         std::memset(&Ipv6Addr, 0, sizeof(Ipv6Addr));
         std::memset(&Ipv4Addr, 0, sizeof(Ipv4Addr));
 
-        if (getaddrinfo(name.data(), 0, &hint, &serverinfo) == 0)
+        if (getaddrinfo(name.data(), nullptr, &hint, &serverinfo) == 0)
         {
             struct addrinfo* p;
             for (p = serverinfo; p != nullptr; p = p->ai_next)
@@ -909,16 +909,16 @@ int getinfo(char mytext[1024U])
                 {
                 case AF_INET:
                     IsIpv4 = true;
-                    pIpv4Addr = (struct sockaddr_in*)p->ai_addr;
+                    pIpv4Addr = reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
                     std::memcpy(&Ipv4Addr, pIpv4Addr, sizeof(Ipv4Addr));
                     Ipv4Addr.sin_family = AF_INET;
                     break;
                 case AF_INET6:
                     IsIpv6 = true;
-                    pIpv6Addr = (struct sockaddr_in6*)p->ai_addr;
+                    pIpv6Addr = reinterpret_cast<struct sockaddr_in6*>(p->ai_addr);
                     std::memcpy(&Ipv6Addr, pIpv6Addr, sizeof(Ipv6Addr));
                     Ipv6Addr.sin6_family = AF_INET6;
-                    sockaddr_ip = (LPSOCKADDR)p->ai_addr;
+                    sockaddr_ip = reinterpret_cast<LPSOCKADDR>(p->ai_addr);
                     ipbufferlength = 46;
                     std::memset(ipstringbuffer.data(), 0, 46);
                     ::WSAAddressToString(sockaddr_ip, static_cast<DWORD>(p->ai_addrlen), nullptr, ipstringbuffer.data(),
@@ -957,7 +957,7 @@ int getinfo(char mytext[1024U])
         {
             if ((hostinfo = gethostbyname(name.data())) != nullptr)
             {
-                IP = inet_ntoa(*(struct in_addr*)*hostinfo->h_addr_list);
+                IP = inet_ntoa(*reinterpret_cast<struct in_addr*>(*hostinfo->h_addr_list));
             }
         }
         if (IP)

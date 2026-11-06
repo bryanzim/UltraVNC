@@ -19,7 +19,7 @@
 #include "resource.h"
 #include "resources.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <shellapi.h>
 #include <windowsx.h>
@@ -83,8 +83,8 @@ static HICON small_icon; /* 16x16 icon */
 
 static std::array<char, MAX_PATH> service_path;
 static SERVICE_STATUS serviceStatus;
-static SERVICE_STATUS_HANDLE serviceStatusHandle = 0;
-static HANDLE stopServiceEvent = 0;
+static SERVICE_STATUS_HANDLE serviceStatusHandle = nullptr;
+static HANDLE stopServiceEvent = nullptr;
 
 static int visible{ 0 }, error_mode = 0;
 static jmp_buf jump_buf;
@@ -136,7 +136,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, con
 
     ghInst = hInstance;
 
-    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+    ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
     /* set current directory */
     ::strcpy_s(dir.data(), dir.size(), exe_file_name.data());
@@ -211,7 +211,7 @@ static int win_main(HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE hPrevI
     wc.hInstance = hInstance;
     wc.hIcon = ::LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MYICON));
     wc.hCursor = ::LoadCursor(nullptr, IDC_ARROW);
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wc.hbrBackground = reinterpret_cast<HBRUSH>((COLOR_WINDOW + 1));
     wc.lpszMenuName = nullptr;
     wc.lpszClassName = classname;
     small_icon = (HICON)::LoadImage(hInstance, MAKEINTRESOURCE(IDI_MYICON), IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
@@ -232,7 +232,7 @@ static int win_main(HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE hPrevI
     /* create child edit window */
     EditControl = ::CreateWindow("EDIT", nullptr, WS_CHILD | WS_VISIBLE | WS_HSCROLL | WS_VSCROLL | ES_MULTILINE | ES_READONLY, 0, 0,
                                0, 0, hwnd, nullptr, hInstance, nullptr);
-    ::SendMessage(EditControl, WM_SETFONT, (WPARAM)::GetStockObject(OEM_FIXED_FONT),
+    ::SendMessage(EditControl, WM_SETFONT, reinterpret_cast<WPARAM>(::GetStockObject(OEM_FIXED_FONT)),
                 MAKELPARAM(FALSE, 0)); /* no need to redraw right, now */
     ::GetClientRect(hwnd, &rect);
     ::MoveWindow(EditControl, 0, 0, rect.right, rect.bottom, TRUE);
@@ -361,10 +361,10 @@ static LRESULT CALLBACK wndProc(const HWND hwnd_local, UINT message, const WPARA
         switch (wParam)
         {
         case IDM_ABOUT:
-            ::DialogBox(ghInst, MAKEINTRESOURCE(ID_ABOUT), hwnd_local, (DLGPROC)about_proc);
+            ::DialogBox(ghInst, MAKEINTRESOURCE(ID_ABOUT), hwnd_local, reinterpret_cast<DLGPROC>(about_proc));
             break;
         case IDM_SETTINGS:
-            ::DialogBox(ghInst, MAKEINTRESOURCE(ID_SETTINGS), hwnd_local, (DLGPROC)settings_proc);
+            ::DialogBox(ghInst, MAKEINTRESOURCE(ID_SETTINGS), hwnd_local, reinterpret_cast<DLGPROC>(settings_proc));
             break;
         case IDM_LOG:
             set_visible(!visible);
@@ -381,7 +381,7 @@ static LRESULT CALLBACK wndProc(const HWND hwnd_local, UINT message, const WPARA
         case IDM_SETUP:
             ::MessageBox(hwnd_local, "Function not implemented", "UltraVNC_Repeater", MB_ICONERROR);
             break;
-        };
+        }
         return TRUE;
 
     case UWM_SYSTRAY:
@@ -428,14 +428,14 @@ static LRESULT CALLBACK settings_proc(const HWND hDlg, const UINT message, const
         ::SetDlgItemText(hDlg, IDC_ACCEPTPORT, tempchar.data());
         ::_itoa_s(portB, tempchar.data(), tempchar.size(), 10);
         ::SetDlgItemText(hDlg, IDC_LISTENPORT, tempchar.data());
-        ::SendDlgItemMessage(hDlg, IDC_ENABLE, BM_SETCHECK, mode2, 0);
-        ::SendDlgItemMessage(hDlg, IDC_ENABLE2, BM_SETCHECK, mode1, 0);
-        ::SendDlgItemMessage(hDlg, IDC_KEEPALIVE, BM_SETCHECK, keepalive, 0);
-        ::SendDlgItemMessage(hDlg, IDC_ENABLE3, BM_SETCHECK, ssl_proxy, 0);
-        ::SendDlgItemMessage(hDlg, IDC_ENABLE4, BM_SETCHECK, ip_service, 0);
-        ::SendDlgItemMessage(hDlg, IDC_ALLOW, BM_SETCHECK, allow, 0);
-        ::SendDlgItemMessage(hDlg, IDC_REFUSE, BM_SETCHECK, refuse, 0);
-        ::SendDlgItemMessage(hDlg, IDC_REFUSE2, BM_SETCHECK, refuse2, 0);
+        ::SendDlgItemMessage(hDlg, IDC_ENABLE, BM_SETCHECK, static_cast<WPARAM>(mode2), 0);
+        ::SendDlgItemMessage(hDlg, IDC_ENABLE2, BM_SETCHECK, static_cast<WPARAM>(mode1), 0);
+        ::SendDlgItemMessage(hDlg, IDC_KEEPALIVE, BM_SETCHECK, static_cast<WPARAM>(keepalive), 0);
+        ::SendDlgItemMessage(hDlg, IDC_ENABLE3, BM_SETCHECK, static_cast<WPARAM>(ssl_proxy), 0);
+        ::SendDlgItemMessage(hDlg, IDC_ENABLE4, BM_SETCHECK, static_cast<WPARAM>(ip_service), 0);
+        ::SendDlgItemMessage(hDlg, IDC_ALLOW, BM_SETCHECK, static_cast<WPARAM>(allow), 0);
+        ::SendDlgItemMessage(hDlg, IDC_REFUSE, BM_SETCHECK, static_cast<WPARAM>(refuse), 0);
+        ::SendDlgItemMessage(hDlg, IDC_REFUSE2, BM_SETCHECK, static_cast<WPARAM>(refuse2), 0);
         ::SetDlgItemText(hDlg, IDC_EDITALLOW, sample1.data());
         ::SetDlgItemText(hDlg, IDC_EDITREFUSE, sample2.data());
         ::SetDlgItemText(hDlg, IDC_EDITREFUSE2, sample3.data());
@@ -640,7 +640,7 @@ static LRESULT CALLBACK pass_proc(const HWND hDlg, const UINT message, const WPA
     {
     case WM_INITDIALOG:
         /* Set the default push button to "Cancel." */
-        ::SendMessage(hDlg, DM_SETDEFID, (WPARAM)IDCANCEL, (LPARAM)0);
+        ::SendMessage(hDlg, DM_SETDEFID, static_cast<WPARAM>(IDCANCEL), static_cast<LPARAM>(0));
 
         safecopy(titlebar.data(), "Private key: ");
         safeconcat(titlebar.data(), "options.key");
@@ -652,13 +652,13 @@ static LRESULT CALLBACK pass_proc(const HWND hDlg, const UINT message, const WPA
         /* Set the default push button to "OK" when the user enters text. */
         if ((HIWORD(wParam) == EN_CHANGE) && (LOWORD(wParam) == IDE_PASSWORDEDIT))
         {
-            ::SendMessage(hDlg, DM_SETDEFID, (WPARAM)IDOK, (LPARAM)0);
+            ::SendMessage(hDlg, DM_SETDEFID, static_cast<WPARAM>(IDOK), static_cast<LPARAM>(0));
         }
         switch (wParam)
         {
         case IDOK:
             /* Get number of characters. */
-            cchPassword = (WORD)::SendDlgItemMessage(hDlg, IDE_PASSWORDEDIT, EM_LINELENGTH, (WPARAM)0, (LPARAM)0);
+            cchPassword = static_cast<WORD>(::SendDlgItemMessage(hDlg, IDE_PASSWORDEDIT, EM_LINELENGTH, (WPARAM)0, (LPARAM)0));
             if ((cchPassword == 0) || (cchPassword >= STRLEN))
             {
                 ::EndDialog(hDlg, FALSE);
@@ -666,10 +666,10 @@ static LRESULT CALLBACK pass_proc(const HWND hDlg, const UINT message, const WPA
             }
 
             /* Put the number of characters into first word of buffer. */
-            *((LPWORD)passphrase.data()) = cchPassword;
+            *(reinterpret_cast<LPWORD>(passphrase.data())) = cchPassword;
 
             /* Get the characters. */
-            ::SendDlgItemMessage(hDlg, IDE_PASSWORDEDIT, EM_GETLINE, (WPARAM)0, /* line 0 */ (LPARAM)passphrase.data());
+            ::SendDlgItemMessage(hDlg, IDE_PASSWORDEDIT, EM_GETLINE, static_cast<WPARAM>(0), /* line 0 */ reinterpret_cast<LPARAM>(passphrase.data()));
 
             passphrase[cchPassword] = 0; /* Null-terminate the string. */
             ::EndDialog(hDlg, TRUE);
@@ -712,8 +712,8 @@ static void save_file(const HWND hwnd_local)
         return;
     }
 
-    if ((hFile = ::CreateFile((LPCSTR)szFileName.data(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL,
-                            (HANDLE) nullptr)) == INVALID_HANDLE_VALUE)
+    if ((hFile = ::CreateFile(reinterpret_cast<LPCSTR>(szFileName.data()), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL,
+                            static_cast<HANDLE>(nullptr))) == INVALID_HANDLE_VALUE)
     {
         ::MessageBox(hwnd_local, "File open failed", "UltraVNC_Repeater", MB_ICONERROR);
         return;
@@ -739,7 +739,7 @@ static void set_visible(const int i)
 
 static int start_service(void)
 {
-    SERVICE_TABLE_ENTRY serviceTable[] = { { "repeater_service", service_main }, { 0, 0 } };
+    SERVICE_TABLE_ENTRY serviceTable[] = { { "repeater_service", service_main }, { nullptr, nullptr } };
 
     if (!::StartServiceCtrlDispatcher(serviceTable))
     {
@@ -753,7 +753,7 @@ static int install_service(void)
 {
     SC_HANDLE scm, service;
 
-    scm = ::OpenSCManager(0, 0, SC_MANAGER_CREATE_SERVICE);
+    scm = ::OpenSCManager(nullptr, nullptr, SC_MANAGER_CREATE_SERVICE);
     if (!scm)
     {
         ::MessageBox(hwnd, "Failed to open service control manager", "repeater_service", MB_ICONERROR);
@@ -779,7 +779,7 @@ static int uninstall_service(void)
     SC_HANDLE scm, service;
     SERVICE_STATUS serviceStatus_local;
 
-    scm = ::OpenSCManager(0, 0, SC_MANAGER_CONNECT);
+    scm = ::OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
     if (!scm)
     {
         ::MessageBox(hwnd, "Failed to open service control manager", "repeater_service", MB_ICONERROR);
@@ -839,7 +839,7 @@ static void WINAPI service_main([[maybe_unused]] const DWORD argc, [[maybe_unuse
         ::SetServiceStatus(serviceStatusHandle, &serviceStatus);
 
         /* do initialisation here */
-        stopServiceEvent = ::CreateEvent(0, FALSE, FALSE, 0);
+        stopServiceEvent = ::CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
         /* running */
         serviceStatus.dwControlsAccepted |= (SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN);
@@ -857,10 +857,10 @@ static void WINAPI service_main([[maybe_unused]] const DWORD argc, [[maybe_unuse
         {
             ::CloseHandle(stopServiceEvent);
         }
-        stopServiceEvent = 0;
+        stopServiceEvent = nullptr;
 
         /* service is now stopped */
-        serviceStatus.dwControlsAccepted &= ~(SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN);
+        serviceStatus.dwControlsAccepted &= static_cast<DWORD>(~(SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN));
         serviceStatus.dwCurrentState = SERVICE_STOPPED;
         ::SetServiceStatus(serviceStatusHandle, &serviceStatus);
     }

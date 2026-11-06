@@ -15,9 +15,9 @@
 
 #include "dwmapi.h"
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #ifndef SUCCEEDED
 #define SUCCEEDED(hr) (((HRESULT)(hr)) >= 0)
@@ -35,7 +35,7 @@ RTL_OSVERSIONINFOW GetRealOSVersion()
     HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
     if (hMod)
     {
-        RtlGetVersionPtr fxPtr = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
+        RtlGetVersionPtr fxPtr = reinterpret_cast<RtlGetVersionPtr>(::GetProcAddress(hMod, "RtlGetVersion"));
         if (fxPtr != nullptr)
         {
             RTL_OSVERSIONINFOW rovi{ 0 };
@@ -148,7 +148,7 @@ void VNC_OSVersion::SetAeroState()
     HMODULE hDLL = ::LoadLibrary("user32");
     if (hDLL)
     {
-        pSetLayeredWindowAttributes = (PSLWA)::GetProcAddress(hDLL, "SetLayeredWindowAttributes");
+        pSetLayeredWindowAttributes = reinterpret_cast<PSLWA>(::GetProcAddress(hDLL, "SetLayeredWindowAttributes"));
     }
     if (pSetLayeredWindowAttributes)
     {
@@ -224,8 +224,8 @@ bool VNC_OSVersion::LoadDM(VOID)
     {
         return FALSE;
     }
-    pfnDwmIsCompositionEnabled = (P_DwmIsCompositionEnabled)::GetProcAddress(DMdll, "DwmIsCompositionEnabled");
-    pfnDwmEnableComposition = (P_DwmEnableComposition)::GetProcAddress(DMdll, "DwmEnableComposition");
+    pfnDwmIsCompositionEnabled = reinterpret_cast<P_DwmIsCompositionEnabled>(::GetProcAddress(DMdll, "DwmIsCompositionEnabled"));
+    pfnDwmEnableComposition = reinterpret_cast<P_DwmEnableComposition>(::GetProcAddress(DMdll, "DwmEnableComposition"));
     return TRUE;
 }
 

@@ -43,8 +43,8 @@
 // is why there is no semaphore timed wait, for example.
 //
 
-#ifndef __omnithread_h_
-#define __omnithread_h_
+#ifndef omnithread_h
+#define omnithread_h
 
 #ifndef NULL
 #ifdef __cplusplus

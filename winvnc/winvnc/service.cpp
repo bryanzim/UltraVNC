@@ -16,14 +16,14 @@
 #include "common/win32_helpers.h"
 #include "inifile.h"
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
-#include <tlhelp32.h>
-#include <tlhelp32.h>
-#include <userenv.h>
-#include <wtsapi32.h>
+#include <TlHelp32.h>
+#include <TlHelp32.h>
+#include <UserEnv.h>
+#include <WtsApi32.h>
 
 #include <stdio.h>
 

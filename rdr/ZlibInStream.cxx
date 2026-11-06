@@ -25,7 +25,7 @@ using namespace rdr;
 enum { DEFAULT_BUF_SIZE = 16384 };
 
 ZlibInStream::ZlibInStream(int bufSize_)
-  : underlying(0), bufSize(bufSize_ ? bufSize_ : DEFAULT_BUF_SIZE), offset(0),
+  : underlying(nullptr), bufSize(bufSize_ ? bufSize_ : DEFAULT_BUF_SIZE), offset(0),
     bytesIn(0)
 {
   zs = new z_stream;
@@ -38,7 +38,7 @@ ZlibInStream::ZlibInStream(int bufSize_)
     delete zs;
     throw Exception("ZlibInStream: inflateInit failed");
   }
-  ptr = end = start = new U8[bufSize];
+  ptr = end = start = new U8[static_cast<unsigned long long>(bufSize)];
 }
 
 ZlibInStream::~ZlibInStream()
@@ -57,7 +57,7 @@ void ZlibInStream::setUnderlying(InStream* is, int bytesIn_)
 
 int ZlibInStream::pos()
 {
-  return (int)(offset + ptr - start);
+  return static_cast<int>((offset + ptr - start));
 }
 
 void ZlibInStream::reset()
@@ -69,7 +69,7 @@ void ZlibInStream::reset()
     decompress();
     end = start; // throw away any data
   }
-  underlying = 0;
+  underlying = nullptr;
 }
 
 int ZlibInStream::overrun(int itemSize, int nItems)
@@ -80,9 +80,9 @@ int ZlibInStream::overrun(int itemSize, int nItems)
     throw Exception("ZlibInStream overrun: no underlying stream");
 
   if (end - ptr != 0)
-    memmove(start, ptr, end - ptr);
+    memmove(start, ptr, static_cast<size_t>(end - ptr));
 
-  offset += (int)(ptr - start);
+  offset += static_cast<int>((ptr - start));
   end -= ptr - start;
   ptr = start;
 
@@ -91,7 +91,7 @@ int ZlibInStream::overrun(int itemSize, int nItems)
   }
 
   if (itemSize * nItems > end - ptr)
-    nItems = (int)((end - ptr) / itemSize);
+    nItems = static_cast<int>(((end - ptr) / itemSize));
 
   return nItems;
 }
@@ -101,21 +101,21 @@ int ZlibInStream::overrun(int itemSize, int nItems)
 
 void ZlibInStream::decompress()
 {
-  zs->next_out = (U8*)end;
-  zs->avail_out = (uInt)(start + bufSize - end);
+  zs->next_out = const_cast<U8*>(reinterpret_cast<const U8 *>(end));
+  zs->avail_out = static_cast<uInt>((start + bufSize - end));
 
   underlying->check(1);
-  zs->next_in = (U8*)underlying->getptr();
-  zs->avail_in = (uInt)(underlying->getend() - underlying->getptr());
-  if ((int)zs->avail_in > bytesIn)
-    zs->avail_in = bytesIn;
+  zs->next_in = const_cast<U8*>(reinterpret_cast<const U8 *>(underlying->getptr()));
+  zs->avail_in = static_cast<uInt>((underlying->getend() - underlying->getptr()));
+  if (static_cast<int>(zs->avail_in) > bytesIn)
+    zs->avail_in = static_cast<uInt>(bytesIn);
 
   int rc = inflate(zs, Z_SYNC_FLUSH);
   if (rc != Z_OK && rc != Z_STREAM_END) {
     throw Exception("ZlibInStream: inflate failed");
   }
 
-  bytesIn -= (int)(zs->next_in - underlying->getptr());
+  bytesIn -= static_cast<int>((zs->next_in - underlying->getptr()));
   end = zs->next_out;
   underlying->setptr(zs->next_in);
 }

@@ -32,15 +32,15 @@ STDMETHODIMP vncSecurityInfo::QueryInterface(const REFIID iid, void** ppv)
     }
     else
     {
-        return (*ppv = 0), E_NOINTERFACE;
+        return (*ppv = nullptr), E_NOINTERFACE;
     }
     reinterpret_cast<IUnknown*>(*ppv)->AddRef();
     return S_OK;
 }
-STDMETHODIMP_(ULONG) vncSecurityInfo::AddRef() { return ++m_cRefs; }
+STDMETHODIMP_(ULONG) vncSecurityInfo::AddRef() { return static_cast<ULONG>(++m_cRefs); }
 STDMETHODIMP_(ULONG) vncSecurityInfo::Release()
 {
-    ULONG n = --m_cRefs;
+    ULONG n = static_cast<ULONG>(--m_cRefs);
     if (0 == n)
     {
         delete this;
@@ -80,7 +80,7 @@ STDMETHODIMP
 vncSecurityInfo::SetSecurity([[maybe_unused]] const SECURITY_INFORMATION ri, void* const psd)
 {
     vncAccessControl vncAC;
-    return vncAC.SetSD((PSECURITY_DESCRIPTOR)psd) ? S_OK : E_FAIL;
+    return vncAC.SetSD(reinterpret_cast<PSECURITY_DESCRIPTOR>(psd)) ? S_OK : E_FAIL;
 }
 
 STDMETHODIMP

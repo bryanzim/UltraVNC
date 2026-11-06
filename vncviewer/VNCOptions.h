@@ -9,8 +9,8 @@
 //
 
 
-#ifndef VNCOPTIONS_H__
-#define VNCOPTIONS_H__
+#ifndef VNCOPTIONS_H
+#define VNCOPTIONS_H
 
 #define MAX_HOST_NAME_LEN 250
 #pragma once
@@ -187,4 +187,4 @@ private:
     HWND hwnd;
 };
 
-#endif //VNCOPTIONS_H__
+#endif //VNCOPTIONS_H

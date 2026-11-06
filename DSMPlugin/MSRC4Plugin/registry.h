@@ -13,15 +13,15 @@
 // REGISTRY class is to allow read/write of strings in the registry
 //
 
-#ifndef _REGISTRY_H
-#define _REGISTRY_H
+#ifndef REGISTRY_H
+#define REGISTRY_H
 
 #ifdef _WITH_LOG
 #pragma once
 #include "logging.h"
 
 #else
-#include <windows.h>
+#include <Windows.h>
 
 #endif
 

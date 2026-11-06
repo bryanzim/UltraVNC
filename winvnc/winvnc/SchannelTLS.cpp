@@ -84,8 +84,8 @@ static bool HexToBin(const char* const hex, BYTE* const out, const DWORD outLen)
 
 SchannelTLS::SchannelTLS() : m_certCtx{ nullptr }, m_credValid{ false }, m_ctxValid{ false }, m_ready{ false }
 {
-    SecInvalidateHandle(&m_credHandle);
-    SecInvalidateHandle(&m_ctxHandle);
+    SecInvalidateHandle(&m_credHandle)
+    SecInvalidateHandle(&m_ctxHandle)
     std::memset(&m_streamSizes, 0, sizeof(m_streamSizes));
     ::InitializeCriticalSection(&m_csCrypto);
 }
@@ -240,7 +240,7 @@ bool SchannelTLS::EnsureSelfSignedCert(const char* const subjectName, const char
         {
             return std::wstring();
         }
-        std::wstring w(len - 1, 0);
+        std::wstring w(static_cast<unsigned long long>(len - 1), 0);
         ::MultiByteToWideChar(CP_ACP, 0, s, -1, &w[0U], len);
         return w;
     };
@@ -353,7 +353,7 @@ bool SchannelTLS::EnsureSelfSignedCert(const char* const subjectName, const char
         }
         if (st == ERROR_SUCCESS)
         {
-            st = ::NCryptSetProperty(hKey, NCRYPT_LENGTH_PROPERTY, (PBYTE)&keyBits, sizeof(keyBits), 0);
+            st = ::NCryptSetProperty(hKey, NCRYPT_LENGTH_PROPERTY, reinterpret_cast<PBYTE>(&keyBits), sizeof(keyBits), 0);
         }
         if (st == ERROR_SUCCESS)
         {
@@ -421,7 +421,7 @@ bool SchannelTLS::EnsureSelfSignedCert(const char* const subjectName, const char
     {
         for (int i{ 0 }; i < 20; ++i)
         {
-            ::sprintf_s(outThumbprint + i * 2, 3, "%02x", sha1[i]);
+            ::sprintf_s(outThumbprint + i * 2, 3, "%02x", sha1[static_cast<unsigned long long>(i)]);
         }
         outThumbprint[40U] = '\0';
         vnclog.Print(LL_CLIENTS, VNCLOG("TLS: self-signed cert thumbprint: %s\n"), outThumbprint);
@@ -506,7 +506,7 @@ bool SchannelTLS::ServerHandshake(VSocket* const sock)
     // If server sent extra data after handshake, buffer it
     if ((extraData.cbBuffer > 0) && extraData.pvBuffer)
     {
-        m_rawBuf.insert(m_rawBuf.end(), (BYTE*)extraData.pvBuffer, (BYTE*)extraData.pvBuffer + extraData.cbBuffer);
+        m_rawBuf.insert(m_rawBuf.end(), reinterpret_cast<BYTE*>(extraData.pvBuffer), reinterpret_cast<BYTE*>(extraData.pvBuffer) + extraData.cbBuffer);
         ::FreeContextBuffer(extraData.pvBuffer);
     }
 
@@ -605,7 +605,7 @@ bool SchannelTLS::HandshakeLoop(VSocket* const sock, bool firstCall, SecBuffer* 
         // Send any token back to client
         if ((outBufs[0U].cbBuffer > 0) && outBufs[0U].pvBuffer)
         {
-            if (!RawSend(sock, (BYTE*)outBufs[0U].pvBuffer, outBufs[0U].cbBuffer))
+            if (!RawSend(sock, reinterpret_cast<BYTE*>(outBufs[0U].pvBuffer), outBufs[0U].cbBuffer))
             {
                 ::FreeContextBuffer(outBufs[0U].pvBuffer);
                 vnclog.Print(LL_CONNERR, VNCLOG("TLS: handshake send failed\n"));
@@ -680,7 +680,7 @@ bool SchannelTLS::Send(VSocket* const sock, const char* const buf, const int len
         // Max plaintext per record
         int chunk = min(len - offset, static_cast<int>(m_streamSizes.cbMaximumMessage));
 
-        std::vector<BYTE> msg(m_streamSizes.cbHeader + chunk + m_streamSizes.cbTrailer);
+        std::vector<BYTE> msg(m_streamSizes.cbHeader + static_cast<unsigned long>(chunk) + m_streamSizes.cbTrailer);
 
         std::array<SecBuffer, 4U> bufs;
         bufs[0U].BufferType = SECBUFFER_STREAM_HEADER;
@@ -690,7 +690,7 @@ bool SchannelTLS::Send(VSocket* const sock, const char* const buf, const int len
         bufs[1U].BufferType = SECBUFFER_DATA;
         bufs[1U].cbBuffer = static_cast<ULONG>(chunk);
         bufs[1U].pvBuffer = msg.data() + m_streamSizes.cbHeader;
-        std::memcpy(bufs[1U].pvBuffer, buf + offset, chunk);
+        std::memcpy(bufs[1U].pvBuffer, buf + offset, static_cast<size_t>(chunk));
 
         bufs[2U].BufferType = SECBUFFER_STREAM_TRAILER;
         bufs[2U].cbBuffer = m_streamSizes.cbTrailer;
@@ -738,7 +738,7 @@ bool SchannelTLS::Recv(VSocket* const sock, char* const buf, const int len, int*
     if (!m_plainBuf.empty())
     {
         int take = min(len, static_cast<int>(m_plainBuf.size()));
-        std::memcpy(buf, m_plainBuf.data(), take);
+        std::memcpy(buf, m_plainBuf.data(), static_cast<size_t>(take));
         m_plainBuf.erase(m_plainBuf.begin(), m_plainBuf.begin() + take);
         *received = take;
         return true;
@@ -759,8 +759,8 @@ bool SchannelTLS::Recv(VSocket* const sock, char* const buf, const int len, int*
             bufs[3U].BufferType = SECBUFFER_EMPTY;
             for (int i{ 1 }; i < 4; ++i)
             {
-                bufs[i].cbBuffer = 0;
-                bufs[i].pvBuffer = nullptr;
+                bufs[static_cast<unsigned long long>(i)].cbBuffer = 0;
+                bufs[static_cast<unsigned long long>(i)].pvBuffer = nullptr;
             }
 
             SecBufferDesc desc;
@@ -782,15 +782,15 @@ bool SchannelTLS::Recv(VSocket* const sock, char* const buf, const int len, int*
 
                 for (int i{ 0 }; i < 4; ++i)
                 {
-                    if (bufs[i].BufferType == SECBUFFER_DATA)
+                    if (bufs[static_cast<unsigned long long>(i)].BufferType == SECBUFFER_DATA)
                     {
-                        plain = (BYTE*)bufs[i].pvBuffer;
-                        plainLen = bufs[i].cbBuffer;
+                        plain = reinterpret_cast<BYTE*>(bufs[i].pvBuffer);
+                        plainLen = bufs[static_cast<unsigned long long>(i)].cbBuffer;
                     }
-                    else if (bufs[i].BufferType == SECBUFFER_EXTRA)
+                    else if (bufs[static_cast<unsigned long long>(i)].BufferType == SECBUFFER_EXTRA)
                     {
-                        extra = (BYTE*)bufs[i].pvBuffer;
-                        extraLen = bufs[i].cbBuffer;
+                        extra = reinterpret_cast<BYTE*>(bufs[i].pvBuffer);
+                        extraLen = bufs[static_cast<unsigned long long>(i)].cbBuffer;
                     }
                 }
 
@@ -818,7 +818,7 @@ bool SchannelTLS::Recv(VSocket* const sock, char* const buf, const int len, int*
                 if (!plainCopy.empty())
                 {
                     int take = min(len, static_cast<int>(plainCopy.size()));
-                    std::memcpy(buf, plainCopy.data(), take);
+                    std::memcpy(buf, plainCopy.data(), static_cast<size_t>(take));
                     *received = take;
                     // Buffer the rest
                     if (take < static_cast<int>(plainCopy.size()))
@@ -845,10 +845,10 @@ bool SchannelTLS::Recv(VSocket* const sock, char* const buf, const int len, int*
                 DWORD extraLen{ 0U };
                 for (int i{ 0 }; i < 4; ++i)
                 {
-                    if (bufs[i].BufferType == SECBUFFER_EXTRA)
+                    if (bufs[static_cast<unsigned long long>(i)].BufferType == SECBUFFER_EXTRA)
                     {
-                        extra = static_cast<BYTE*>(bufs[i].pvBuffer);
-                        extraLen = bufs[i].cbBuffer;
+                        extra = static_cast<BYTE*>(bufs[static_cast<unsigned long long>(i)].pvBuffer);
+                        extraLen = bufs[static_cast<unsigned long long>(i)].cbBuffer;
                         break;
                     }
                 }
@@ -950,7 +950,7 @@ void SchannelTLS::Shutdown(VSocket* const sock)
 
     if (outBuf.pvBuffer && outBuf.cbBuffer)
     {
-        RawSend(sock, (BYTE*)outBuf.pvBuffer, outBuf.cbBuffer);
+        RawSend(sock, reinterpret_cast<BYTE*>(outBuf.pvBuffer), outBuf.cbBuffer);
         ::FreeContextBuffer(outBuf.pvBuffer);
     }
 
@@ -966,7 +966,7 @@ bool SchannelTLS::RawSend(VSocket* const sock, const BYTE* const data, const DWO
     DWORD sent{ 0U };
     while (sent < len)
     {
-        int n = sock->Send((const char*)data + sent, (VCard)(len - sent));
+        int n = sock->Send(reinterpret_cast<const char*>(data) + sent, static_cast<VCard>((len - sent)));
         if (n <= 0)
         {
             vnclog.Print(LL_CONNERR, VNCLOG("TLS: RawSend failed n=%d wsa=%d\n"), n, ::WSAGetLastError());
@@ -980,7 +980,7 @@ bool SchannelTLS::RawSend(VSocket* const sock, const BYTE* const data, const DWO
 bool SchannelTLS::RawRecv(VSocket* const sock, BYTE* const data, const DWORD len, DWORD* received)
 {
     // We need at least 1 byte; use non-exact read to avoid blocking on full len
-    int n = sock->Read((char*)data, static_cast<int>(len));
+    int n = sock->Read(reinterpret_cast<char*>(data), static_cast<int>(len));
     if (n <= 0)
     {
         vnclog.Print(LL_CONNERR, VNCLOG("TLS: RawRecv failed n=%d wsa=%d\n"), n, ::WSAGetLastError());

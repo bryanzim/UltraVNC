@@ -22,8 +22,8 @@ class vncDesktop;
 
 class vncBuffer;
 
-#if !defined(_WINVNC_VNCBUFFER)
-#define _WINVNC_VNCBUFFER
+#if !defined(WINVNC_VNCBUFFER)
+#define WINVNC_VNCBUFFER
 #pragma once
 
 
@@ -93,8 +93,8 @@ public:
     BOOL SetAccuracy(int accuracy);
 
     // CURSOR HANDLING
-    BOOL IsCursorUpdatePending() { return m_cursorpending; };
-    void SetCursorPending(const BOOL enable) { m_cursorpending = enable; };
+    BOOL IsCursorUpdatePending() { return m_cursorpending; }
+    void SetCursorPending(const BOOL enable) { m_cursorpending = enable; }
 
     bool ClipRect(int* x, int* y, int* w, int* h, int cx, int cy, int cw, int ch);
 
@@ -145,4 +145,4 @@ public:
     bool VideDriverUsed();
 };
 
-#endif // _WINVNC_VNCBUFFER
+#endif // WINVNC_VNCBUFFER

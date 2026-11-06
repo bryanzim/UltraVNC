@@ -97,7 +97,7 @@ static CARD32 getBgColour(char* data, int size, int bpp);
         int thex, they, thew, theh;                                                                                                \
         int numsubs{ 0 };                                                                                                          \
         int newLen;                                                                                                                \
-        CARD##bpp bg = (CARD##bpp)getBgColour((char*)data, w * h, bpp);                                                            \
+        CARD##bpp bg = static_cast<CARD##bpp>(getBgColour((char*)data, w * h, bpp));                                                            \
                                                                                                                                    \
         /* Set the background colour value */                                                                                      \
         *((CARD##bpp*)buf) = bg;                                                                                                   \
@@ -216,11 +216,11 @@ static CARD32 getBgColour(char* const data, const int size, const int bpp)
     {
         if (bpp == 16)
         {
-            return ((CARD16*)data)[0U];
+            return (reinterpret_cast<CARD16*>(data))[0U];
         }
         else if (bpp == 32)
         {
-            return ((CARD32*)data)[0U];
+            return (reinterpret_cast<CARD32*>(data))[0U];
         }
         else
         {
@@ -231,22 +231,22 @@ static CARD32 getBgColour(char* const data, const int size, const int bpp)
 
     for (i = 0; i < NUMCLRS; ++i)
     {
-        counts[i] = 0;
+        counts[static_cast<unsigned long long>(i)] = 0;
     }
 
     for (j = 0; j < size; ++j)
     {
-        k = static_cast<int>((((CARD8*)data)[j]));
+        k = static_cast<int>(((reinterpret_cast<CARD8*>(data))[j]));
         if (k >= NUMCLRS)
         {
             std::fprintf(stderr, "%s: unusual colour = %d\n", "getBgColour", k);
             exit(1);
         }
-        counts[k] += 1;
-        if (counts[k] > maxcount)
+        counts[static_cast<unsigned long long>(k)] += 1;
+        if (counts[static_cast<unsigned long long>(k)] > maxcount)
         {
-            maxcount = counts[k];
-            maxclr = ((CARD8*)data)[j];
+            maxcount = counts[static_cast<unsigned long long>(k)];
+            maxclr = (reinterpret_cast<CARD8*>(data))[j];
         }
     }
 
@@ -258,15 +258,15 @@ inline UINT vncEncodeRRE::EncodeRect(BYTE* const source, BYTE* const dest, const
 {
     int subrects = -1;
 
-    const UINT rectW = rect.br.x - rect.tl.x;
-    const UINT rectH = rect.br.y - rect.tl.y;
+    const UINT rectW = static_cast<UINT>(rect.br.x - rect.tl.x);
+    const UINT rectH = static_cast<UINT>(rect.br.y - rect.tl.y);
 
     // Create the rectangle header
-    rfbFramebufferUpdateRectHeader* surh = (rfbFramebufferUpdateRectHeader*)dest;
-    surh->r.x = (CARD16)(rect.tl.x - monitor_Offsetx);
-    surh->r.y = (CARD16)(rect.tl.y - monitor_Offsety);
-    surh->r.w = (CARD16)(rectW);
-    surh->r.h = (CARD16)(rectH);
+    rfbFramebufferUpdateRectHeader* surh = reinterpret_cast<rfbFramebufferUpdateRectHeader*>(dest);
+    surh->r.x = static_cast<CARD16>((rect.tl.x - monitor_Offsetx));
+    surh->r.y = static_cast<CARD16>((rect.tl.y - monitor_Offsety));
+    surh->r.w = static_cast<CARD16>((rectW));
+    surh->r.h = static_cast<CARD16>((rectH));
     surh->r.x = Swap16IfLE(surh->r.x);
     surh->r.y = Swap16IfLE(surh->r.y);
     surh->r.w = Swap16IfLE(surh->r.w);
@@ -296,16 +296,16 @@ inline UINT vncEncodeRRE::EncodeRect(BYTE* const source, BYTE* const dest, const
     switch (m_remoteformat.bitsPerPixel)
     {
     case 8:
-        subrects = subrectEncode8(m_buffer, dest + sz_rfbFramebufferUpdateRectHeader + sz_rfbRREHeader, rectW, rectH,
+        subrects = subrectEncode8(m_buffer, dest + sz_rfbFramebufferUpdateRectHeader + sz_rfbRREHeader, static_cast<int>(rectW), static_cast<int>(rectH),
                                   m_bufflen - sz_rfbFramebufferUpdateRectHeader - sz_rfbRREHeader);
         break;
     case 16:
-        subrects = subrectEncode16((CARD16*)m_buffer, (CARD8*)(dest + sz_rfbFramebufferUpdateRectHeader + sz_rfbRREHeader), rectW,
-                                   rectH, m_bufflen - sz_rfbFramebufferUpdateRectHeader - sz_rfbRREHeader);
+        subrects = subrectEncode16(reinterpret_cast<CARD16*>(m_buffer), reinterpret_cast<CARD8*>((dest + sz_rfbFramebufferUpdateRectHeader + sz_rfbRREHeader)), static_cast<int>(rectW),
+                                   static_cast<int>(rectH), m_bufflen - sz_rfbFramebufferUpdateRectHeader - sz_rfbRREHeader);
         break;
     case 32:
-        subrects = subrectEncode32((CARD32*)m_buffer, (CARD8*)(dest + sz_rfbFramebufferUpdateRectHeader + sz_rfbRREHeader), rectW,
-                                   rectH, m_bufflen - sz_rfbFramebufferUpdateRectHeader - sz_rfbRREHeader);
+        subrects = subrectEncode32(reinterpret_cast<CARD32*>(m_buffer), reinterpret_cast<CARD8*>((dest + sz_rfbFramebufferUpdateRectHeader + sz_rfbRREHeader)), static_cast<int>(rectW),
+                                   static_cast<int>(rectH), m_bufflen - sz_rfbFramebufferUpdateRectHeader - sz_rfbRREHeader);
         break;
     }
 
@@ -316,8 +316,8 @@ inline UINT vncEncodeRRE::EncodeRect(BYTE* const source, BYTE* const dest, const
     }
 
     // Send the RREHeader
-    rfbRREHeader* rreh = (rfbRREHeader*)(dest + sz_rfbFramebufferUpdateRectHeader);
-    rreh->nSubrects = Swap32IfLE(subrects);
+    rfbRREHeader* rreh = reinterpret_cast<rfbRREHeader*>((dest + sz_rfbFramebufferUpdateRectHeader));
+    rreh->nSubrects = static_cast<unsigned int>(Swap32IfLE(subrects));
 
     // Return the amount of data sent
     return sz_rfbFramebufferUpdateRectHeader + sz_rfbRREHeader + (m_remoteformat.bitsPerPixel / 8) +

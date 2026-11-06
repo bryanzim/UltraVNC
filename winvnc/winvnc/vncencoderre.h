@@ -18,8 +18,8 @@
 
 class vncEncodeRRE;
 
-#if !defined(_WINVNC_ENCODERRRE)
-#define _WINVNC_ENCODERRE
+#if !defined(WINVNC_ENCODERRRE)
+#define WINVNC_ENCODERRE
 #pragma once
 
 #include "vncencoder.h"
@@ -48,4 +48,4 @@ protected:
     int m_bufflen;
 };
 
-#endif // _WINVNC_ENCODERRE
+#endif // WINVNC_ENCODERRE

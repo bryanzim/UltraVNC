@@ -10,8 +10,8 @@
 //
 
 
-#ifndef __RDR_MEMINSTREAM_H__
-#define __RDR_MEMINSTREAM_H__
+#ifndef RDR_MEMINSTREAM_H
+#define RDR_MEMINSTREAM_H
 
 #include "Exception.h"
 #include "InStream.h"
@@ -25,7 +25,7 @@ namespace rdr
     public:
         MemInStream(const void* const data, const int len)
         {
-            ptr = start = (const U8*)data;
+            ptr = start = reinterpret_cast<const U8*>(data);
             end = start + len;
         }
 

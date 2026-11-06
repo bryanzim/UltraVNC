@@ -53,7 +53,7 @@ void vncListDlg::Display()
 {
     if (!m_dlgvisible)
     {
-        ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_LIST_DLG), nullptr, (DLGPROC)DialogProc, (LONG_PTR)this);
+        ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_LIST_DLG), nullptr, reinterpret_cast<DLGPROC>(DialogProc), reinterpret_cast<LONG_PTR>(this));
     }
 }
 
@@ -68,10 +68,10 @@ BOOL CALLBACK vncListDlg::DialogProc(const HWND hwnd, const UINT uMsg, const WPA
 
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_WINVNC));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         helper::SafeSetWindowUserData(hwnd, lParam);
-        _this = (vncListDlg*)lParam;
+        _this = reinterpret_cast<vncListDlg*>(lParam);
         listDlgHwnd = hwnd;
         //vncClientList::iterator i;
         HWND hList = ::GetDlgItem(hwnd, IDC_VIEWERS_LISTBOX);
@@ -118,7 +118,7 @@ BOOL CALLBACK vncListDlg::DialogProc(const HWND hwnd, const UINT uMsg, const WPA
             if (nSelected != LB_ERR)
             {
                 std::array<char, 128U> szClient;
-                if (::SendMessage(hList, LB_GETTEXT, nSelected, (LPARAM)szClient.data()) > 0)
+                if (::SendMessage(hList, LB_GETTEXT, static_cast<WPARAM>(nSelected), reinterpret_cast<LPARAM>(szClient.data())) > 0)
                 {
                     _this->m_pServer->KillClient(szClient.data());
                 }
@@ -135,7 +135,7 @@ BOOL CALLBACK vncListDlg::DialogProc(const HWND hwnd, const UINT uMsg, const WPA
             if (nSelected != LB_ERR)
             {
                 std::array<char, 128U> szClient;
-                if (::SendMessage(hList, LB_GETTEXT, nSelected, (LPARAM)szClient.data()) > 0)
+                if (::SendMessage(hList, LB_GETTEXT, static_cast<WPARAM>(nSelected), reinterpret_cast<LPARAM>(szClient.data())) > 0)
                 {
                     _this->m_pServer->TextChatClient(szClient.data());
                 }

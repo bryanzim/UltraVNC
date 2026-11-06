@@ -13,17 +13,17 @@
 // MRU maintains a list of 'Most Recently Used' strings in the registry
 //
 
-#ifndef MRU_H__
-#define MRU_H__
+#ifndef MRU_H
+#define MRU_H
 
 #pragma once
 #include "stdhdrs.h"
 
 #include "VNCOptions.h"
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <tchar.h>
 

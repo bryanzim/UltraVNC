@@ -59,12 +59,12 @@ static void rfbInitTrueColourSingleTableOUTVNC(char** table, rfbPixelFormat* in,
     {
         std::free(*table);
     }
-    *table = (char*)std::malloc(nEntries * sizeof(OUT_T));
+    *table = reinterpret_cast<char*>(std::malloc(static_cast<unsigned long long>(nEntries) * sizeof(OUT_T)));
     if (table == nullptr)
     {
         return;
     }
-    t = (OUT_T*)*table;
+    t = reinterpret_cast<OUT_T*>(*table);
 
     for (i = 0; i < nEntries; ++i)
     {
@@ -78,7 +78,7 @@ static void rfbInitTrueColourSingleTableOUTVNC(char** table, rfbPixelFormat* in,
 
         if (t)
         {
-            t[i] = ((outRed << out->redShift) | (outGreen << out->greenShift) | (outBlue << out->blueShift));
+            t[i] = ((outRed << out->redShift) | static_cast<CARD32>((outGreen << out->greenShift) | (outBlue << out->blueShift)));
         }
 #if (OUTVNC != 8)
         if (t)
@@ -106,8 +106,8 @@ static void rfbInitTrueColourRGBTablesOUTVNC(char** table, rfbPixelFormat* const
     {
         std::free(*table);
     }
-    *table = (char*)std::malloc((in->redMax + in->greenMax + in->blueMax + 3) * sizeof(OUT_T));
-    redTable = (OUT_T*)*table;
+    *table = reinterpret_cast<char*>(std::malloc((in->redMax + in->greenMax + in->blueMax + 3) * sizeof(OUT_T)));
+    redTable = reinterpret_cast<OUT_T*>(*table);
     greenTable = redTable + in->redMax + 1;
     blueTable = greenTable + in->greenMax + 1;
 

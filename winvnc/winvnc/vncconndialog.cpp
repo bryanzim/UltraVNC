@@ -54,7 +54,7 @@ INT_PTR vncConnDialog::DoDialog(const bool rep)
     //DialogBoxParam(hAppInstance, MAKEINTRESOURCE(IDD_OUTGOING_CONN),
     //adzm 2009-06-20 - Return the result
     INT_PTR nResult =
-        ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_OUTGOING_CONN), nullptr, (DLGPROC)vncConnDlgProc, (LONG_PTR)this);
+        ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_OUTGOING_CONN), nullptr, reinterpret_cast<DLGPROC>(vncConnDlgProc), reinterpret_cast<LONG_PTR>(this));
     return nResult;
 }
 
@@ -74,13 +74,13 @@ BOOL CALLBACK vncConnDialog::vncConnDlgProc(const HWND hwnd, const UINT uMsg, co
         // Dialog has just been created
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_WINVNC));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         // Save the lParam into our user data so that subsequent calls have
         // access to the parent C++ object
         helper::SafeSetWindowUserData(hwnd, lParam);
 
-        vncConnDialog* _thisInner = (vncConnDialog*)lParam;
+        vncConnDialog* _thisInner = reinterpret_cast<vncConnDialog*>(lParam);
 
         //adzm 2009-06-20
         if (g_szRepeaterHost)
@@ -112,11 +112,11 @@ BOOL CALLBACK vncConnDialog::vncConnDlgProc(const HWND hwnd, const UINT uMsg, co
                 LPRECT lprcEdit = &rcEdit;
                 LPRECT lprcLabel = &rcLabel;
 
-                ::ScreenToClient(hwnd, (LPPOINT)lprcEdit);
-                ::ScreenToClient(hwnd, ((LPPOINT)lprcEdit) + 1);
+                ::ScreenToClient(hwnd, reinterpret_cast<LPPOINT>(lprcEdit));
+                ::ScreenToClient(hwnd, (reinterpret_cast<LPPOINT>(lprcEdit)) + 1);
 
-                ::ScreenToClient(hwnd, (LPPOINT)lprcLabel);
-                ::ScreenToClient(hwnd, ((LPPOINT)lprcLabel) + 1);
+                ::ScreenToClient(hwnd, reinterpret_cast<LPPOINT>(lprcLabel));
+                ::ScreenToClient(hwnd, (reinterpret_cast<LPPOINT>(lprcLabel)) + 1);
 
                 RECT rcClient;
                 ::GetClientRect(hwnd, &rcClient);
@@ -133,7 +133,7 @@ BOOL CALLBACK vncConnDialog::vncConnDlgProc(const HWND hwnd, const UINT uMsg, co
                            TRUE);
 
                 HWND hwndCaption = ::GetDlgItem(hwnd, IDC_CAPTION_STATIC);
-                HFONT hFont = (HFONT)::SendMessage(hwndCaption, WM_GETFONT, 0, 0);
+                HFONT hFont = reinterpret_cast<HFONT>(::SendMessage(hwndCaption, WM_GETFONT, 0, 0));
                 if (hFont)
                 {
                     LOGFONT lf;
@@ -146,7 +146,7 @@ BOOL CALLBACK vncConnDialog::vncConnDlgProc(const HWND hwnd, const UINT uMsg, co
 
                         if (_thisInner->m_hfont)
                         {
-                            ::SendMessage(hwndCaption, WM_SETFONT, (WPARAM)_thisInner->m_hfont, (LPARAM)TRUE);
+                            ::SendMessage(hwndCaption, WM_SETFONT, reinterpret_cast<WPARAM>(_thisInner->m_hfont), static_cast<LPARAM>(TRUE));
                         }
                     }
                 }
@@ -292,12 +292,12 @@ BOOL CALLBACK vncConnDialog::vncConnDlgProc(const HWND hwnd, const UINT uMsg, co
             bool result;
             if (settings->getIPV6())
             {
-                result = tmpsock->CreateConnect(actualhostname.data(), port);
+                result = tmpsock->CreateConnect(actualhostname.data(), static_cast<VCard>(port));
             }
             else
             {
                 tmpsock->Create();
-                result = tmpsock->Connect(actualhostname.data(), port);
+                result = tmpsock->Connect(actualhostname.data(), static_cast<VCard>(port));
             }
             if (result)
             {
@@ -309,14 +309,14 @@ BOOL CALLBACK vncConnDialog::vncConnDlgProc(const HWND hwnd, const UINT uMsg, co
                     // Add the new client to this server
                     // adzm 2009-08-02
                     _this->m_server->AddClient(tmpsock, !settings->getReverseAuthRequired(), TRUE, 0, nullptr, finalidcode.data(),
-                                               actualhostname.data(), port, true);
+                                               actualhostname.data(), static_cast<VCard>(port), true);
                 }
                 else
                 {
                     // Add the new client to this server
                     // adzm 2009-08-02
                     _this->m_server->AddClient(tmpsock, !settings->getReverseAuthRequired(), TRUE, 0, nullptr, nullptr,
-                                               actualhostname.data(), port, true);
+                                               actualhostname.data(), static_cast<VCard>(port), true);
                 }
                 // And close the dialog
                 ::EndDialog(hwnd, TRUE);
@@ -334,7 +334,7 @@ BOOL CALLBACK vncConnDialog::vncConnDlgProc(const HWND hwnd, const UINT uMsg, co
         case IDCANCEL:
             ::EndDialog(hwnd, FALSE);
             return TRUE;
-        };
+        }
 
         break;
 

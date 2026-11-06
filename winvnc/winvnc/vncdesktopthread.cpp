@@ -108,9 +108,9 @@ void vncDesktopThread::copy_bitmaps_to_buffer(const ULONG i, rfb::Region2D& rgnc
             //////////////////////
             // Fix Eckerd
             x = x + dx;
-            ;
+            
             y = y + dy;
-            ;
+            
             if (!ClipRect(&x, &y, &w, &h, 0, 0, m_desktop->m_bmrect.br.x, m_desktop->m_bmrect.br.y))
             {
                 return;
@@ -162,7 +162,7 @@ BOOL vncDesktopThread::handle_driver_changes(rfb::Region2D& rgncache, rfb::Updat
         return FALSE;
     }
     int oldaantal = m_desktop->m_screenCapture->getPreviousCounter();
-    int counter = m_desktop->pchanges_buf->counter;
+    int counter = static_cast<int>(m_desktop->pchanges_buf->counter);
     //	int nr_updates=m_desktop->pchanges_buf->pointrect[0].type;
     //	vnclog.Print(LL_INTERR, VNCLOG("updates, rects %i\n"),oldaantal-counter);
     if (oldaantal == counter)
@@ -180,7 +180,7 @@ BOOL vncDesktopThread::handle_driver_changes(rfb::Region2D& rgncache, rfb::Updat
     {
         for (int i = oldaantal + 1; i <= counter; ++i)
         {
-            copy_bitmaps_to_buffer(i, rgncache, tracker);
+            copy_bitmaps_to_buffer(static_cast<ULONG>(i), rgncache, tracker);
         }
     }
     else
@@ -188,11 +188,11 @@ BOOL vncDesktopThread::handle_driver_changes(rfb::Region2D& rgncache, rfb::Updat
         int i{ 0 };
         for (i = oldaantal + 1; i < MAXCHANGES_BUF; ++i)
         {
-            copy_bitmaps_to_buffer(i, rgncache, tracker);
+            copy_bitmaps_to_buffer(static_cast<ULONG>(i), rgncache, tracker);
         }
         for (i = 1; i <= counter; ++i)
         {
-            copy_bitmaps_to_buffer(i, rgncache, tracker);
+            copy_bitmaps_to_buffer(static_cast<ULONG>(i), rgncache, tracker);
         }
     }
     //	vnclog.Print(LL_INTINFO, VNCLOG("Nr rects %i \n"),rgncache.Numrects());
@@ -266,7 +266,7 @@ BOOL vncDesktopThread::Init(vncDesktop* desktop, vncServer* server)
     {
         g_DesktopThread_running = false;
     }
-    return m_return;
+    return static_cast<BOOL>(m_return);
 }
 
 void vncDesktopThread::ReturnVal(const DWORD result)
@@ -590,29 +590,29 @@ bool vncDesktopThread::handle_display_change(HANDLE& threadHandle, rfb::Region2D
                     const int nCurrentMon = m_desktop->m_current_monitor;
 
                     m_desktop->m_SWOffsetx =
-                        m_desktop->mymonitor[nCurrentMon].offsetx - m_desktop->mymonitor[MULTI_MON_ALL].offsetx;
+                        m_desktop->mymonitor[static_cast<unsigned long long>(nCurrentMon)].offsetx - m_desktop->mymonitor[MULTI_MON_ALL].offsetx;
                     m_desktop->m_SWOffsety =
-                        m_desktop->mymonitor[nCurrentMon].offsety - m_desktop->mymonitor[MULTI_MON_ALL].offsety;
+                        m_desktop->mymonitor[static_cast<unsigned long long>(nCurrentMon)].offsety - m_desktop->mymonitor[MULTI_MON_ALL].offsety;
                     m_server->SetBufferOffset(m_desktop->m_SWOffsetx, m_desktop->m_SWOffsety);
 
-                    m_desktop->m_ScreenOffsetx = m_desktop->mymonitor[nCurrentMon].offsetx;
-                    m_desktop->m_ScreenOffsety = m_desktop->mymonitor[nCurrentMon].offsety;
+                    m_desktop->m_ScreenOffsetx = m_desktop->mymonitor[static_cast<unsigned long long>(nCurrentMon)].offsetx;
+                    m_desktop->m_ScreenOffsety = m_desktop->mymonitor[static_cast<unsigned long long>(nCurrentMon)].offsety;
                     m_server->SetScreenOffset(m_desktop->m_ScreenOffsetx, m_desktop->m_ScreenOffsety, m_desktop->nr_monitors == 1);
 
                     m_desktop->m_Cliprect.tl.x =
-                        m_desktop->mymonitor[nCurrentMon].offsetx - m_desktop->mymonitor[MULTI_MON_ALL].offsetx;
+                        m_desktop->mymonitor[static_cast<unsigned long long>(nCurrentMon)].offsetx - m_desktop->mymonitor[MULTI_MON_ALL].offsetx;
                     m_desktop->m_Cliprect.tl.y =
-                        m_desktop->mymonitor[nCurrentMon].offsety - m_desktop->mymonitor[MULTI_MON_ALL].offsety;
-                    m_desktop->m_Cliprect.br.x = m_desktop->mymonitor[nCurrentMon].offsetx +
-                                                 m_desktop->mymonitor[nCurrentMon].Width -
+                        m_desktop->mymonitor[static_cast<unsigned long long>(nCurrentMon)].offsety - m_desktop->mymonitor[MULTI_MON_ALL].offsety;
+                    m_desktop->m_Cliprect.br.x = m_desktop->mymonitor[static_cast<unsigned long long>(nCurrentMon)].offsetx +
+                                                 m_desktop->mymonitor[static_cast<unsigned long long>(nCurrentMon)].Width -
                                                  m_desktop->mymonitor[MULTI_MON_ALL].offsetx;
-                    m_desktop->m_Cliprect.br.y = m_desktop->mymonitor[nCurrentMon].offsety +
-                                                 m_desktop->mymonitor[nCurrentMon].Height -
+                    m_desktop->m_Cliprect.br.y = m_desktop->mymonitor[static_cast<unsigned long long>(nCurrentMon)].offsety +
+                                                 m_desktop->mymonitor[static_cast<unsigned long long>(nCurrentMon)].Height -
                                                  m_desktop->mymonitor[MULTI_MON_ALL].offsety;
 
 
-                    rc.right = m_desktop->mymonitor[nCurrentMon].Width;
-                    rc.bottom = m_desktop->mymonitor[nCurrentMon].Height;
+                    rc.right = m_desktop->mymonitor[static_cast<unsigned long long>(nCurrentMon)].Width;
+                    rc.bottom = m_desktop->mymonitor[static_cast<unsigned long long>(nCurrentMon)].Height;
                     vnclog.Print(LL_INTINFO, VNCLOG("Monitor %d: width = %d height = %d\n"), m_desktop->m_current_monitor, rc.right,
                                  rc.bottom);
                 }
@@ -658,10 +658,10 @@ bool vncDesktopThread::handle_display_change(HANDLE& threadHandle, rfb::Region2D
                     }
                     else
                     {
-                        rc.right = m_desktop->mymonitor[m_desktop->m_current_monitor].Width;
-                        rc.bottom = m_desktop->mymonitor[m_desktop->m_current_monitor].Height;
-                        m_desktop->m_ScreenOffsetx = m_desktop->mymonitor[m_desktop->m_current_monitor].offsetx;
-                        m_desktop->m_ScreenOffsety = m_desktop->mymonitor[m_desktop->m_current_monitor].offsety;
+                        rc.right = m_desktop->mymonitor[static_cast<unsigned long long>(m_desktop->m_current_monitor)].Width;
+                        rc.bottom = m_desktop->mymonitor[static_cast<unsigned long long>(m_desktop->m_current_monitor)].Height;
+                        m_desktop->m_ScreenOffsetx = m_desktop->mymonitor[static_cast<unsigned long long>(m_desktop->m_current_monitor)].offsetx;
+                        m_desktop->m_ScreenOffsety = m_desktop->mymonitor[static_cast<unsigned long long>(m_desktop->m_current_monitor)].offsety;
                     }
                 }
                 if (clients_support_resize)
@@ -726,7 +726,7 @@ void vncDesktopThread::do_polling(HANDLE& threadHandle, rfb::Region2D& rgncache,
 
     if ((settings->getPollFullScreen()) || (!m_desktop->can_be_hooked && !cursormoved))
     {
-        int timeSinceLastMouseMove = lTime - m_lLastMouseMoveTime;
+        int timeSinceLastMouseMove = static_cast<int>(lTime - m_lLastMouseMoveTime);
         if (timeSinceLastMouseMove > 50)
         { // 50 ms pause after a Mouse move
             ++fullpollcounter;
@@ -752,7 +752,7 @@ void vncDesktopThread::do_polling(HANDLE& threadHandle, rfb::Region2D& rgncache,
         }
     }
 
-    HWND hWndToPoll = 0;
+    HWND hWndToPoll = nullptr;
     if (settings->getPollForeground() || !m_desktop->can_be_hooked)
     {
         // Get the window rectangle for the currently selected window
@@ -783,7 +783,7 @@ void vncDesktopThread::do_polling(HANDLE& threadHandle, rfb::Region2D& rgncache,
         // Only strip WS_EX_LAYERED when DWM composition is off (plain WinPE
         // without explorer.exe). When DWM is active, layered windows are
         // composited correctly and stripping them causes visual artifacts.
-        int timeSinceLastMouseMove = lTime - m_lLastUpdate;
+        int timeSinceLastMouseMove = static_cast<int>(lTime - m_lLastUpdate);
         if (timeSinceLastMouseMove > 5000)
         {
             m_lLastUpdate = lTime;
@@ -795,7 +795,7 @@ void vncDesktopThread::do_polling(HANDLE& threadHandle, rfb::Region2D& rgncache,
 
 DWORD WINAPI ThreadCheckMirrorDriverUpdates(const LPVOID lpParam)
 {
-    vncDesktopThread* dt = (vncDesktopThread*)lpParam;
+    vncDesktopThread* dt = reinterpret_cast<vncDesktopThread*>(lpParam);
     while (dt->looping)
     {
         if (dt->m_desktop->m_screenCapture &&
@@ -811,7 +811,7 @@ DWORD WINAPI ThreadCheckMirrorDriverUpdates(const LPVOID lpParam)
 
 DWORD WINAPI ThreadCheckCursorUpdates(const LPVOID lpParam)
 {
-    vncDesktopThread* dt = (vncDesktopThread*)lpParam;
+    vncDesktopThread* dt = reinterpret_cast<vncDesktopThread*>(lpParam);
     POINT cursorpos;
     while (dt->looping)
     {
@@ -1033,7 +1033,7 @@ void* vncDesktopThread::run_undetached([[maybe_unused]] void* const arg)
     {
         DWORD result;
 
-        result = ::WaitForMultipleObjects(8, m_desktop->trigger_events.data(), FALSE, waittime);
+        result = ::WaitForMultipleObjects(8, m_desktop->trigger_events.data(), FALSE, static_cast<DWORD>(waittime));
         {
 
             // We need to wait until restart is done
@@ -1487,7 +1487,7 @@ void* vncDesktopThread::run_undetached([[maybe_unused]] void* const arg)
                             DWORD new_timer = ::GetTickCount();
                             if ((new_timer - monitor_sleep_timer) > 500)
                             {
-                                ::SendMessage(m_desktop->m_hwnd, WM_SYSCOMMAND, SC_MONITORPOWER, (LPARAM)2);
+                                ::SendMessage(m_desktop->m_hwnd, WM_SYSCOMMAND, SC_MONITORPOWER, static_cast<LPARAM>(2));
                                 monitor_sleep_timer = new_timer;
                             }
                         }
@@ -1495,7 +1495,7 @@ void* vncDesktopThread::run_undetached([[maybe_unused]] void* const arg)
 #ifdef AVILOG
                         if (m_desktop->AviGen)
                         {
-                            m_desktop->AviGen->AddFrame((BYTE*)m_desktop->m_DIBbits);
+                            m_desktop->AviGen->AddFrame(static_cast<BYTE*>(m_desktop->m_DIBbits));
                         }
 #endif
                     }

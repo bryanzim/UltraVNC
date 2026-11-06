@@ -16,8 +16,8 @@
 
 class vncAbout;
 
-#if (!defined(_WINVNC_VNCABOUT))
-#define _WINVNC_VNCABOUT
+#if (!defined(WINVNC_VNCABOUT))
+#define WINVNC_VNCABOUT
 
 // Includes
 #include "stdhdrs.h"
@@ -43,4 +43,4 @@ public:
     BOOL m_dlgvisible;
 };
 
-#endif // _WINVNC_VNCABOUT
+#endif // WINVNC_VNCABOUT

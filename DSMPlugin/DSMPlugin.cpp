@@ -56,7 +56,7 @@
 
 #include "DSMPlugin.h"
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
 #include <memory.h>
 
@@ -371,7 +371,7 @@ int CDSMPlugin::ListPlugins(const HWND hComboBox)
 
     while (fRet != 0)
     {
-        ::SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM)(fd.cFileName));
+        ::SendMessage(hComboBox, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>((fd.cFileName)));
         ++nFiles;
         fRet = ::FindNextFile(ff, &fd);
     }
@@ -416,7 +416,7 @@ int CDSMPlugin::ListPlugins(const HWND hComboBox)
 
     while (fRet != 0)
     {
-        ::SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM)(fd.cFileName));
+        ::SendMessage(hComboBox, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>((fd.cFileName)));
         ++nFiles;
         fRet = ::FindNextFileA(ff, &fd);
     }
@@ -631,22 +631,22 @@ bool CDSMPlugin::LoadPlugin(char* const szPlugin, const bool fAllowMulti)
         return false;
     }
 
-    m_PDescription = (DESCRIPTION)::GetProcAddress(m_hPDll, "Description");
-    m_PStartup = (STARTUP)::GetProcAddress(m_hPDll, "Startup");
-    m_PShutdown = (SHUTDOWN)::GetProcAddress(m_hPDll, "Shutdown");
-    m_PSetParams = (SETPARAMS)::GetProcAddress(m_hPDll, "SetParams");
-    m_PGetParams = (GETPARAMS)::GetProcAddress(m_hPDll, "GetParams");
-    m_PTransformBuffer = (TRANSFORMBUFFER)::GetProcAddress(m_hPDll, "TransformBuffer");
-    m_PRestoreBuffer = (RESTOREBUFFER)::GetProcAddress(m_hPDll, "RestoreBuffer");
-    m_PFreeBuffer = (FREEBUFFER)::GetProcAddress(m_hPDll, "FreeBuffer");
-    m_PReset = (RESET)::GetProcAddress(m_hPDll, "Reset");
+    m_PDescription = reinterpret_cast<DESCRIPTION>(::GetProcAddress(m_hPDll, "Description"));
+    m_PStartup = reinterpret_cast<STARTUP>(::GetProcAddress(m_hPDll, "Startup"));
+    m_PShutdown = reinterpret_cast<SHUTDOWN>(::GetProcAddress(m_hPDll, "Shutdown"));
+    m_PSetParams = reinterpret_cast<SETPARAMS>(::GetProcAddress(m_hPDll, "SetParams"));
+    m_PGetParams = reinterpret_cast<GETPARAMS>(::GetProcAddress(m_hPDll, "GetParams"));
+    m_PTransformBuffer = reinterpret_cast<TRANSFORMBUFFER>(::GetProcAddress(m_hPDll, "TransformBuffer"));
+    m_PRestoreBuffer = reinterpret_cast<RESTOREBUFFER>(::GetProcAddress(m_hPDll, "RestoreBuffer"));
+    m_PFreeBuffer = reinterpret_cast<FREEBUFFER>(::GetProcAddress(m_hPDll, "FreeBuffer"));
+    m_PReset = reinterpret_cast<RESET>(::GetProcAddress(m_hPDll, "Reset"));
     //adzm - 2009-06-21
-    m_PCreatePluginInterface = (CREATEPLUGININTERFACE)::GetProcAddress(m_hPDll, "CreatePluginInterface");
+    m_PCreatePluginInterface = reinterpret_cast<CREATEPLUGININTERFACE>(::GetProcAddress(m_hPDll, "CreatePluginInterface"));
     //adzm 2010-05-10
     m_PCreateIntegratedPluginInterface =
-        (CREATEINTEGRATEDPLUGININTERFACE)::GetProcAddress(m_hPDll, "CreateIntegratedPluginInterface");
+        reinterpret_cast<CREATEINTEGRATEDPLUGININTERFACE>(::GetProcAddress(m_hPDll, "CreateIntegratedPluginInterface"));
     //adzm 2010-05-12 - dsmplugin config
-    m_PConfig = (CONFIG)::GetProcAddress(m_hPDll, "Config");
+    m_PConfig = reinterpret_cast<CONFIG>(::GetProcAddress(m_hPDll, "Config"));
 #else
     loadDllFromMemory = std::make_unique<LoadDllFromMemory>();
     loadDllFromMemory->LoadPlugin(m_PDescription, m_PShutdown, m_PStartup, m_PSetParams, m_PGetParams, m_PTransformBuffer,
@@ -812,8 +812,8 @@ const char Base64::cd64[] = "|$$$}rstuvwxyz{$$$$$$$>?@ABCDEFGHIJKLMNOPQRSTUVW$$$
 
 void Base64::encodeblock(BYTE in[3U], BYTE out[4U], const int len)
 {
-    out[0U] = cb64[in[0U] >> 2];
-    out[1U] = cb64[((in[0U] & 0x03) << 4) | ((in[1U] & 0xf0) >> 4)];
+    out[0U] = static_cast<BYTE>(cb64[in[0U] >> 2]);
+    out[1U] = static_cast<BYTE>(cb64[((in[0U] & 0x03) << 4) | ((in[1U] & 0xf0) >> 4)]);
     out[2U] = static_cast<BYTE>((len > 1 ? cb64[((in[1U] & 0x0f) << 2) | ((in[2U] & 0xc0) >> 6)] : '='));
     out[3U] = static_cast<BYTE>((len > 2 ? cb64[in[2U] & 0x3f] : '='));
 }
@@ -839,7 +839,7 @@ void Base64::encode(const char* const szIn, char* const szOut)
         len = 0;
         for (i = 0; i < 3; ++i)
         {
-            in[i] = (BYTE)*pIn;
+            in[static_cast<unsigned long long>(i)] = static_cast<BYTE>(*pIn);
             if (*pIn != '\0')
             {
                 ++len;
@@ -847,7 +847,7 @@ void Base64::encode(const char* const szIn, char* const szOut)
             }
             else
             {
-                in[i] = 0;
+                in[static_cast<unsigned long long>(i)] = 0;
             }
         }
         if (len)
@@ -855,7 +855,7 @@ void Base64::encode(const char* const szIn, char* const szOut)
             encodeblock(in.data(), out.data(), len);
             for (i = 0; i < 4; ++i)
             {
-                *pOut = static_cast<char>(out[i]);
+                *pOut = static_cast<char>(out[static_cast<unsigned long long>(i)]);
                 ++pOut;
             }
         }
@@ -879,7 +879,7 @@ void Base64::decode(const char* const szIn, char* const szOut)
             o = 0;
             while ((*pIn != '\0') && (v == 0))
             {
-                v = (BYTE)*pIn;
+                v = static_cast<BYTE>(*pIn);
                 o = v;
                 ++pIn;
 

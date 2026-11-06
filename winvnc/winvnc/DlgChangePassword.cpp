@@ -25,12 +25,12 @@ INT_PTR CALLBACK dialogProcChangePassword(const HWND hwnd, const UINT uMsg, cons
     DlgChangePassword* _this;
     if (uMsg == WM_INITDIALOG)
     {
-        _this = (DlgChangePassword*)lParam;
+        _this = reinterpret_cast<DlgChangePassword*>(lParam);
         helper::SafeSetWindowUserData(hwnd, lParam);
     }
     else
     {
-        _this = (DlgChangePassword*)helper::SafeGetWindowUserData<DlgChangePassword>(hwnd);
+        _this = reinterpret_cast<DlgChangePassword*>(helper::SafeGetWindowUserData<DlgChangePassword>(hwnd));
     }
 
     switch (uMsg)
@@ -67,7 +67,7 @@ int DlgChangePassword::ShowDlg(const HWND parentWindow, const char* const titleI
     this->passwordSize = passwordSizeIn;
 
     const int a =
-        static_cast<int>(::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_CHANGE_PASSWORD), parentWindow, dialogProcChangePassword, (LPARAM)this));
+        static_cast<int>(::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_CHANGE_PASSWORD), parentWindow, dialogProcChangePassword, reinterpret_cast<LPARAM>(this)));
     return a;
 }
 
@@ -76,11 +76,11 @@ bool DlgChangePassword::InitDialog(const HWND hwnd)
     DlgChangePasswordHwnd = hwnd;
     ::SetForegroundWindow(hwnd);
     HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_WINVNC));
-    ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-    ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+    ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+    ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
     ::SetWindowText(hwnd, title);
-    ::SendMessage(::GetDlgItem(DlgChangePasswordHwnd, IDC_PASSWORD_1), EM_SETLIMITTEXT, passwordSize, 0);
-    ::SendMessage(::GetDlgItem(DlgChangePasswordHwnd, IDC_PASSWORD_2), EM_SETLIMITTEXT, passwordSize, 0);
+    ::SendMessage(::GetDlgItem(DlgChangePasswordHwnd, IDC_PASSWORD_1), EM_SETLIMITTEXT, static_cast<WPARAM>(passwordSize), 0);
+    ::SendMessage(::GetDlgItem(DlgChangePasswordHwnd, IDC_PASSWORD_2), EM_SETLIMITTEXT, static_cast<WPARAM>(passwordSize), 0);
     ::SetDlgItemText(hwnd, IDC_PASSWORD_1, "~~~~~~~~");
     ::SetDlgItemText(hwnd, IDC_PASSWORD_2, "~~~~~~~~");
     return true;
@@ -91,8 +91,8 @@ void DlgChangePassword::onOK(const HWND hwnd)
     std::array<char, 1024U> passwd2;
     std::memset(passwd, '\0', 1024);
     std::memset(passwd2.data(), '\0', 1024);
-    ::GetDlgItemText(hwnd, IDC_PASSWORD_1, (LPSTR)&passwd, 1024);
-    ::GetDlgItemText(hwnd, IDC_PASSWORD_2, (LPSTR)passwd2.data(), 1024);
+    ::GetDlgItemText(hwnd, IDC_PASSWORD_1, reinterpret_cast<LPSTR>(&passwd), 1024);
+    ::GetDlgItemText(hwnd, IDC_PASSWORD_2, reinterpret_cast<LPSTR>(passwd2.data()), 1024);
     if (((std::strlen(passwd) == 0) || (std::strcmp(passwd, "~~~~~~~~") == 0)) && (settings->getAuthRequired() != false))
     {
         helper::yesUVNCMessageBox(hInstResDLL, hwnd, "Password can not be empty.", "UltraVNC warning", MB_ICONWARNING);

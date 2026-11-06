@@ -28,9 +28,9 @@ void ClientConnection::ReadCoRRERect(rfbFramebufferUpdateRectHeader* const pfbur
     // An RRE rect is always followed by a background color
     // For speed's sake we read them together into a buffer.
     char tmpbuf[sz_rfbRREHeader + 4]; // biggest pixel is 4 bytes long
-    rfbRREHeader* prreh = (rfbRREHeader*)tmpbuf;
-    CARD8* pcolor = (CARD8*)tmpbuf + sz_rfbRREHeader;
-    ReadExact(tmpbuf, sz_rfbRREHeader + m_minPixelBytes);
+    rfbRREHeader* prreh = reinterpret_cast<rfbRREHeader*>(tmpbuf);
+    CARD8* pcolor = reinterpret_cast<CARD8*>(tmpbuf) + sz_rfbRREHeader;
+    ReadExact(tmpbuf, static_cast<int>(sz_rfbRREHeader + m_minPixelBytes));
 
     prreh->nSubrects = Swap32IfLE(prreh->nSubrects);
 
@@ -51,12 +51,12 @@ void ClientConnection::ReadCoRRERect(rfbFramebufferUpdateRectHeader* const pfbur
     rfbRectangle rect;
 
     // The size of an CoRRE subrect including color info
-    int subRectSize = m_minPixelBytes + sz_rfbCoRRERectangle;
+    int subRectSize = static_cast<int>(m_minPixelBytes + sz_rfbCoRRERectangle);
 
     // Read subrects into the buffer
-    CheckBufferSize(subRectSize * prreh->nSubrects);
-    ReadExact(m_netbuf, subRectSize * prreh->nSubrects);
-    BYTE* p = (BYTE*)m_netbuf;
+    CheckBufferSize(static_cast<CARD32>(subRectSize) * prreh->nSubrects);
+    ReadExact(m_netbuf, static_cast<int>(subRectSize * prreh->nSubrects));
+    BYTE* p = reinterpret_cast<BYTE*>(m_netbuf);
 
     {
         omni_mutex_lock l(m_bitmapdcMutex);
@@ -64,7 +64,7 @@ void ClientConnection::ReadCoRRERect(rfbFramebufferUpdateRectHeader* const pfbur
         for (CARD32 i = 0; i < prreh->nSubrects; ++i)
         {
 
-            pRect = (rfbCoRRERectangle*)(p + m_minPixelBytes);
+            pRect = reinterpret_cast<rfbCoRRERectangle*>((p + m_minPixelBytes));
 
             rect.x = pRect->x + pfburh->r.x;
             rect.y = pRect->y + pfburh->r.y;

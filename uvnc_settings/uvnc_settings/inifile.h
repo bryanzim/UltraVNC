@@ -9,12 +9,12 @@
 //
 
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <array>
 
-#if (!defined(_WINVNC_INIFILE))
-#define _WINVNC_INIFILE
+#if (!defined(WINVNC_INIFILE))
+#define WINVNC_INIFILE
 
 #define INIFILE_NAME "ultravnc.ini"
 

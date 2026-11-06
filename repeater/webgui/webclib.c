@@ -92,7 +92,7 @@ wi_printf(wi_sess * sess, char * fmt, ...)
    }
 
    MEMCPY( &sess->ws_txtail->tb_data[sess->ws_txtail->tb_total],
-      output, len);
+      output, (unsigned long long)(len));
    sess->ws_txtail->tb_total += len;
    return;
 }
@@ -131,7 +131,7 @@ wi_formvalue( wi_sess * sess, char * ctlname )
    for(form = sess->ws_formlist; form; form = form->next)
    {
       for(i = 0; i < form->paircount; i++)
-         if( _strnicmp(form->pairs[i].name, ctlname, namelen) == 0 )
+         if( _strnicmp(form->pairs[i].name, ctlname, (size_t)(namelen)) == 0 )
          {
             if( (*form->pairs[i].value) == 0)
                return NULL;
@@ -162,7 +162,7 @@ wi_checkip(u_long * out, char * input)
      */
     for(octet = 1; octet < 5; octet++)
     {
-        value = atoi(cp);
+        value = (unsigned int)(atoi(cp));
         if((value == 0) && (*cp != '0'))
             return ("All chars must be digits or dots");
 

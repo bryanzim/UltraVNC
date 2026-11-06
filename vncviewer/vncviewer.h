@@ -9,8 +9,8 @@
 //
 
 
-#ifndef VNCVIEWER_H__
-#define VNCVIEWER_H__
+#ifndef VNCVIEWER_H
+#define VNCVIEWER_H
 
 #pragma once
 

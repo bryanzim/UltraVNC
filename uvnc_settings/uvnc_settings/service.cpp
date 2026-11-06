@@ -27,11 +27,11 @@
 #include <iphlpapi.h>
 
 #pragma comment(lib, "iphlpapi")
-#include <shlwapi.h>
+#include <Shlwapi.h>
 
 #pragma comment(lib, "shlwapi")
 #ifndef _WINSOCK2API_
-#include <winsock2.h>
+#include <WinSock2.h>
 
 #pragma comment(lib, "ws2_32.lib")
 #endif
@@ -55,7 +55,7 @@ void set_service_description()
     _snprintf(tempName.data(), sizeof tempName, "SYSTEM\\CurrentControlSet\\Services\\%s", service_name.data());
     ::RegCreateKeyEx(HKEY_LOCAL_MACHINE, tempName.data(), 0, REG_NONE, REG_OPTION_NON_VOLATILE, KEY_READ | KEY_WRITE, nullptr, &hKey,
                    &dw);
-    ::RegSetValueEx(hKey, "Description", 0, REG_SZ, (const BYTE*)desc, static_cast<DWORD>((std::strlen(desc) + 1)));
+    ::RegSetValueEx(hKey, "Description", 0, REG_SZ, reinterpret_cast<const BYTE*>(desc), static_cast<DWORD>((std::strlen(desc) + 1)));
 
 
     ::RegCloseKey(hKey);
@@ -66,7 +66,7 @@ static int pad()
     std::array<char, MAX_PATH> exe_file_name;
     std::array<char, MAX_PATH> dir;
     char* ptr;
-    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+    ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
     /* set current directory */
     ::strcpy_s(dir.data(), dir.size(), exe_file_name.data());
@@ -93,7 +93,7 @@ static int pad()
 DWORD MessageBoxSecure(const HWND hWnd, const LPCTSTR lpText, const LPCTSTR lpCaption, const UINT uType)
 {
     DWORD retunvalue;
-    retunvalue = ::MessageBox(hWnd, lpText, lpCaption, uType);
+    retunvalue = static_cast<DWORD>(::MessageBox(hWnd, lpText, lpCaption, uType));
     return retunvalue;
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -120,7 +120,7 @@ int install_service(void)
                          app_name, MB_ICONERROR);
         return 1;
     }
-    scm = ::OpenSCManager(0, 0, SC_MANAGER_CREATE_SERVICE);
+    scm = ::OpenSCManager(nullptr, nullptr, SC_MANAGER_CREATE_SERVICE);
     if (!scm)
     {
         MessageBoxSecure(nullptr, "Failed to open service control manager", app_name, MB_ICONERROR);
@@ -164,7 +164,7 @@ int uninstall_service(void)
     SC_HANDLE scm, service;
     SERVICE_STATUS serviceStatus;
 
-    scm = ::OpenSCManager(0, 0, SC_MANAGER_CONNECT);
+    scm = ::OpenSCManager(nullptr, nullptr, SC_MANAGER_CONNECT);
     if (!scm)
     {
         MessageBoxSecure(nullptr, "Failed to open service control manager", app_name, MB_ICONERROR);
@@ -257,7 +257,7 @@ bool IsInstalled()
             bResult = TRUE;
             SERVICE_STATUS_PROCESS ssp;
             DWORD dwBytesNeeded;
-            if (::QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&ssp, sizeof(SERVICE_STATUS_PROCESS),
+            if (::QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, reinterpret_cast<LPBYTE>(&ssp), sizeof(SERVICE_STATUS_PROCESS),
                                      &dwBytesNeeded) != 0)
             {
                 if (ssp.dwCurrentState == SERVICE_RUNNING)
@@ -373,7 +373,7 @@ BOOL CALLBACK DlgProcService(const HWND hwnd, const UINT uMsg, const WPARAM wPar
                 std::strcpy(link.data(), "https://uvnc.com/webhelp/");
                 std::strcat(link.data(), "service");
                 std::strcat(link.data(), ".html");
-                ::ShellExecute(::GetDesktopWindow(), "open", link.data(), "", 0, SW_SHOWNORMAL);
+                ::ShellExecute(::GetDesktopWindow(), "open", link.data(), "", nullptr, SW_SHOWNORMAL);
             }
             break;
         case IDOK:
