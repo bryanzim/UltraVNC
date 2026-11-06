@@ -7032,7 +7032,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         RECT rcInner;
                         rcInner.left = LVIR_BOUNDS; // Use BOUNDS for subitems, not LABEL
                         rcInner.top = lpNmlvcd->iSubItem;
-                        ::SendMessageW(lpNmlvcd->nmcd.hdr.hwndFrom, LVM_GETSUBITEMRECT, reinterpret_cast<WPARAM>(lpNmlvcd->nmcd.dwItemSpec),
+                        ::SendMessageW(lpNmlvcd->nmcd.hdr.hwndFrom, LVM_GETSUBITEMRECT, static_cast<WPARAM>(lpNmlvcd->nmcd.dwItemSpec),
                                      reinterpret_cast<LPARAM>(&rcInner));
                         // Use actual selection state from ListView
                         BOOL bSelected = (ListView_GetItemState(lpNmlvcd->nmcd.hdr.hwndFrom,

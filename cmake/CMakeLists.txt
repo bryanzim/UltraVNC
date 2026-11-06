@@ -118,7 +118,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MS
         $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-Wno-unsafe-buffer-usage>
         $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-Wno-unsafe-buffer-usage-in-libc-call>)
 endif()
-if( ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64" OR ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64" )
+# CMAKE_SYSTEM_PROCESSOR is the host on the Visual Studio generator, so a
+# Win32 build still reports AMD64. Pointer size is the target.
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     add_compile_definitions("_X64")
 endif()
 
