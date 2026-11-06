@@ -121,7 +121,7 @@ DeskDupEngine::~DeskDupEngine()
     }
 }
 //-----------------------------------------------------------
-void DeskDupEngine::videoDriver_start(const int x, int y, int w, int h, const bool onlyVirtual, const int maxFPS)
+void DeskDupEngine::videoDriver_start([[maybe_unused]] const int x, [[maybe_unused]] int y, int w, int h, const bool onlyVirtual, const int maxFPS)
 {
 #ifdef _DEBUG
     std::array<char, 256U> szText;

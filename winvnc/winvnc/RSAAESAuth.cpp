@@ -554,11 +554,11 @@ bool RSAAESAuth::Authenticate(DWORD keySize, bool allEncrypted, bool requireUser
 // Load the VeNCrypt certificate and expose its RSA key pair for RA2.
 bool RSAAESAuth::LoadServerKey()
 {
-    SettingsManager* settings = SettingsManager::getInstance();
+    SettingsManager* settingsLocal = SettingsManager::getInstance();
     m_tlsLoader = new SchannelTLS();
 
     bool certOk{ false };
-    const char* thumbprint = settings->getVeNCryptTLSCertThumbprint();
+    const char* thumbprint = settingsLocal->getVeNCryptTLSCertThumbprint();
     if (thumbprint && thumbprint[0U])
     {
         certOk = m_tlsLoader->LoadCertByThumbprint(thumbprint);
@@ -567,11 +567,11 @@ bool RSAAESAuth::LoadServerKey()
     {
         std::array<char, 41U> generatedThumbprint{};
         certOk = m_tlsLoader->EnsureSelfSignedCert("CN=UltraVNC-VeNCrypt", "UltraVNC-VeNCrypt", generatedThumbprint.data(),
-                                                   settings->getTLSCertKeyBits());
+                                                   settingsLocal->getTLSCertKeyBits());
         if (certOk)
         {
-            settings->setVeNCryptTLSCertThumbprint(generatedThumbprint.data());
-            settings->save();
+            settingsLocal->setVeNCryptTLSCertThumbprint(generatedThumbprint.data());
+            settingsLocal->save();
         }
     }
     if (!certOk)

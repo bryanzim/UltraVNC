@@ -70,21 +70,21 @@ vncSecurityInfo::GetObjectInformation(SI_OBJECT_INFO* const poi)
 }
 
 STDMETHODIMP
-vncSecurityInfo::GetSecurity(const SECURITY_INFORMATION ri, PSECURITY_DESCRIPTOR* ppsd, const BOOL bDefault)
+vncSecurityInfo::GetSecurity([[maybe_unused]] const SECURITY_INFORMATION ri, PSECURITY_DESCRIPTOR* ppsd, [[maybe_unused]] const BOOL bDefault)
 {
     vncAccessControl vncAC;
     return (*ppsd = vncAC.GetSD()) ? S_OK : E_FAIL;
 }
 
 STDMETHODIMP
-vncSecurityInfo::SetSecurity(const SECURITY_INFORMATION ri, void* const psd)
+vncSecurityInfo::SetSecurity([[maybe_unused]] const SECURITY_INFORMATION ri, void* const psd)
 {
     vncAccessControl vncAC;
     return vncAC.SetSD((PSECURITY_DESCRIPTOR)psd) ? S_OK : E_FAIL;
 }
 
 STDMETHODIMP
-vncSecurityInfo::PropertySheetPageCallback(const HWND hwnd, const UINT msg, const SI_PAGE_TYPE pt)
+vncSecurityInfo::PropertySheetPageCallback([[maybe_unused]] const HWND hwnd, [[maybe_unused]] const UINT msg, [[maybe_unused]] const SI_PAGE_TYPE pt)
 {
     // this is effectively a pass-through from the PropertySheet callback,
     // which we don't care about here.
@@ -92,7 +92,7 @@ vncSecurityInfo::PropertySheetPageCallback(const HWND hwnd, const UINT msg, cons
 }
 
 STDMETHODIMP
-vncSecurityInfo::GetAccessRights(const GUID*, const DWORD dwFlags, SI_ACCESS** ppAccess, ULONG* pcAccesses, ULONG* piDefaultAccess)
+vncSecurityInfo::GetAccessRights(const GUID*, [[maybe_unused]] const DWORD dwFlags, SI_ACCESS** ppAccess, ULONG* pcAccesses, ULONG* piDefaultAccess)
 {
     // here's where we hand back the permissions->strings mapping
     *ppAccess = const_cast<SI_ACCESS*>(g_vncAccess);
@@ -102,7 +102,7 @@ vncSecurityInfo::GetAccessRights(const GUID*, const DWORD dwFlags, SI_ACCESS** p
 }
 
 STDMETHODIMP
-vncSecurityInfo::MapGeneric(const GUID*, UCHAR* const pAceFlags, ACCESS_MASK* const pMask)
+vncSecurityInfo::MapGeneric(const GUID*, [[maybe_unused]] UCHAR* const pAceFlags, ACCESS_MASK* const pMask)
 {
     // here's where we hand back the generic permissions mapping
     ::MapGenericMask(pMask, const_cast<GENERIC_MAPPING*>(&g_vncGenericMapping));

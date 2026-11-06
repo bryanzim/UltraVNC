@@ -33,7 +33,7 @@ public:
 
     virtual UINT EncodeRect(BYTE* source, BYTE* dest, const rfb::Rect& rect);
 
-    virtual UINT EncodeBulkRects(const rfb::RectVector& rects, BYTE* source, BYTE* dest, VSocket* outConn);
+    virtual UINT EncodeBulkRects(const rfb::RectVector& rects, BYTE* const source, BYTE* const dest, VSocket* const outConn);
 
     void EncodeRect_Internal(BYTE* source, int x, int y, int w, int h);
 

@@ -214,7 +214,7 @@ BOOL CALLBACK SessDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 int SessionDialog::DoDialog()
 {
     // Use m_hInstResDLL for dialog resources (contains translated dialogs)
-    return ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_SESSION_DLG), nullptr, (DLGPROC)SessDlgProc, (LONG_PTR)this);
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_SESSION_DLG), nullptr, (DLGPROC)SessDlgProc, (LONG_PTR)this));
 }
 
 BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
@@ -231,7 +231,7 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
         std::array<wchar_t, 256U> title{};
         ::wcscpy_s(title.data(), title.size(), L"UltraVNC Viewer -");
         std::array<wchar_t, 50U> wver{};
-        ::MultiByteToWideChar(CP_ACP, 0, GetVersionFromResource(cver.data()), -1, wver.data(), wver.size());
+        ::MultiByteToWideChar(CP_ACP, 0, GetVersionFromResource(cver.data()), -1, wver.data(), static_cast<int>(wver.size()));
         ::wcscat_s(title.data(), title.size(), wver.data());
         ::SetWindowText(hwnd, title.data());
     }
@@ -281,7 +281,7 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
             if (HIWORD(wParam) == CBN_SELCHANGE)
             {
                 std::array<TCHAR, 256U> hostname;
-                int ItemIndex = ::SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0);
+                int ItemIndex = static_cast<int>(::SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0));
                 ::SendMessage((HWND)lParam, static_cast<UINT>(CB_GETLBTEXT), (WPARAM)ItemIndex, (LPARAM)hostname.data());
                 _this->m_pMRU->RemoveItem(hostname.data());
                 _this->m_pMRU->AddItem(hostname.data());
@@ -291,7 +291,7 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
             if (HIWORD(wParam) == CBN_SELENDOK)
             {
                 std::array<TCHAR, 256U> hostname;
-                int ItemIndex = ::SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0);
+                int ItemIndex = static_cast<int>(::SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0));
                 ::SendMessage((HWND)lParam, static_cast<UINT>(CB_SETCURSEL), (WPARAM)ItemIndex, (LPARAM)hostname.data());
             }
             ::SetTimer(hwnd, 100, 3000, nullptr);
@@ -386,7 +386,7 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
                 HWND hPlugins = ::GetDlgItem(hwnd, IDC_PLUGINS_COMBO);
                 if ((::_tcscmp(_this->szDSMPluginFilename.data(), _T("")) != 0) && _this->fUseDSMPlugin)
                 {
-                    int pos = ::SendMessage(hPlugins, CB_FINDSTRINGEXACT, -1, (LPARAM) & (_this->szDSMPluginFilename[0U]));
+                    int pos = static_cast<int>(::SendMessage(hPlugins, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), (LPARAM) & (_this->szDSMPluginFilename[0U])));
 
                     if (pos != CB_ERR)
                     {
@@ -408,7 +408,7 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
         case IDC_HOSTNAME_DEL: {
             _this->SettingsFromUI();
             HWND hcombo = ::GetDlgItem(hwnd, IDC_HOSTNAME_EDIT);
-            int sel = ::SendMessage(hcombo, CB_GETCURSEL, 0, 0);
+            int sel = static_cast<int>(::SendMessage(hcombo, CB_GETCURSEL, 0, 0));
             if (sel != CB_ERR)
             {
                 ::SendMessage(hcombo, CB_DELETESTRING, sel, 0);
@@ -432,7 +432,7 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
             if (HIWORD(wParam) == CBN_SELCHANGE)
             {
                 HWND hLangCombo = ::GetDlgItem(hwnd, IDC_LANGUAGE_COMBO);
-                int selIdx = ::SendMessage(hLangCombo, CB_GETCURSEL, 0, 0);
+                int selIdx = static_cast<int>(::SendMessage(hLangCombo, CB_GETCURSEL, 0, 0));
                 if (selIdx != CB_ERR)
                 {
                     wchar_t* langCode = (wchar_t*)::SendMessage(hLangCombo, CB_GETITEMDATA, selIdx, 0);
@@ -595,7 +595,7 @@ void SessionDialog::InitPlugin(const HWND hwnd)
     //AaronP
     if ((::_tcscmp(szDSMPluginFilename.data(), _T("")) != 0) && fUseDSMPlugin)
     {
-        int pos = ::SendMessage(hPlugins, CB_FINDSTRINGEXACT, -1, (LPARAM) & (szDSMPluginFilename[0U]));
+        int pos = static_cast<int>(::SendMessage(hPlugins, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), (LPARAM) & (szDSMPluginFilename[0U])));
 
         if (pos != CB_ERR)
         {
@@ -792,7 +792,7 @@ bool SessionDialog::connect(const HWND hwnd)
         if (!m_pDSMPlugin->IsLoaded())
         {
             std::array<char, MAX_PATH> szPluginA;
-            ::WideCharToMultiByte(CP_ACP, 0, szDSMPluginFilename.data(), -1, szPluginA.data(), szPluginA.size(), nullptr, nullptr);
+            ::WideCharToMultiByte(CP_ACP, 0, szDSMPluginFilename.data(), -1, szPluginA.data(), static_cast<int>(szPluginA.size()), nullptr, nullptr);
             m_pDSMPlugin->LoadPlugin(szPluginA.data(), listening);
             if (m_pDSMPlugin->IsLoaded())
             {
@@ -836,7 +836,7 @@ bool SessionDialog::connect(const HWND hwnd)
                 m_pDSMPlugin->UnloadPlugin();
                 // Load the new selected one
                 std::array<char, MAX_PATH> szPluginA;
-                ::WideCharToMultiByte(CP_ACP, 0, szDSMPluginFilename.data(), -1, szPluginA.data(), szPluginA.size(), nullptr, nullptr);
+                ::WideCharToMultiByte(CP_ACP, 0, szDSMPluginFilename.data(), -1, szPluginA.data(), static_cast<int>(szPluginA.size()), nullptr, nullptr);
                 m_pDSMPlugin->LoadPlugin(szPluginA.data(), listening);
             }
             if (m_pDSMPlugin->IsLoaded())
@@ -937,7 +937,7 @@ void SessionDialog::InitLanguage(const HWND hwnd)
     ::SendMessage(hLanguageCombo, CB_RESETCONTENT, 0, 0);
 
     // Add English (default - no DLL needed)
-    int idx = ::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, (LPARAM) _T("English"));
+    int idx = static_cast<int>(::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, (LPARAM) _T("English")));
     ::SendMessage(hLanguageCombo, CB_SETITEMDATA, idx, (LPARAM)_wcsdup(L"en"));
 
     // Get viewer executable path
@@ -945,7 +945,7 @@ void SessionDialog::InitLanguage(const HWND hwnd)
     std::array<wchar_t, MAX_PATH> languagesPath;
     std::array<wchar_t, MAX_PATH> dllPath;
 
-    if (::GetModuleFileNameW(nullptr, exePath.data(), exePath.size()))
+    if (::GetModuleFileNameW(nullptr, exePath.data(), static_cast<DWORD>(exePath.size())))
     {
         wchar_t* lastSlash = std::wcsrchr(exePath.data(), L'\\');
         if (lastSlash)
@@ -984,15 +984,15 @@ void SessionDialog::InitLanguage(const HWND hwnd)
                                 0)
                             {
                                 // Successfully loaded language name from DLL
-                                int idx = ::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, (LPARAM)displayName.data());
-                                ::SendMessage(hLanguageCombo, CB_SETITEMDATA, idx, (LPARAM)_wcsdup(langCode.data()));
+                                int idxInner = static_cast<int>(::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, (LPARAM)displayName.data()));
+                                ::SendMessage(hLanguageCombo, CB_SETITEMDATA, idxInner, (LPARAM)_wcsdup(langCode.data()));
                             }
                             else
                             {
                                 // Fallback: use language code if string not found
                                 ::swprintf_s(displayName.data(), displayName.size(), L"Language (%s)", langCode.data());
-                                int idx = ::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, (LPARAM)displayName.data());
-                                ::SendMessage(hLanguageCombo, CB_SETITEMDATA, idx, (LPARAM)_wcsdup(langCode.data()));
+                                int idxInner = static_cast<int>(::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, (LPARAM)displayName.data()));
+                                ::SendMessage(hLanguageCombo, CB_SETITEMDATA, idxInner, (LPARAM)_wcsdup(langCode.data()));
                             }
                             ::FreeLibrary(hLangDll);
                         }
@@ -1000,8 +1000,8 @@ void SessionDialog::InitLanguage(const HWND hwnd)
                         {
                             // DLL couldn't be loaded, use code as fallback
                             ::swprintf_s(displayName.data(), displayName.size(), L"Language (%s)", langCode.data());
-                            int idx = ::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, (LPARAM)displayName.data());
-                            ::SendMessage(hLanguageCombo, CB_SETITEMDATA, idx, (LPARAM)_wcsdup(langCode.data()));
+                            int idxInner = static_cast<int>(::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, (LPARAM)displayName.data()));
+                            ::SendMessage(hLanguageCombo, CB_SETITEMDATA, idxInner, (LPARAM)_wcsdup(langCode.data()));
                         }
                     }
                 } while (::FindNextFileW(hFind, &findData));
@@ -1011,7 +1011,7 @@ void SessionDialog::InitLanguage(const HWND hwnd)
     }
 
     // Select current language
-    const int count = ::SendMessage(hLanguageCombo, CB_GETCOUNT, 0, 0);
+    const int count = static_cast<int>(::SendMessage(hLanguageCombo, CB_GETCOUNT, 0, 0));
     for (int i{ 0 }; i < count; ++i)
     {
         wchar_t* langCode = (wchar_t*)::SendMessage(hLanguageCombo, CB_GETITEMDATA, i, 0);

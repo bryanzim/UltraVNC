@@ -241,12 +241,12 @@ inline void VNCLog::ReallyPrintLine(const char* const line)
     if (m_toconsole)
     {
         DWORD byteswritten;
-        ::WriteConsole(::GetStdHandle(STD_OUTPUT_HANDLE), line, std::strlen(line), &byteswritten, nullptr);
+        ::WriteConsole(::GetStdHandle(STD_OUTPUT_HANDLE), line, static_cast<DWORD>(std::strlen(line)), &byteswritten, nullptr);
     };
     if (m_tofile && (hlogfile != nullptr))
     {
         DWORD byteswritten;
-        ::WriteFile(hlogfile, line, std::strlen(line), &byteswritten, nullptr);
+        ::WriteFile(hlogfile, line, static_cast<DWORD>(std::strlen(line)), &byteswritten, nullptr);
     }
 }
 
@@ -274,7 +274,7 @@ void VNCLog::ReallyPrint(const char* const format, const va_list ap)
     if (dwErrorCode != 0)
     {
         if (::FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, dwErrorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                          (char*)szErrorMsg.data(), szErrorMsg.size(), nullptr) == 0)
+                          (char*)szErrorMsg.data(), static_cast<DWORD>(szErrorMsg.size()), nullptr) == 0)
         {
             ::sprintf_s(szErrorMsg.data(), szErrorMsg.size(), "error code 0x%08X", dwErrorCode);
         }

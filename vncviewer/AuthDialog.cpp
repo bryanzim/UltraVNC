@@ -54,17 +54,17 @@ void AuthDialog::SetStatusWindow(HWND hwndStatus, const wchar_t* const className
     }
 }
 
-int AuthDialog::DoDialog(const DialogType dialogType, TCHAR IN_host[MAX_HOST_NAME_LEN], const int IN_port, char hex[24U],
-                         char catchphrase[1024U])
+int AuthDialog::DoDialog(const DialogType dialogTypeIn, TCHAR IN_host[MAX_HOST_NAME_LEN], const int IN_port, char hexIn[24U],
+                         char catchphraseIn[1024U])
 {
     std::array<TCHAR, 10U> tempchar;
     ::_tcscpy_s(_host.data(), _host.size(), IN_host);
     ::_tcscat_s(_host.data(), _host.size(), _T(":"));
     _itot_s(IN_port, tempchar.data(), tempchar.size(), 10);
     ::_tcscat_s(_host.data(), _host.size(), tempchar.data());
-    this->dialogType = dialogType;
-    std::strcpy(this->hex, hex);
-    std::strcpy(this->catchphrase.data(), catchphrase);
+    this->dialogType = dialogTypeIn;
+    std::strcpy(this->hex, hexIn);
+    std::strcpy(this->catchphrase.data(), catchphraseIn);
 
     // Hide status window during authentication if classname is used
     m_statusWasVisible = false;
@@ -76,33 +76,33 @@ int AuthDialog::DoDialog(const DialogType dialogType, TCHAR IN_host[MAX_HOST_NAM
 
     extern HINSTANCE m_hInstResDLL;
     int result{ 0 };
-    switch (dialogType)
+    switch (dialogTypeIn)
     {
     case dtUserPass:
-        result = ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this);
+        result = static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this));
         break;
     case dtPass:
         result =
-            ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG3), nullptr, (DLGPROC)DlgProc1, (LONG_PTR)this);
+            static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG3), nullptr, (DLGPROC)DlgProc1, (LONG_PTR)this));
         break;
     case dtUserPassNotEncryption:
-        result = ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG2), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this);
+        result = static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG2), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this));
         break;
     case dtPassUpgrade:
         result =
-            ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG1), nullptr, (DLGPROC)DlgProc1, (LONG_PTR)this);
+            static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG1), nullptr, (DLGPROC)DlgProc1, (LONG_PTR)this));
         break;
     case dtUserPassRSA:
         m_bPassphraseMode = true;
-        result = ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG4), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this);
+        result = static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG4), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this));
         break;
     case dtPassRSA:
         m_bPassphraseMode = true;
         result =
-            ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG5), nullptr, (DLGPROC)DlgProc1, (LONG_PTR)this);
+            static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG5), nullptr, (DLGPROC)DlgProc1, (LONG_PTR)this));
         break;
     case dtUserToken:
-        result = ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this);
+        result = static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_AUTH_DIALOG), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this));
         break;
     }
 
@@ -232,7 +232,7 @@ BOOL CALLBACK AuthDialog::DlgProc1(const HWND hwnd, const UINT uMsg, const WPARA
         switch (LOWORD(wParam))
         {
         case IDOK: {
-            UINT res = ::GetDlgItemTextA(hwnd, IDC_PASSWD_EDIT, _this->m_passwd.data(), 256);
+            [[maybe_unused]] UINT res = ::GetDlgItemTextA(hwnd, IDC_PASSWD_EDIT, _this->m_passwd.data(), 256);
             _this->m_savePassword = (::IsDlgButtonChecked(hwnd, IDC_SAVE_PASSWORD) == BST_CHECKED);
             ::EndDialog(hwnd, TRUE);
 

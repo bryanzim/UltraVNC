@@ -266,7 +266,7 @@ int ClientConnection::ReadCompactLen()
 //   COLORREF m_tightPalette[256];
 //   CARD8 m_tightPrevRow[2048*3*sizeof(CARD16)];
 
-int ClientConnection::InitFilterCopy(const int rw, const int rh)
+int ClientConnection::InitFilterCopy(const int rw, [[maybe_unused]] const int rh)
 {
     std::array<tightFilterFunc, 3U> funcArray{ &ClientConnection::FilterCopy8, &ClientConnection::FilterCopy16,
                                                &ClientConnection::FilterCopy32 };
@@ -307,7 +307,7 @@ int ClientConnection::InitFilterGradient(const int rw, const int rh)
     return bits;
 }
 
-int ClientConnection::InitFilterPalette(const int rw, const int rh)
+int ClientConnection::InitFilterPalette(const int rw, [[maybe_unused]] const int rh)
 {
     m_tightCurrentFilter = &ClientConnection::FilterPalette;
     m_tightRectWidth = rw;
@@ -558,7 +558,7 @@ static boolean JpegFillInputBuffer(const j_decompress_ptr cinfo) { return Viewer
 
 static void JpegSkipInputData(const j_decompress_ptr cinfo, const long num_bytes) { ViewerJpeg::skipInputData(cinfo, num_bytes); }
 
-static void JpegTermSource(const j_decompress_ptr cinfo) { /* No work necessary here. */ }
+static void JpegTermSource([[maybe_unused]] const j_decompress_ptr cinfo) { /* No work necessary here. */ }
 
 /*static void
 JpegSetSrcManager(j_decompress_ptr cinfo, char *compressedData, int compressedLen)
@@ -585,7 +585,7 @@ void JpegErrorHeader(const j_common_ptr cinfo)
     std::array<char, JMSG_LENGTH_MAX> msg;
     (*cinfo->err->format_message)(cinfo, msg.data());
     std::array<wchar_t, JMSG_LENGTH_MAX> wmsg;
-    ::MultiByteToWideChar(CP_UTF8, 0, msg.data(), -1, wmsg.data(), wmsg.size());
+    ::MultiByteToWideChar(CP_UTF8, 0, msg.data(), -1, wmsg.data(), static_cast<int>(wmsg.size()));
     throw QuietException(wmsg.data());
 }
 void ClientConnection::DecompressJpegRect(int x, int y, const int w, const int h)

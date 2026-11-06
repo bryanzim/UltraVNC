@@ -61,13 +61,13 @@ INT_PTR CALLBACK dialogProcChangePassword(const HWND hwnd, const UINT uMsg, cons
 DlgChangePassword::DlgChangePassword() {}
 DlgChangePassword::~DlgChangePassword() {}
 
-int DlgChangePassword::ShowDlg(const HWND parentWindow, const char* const title, const int passwordSize)
+int DlgChangePassword::ShowDlg(const HWND parentWindow, const char* const titleIn, const int passwordSizeIn)
 {
-    ::strcpy_s(this->title, title);
-    this->passwordSize = passwordSize;
+    ::strcpy_s(this->title, titleIn);
+    this->passwordSize = passwordSizeIn;
 
     const int a =
-        ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_CHANGE_PASSWORD), parentWindow, dialogProcChangePassword, (LPARAM)this);
+        static_cast<int>(::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_CHANGE_PASSWORD), parentWindow, dialogProcChangePassword, (LPARAM)this));
     return a;
 }
 

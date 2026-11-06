@@ -552,11 +552,11 @@ int CheckUserGroupPasswordUni2(char* const userin, char* const password, const c
     {
         typedef BOOL (*LogeventFn)(char* machine, char* user, char* szMslogonLog);
         LogeventFn Logevent = 0;
-        std::array<char, MAX_PATH> szCurrentDir;
-        ::strcpy_s(szCurrentDir.data(), szCurrentDir.size(), winvncFolder.data());
-        ::strcat_s(szCurrentDir.data(), szCurrentDir.size(), "\\logging.dll");
+        std::array<char, MAX_PATH> szCurrentDirInner;
+        ::strcpy_s(szCurrentDirInner.data(), szCurrentDirInner.size(), winvncFolder.data());
+        ::strcat_s(szCurrentDirInner.data(), szCurrentDirInner.size(), "\\logging.dll");
 
-        HMODULE hModule = ::LoadLibrary(szCurrentDir.data());
+        HMODULE hModule = ::LoadLibrary(szCurrentDirInner.data());
         if (hModule)
         {
             Logevent = (LogeventFn)::GetProcAddress(hModule, "LOGFAILEDUSERV2");
@@ -595,11 +595,11 @@ accessOK: //full access
 {
     typedef BOOL (*LogeventFn)(char* machine, char* user, char* szMslogonLog);
     LogeventFn Logevent = 0;
-    std::array<char, MAX_PATH> szCurrentDir;
-    ::strcpy_s(szCurrentDir.data(), szCurrentDir.size(), winvncFolder.data());
-    ::strcat_s(szCurrentDir.data(), szCurrentDir.size(), "\\logging.dll");
+    std::array<char, MAX_PATH> szCurrentDirInner;
+    ::strcpy_s(szCurrentDirInner.data(), szCurrentDirInner.size(), winvncFolder.data());
+    ::strcat_s(szCurrentDirInner.data(), szCurrentDirInner.size(), "\\logging.dll");
 
-    HMODULE hModule = ::LoadLibrary(szCurrentDir.data());
+    HMODULE hModule = ::LoadLibrary(szCurrentDirInner.data());
     if (hModule)
     {
         Logevent = (LogeventFn)::GetProcAddress(hModule, "LOGLOGONUSERV2");
@@ -641,11 +641,11 @@ accessOK2: //readonly
 {
     typedef BOOL (*LogeventFn)(char* machine, char* user, char* szMslogonLog);
     LogeventFn Logevent = 0;
-    std::array<char, MAX_PATH> szCurrentDir;
-    ::strcpy_s(szCurrentDir.data(), szCurrentDir.size(), winvncFolder.data());
-    ::strcat_s(szCurrentDir.data(), szCurrentDir.size(), "\\logging.dll");
+    std::array<char, MAX_PATH> szCurrentDirInner;
+    ::strcpy_s(szCurrentDirInner.data(), szCurrentDirInner.size(), winvncFolder.data());
+    ::strcat_s(szCurrentDirInner.data(), szCurrentDirInner.size(), "\\logging.dll");
 
-    HMODULE hModule = ::LoadLibrary(szCurrentDir.data());
+    HMODULE hModule = ::LoadLibrary(szCurrentDirInner.data());
     if (hModule)
     {
         Logevent = (LogeventFn)::GetProcAddress(hModule, "LOGLOGONUSERV2");

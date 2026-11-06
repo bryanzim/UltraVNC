@@ -30,7 +30,7 @@ typedef struct _WKSTA_INFO_100_NT
 } WKSTA_INFO_100_NT;
 
 
-BOOL APIENTRY DllMain(const HANDLE hModule, const DWORD ul_reason_for_call, const LPVOID lpReserved)
+BOOL APIENTRY DllMain([[maybe_unused]] const HANDLE hModule, const DWORD ul_reason_for_call, [[maybe_unused]] const LPVOID lpReserved)
 {
     switch (ul_reason_for_call)
     {
@@ -57,7 +57,7 @@ bool IsAdmin()
 }
 
 AUTHADMIN_API
-BOOL CUGP(char* const userin, char* const password, char* const machine, char* const groupin, const int locdom)
+BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const machine, [[maybe_unused]] char* const groupin, [[maybe_unused]] const int locdom)
 {
     DWORD dwLogonType;
     DWORD dwLogonProvider;

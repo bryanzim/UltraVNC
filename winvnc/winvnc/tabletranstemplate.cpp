@@ -39,7 +39,7 @@
  * using a single lookup table.
  */
 
-static void rfbTranslateWithSingleTableINVNCtoOUTVNC(char* const table, rfbPixelFormat* const in, rfbPixelFormat* const out,
+static void rfbTranslateWithSingleTableINVNCtoOUTVNC(char* const table, [[maybe_unused]] rfbPixelFormat* const in, [[maybe_unused]] rfbPixelFormat* const out,
                                                      char* const iptr, char* const optr, const int bytesBetweenInputLines,
                                                      const int width, int height)
 {
@@ -69,7 +69,7 @@ static void rfbTranslateWithSingleTableINVNCtoOUTVNC(char* const table, rfbPixel
  * using three separate lookup tables for the red, green and blue values.
  */
 
-static void rfbTranslateWithRGBTablesINVNCtoOUTVNC(char* const table, rfbPixelFormat* in, rfbPixelFormat* const out,
+static void rfbTranslateWithRGBTablesINVNCtoOUTVNC(char* const table, rfbPixelFormat* in, [[maybe_unused]] rfbPixelFormat* const out,
                                                    char* const iptr, char* const optr, const int bytesBetweenInputLines,
                                                    const int width, int height)
 {

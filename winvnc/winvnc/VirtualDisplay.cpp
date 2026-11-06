@@ -598,7 +598,7 @@ bool VirtualDisplay::InstallDriver(const bool fromCommandline)
                     if (fromCommandline)
                     {
                         DWORD byteswritten;
-                        ::WriteConsole(::GetStdHandle(STD_OUTPUT_HANDLE), messageBuffer, std::strlen(messageBuffer), &byteswritten,
+                        ::WriteConsole(::GetStdHandle(STD_OUTPUT_HANDLE), messageBuffer, static_cast<DWORD>(std::strlen(messageBuffer)), &byteswritten,
                                      nullptr);
                         ::Sleep(3000);
                     }
@@ -611,7 +611,7 @@ bool VirtualDisplay::InstallDriver(const bool fromCommandline)
     else if (fromCommandline)
     {
         DWORD byteswritten;
-        ::WriteConsole(::GetStdHandle(STD_OUTPUT_HANDLE), "OS not supported", std::strlen("OS not supported"), &byteswritten, nullptr);
+        ::WriteConsole(::GetStdHandle(STD_OUTPUT_HANDLE), "OS not supported", static_cast<DWORD>(std::strlen("OS not supported")), &byteswritten, nullptr);
         ::Sleep(3000);
     }
 

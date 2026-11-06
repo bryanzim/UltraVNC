@@ -826,7 +826,7 @@ DWORD WINAPI ThreadCheckCursorUpdates(const LPVOID lpParam)
 
 
 
-void* vncDesktopThread::run_undetached(void* const arg)
+void* vncDesktopThread::run_undetached([[maybe_unused]] void* const arg)
 {
     //*******************************************************
     // INIT
@@ -1584,7 +1584,7 @@ void* vncDesktopThread::run_undetached(void* const arg)
     return nullptr;
 }
 
-void writeLog(char* const sender, char* const text)
+void writeLog([[maybe_unused]] char* const sender, [[maybe_unused]] char* const text)
 {
 #ifdef _DEBUG
     std::array<char, 3000U> mess;

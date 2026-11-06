@@ -31,7 +31,7 @@ static const TCHAR FIRST_USEABLE_ID = _T('A');
 static const TCHAR LAST_USEABLE_ID = _T('~');
 static const int MRU_MAX_ITEM_LENGTH{ 256 };
 
-MRU::MRU(const LPTSTR keyname, unsigned int maxnum)
+MRU::MRU([[maybe_unused]] const LPTSTR keyname, unsigned int maxnum)
 {
     VNCOptions::setDefaultOptionsFileName(m_optionfile);
     m_maxnum = maxnum;
@@ -104,7 +104,7 @@ void MRU::AddItem(const LPTSTR txt)
     valname[1U] = _T('\0');
     ::WritePrivateProfileStringW(L"connection", valname.data(), txt, m_optionfile);
     // move all the current ids up one
-    for (int j = ::_tcslen(m_index.data()) + 1; j >= 0; --j)
+    for (int j = static_cast<int>(::_tcslen(m_index.data()) + 1); j >= 0; --j)
     {
         m_index[j] = m_index[j - 1];
     }
@@ -118,7 +118,7 @@ void MRU::AddItem(const LPTSTR txt)
 int MRU::NumItems()
 {
     // return the length of index
-    return ::_tcslen(m_index.data());
+    return static_cast<int>(::_tcslen(m_index.data()));
 }
 
 // Return them in order. 0 is the newest.
@@ -133,9 +133,9 @@ int MRU::GetItem(const int index, const LPTSTR buf, int buflen)
     std::array<TCHAR, 2U> valname;
     valname[0U] = m_index[index];
     valname[1U] = _T('\0');
-    const DWORD dwbuflen = buflen;
+    [[maybe_unused]] const DWORD dwbuflen = buflen;
     ::GetPrivateProfileStringW(L"connection", valname.data(), L"", buf, buflen, m_optionfile);
-    return ::_tcslen(buf);
+    return static_cast<int>(::_tcslen(buf));
 }
 
 // Remove the specified item if it exists.
@@ -222,7 +222,7 @@ void MRU::ReadIndex()
     {
         WriteIndex();
     }
-    const int size = NumItems();
+    [[maybe_unused]] const int size = NumItems();
 }
 
 // Save the index string to the registry

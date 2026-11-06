@@ -172,14 +172,14 @@ static bool ValidateFileTransferPath(const char* const szPath, const char* szUtf
     outCanonical.clear();
 
     std::array<WCHAR, MAX_PATH * 4> szPathW;
-    int nPath = ::MultiByteToWideChar(cp, 0, szPath, -1, szPathW.data(), szPathW.size());
+    int nPath = ::MultiByteToWideChar(cp, 0, szPath, -1, szPathW.data(), static_cast<int>(szPathW.size()));
     if (nPath <= 0)
     {
         return false;
     }
 
     std::array<WCHAR, MAX_PATH * 4> szCanonW;
-    DWORD dwLen = ::GetFullPathNameW(szPathW.data(), szCanonW.size(), szCanonW.data(), nullptr);
+    DWORD dwLen = ::GetFullPathNameW(szPathW.data(), static_cast<DWORD>(szCanonW.size()), szCanonW.data(), nullptr);
     if ((dwLen == 0) || (dwLen >= szCanonW.size()))
     {
         return false;
@@ -221,14 +221,14 @@ static bool ValidateFileTransferPath(const char* const szPath, const char* szUtf
     if (szUtf8Root && (szUtf8Root[0U] != '\0'))
     {
         std::array<WCHAR, MAX_PATH * 4> szRootW;
-        int nRoot = ::MultiByteToWideChar(CP_ACP, 0, szUtf8Root, -1, szRootW.data(), szRootW.size());
+        int nRoot = ::MultiByteToWideChar(CP_ACP, 0, szUtf8Root, -1, szRootW.data(), static_cast<int>(szRootW.size()));
         if (nRoot <= 0)
         {
             return false;
         }
 
         std::array<WCHAR, MAX_PATH * 4> szRootCanonW;
-        DWORD dwRootLen = ::GetFullPathNameW(szRootW.data(), szRootCanonW.size(), szRootCanonW.data(), nullptr);
+        DWORD dwRootLen = ::GetFullPathNameW(szRootW.data(), static_cast<DWORD>(szRootCanonW.size()), szRootCanonW.data(), nullptr);
         if ((dwRootLen == 0) || (dwRootLen >= szRootCanonW.size()))
         {
             return false;
@@ -307,7 +307,7 @@ bool DeleteFileOrDirectory(WCHAR* srcpath)
 static void MakeLongPath(const char* const utf8, WCHAR* const outW, const int outLen)
 {
     std::array<WCHAR, MAX_PATH * 4> tmp;
-    ::MultiByteToWideChar(CP_UTF8, 0, utf8, -1, tmp.data(), tmp.size());
+    ::MultiByteToWideChar(CP_UTF8, 0, utf8, -1, tmp.data(), static_cast<int>(tmp.size()));
     if (tmp[0U] && (tmp[1U] == L':'))
     {
         ::_snwprintf_s(outW, outLen, _TRUNCATE, L"\\\\?\\%s", tmp.data());
@@ -323,8 +323,8 @@ bool replaceFile(const char* const src, const char* const dst)
     // src and dst are UTF-8 paths - use \\?\ prefix for long path support
     std::array<WCHAR, MAX_PATH * 4> srcW;
     std::array<WCHAR, MAX_PATH * 4> dstW;
-    MakeLongPath(src, srcW.data(), srcW.size());
-    MakeLongPath(dst, dstW.data(), dstW.size());
+    MakeLongPath(src, srcW.data(), static_cast<int>(srcW.size()));
+    MakeLongPath(dst, dstW.data(), static_cast<int>(dstW.size()));
 
     DWORD dwFileAttribs;
     bool status;
@@ -383,7 +383,7 @@ bool isDirectory(const char* const name)
     struct _stat statbuf;
     // Convert UTF-8 to Unicode for Chinese character support
     std::array<WCHAR, MAX_PATH> nameW;
-    ::MultiByteToWideChar(CP_UTF8, 0, name, -1, nameW.data(), nameW.size());
+    ::MultiByteToWideChar(CP_UTF8, 0, name, -1, nameW.data(), static_cast<int>(nameW.size()));
     ::_wstat(nameW.data(), &statbuf);
     return (statbuf.st_mode & _S_IFDIR) == _S_IFDIR;
 }
@@ -498,13 +498,13 @@ void vncClient::FTDownloadFailureHook() {}
 void vncClient::FTDownloadCompleteHook() {}
 
 // Called when a new folder is created.
-void vncClient::FTNewFolderHook(const std::string name) {}
+void vncClient::FTNewFolderHook([[maybe_unused]] const std::string name) {}
 
 // called when a folder is created
-void vncClient::FTDeleteHook(const std::string name, const bool isDir) {}
+void vncClient::FTDeleteHook([[maybe_unused]] const std::string name, [[maybe_unused]] const bool isDir) {}
 
 // called when a file or folder is renamed.
-void vncClient::FTRenameHook(const std::string oldName, const std::string newname) {}
+void vncClient::FTRenameHook([[maybe_unused]] const std::string oldName, [[maybe_unused]] const std::string newname) {}
 
 BOOL vncClientUpdateThread::Init(vncClient* client)
 {
@@ -594,7 +594,7 @@ void vncClientUpdateThread::EnableUpdates(BOOL enable)
 
 extern bool g_DesktopThread_running;
 
-void* vncClientUpdateThread::run_undetached(void* const arg)
+void* vncClientUpdateThread::run_undetached([[maybe_unused]] void* const arg)
 {
     rfb::SimpleUpdateTracker update;
     rfb::Region2D clipregion;
@@ -696,7 +696,7 @@ void* vncClientUpdateThread::run_undetached(void* const arg)
                     rsfb.desktop_h = Swap16IfLE(ScreenSize.br.y);
                     rsfb.buffer_w = Swap16IfLE(ViewerSize.br.x);
                     rsfb.buffer_h = Swap16IfLE(ViewerSize.br.y);
-                    omni_mutex_lock l(m_client->GetUpdateLock(), 82);
+                    omni_mutex_lock lInner(m_client->GetUpdateLock(), 82);
                     m_client->m_socket->SendExact((char*)&rsfb, sz_rfbPalmVNCReSizeFrameBufferMsg, rfbPalmVNCReSizeFrameBuffer);
                 }
                 else // eSVNC-UltraVNC Scaling
@@ -706,7 +706,7 @@ void* vncClientUpdateThread::run_undetached(void* const arg)
                     rsmsg.type = rfbResizeFrameBuffer;
                     rsmsg.framebufferWidth = Swap16IfLE(ViewerSize.br.x);
                     rsmsg.framebufferHeigth = Swap16IfLE(ViewerSize.br.y);
-                    omni_mutex_lock l(m_client->GetUpdateLock(), 82);
+                    omni_mutex_lock lInner(m_client->GetUpdateLock(), 82);
                     m_client->m_socket->SendExact((char*)&rsmsg, sz_rfbResizeFrameBufferMsg, rfbResizeFrameBuffer);
                     m_client->m_ScaledScreen = m_client->m_encodemgr.m_buffer->GetViewerSize();
                     m_client->m_nScale = m_client->m_encodemgr.m_buffer->GetScale();
@@ -758,7 +758,7 @@ void* vncClientUpdateThread::run_undetached(void* const arg)
             if (!m_client->m_fFileSessionOpen)
             {
                 bool bShouldFlush{ false };
-                omni_mutex_lock l(m_client->GetUpdateLock(), 82);
+                omni_mutex_lock lInner(m_client->GetUpdateLock(), 82);
                 // adzm - 2010-07 - Extended clipboard
                 // send any clipboard data that should be sent automatically
                 if (m_client->m_clipboard.m_bNeedToProvide)
@@ -1926,7 +1926,7 @@ BOOL vncClientThread::AuthenticateClient(std::vector<CARD8>& current_auth, const
     }
 }
 
-BOOL vncClientThread::AuthenticateLegacyClient(const bool isconnected)
+BOOL vncClientThread::AuthenticateLegacyClient([[maybe_unused]] const bool isconnected)
 {
     vncPasswd::ToText plain(settings->getPasswd(), settings->getSecure());
 
@@ -2312,7 +2312,7 @@ BOOL vncClientThread::AuthSecureVNCPlugin_old(std::string& auth_message)
 // marscha@2006: Try to better hide the windows password.
 // I know that this is no breakthrough in modern cryptography.
 // It's just a patch/kludge/workaround.
-BOOL vncClientThread::AuthMsLogon(std::string& auth_message)
+BOOL vncClientThread::AuthMsLogon([[maybe_unused]] std::string& auth_message)
 {
     DH dh;
     std::array<char, 8U> gen;
@@ -2390,7 +2390,7 @@ BOOL vncClientThread::AuthMsLogon(std::string& auth_message)
 // MS-Logon III: X25519 key exchange, but credentials are still DES-CBC
 // (vncDecryptBytes) under the first 8 bytes of the derived key.
 // Prefer MS-Logon IV (XChaCha20-Poly1305 AEAD) when the viewer supports it.
-BOOL vncClientThread::AuthMsLogonIII(std::string& auth_message)
+BOOL vncClientThread::AuthMsLogonIII([[maybe_unused]] std::string& auth_message)
 {
     // X25519 key exchange
     std::array<unsigned char, crypto_scalarmult_BYTES> server_pk;
@@ -2495,7 +2495,7 @@ BOOL vncClientThread::AuthMsLogonIII(std::string& auth_message)
 // Wire format: server_pk(32) -> client_pk(32) -> user_ct(256+16) -> passwd_ct(64+16).
 // Key and per-message nonces are derived from the shared secret (same derivation
 // as the viewer), so nothing extra travels on the wire beyond ciphertexts + tags.
-BOOL vncClientThread::AuthMsLogonIV(std::string& auth_message)
+BOOL vncClientThread::AuthMsLogonIV([[maybe_unused]] std::string& auth_message)
 {
     // X25519 key exchange
     std::array<unsigned char, crypto_scalarmult_BYTES> server_pk;
@@ -2681,7 +2681,7 @@ BOOL vncClientThread::AuthMsLogonReject(std::string& auth_message)
     return FALSE;
 }
 
-BOOL vncClientThread::AuthVnc(std::string& auth_message)
+BOOL vncClientThread::AuthVnc([[maybe_unused]] std::string& auth_message)
 {
     vncPasswd::ToText plain(settings->getPasswd(), settings->getSecure());
 
@@ -2801,7 +2801,7 @@ BOOL vncClientThread::AuthSCPrompt(std::string& auth_message)
     }
 }
 
-BOOL vncClientThread::AuthSessionSelect(std::string& auth_message)
+BOOL vncClientThread::AuthSessionSelect([[maybe_unused]] std::string& auth_message)
 {
     return TRUE;
     /* Session select */
@@ -3045,8 +3045,8 @@ void GetIPString(char* buffer, const int buflen)
                     std::memset(szText.data(), 0, 256);
                     ::strncpy_s(szText.data(), szText.size(), ipstringbuffer.data(), ipbufferlength - 4);
                     ::strcat_s(szText.data(), szText.size(), "-");
-                    int len = std::strlen(buffer);
-                    int len2 = std::strlen(szText.data());
+                    int len = static_cast<int>(std::strlen(buffer));
+                    int len2 = static_cast<int>(std::strlen(szText.data()));
                     if (len + len2 < buflen)
                     {
                         ::strcat_s(buffer, buflen, szText.data());
@@ -3245,7 +3245,7 @@ bool vncClientThread::TryReconnect()
     return false;
 }
 
-void vncClientThread::run(void* const arg)
+void vncClientThread::run([[maybe_unused]] void* const arg)
 {
 #ifdef _Gii
 #ifdef _USE_DLL
@@ -4375,7 +4375,7 @@ void vncClientThread::run(void* const arg)
                 }
                 rfbGIIClientDeviceCreationMsg rfbGIIClientDeviceCreation{};
                 //prepare already known data
-                omni_mutex_lock ll(m_client->GetUpdateLock(), 777);
+                omni_mutex_lock llInner(m_client->GetUpdateLock(), 777);
                 vnclog.Print(LL_INTINFO, VNCLOG("GII: Get Subtype _rfbGIIDeviceCreation \n"));
                 rfbGIIClientDeviceCreation.header.messageType = rfbGIIMessage;
                 rfbGIIClientDeviceCreation.header.subType = subType;
@@ -4618,8 +4618,8 @@ void vncClientThread::run(void* const arg)
                     msg.pe.y = (Swap16IfLE(msg.pe.y));
                     //Error, msd.pe.x is defined as unsigned while with a negative secondary screen it's negative
                     //offset need to be used later in this function
-                    msg.pe.x = (msg.pe.x) * m_client->m_nScale;
-                    msg.pe.y = (msg.pe.y) * m_client->m_nScale;
+                    msg.pe.x = static_cast<CARD16>((msg.pe.x) * m_client->m_nScale);
+                    msg.pe.y = static_cast<CARD16>((msg.pe.y) * m_client->m_nScale);
 
                     // Work out the flags for this event
                     DWORD flags = MOUSEEVENTF_ABSOLUTE;
@@ -4732,7 +4732,7 @@ void vncClientThread::run(void* const arg)
                         if (msg.pe.buttonMask & rfbWheelDownMask)
                         {
                             flags |= MOUSEEVENTF_WHEEL;
-                            wheel_movement = -WHEEL_DELTA;
+                            wheel_movement = static_cast<DWORD>(-WHEEL_DELTA);
                         }
                         // UltraVNC horizontal wheel
                         if (msg.pe.buttonMask & rfbWheelRightMask)
@@ -4743,7 +4743,7 @@ void vncClientThread::run(void* const arg)
                         if (msg.pe.buttonMask & rfbWheelLeftMask)
                         {
                             flags |= MOUSEEVENTF_HWHEEL;
-                            wheel_movement = -WHEEL_DELTA;
+                            wheel_movement = static_cast<DWORD>(-WHEEL_DELTA);
                         }
                     }
 
@@ -5141,7 +5141,7 @@ void vncClientThread::run(void* const arg)
                         m_client->cl_connected = FALSE;
                         break;
                     }
-                    int id = Swap32IfLE(eds.id);
+                    [[maybe_unused]] int id = Swap32IfLE(eds.id);
                     int x = Swap16IfLE(eds.x);
                     int y = Swap16IfLE(eds.y);
                     int w = Swap16IfLE(eds.width);
@@ -5308,7 +5308,7 @@ void vncClientThread::run(void* const arg)
 #if DEBUG_FT
                     {
                         std::array<WCHAR, MAX_PATH * 4> _dbg;
-                        ::MultiByteToWideChar(CP_UTF8, 0, m_client->m_szFullDestName.data(), -1, _dbg.data(), _dbg.size());
+                        ::MultiByteToWideChar(CP_UTF8, 0, m_client->m_szFullDestName.data(), -1, _dbg.data(), static_cast<int>(_dbg.size()));
                         ::OutputDebugStringW(L"=== SRV FTOffer: m_szFullDestName=");
                         ::OutputDebugStringW(_dbg.data());
                         ::OutputDebugStringW(L"\n");
@@ -5322,7 +5322,7 @@ void vncClientThread::run(void* const arg)
                     unsigned long dwFreeKBytes;
                     {
                         std::array<WCHAR, MAX_PATH * 4> szDestPathW;
-                        ::MultiByteToWideChar(CP_UTF8, 0, m_client->m_szFullDestName.data(), -1, szDestPathW.data(), szDestPathW.size());
+                        ::MultiByteToWideChar(CP_UTF8, 0, m_client->m_szFullDestName.data(), -1, szDestPathW.data(), static_cast<int>(szDestPathW.size()));
                         WCHAR* pSlash = std::wcsrchr(szDestPathW.data(), L'\\');
                         if (pSlash)
                         {
@@ -5405,7 +5405,7 @@ void vncClientThread::run(void* const arg)
                         std::array<WCHAR, MAX_PATH * 4> szFullDestNameW;
                         {
                             std::array<WCHAR, MAX_PATH * 4> szTmp;
-                            ::MultiByteToWideChar(CP_UTF8, 0, m_client->m_szFullDestName.data(), -1, szTmp.data(), szTmp.size());
+                            ::MultiByteToWideChar(CP_UTF8, 0, m_client->m_szFullDestName.data(), -1, szTmp.data(), static_cast<int>(szTmp.size()));
                             // Only add prefix for absolute paths (not UNC) to avoid double-prefix
                             if (szTmp[0U] && (szTmp[1U] == L':'))
                             {
@@ -6140,7 +6140,7 @@ void vncClientThread::run(void* const arg)
                         std::string canonDirCreate;
                         if (ValidateFileTransferPath(szDir.data(), settings->getFileTransferRoot(), canonDirCreate))
                         {
-                            ::MultiByteToWideChar(CP_UTF8, 0, canonDirCreate.c_str(), -1, szDirW.data(), szDirW.size());
+                            ::MultiByteToWideChar(CP_UTF8, 0, canonDirCreate.c_str(), -1, szDirW.data(), static_cast<int>(szDirW.size()));
                             fRet = ::CreateDirectoryW(szDirW.data(), nullptr);
                         }
 
@@ -6202,7 +6202,7 @@ void vncClientThread::run(void* const arg)
                         std::string canonFileDel;
                         if (ValidateFileTransferPath(szFile.data(), settings->getFileTransferRoot(), canonFileDel))
                         {
-                            ::MultiByteToWideChar(CP_UTF8, 0, canonFileDel.c_str(), -1, szFileW.data(), szFileW.size());
+                            ::MultiByteToWideChar(CP_UTF8, 0, canonFileDel.c_str(), -1, szFileW.data(), static_cast<int>(szFileW.size()));
                             fRet = DeleteFileOrDirectory(szFileW.data());
                         }
 
@@ -6267,8 +6267,8 @@ void vncClientThread::run(void* const arg)
                         if (ValidateFileTransferPath(szCurrentName.data(), settings->getFileTransferRoot(), canonCurName) &&
                             ValidateFileTransferPath(szNewName.data(), settings->getFileTransferRoot(), canonNewName))
                         {
-                            MakeLongPath(canonCurName.c_str(), szCurrentNameW.data(), szCurrentNameW.size());
-                            MakeLongPath(canonNewName.c_str(), szNewNameW.data(), szNewNameW.size());
+                            MakeLongPath(canonCurName.c_str(), szCurrentNameW.data(), static_cast<int>(szCurrentNameW.size()));
+                            MakeLongPath(canonNewName.c_str(), szNewNameW.data(), static_cast<int>(szNewNameW.size()));
                             fRet = ::MoveFileExW(szCurrentNameW.data(), szNewNameW.data(), MOVEFILE_REPLACE_EXISTING);
                         }
 
@@ -6956,19 +6956,19 @@ void vncClient::UpdateMouse()
     // offset needed
     if (m_use_PointerPos && !m_cursor_pos_changed)
     {
-        POINT cursorPos;
-        ::GetCursorPos(&cursorPos);
-        cursorPos.x = cursorPos.x - (m_ScreenOffsetx + monitor_Offsetx);
-        cursorPos.y = cursorPos.y - (m_ScreenOffsety + monitor_Offsety);
+        POINT cursorPosInner;
+        ::GetCursorPos(&cursorPosInner);
+        cursorPosInner.x = cursorPosInner.x - (m_ScreenOffsetx + monitor_Offsetx);
+        cursorPosInner.y = cursorPosInner.y - (m_ScreenOffsety + monitor_Offsety);
         //vnclog.Print(LL_INTINFO, VNCLOG("UpdateMouse m_cursor_pos(%d, %d), new(%d, %d)\n"),
         //    m_cursor_pos.x, m_cursor_pos.y, cursorPos.x, cursorPos.y);
-        if ((cursorPos.x != m_cursor_pos.x) || (cursorPos.y != m_cursor_pos.y))
+        if ((cursorPosInner.x != m_cursor_pos.x) || (cursorPosInner.y != m_cursor_pos.y))
         {
             // This movement isn't by this client, but generated locally or by other client.
             // Send it to this client.
             omni_mutex_lock l(GetUpdateLock(), 94);
-            m_cursor_pos.x = cursorPos.x;
-            m_cursor_pos.y = cursorPos.y;
+            m_cursor_pos.x = cursorPosInner.x;
+            m_cursor_pos.y = cursorPosInner.y;
             m_cursor_pos_changed = TRUE;
             TriggerUpdateThread();
         }
@@ -7268,9 +7268,9 @@ BOOL vncClient::SendUpdate(rfb::SimpleUpdateTracker& update)
                 hdr.r.w = Swap16IfLE(mon.Width * m_nScale_viewer / m_nScale);
                 hdr.r.h = Swap16IfLE(mon.Height * m_nScale_viewer / m_nScale);
                 hdr.encoding = Swap32IfLE(rfbEncodingExtViewSize);
-                rfbFramebufferUpdateMsg header{};
-                header.nRects = Swap16IfLE(1);
-                SendRFBMsgQueue(rfbFramebufferUpdate, (BYTE*)&header, sz_rfbFramebufferUpdateMsg);
+                rfbFramebufferUpdateMsg headerInner{};
+                headerInner.nRects = Swap16IfLE(1);
+                SendRFBMsgQueue(rfbFramebufferUpdate, (BYTE*)&headerInner, sz_rfbFramebufferUpdateMsg);
                 m_socket->SendExact((char*)&hdr, sizeof(hdr));
             }
             sizeUpdateSent = true;
@@ -8049,7 +8049,7 @@ int vncClient::GenerateFileChecksums(const HANDLE hFile, char* const lpCSBuffer,
 // Destination file already exists
 // The server sends the checksums of this file in one shot.
 //
-bool vncClient::ReceiveDestinationFileChecksums(const int nSize, const int nLen)
+bool vncClient::ReceiveDestinationFileChecksums([[maybe_unused]] const int nSize, const int nLen)
 {
     if ((nLen < 0) || (nLen > 104857600))
     { // 100 MBytes max
@@ -8202,11 +8202,11 @@ void vncClient::FinishFileReception()
     {
         FILETIME DestFileTime;
         SYSTEMTIME FileTime{};
-        FileTime.wMonth = atoi(m_szFileTime.data());
-        FileTime.wDay = atoi(m_szFileTime.data() + 3);
-        FileTime.wYear = atoi(m_szFileTime.data() + 6);
-        FileTime.wHour = atoi(m_szFileTime.data() + 11);
-        FileTime.wMinute = atoi(m_szFileTime.data() + 14);
+        FileTime.wMonth = static_cast<WORD>(atoi(m_szFileTime.data()));
+        FileTime.wDay = static_cast<WORD>(atoi(m_szFileTime.data() + 3));
+        FileTime.wYear = static_cast<WORD>(atoi(m_szFileTime.data() + 6));
+        FileTime.wHour = static_cast<WORD>(atoi(m_szFileTime.data() + 11));
+        FileTime.wMinute = static_cast<WORD>(atoi(m_szFileTime.data() + 14));
         FileTime.wMilliseconds = 0;
         FileTime.wSecond = 0;
         ::SystemTimeToFileTime(&FileTime, &DestFileTime);
@@ -8254,7 +8254,7 @@ void vncClient::FinishFileReception()
         SplitTransferredFileNameAndDate(m_szFullDestName.data(), 0);
         {
             std::array<WCHAR, MAX_PATH * 4> _dp;
-            MakeLongPath(m_szFullDestName.data(), _dp.data(), _dp.size());
+            MakeLongPath(m_szFullDestName.data(), _dp.data(), static_cast<int>(_dp.size()));
             ::DeleteFileW(_dp.data());
         }
         FTDownloadCancelledHook();
@@ -8562,11 +8562,11 @@ int vncClient::ZipPossibleDirectory(const LPSTR szSrcFileName)
         ::GetTempPathW(MAX_PATH * 4, szWorkingDirW.data());
         if (m_fFTUserImpersonatedOk)
         {
-            ::MultiByteToWideChar(CP_ACP, 0, m_szTempDir.data(), -1, szWorkingDirW.data(), szWorkingDirW.size());
+            ::MultiByteToWideChar(CP_ACP, 0, m_szTempDir.data(), -1, szWorkingDirW.data(), static_cast<int>(szWorkingDirW.size()));
         }
         if (szWorkingDirW[0U] == L'\0')
         {
-            if (::GetModuleFileNameW(nullptr, szWorkingDirW.data(), szWorkingDirW.size()))
+            if (::GetModuleFileNameW(nullptr, szWorkingDirW.data(), static_cast<DWORD>(szWorkingDirW.size())))
             {
                 WCHAR* p = std::wcsrchr(szWorkingDirW.data(), L'\\');
                 if (p == nullptr)
@@ -8583,7 +8583,7 @@ int vncClient::ZipPossibleDirectory(const LPSTR szSrcFileName)
 
         // Convert UTF-8 input path to Unicode
         std::array<WCHAR, MAX_PATH * 4> szSrcFileNameW;
-        ::MultiByteToWideChar(CP_UTF8, 0, szSrcFileName, -1, szSrcFileNameW.data(), szSrcFileNameW.size());
+        ::MultiByteToWideChar(CP_UTF8, 0, szSrcFileName, -1, szSrcFileNameW.data(), static_cast<int>(szSrcFileNameW.size()));
 
         // Parse: "C:\parent\[ dirname ]" -> szPathW="C:\parent\", szDirNameW="dirname"
         std::array<WCHAR, MAX_PATH * 4> szPathW;
@@ -8616,7 +8616,7 @@ int vncClient::ZipPossibleDirectory(const LPSTR szSrcFileName)
         m_OrigSourceDirectoryName = std::string(szSrcFileName); // keep for reference
 
         std::array<WCHAR, MAX_PATH * 4> szShortSrcW;
-        if (!::GetShortPathNameW(szSrcDirW.data(), szShortSrcW.data(), szShortSrcW.size()))
+        if (!::GetShortPathNameW(szSrcDirW.data(), szShortSrcW.data(), static_cast<DWORD>(szShortSrcW.size())))
         {
             ::wcscpy_s(szShortSrcW.data(), szShortSrcW.size(), szSrcDirW.data());
         }
@@ -8627,7 +8627,7 @@ int vncClient::ZipPossibleDirectory(const LPSTR szSrcFileName)
 
         // Hex-encode UTF-8 dirname for zip filename so viewer can recover original name
         std::array<char, MAX_PATH * 4> szDirNameUtf8;
-        ::WideCharToMultiByte(CP_UTF8, 0, szDirNameW.data(), -1, szDirNameUtf8.data(), szDirNameUtf8.size(), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_UTF8, 0, szDirNameW.data(), -1, szDirNameUtf8.data(), static_cast<int>(szDirNameUtf8.size()), nullptr, nullptr);
         std::array<char, MAX_PATH * 8> szHexName;
         szHexName[0U] = '\0';
         for (int _hi{ 0 }; (szDirNameUtf8[_hi] != '\0') && (_hi < MAX_PATH * 4 - 1); ++_hi)
@@ -8698,9 +8698,9 @@ int vncClient::CheckAndZipDirectoryForChecksuming(const LPSTR szSrcFileName)
             std::array<WCHAR, MAX_PATH * 4> szPathW;
             std::array<WCHAR, MAX_PATH * 4> szDirectoryNameW;
             std::array<WCHAR, MAX_PATH * 4> szSrcFileNameW;
-            ::MultiByteToWideChar(CP_ACP, 0, szPath.data(), -1, szPathW.data(), szPathW.size());
-            ::MultiByteToWideChar(CP_ACP, 0, szDirectoryName.data(), -1, szDirectoryNameW.data(), szDirectoryNameW.size());
-            ::MultiByteToWideChar(CP_ACP, 0, szSrcFileName, -1, szSrcFileNameW.data(), szSrcFileNameW.size());
+            ::MultiByteToWideChar(CP_ACP, 0, szPath.data(), -1, szPathW.data(), static_cast<int>(szPathW.size()));
+            ::MultiByteToWideChar(CP_ACP, 0, szDirectoryName.data(), -1, szDirectoryNameW.data(), static_cast<int>(szDirectoryNameW.size()));
+            ::MultiByteToWideChar(CP_ACP, 0, szSrcFileName, -1, szSrcFileNameW.data(), static_cast<int>(szSrcFileNameW.size()));
 
             bool fZip = m_pZipUnZip->ZipDirectory(szPathW.data(), szDirectoryNameW.data(), szSrcFileNameW.data(), true);
             if (!fZip)
@@ -8737,7 +8737,7 @@ bool vncClient::UnzipPossibleDirectory(const LPSTR szFileName)
 
         {
             std::array<WCHAR, MAX_PATH * 4> _dbg2;
-            ::MultiByteToWideChar(CP_ACP, 0, szDirName.data(), -1, _dbg2.data(), _dbg2.size());
+            ::MultiByteToWideChar(CP_ACP, 0, szDirName.data(), -1, _dbg2.data(), static_cast<int>(_dbg2.size()));
             vnclog.Print(0, _T("  Hex dirname: %s\n"), _dbg2.data());
         }
 
@@ -8766,7 +8766,7 @@ bool vncClient::UnzipPossibleDirectory(const LPSTR szFileName)
                 szUtf8[nBytes] = static_cast<char>(std::strtol(_hx, nullptr, 16));
             }
             szUtf8[nBytes] = '\0';
-            ::MultiByteToWideChar(CP_UTF8, 0, szUtf8.data(), -1, szFinalDirNameW.data(), szFinalDirNameW.size());
+            ::MultiByteToWideChar(CP_UTF8, 0, szUtf8.data(), -1, szFinalDirNameW.data(), static_cast<int>(szFinalDirNameW.size()));
             vnclog.Print(0, _T("  Decoded dirname: %s\n"), szFinalDirNameW.data());
         }
 
@@ -8775,14 +8775,14 @@ bool vncClient::UnzipPossibleDirectory(const LPSTR szFileName)
         // specifiers and trailing dots/spaces before extracting anything.
         UINT cpName = m_fClientSupportsUnicode ? CP_UTF8 : CP_ACP;
         std::array<WCHAR, MAX_PATH * 4> szDirNameW2;
-        ::MultiByteToWideChar(cpName, 0, szDirName.data(), -1, szDirNameW2.data(), szDirNameW2.size());
+        ::MultiByteToWideChar(cpName, 0, szDirName.data(), -1, szDirNameW2.data(), static_cast<int>(szDirNameW2.size()));
         const WCHAR* szEffectiveNameW = (std::wcslen(szFinalDirNameW.data()) > 0) ? szFinalDirNameW.data() : szDirNameW2.data();
         if (!helper::IsSafeFileNameW(szEffectiveNameW))
         {
             vnclog.Print(0, _T("  REJECTED unsafe dir name: %s\n"), szEffectiveNameW);
             m_fFileDownloadError = true;
             std::array<WCHAR, MAX_PATH * 4> szZipDelW;
-            MakeLongPath(szFileName, szZipDelW.data(), szZipDelW.size());
+            MakeLongPath(szFileName, szZipDelW.data(), static_cast<int>(szZipDelW.size()));
             ::DeleteFileW(szZipDelW.data());
             return true;
         }
@@ -8798,8 +8798,8 @@ bool vncClient::UnzipPossibleDirectory(const LPSTR szFileName)
         UINT cp = m_fClientSupportsUnicode ? CP_UTF8 : CP_ACP;
         std::array<WCHAR, MAX_PATH * 4> szPathW;
         std::array<WCHAR, MAX_PATH * 4> szFileNameW;
-        ::MultiByteToWideChar(cp, 0, szPath.data(), -1, szPathW.data(), szPathW.size());
-        ::MultiByteToWideChar(cp, 0, szFileName, -1, szFileNameW.data(), szFileNameW.size());
+        ::MultiByteToWideChar(cp, 0, szPath.data(), -1, szPathW.data(), static_cast<int>(szPathW.size()));
+        ::MultiByteToWideChar(cp, 0, szFileName, -1, szFileNameW.data(), static_cast<int>(szFileNameW.size()));
 
         bool bUnzipOk{ false };
         __try
@@ -8812,7 +8812,7 @@ bool vncClient::UnzipPossibleDirectory(const LPSTR szFileName)
         }
         {
             std::array<WCHAR, MAX_PATH * 4> _dp;
-            MakeLongPath(szFileName, _dp.data(), _dp.size());
+            MakeLongPath(szFileName, _dp.data(), static_cast<int>(_dp.size()));
             ::DeleteFileW(_dp.data());
         }
 
@@ -8824,9 +8824,9 @@ bool vncClient::UnzipPossibleDirectory(const LPSTR szFileName)
             std::array<WCHAR, MAX_PATH * 4> szExtractPathW;
             std::array<WCHAR, MAX_PATH * 4> szFinalPathW;
             // Parent path (destination dir) from szFileName
-            std::array<WCHAR, MAX_PATH * 4> szFileNameW;
-            ::MultiByteToWideChar(cp, 0, szFileName, -1, szFileNameW.data(), szFileNameW.size());
-            ::wcscpy_s(szExtractPathW.data(), szExtractPathW.size(), szFileNameW.data());
+            std::array<WCHAR, MAX_PATH * 4> szFileNameWInner;
+            ::MultiByteToWideChar(cp, 0, szFileName, -1, szFileNameWInner.data(), static_cast<int>(szFileNameWInner.size()));
+            ::wcscpy_s(szExtractPathW.data(), szExtractPathW.size(), szFileNameWInner.data());
             WCHAR* pParent = std::wcsrchr(szExtractPathW.data(), L'\\');
             if (pParent)
             {
@@ -8840,7 +8840,7 @@ bool vncClient::UnzipPossibleDirectory(const LPSTR szFileName)
             if (pParent)
             {
                 std::array<WCHAR, MAX_PATH * 4> szParentW;
-                ::wcscpy_s(szParentW.data(), szParentW.size(), szFileNameW.data());
+                ::wcscpy_s(szParentW.data(), szParentW.size(), szFileNameWInner.data());
                 WCHAR* pp2 = std::wcsrchr(szParentW.data(), L'\\');
                 if (pp2)
                 {
@@ -8891,7 +8891,7 @@ bool vncClient::MyGetFileSize(char* const szFilePath, ULARGE_INTEGER* const n2Fi
 
     // Convert UTF-8 to Unicode for Chinese character support
     std::array<WCHAR, MAX_PATH + 64> szFilePathW;
-    ::MultiByteToWideChar(CP_UTF8, 0, szFilePath, -1, szFilePathW.data(), szFilePathW.size());
+    ::MultiByteToWideChar(CP_UTF8, 0, szFilePath, -1, szFilePathW.data(), static_cast<int>(szFilePathW.size()));
 
     DWORD errmode = ::SetErrorMode(SEM_FAILCRITICALERRORS); // No popup please !
     ff = ::FindFirstFileW(szFilePathW.data(), &fdW);
@@ -8967,7 +8967,7 @@ bool vncClient::DoFTUserImpersonation()
             }
             vnclog.Print(LL_INTERR, VNCLOG("%%%%%%%%%%%%% vncClient::DoFTUserImpersonation - thread = %d\n"), ::GetCurrentThreadId());
 
-            ::ExpandEnvironmentStringsForUser(m_hPToken, "%TEMP%", m_szTempDir.data(), m_szTempDir.size());
+            ::ExpandEnvironmentStringsForUser(m_hPToken, "%TEMP%", m_szTempDir.data(), static_cast<DWORD>(m_szTempDir.size()));
             ::strcat_s(m_szTempDir.data(), m_szTempDir.size(), "\\");
         }
         if (!settings->RunningFromExternalService())
@@ -9061,7 +9061,7 @@ void vncClient::SendMonitorInfo()
     rfbMonitorMsg mm;
     std::memset(&mm, 0, sizeof mm);
     mm.type = rfbMonitorInfo;
-    mm.nbr = m_encodemgr.m_buffer->m_desktop->nr_monitors;
+    mm.nbr = static_cast<CARD8>(m_encodemgr.m_buffer->m_desktop->nr_monitors);
     m_socket->SendExact((char*)&mm, sz_rfbMonitorMsg, rfbMonitorInfo);
 }
 
@@ -9225,7 +9225,7 @@ int vncClient::filetransferrequestPart2(const int nDirZipRet)
     // Open source file
     // Convert UTF-8 filename to Unicode for Chinese character support
     std::array<WCHAR, MAX_PATH * 4> szSrcFileNameW;
-    ::MultiByteToWideChar(CP_UTF8, 0, m_szSrcFileName.data(), -1, szSrcFileNameW.data(), szSrcFileNameW.size());
+    ::MultiByteToWideChar(CP_UTF8, 0, m_szSrcFileName.data(), -1, szSrcFileNameW.data(), static_cast<int>(szSrcFileNameW.size()));
     m_hSrcFile = ::CreateFileW(szSrcFileNameW.data(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING,
                              FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 
@@ -9322,10 +9322,10 @@ int vncClient::filetransferrequestPart2(const int nDirZipRet)
 }
 
 extern HINSTANCE hAppInstance;
-void vncClient::SetHasMouse(const bool has_mouse)
+void vncClient::SetHasMouse(const bool has_mouseIn)
 {
-    this->has_mouse = has_mouse;
-    if (has_mouse)
+    this->has_mouse = has_mouseIn;
+    if (has_mouseIn)
     {
         if (simulateCursor)
         {

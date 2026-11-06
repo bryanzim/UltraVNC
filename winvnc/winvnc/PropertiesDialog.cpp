@@ -342,7 +342,7 @@ static bool ValidatorHasManagementUi(const HWND hwnd)
     constexpr int TV_CAP_MANAGEMENT_UI{ 0x02 };
 
     std::array<char, MAX_PATH> dllPath{};
-    ::GetDlgItemTextA(hwnd, IDC_VENCRYPT_DLLPATH, dllPath.data(), dllPath.size());
+    ::GetDlgItemTextA(hwnd, IDC_VENCRYPT_DLLPATH, dllPath.data(), static_cast<int>(dllPath.size()));
     HMODULE hMod = SafeLoadValidatorDllA(hwnd, dllPath.data(), false);
     if (!hMod)
     {
@@ -743,7 +743,7 @@ bool PropertiesDialog::InitDialog(const HWND hwnd)
     ::SetWindowPos(hTabService, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
     return TRUE;
 };
-int PropertiesDialog::HandleNotify(const HWND hwndDlg, const WPARAM wParam, const LPARAM lParam)
+int PropertiesDialog::HandleNotify([[maybe_unused]] const HWND hwndDlg, [[maybe_unused]] const WPARAM wParam, const LPARAM lParam)
 {
     LPNMHDR pn = (LPNMHDR)lParam;
     switch (pn->code)
@@ -901,7 +901,7 @@ BOOL CALLBACK DlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, con
         return _this->DlgInitDialog(hwnd);
     }
     case WM_CTLCOLORDLG:
-        return (INT_PTR)::GetStockObject(WHITE_BRUSH);
+        return static_cast<BOOL>((INT_PTR)::GetStockObject(WHITE_BRUSH));
     case WM_CTLCOLORSTATIC: {
         HDC hdcStatic = (HDC)wParam;
         ::SetTextColor(hdcStatic, RGB(0, 0, 0));
@@ -909,11 +909,11 @@ BOOL CALLBACK DlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, con
         return static_cast<LONG>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
     }
     case WM_NOTIFY: {
-        const int a{ 0 };
+        [[maybe_unused]] const int a{ 0 };
         LPNMHDR nmhdr = (LPNMHDR)lParam;
         if (nmhdr->idFrom == IDC_SLIDERFPS)
         {
-            int fps = ::SendMessage(::GetDlgItem(hwnd, IDC_SLIDERFPS), TBM_GETPOS, 0, 0L);
+            int fps = static_cast<int>(::SendMessage(::GetDlgItem(hwnd, IDC_SLIDERFPS), TBM_GETPOS, 0, 0L));
             if (fps != settings->getMaxFPS())
             {
                 ::EnableWindow(::GetDlgItem(_this->PropertiesDialogHwnd, IDC_APPLY), true);
@@ -1326,7 +1326,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
 
         std::array<TCHAR, MAX_PATH> szPlugin;
         std::array<TCHAR, MAX_PATH> szPluginDefault{"No Plugin detected..."};
-        ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), szPlugin.size());
+        ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), static_cast<int>(szPlugin.size()));
         bool pluginset = (std::strcmp(szPlugin.data(), szPluginDefault.data()) != 0) && (std::strlen(szPlugin.data()) > 0);
         ::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_SETCHECK, settings->getUseDSMPlugin(), 0);
         ::EnableWindow(::GetDlgItem(hwnd, IDC_PLUGIN_BUTTON),
@@ -1600,7 +1600,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
         std::array<wchar_t, MAX_PATH> exePathW;
         std::array<wchar_t, MAX_PATH> languagesPathW;
         std::array<wchar_t, MAX_PATH> dllPathW;
-        ::GetModuleFileNameW(nullptr, exePathW.data(), exePathW.size());
+        ::GetModuleFileNameW(nullptr, exePathW.data(), static_cast<DWORD>(exePathW.size()));
         wchar_t* lastSlashW = std::wcsrchr(exePathW.data(), L'\\');
         if (lastSlashW)
         {
@@ -1641,7 +1641,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
                     if (hLangDll)
                     {
                         // Try to load IDS_LANGUAGE_NAME string resource from DLL using Unicode
-                        if (::LoadStringW(hLangDll, IDS_LANGUAGE_NAME, displayNameW.data(), displayNameW.size()) > 0)
+                        if (::LoadStringW(hLangDll, IDS_LANGUAGE_NAME, displayNameW.data(), static_cast<int>(displayNameW.size())) > 0)
                         {
                             // Successfully loaded language name from DLL
                             idx = static_cast<int>(::SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)displayNameW.data()));
@@ -1884,11 +1884,11 @@ void PropertiesDialog::ShowImpersonateDialog()
     }
 }
 
-int PropertiesDialog::ShowDialog(const bool standalone)
+int PropertiesDialog::ShowDialog(const bool standaloneIn)
 {
-    this->standalone = standalone;
-    const int result = ::DialogBoxParam(hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_PROPERTIESDIALOG), nullptr,
-                                      (DLGPROC)PropertiesDlgProc, (LONG_PTR)this);
+    this->standalone = standaloneIn;
+    const int result = static_cast<int>(::DialogBoxParam(hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_PROPERTIESDIALOG), nullptr,
+                                      (DLGPROC)PropertiesDlgProc, (LONG_PTR)this));
     // Apply settings to the running server so DSM plugin changes take effect
     // immediately without requiring a restart.
     UpdateServer();
@@ -2288,7 +2288,7 @@ bool PropertiesDialog::onCommand(int command, const HWND hwnd, const int subcomm
 
     case IDC_VENCRYPT_MANAGE: {
         std::array<char, MAX_PATH> dllPath{};
-        ::GetDlgItemTextA(hwnd, IDC_VENCRYPT_DLLPATH, dllPath.data(), dllPath.size());
+        ::GetDlgItemTextA(hwnd, IDC_VENCRYPT_DLLPATH, dllPath.data(), static_cast<int>(dllPath.size()));
         HMODULE hMod = SafeLoadValidatorDllA(hwnd, dllPath.data(), true);
         if (!hMod)
         {
@@ -2316,7 +2316,7 @@ bool PropertiesDialog::onCommand(int command, const HWND hwnd, const int subcomm
 
     case IDC_VENCRYPT_DLL_BROWSE: {
         std::array<char, MAX_PATH> file{};
-        ::GetDlgItemText(hwnd, IDC_VENCRYPT_DLLPATH, file.data(), file.size());
+        ::GetDlgItemText(hwnd, IDC_VENCRYPT_DLLPATH, file.data(), static_cast<int>(file.size()));
         OPENFILENAMEA ofn{};
         ofn.lStructSize = sizeof(ofn);
         ofn.hwndOwner = hwnd;
@@ -2335,17 +2335,17 @@ bool PropertiesDialog::onCommand(int command, const HWND hwnd, const int subcomm
         // TightVNC 1.2.7 method
         // The user has clicked on the socket connect tickbox
         {
-            BOOL bConnectSock = (::SendDlgItemMessage(hwnd, IDC_CONNECT_SOCK, BM_GETCHECK, 0, 0) == BST_CHECKED);
+            BOOL bConnectSockIn = (::SendDlgItemMessage(hwnd, IDC_CONNECT_SOCK, BM_GETCHECK, 0, 0) == BST_CHECKED);
             BOOL bConnectHttp = (::SendDlgItemMessage(hwnd, IDC_CONNECT_HTTP, BM_GETCHECK, 0, 0) == BST_CHECKED);
 
             HWND hPortNoAuto = ::GetDlgItem(hwnd, IDC_PORTNO_AUTO);
-            ::EnableWindow(hPortNoAuto, bConnectSock);
+            ::EnableWindow(hPortNoAuto, bConnectSockIn);
             HWND hSpecPort = ::GetDlgItem(hwnd, IDC_SPECPORT);
-            ::EnableWindow(hSpecPort, bConnectSock);
+            ::EnableWindow(hSpecPort, bConnectSockIn);
             ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTRFB),
-                         (bConnectSock && (::SendMessage(hSpecPort, BM_GETCHECK, 0, 0) == BST_CHECKED)));
+                         (bConnectSockIn && (::SendMessage(hSpecPort, BM_GETCHECK, 0, 0) == BST_CHECKED)));
             ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTHTTP),
-                         (bConnectSock && (::SendMessage(hSpecPort, BM_GETCHECK, 0, 0) == BST_CHECKED) && bConnectHttp));
+                         (bConnectSockIn && (::SendMessage(hSpecPort, BM_GETCHECK, 0, 0) == BST_CHECKED) && bConnectHttp));
         }
         return TRUE;
 
@@ -2402,7 +2402,7 @@ bool PropertiesDialog::onCommand(int command, const HWND hwnd, const int subcomm
     case IDC_PLUGIN_CHECK: {
         std::array<TCHAR, MAX_PATH> szPlugin;
         std::array<TCHAR, MAX_PATH> szPluginDefault{"No Plugin detected..."};
-        ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), szPlugin.size());
+        ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), static_cast<int>(szPlugin.size()));
         bool pluginset = (std::strcmp(szPlugin.data(), szPluginDefault.data()) != 0) && (std::strlen(szPlugin.data()) > 0);
         if (m_server)
         {
@@ -2451,7 +2451,7 @@ bool PropertiesDialog::onCommand(int command, const HWND hwnd, const int subcomm
 
             std::array<char, MAX_PATH + 32> dir;
             std::array<char, MAX_PATH> exe_file_name;
-            ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+            ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
             ::sprintf_s(dir.data(), dir.size(), "\"%s\" -securityeditorhelper", exe_file_name.data());
 
             STARTUPINFO StartUPInfo;
@@ -2597,7 +2597,7 @@ bool PropertiesDialog::onCommand(int command, const HWND hwnd, const int subcomm
         if (::SendMessage(hPlugin, BM_GETCHECK, 0, 0) == BST_CHECKED)
         {
             std::array<TCHAR, MAX_PATH> szPlugin;
-            ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), szPlugin.size());
+            ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), static_cast<int>(szPlugin.size()));
             ::PathStripPathA(szPlugin.data());
             if (m_server)
             {
@@ -2787,7 +2787,7 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
 
     if (::GetDlgItem(hwnd, IDC_SLIDERFPS))
     {
-        int pos = ::SendMessage(::GetDlgItem(hwnd, IDC_SLIDERFPS), TBM_GETPOS, 0, 0L);
+        int pos = static_cast<int>(::SendMessage(::GetDlgItem(hwnd, IDC_SLIDERFPS), TBM_GETPOS, 0, 0L));
         settings->setMaxFPS(pos);
     }
 
@@ -3398,7 +3398,7 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
         if (::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED)
         {
             std::array<TCHAR, MAX_PATH> szPlugin;
-            ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), szPlugin.size());
+            ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), static_cast<int>(szPlugin.size()));
             settings->setSzDSMPlugin(szPlugin.data());
             settings->setUseDSMPlugin(true);
         }
@@ -3482,7 +3482,7 @@ void PropertiesDialog::onTabsOK(const HWND hwnd)
 
 void PropertiesDialog::InitPortSettings(const HWND hwnd)
 {
-    BOOL bConnectSock = m_server ? m_server->SockConnected() : false;
+    BOOL bConnectSockIn = m_server ? m_server->SockConnected() : false;
     BOOL bConnectHttp = settings->getHTTPConnect();
     BOOL bAutoPort = settings->getAutoPortSelect();
     UINT port_rfb = settings->getPortNumber();
@@ -3494,23 +3494,23 @@ void PropertiesDialog::InitPortSettings(const HWND hwnd)
     if (::GetDlgItem(hwnd, IDC_PORTNO_AUTO))
     {
         ::CheckDlgButton(hwnd, IDC_PORTNO_AUTO, (bAutoPort) ? BST_CHECKED : BST_UNCHECKED);
-        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTNO_AUTO), bConnectSock);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTNO_AUTO), bConnectSockIn);
     }
 
     if (::GetDlgItem(hwnd, IDC_PORTRFB))
     {
         ::SetDlgItemInt(hwnd, IDC_PORTRFB, port_rfb, FALSE);
-        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTRFB), (bConnectSock && !bAutoPort && !bValidDisplay));
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTRFB), (bConnectSockIn && !bAutoPort && !bValidDisplay));
     }
 
     if (::GetDlgItem(hwnd, IDC_PORTHTTP))
     {
         ::SetDlgItemInt(hwnd, IDC_PORTHTTP, port_http, FALSE);
-        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTHTTP), (bConnectSock && !bAutoPort && !bValidDisplay && bConnectHttp));
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTHTTP), (bConnectSockIn && !bAutoPort && !bValidDisplay && bConnectHttp));
     }
 }
 
-void PropertiesDialog::onApply(const HWND hwnd)
+void PropertiesDialog::onApply([[maybe_unused]] const HWND hwnd)
 {
     ::SendMessage(hTabAuthentication, WM_COMMAND, IDC_APPLY, 0);
     ::SendMessage(hTabIncoming, WM_COMMAND, IDC_APPLY, 0);
@@ -3660,7 +3660,7 @@ void PropertiesDialog::LogToEdit(const std::string& message)
 
     // Set the new content and scroll to the end
     ::SetWindowText(hEditLog, oss.str().c_str());
-    ::SendMessage(hEditLog, EM_SETSEL, -1, -1);    // Move the caret to the end
+    ::SendMessage(hEditLog, EM_SETSEL, static_cast<WPARAM>(-1), -1);    // Move the caret to the end
     ::SendMessage(hEditLog, EM_SCROLLCARET, 0, 0); // Ensure the last line is visible
     ::GetWindowText(hEditLog, buffer, sizeof(buffer));
 }

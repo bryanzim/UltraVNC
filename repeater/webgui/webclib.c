@@ -53,7 +53,7 @@ wi_printf(wi_sess * sess, char * fmt, ...)
       return;
 
    /* Try to make sure we won't overflow the print buffer */
-   len = strlen(fmt);
+   len = (int)(strlen(fmt));
    if(len > sizeof(output)/2 )
    {
       dtrap();
@@ -67,7 +67,7 @@ wi_printf(wi_sess * sess, char * fmt, ...)
    output[sizeof(output) - 1] = '\0';
 
    /* See if we overflowed the print buffer */
-   len = strlen(output);
+   len = (int)(strlen(output));
    if(len >= sizeof(output) - 1)
    {
       dprintf("wi_printf: overflow, output: %s\n", output);
@@ -127,7 +127,7 @@ wi_formvalue( wi_sess * sess, char * ctlname )
    int      namelen;
    struct wi_form_s * form;
 
-   namelen = strlen(ctlname);
+   namelen = (int)(strlen(ctlname));
    for(form = sess->ws_formlist; form; form = form->next)
    {
       for(i = 0; i < form->paircount; i++)

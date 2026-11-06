@@ -95,7 +95,7 @@ BOOL CALLBACK DlgProcMISC(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
             if (std::strlen(path) == 0)
             {
                 std::array<char, MAX_PATH> WORKDIR;
-                if (::GetModuleFileName(nullptr, WORKDIR.data(), WORKDIR.size()))
+                if (::GetModuleFileName(nullptr, WORKDIR.data(), static_cast<DWORD>(WORKDIR.size())))
                 {
                     char* p = std::strrchr(WORKDIR.data(), '\\');
                     if (p == nullptr)
@@ -116,7 +116,7 @@ BOOL CALLBACK DlgProcMISC(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
             if (std::strlen(path) == 0)
             {
                 std::array<char, MAX_PATH> WORKDIR;
-                if (::GetModuleFileName(nullptr, WORKDIR.data(), WORKDIR.size()))
+                if (::GetModuleFileName(nullptr, WORKDIR.data(), static_cast<DWORD>(WORKDIR.size())))
                 {
                     char* p = std::strrchr(WORKDIR.data(), '\\');
                     if (p == nullptr)

@@ -28,7 +28,7 @@ extern char buildtime[];
 void convertToISO8601(const char* const input, char* const output, const std::size_t size);
 
 // Process the About dialog.
-static LRESULT CALLBACK MessageDlgProc2(const HWND hwnd, const UINT iMsg, const WPARAM wParam, const LPARAM lParam)
+static LRESULT CALLBACK MessageDlgProc2(const HWND hwnd, const UINT iMsg, const WPARAM wParam, [[maybe_unused]] const LPARAM lParam)
 {
     switch (iMsg)
     {
@@ -117,7 +117,7 @@ void ShowMessageBox2(char* const info, const int error_nr)
     use_wide_msg2 = false;
     infomsg2 = info;
     g_error_nr2 = error_nr;
-    const int res = ::DialogBox(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_APP_MESSAGE2), nullptr, (DLGPROC)MessageDlgProc2);
+    [[maybe_unused]] const int res = static_cast<int>(::DialogBox(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_APP_MESSAGE2), nullptr, (DLGPROC)MessageDlgProc2));
 }
 
 void ShowMessageBox2(const wchar_t* const info, const int error_nr)
@@ -125,5 +125,5 @@ void ShowMessageBox2(const wchar_t* const info, const int error_nr)
     use_wide_msg2 = true;
     infomsg2_w = info;
     g_error_nr2 = error_nr;
-    const int res = ::DialogBox(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_APP_MESSAGE2), nullptr, (DLGPROC)MessageDlgProc2);
+    [[maybe_unused]] const int res = static_cast<int>(::DialogBox(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_APP_MESSAGE2), nullptr, (DLGPROC)MessageDlgProc2));
 }

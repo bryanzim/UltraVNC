@@ -99,7 +99,7 @@ void vncCad::delete_softwareCAD_elevated()
     }
 
     std::array<char, MAX_PATH> exe_file_name;
-    ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     SHELLEXECUTEINFO shExecInfo;
     shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
     shExecInfo.fMask = 0;
@@ -123,7 +123,7 @@ void vncCad::Enable_softwareCAD_elevated()
         return;
     }
     std::array<char, MAX_PATH> exe_file_name;
-    ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     SHELLEXECUTEINFO shExecInfo;
     shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
     shExecInfo.fMask = 0;
@@ -182,7 +182,7 @@ bool vncCad::IsSoftwareCadEnabled()
     }
 }
 
-DWORD WINAPI vncCad::Cadthread(const LPVOID lpParam)
+DWORD WINAPI vncCad::Cadthread([[maybe_unused]] const LPVOID lpParam)
 {
     //SET THREAD in CURRENT INPUTDESKTOP
     HANDLE hShutdownEventcad;
@@ -209,7 +209,7 @@ DWORD WINAPI vncCad::Cadthread(const LPVOID lpParam)
             {
                 std::array<char, MAX_PATH + 32> dir;
                 std::array<char, MAX_PATH> exe_file_name;
-                ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+                ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
                 ::sprintf_s(dir.data(), dir.size(), "\"%s\" -softwarecadhelper", exe_file_name.data());
 
                 STARTUPINFO StartUPInfo{};
@@ -259,7 +259,7 @@ gotome:
     { // call cad.exe
         std::array<char, MAX_PATH> WORKDIR;
         std::array<char, MAX_PATH> mycommand;
-        if (::GetModuleFileName(nullptr, WORKDIR.data(), WORKDIR.size()))
+        if (::GetModuleFileName(nullptr, WORKDIR.data(), static_cast<DWORD>(WORKDIR.size())))
         {
             char* p = std::strrchr(WORKDIR.data(), '\\');
             if (p == nullptr)

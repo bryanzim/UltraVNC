@@ -57,7 +57,7 @@ VideoDriver::~VideoDriver()
     }
 }
 //----------------------------------------------------------
-void VideoDriver::videoDriver_start(const int x, int y, const int w, const int h, const bool onlyVirtual, const int maxFPS)
+void VideoDriver::videoDriver_start(const int x, int y, const int w, const int h, [[maybe_unused]] const bool onlyVirtual, [[maybe_unused]] const int maxFPS)
 {
     if (init)
     {
@@ -683,7 +683,7 @@ bool VideoDriver::mirror_driver_attach_XP(int x, int y, const int w, int h)
 HDC VideoDriver::getDcMirror()
 {
     HDC m_hrootdc = nullptr;
-    LPSTR driverName = "mv video hook driver2";
+    LPSTR driverNameLocal = "mv video hook driver2";
     BOOL DriverFound;
     DEVMODE devmode;
     ::FillMemory(&devmode, sizeof(DEVMODE), 0);
@@ -702,7 +702,7 @@ HDC VideoDriver::getDcMirror()
     DriverFound = false;
     while (result = ::EnumDisplayDevicesA(nullptr, devNum, &dd, 0))
     {
-        if (std::strcmp((const char*)&dd.DeviceString[0U], driverName) == 0)
+        if (std::strcmp((const char*)&dd.DeviceString[0U], driverNameLocal) == 0)
         {
             DriverFound = true;
             break;

@@ -22,8 +22,8 @@ ZstdInStream::ZstdInStream(int bufSize_)
 	bytesIn(0)
 {
 	zstds = ZSTD_createDStream();
-	unsigned int inSize = ZSTD_DStreamInSize();
-	unsigned int outSize = ZSTD_DStreamOutSize();
+	unsigned int inSize = static_cast<unsigned int>(ZSTD_DStreamInSize());
+	unsigned int outSize = static_cast<unsigned int>(ZSTD_DStreamOutSize());
 	bufSize = inSize > outSize ? inSize : outSize;
 	bufSize = bufSize_ > bufSize ? bufSize_ : bufSize;
 	outBuffer = new ZSTD_outBuffer;

@@ -191,7 +191,7 @@ void ClientConnection::UpdateRemoteClipboard(CARD32 overrideFlags)
                 unixcontents[j] = '\0';
                 try
                 {
-                    SendClientCutText(unixcontents, std::strlen(unixcontents));
+                    SendClientCutText(unixcontents, static_cast<int>(std::strlen(unixcontents)));
                 }
                 catch (WarningException& e)
                 {
@@ -324,7 +324,7 @@ void ClientConnection::UpdateLocalClipboard(char* const buf, int len)
             return;
         }
 
-        int finalLen = std::strlen(wincontents) + 1;
+        int finalLen = static_cast<int>(std::strlen(wincontents) + 1);
 
         // Allocate a global memory object for the text.
         HGLOBAL hglbCopy = ::GlobalAlloc(GMEM_DDESHARE, finalLen); // in bytes
@@ -376,7 +376,7 @@ void ClientConnection::SaveClipboardPreferences()
         ::sprintf_s(buf.data(), buf.size(), "%d", dwClipboardPrefs);
         {
             std::array<char, MAX_PATH> _fn;
-            ::WideCharToMultiByte(CP_UTF8, 0, m_opts->getDefaultOptionsFileName(), -1, _fn.data(), _fn.size(), nullptr, nullptr);
+            ::WideCharToMultiByte(CP_UTF8, 0, m_opts->getDefaultOptionsFileName(), -1, _fn.data(), static_cast<int>(_fn.size()), nullptr, nullptr);
             vnclog.Print(1, _T("Saving to %S\n"), m_opts->getDefaultOptionsFileName());
             ::WritePrivateProfileStringA("connection", "ClipboardPrefs", buf.data(), _fn.data());
         }
@@ -390,7 +390,7 @@ bool ClientConnection::LoadClipboardPreferences()
     //	ofnInit();
     {
         std::array<char, MAX_PATH> _fn;
-        ::WideCharToMultiByte(CP_UTF8, 0, m_opts->getDefaultOptionsFileName(), -1, _fn.data(), _fn.size(), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_UTF8, 0, m_opts->getDefaultOptionsFileName(), -1, _fn.data(), static_cast<int>(_fn.size()), nullptr, nullptr);
         vnclog.Print(1, _T("Loading from %S\n"), m_opts->getDefaultOptionsFileName());
         dwClipboardPrefs = clipText | clipRTF | clipHTML;
         dwClipboardPrefs = ::GetPrivateProfileIntA("connection", "ClipboardPrefs", dwClipboardPrefs, _fn.data());

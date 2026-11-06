@@ -55,7 +55,7 @@ HWND networkproc;
 std::array<char, 256U> strLocalIP;
 std::array<char, 256U> strExternIP;
 
-DWORD WINAPI upnpthread(const LPVOID lpParam)
+DWORD WINAPI upnpthread([[maybe_unused]] const LPVOID lpParam)
 {
 #if !defined(__MINGW32__)
     if (FAILED(::CoInitializeEx(0, COINIT_APARTMENTTHREADED)))
@@ -101,7 +101,7 @@ DWORD WINAPI upnpthread(const LPVOID lpParam)
     return 0;
 }
 
-DWORD WINAPI checkthread(const LPVOID lpParam)
+DWORD WINAPI checkthread([[maybe_unused]] const LPVOID lpParam)
 {
 #if !defined(__MINGW32__)
     if (FAILED(::CoInitializeEx(0, COINIT_APARTMENTTHREADED)))
@@ -119,7 +119,7 @@ DWORD WINAPI checkthread(const LPVOID lpParam)
     return 0;
 }
 
-DWORD WINAPI mapthread(const LPVOID lpParam)
+DWORD WINAPI mapthread([[maybe_unused]] const LPVOID lpParam)
 {
 #if !defined(__MINGW32__)
     if (FAILED(::CoInitializeEx(0, COINIT_APARTMENTTHREADED)))
@@ -163,7 +163,7 @@ DWORD WINAPI mapthread(const LPVOID lpParam)
     return 0;
 }
 
-DWORD WINAPI unmapthread(const LPVOID lpParam)
+DWORD WINAPI unmapthread([[maybe_unused]] const LPVOID lpParam)
 {
 #if !defined(__MINGW32__)
     if (FAILED(::CoInitializeEx(0, COINIT_APARTMENTTHREADED)))
@@ -207,7 +207,7 @@ DWORD WINAPI unmapthread(const LPVOID lpParam)
     return 0;
 }
 
-DWORD WINAPI Fixhread(const LPVOID lpParam)
+DWORD WINAPI Fixhread([[maybe_unused]] const LPVOID lpParam)
 {
 #if !defined(__MINGW32__)
     if (FAILED(::CoInitializeEx(0, COINIT_APARTMENTTHREADED)))
@@ -287,27 +287,27 @@ BOOL CALLBACK DlgProcOptions1(const HWND hwnd, const UINT uMsg, const WPARAM wPa
             break;
         case IDC_CHECKUPNP: {
             DWORD dw;
-            HANDLE thread = ::CreateThread(nullptr, 0, checkthread, nullptr, 0, &dw);
+            [[maybe_unused]] HANDLE thread = ::CreateThread(nullptr, 0, checkthread, nullptr, 0, &dw);
         }
         break;
         case IDC_TESTNET: {
             DWORD dw;
-            HANDLE thread = ::CreateThread(nullptr, 0, upnpthread, nullptr, 0, &dw);
+            [[maybe_unused]] HANDLE thread = ::CreateThread(nullptr, 0, upnpthread, nullptr, 0, &dw);
         }
         break;
         case IDC_FIXUPNP: {
             DWORD dw;
-            HANDLE thread = ::CreateThread(nullptr, 0, Fixhread, nullptr, 0, &dw);
+            [[maybe_unused]] HANDLE thread = ::CreateThread(nullptr, 0, Fixhread, nullptr, 0, &dw);
         }
         break;
         case IDC_UPNPON: {
             DWORD dw;
-            HANDLE thread = ::CreateThread(nullptr, 0, mapthread, nullptr, 0, &dw);
+            [[maybe_unused]] HANDLE thread = ::CreateThread(nullptr, 0, mapthread, nullptr, 0, &dw);
         }
         break;
         case IDC_UPNPOFF: {
             DWORD dw;
-            HANDLE thread = ::CreateThread(nullptr, 0, unmapthread, nullptr, 0, &dw);
+            [[maybe_unused]] HANDLE thread = ::CreateThread(nullptr, 0, unmapthread, nullptr, 0, &dw);
         }
         break;
         case IDC_HELP2:
@@ -356,9 +356,9 @@ BOOL CALLBACK DlgProcOptions1(const HWND hwnd, const UINT uMsg, const WPARAM wPa
                 ::EnableWindow(::GetDlgItem(hwnd, IDC_TESTNET), (SocketConnect && !AutoPortSelect && UPNP_status));
                 ::EnableWindow(::GetDlgItem(hwnd, IDC_CHECKUPNP), (SocketConnect && !AutoPortSelect));
                 ::EnableWindow(::GetDlgItem(hwnd, IDC_FIXUPNP), (!UPNP_status && UPNP_status_checked));
-                BOOL ok1, ok2;
-                PortNumber = ::GetDlgItemInt(hwnd, IDC_PORTRFB, &ok1, TRUE);
-                HttpPortNumber = ::GetDlgItemInt(hwnd, IDC_PORTHTTP, &ok2, TRUE);
+                BOOL ok1Inner, ok2Inner;
+                PortNumber = ::GetDlgItemInt(hwnd, IDC_PORTRFB, &ok1Inner, TRUE);
+                HttpPortNumber = ::GetDlgItemInt(hwnd, IDC_PORTHTTP, &ok2Inner, TRUE);
             }
             break;
         }

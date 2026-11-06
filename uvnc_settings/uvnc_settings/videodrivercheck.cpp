@@ -66,7 +66,7 @@ BOOL GetDllProductVersion(char* const dllName, char* vBuffer, const int size)
     }
     versionInfo = new char[sVersion];
 
-    const BOOL resultVersion = ::GetFileVersionInfo(dllName, 0, sVersion, versionInfo);
+    [[maybe_unused]] const BOOL resultVersion = ::GetFileVersionInfo(dllName, 0, sVersion, versionInfo);
 
     BOOL resultValue = ::VerQueryValue(versionInfo,
 
@@ -96,7 +96,7 @@ BOOL GetDllProductVersion(char* const dllName, char* vBuffer, const int size)
 bool CheckVideoDriver(const bool Box)
 {
     typedef BOOL(WINAPI * pEnumDisplayDevices)(PVOID, DWORD, PVOID, DWORD);
-    HDC m_hrootdc = nullptr;
+    [[maybe_unused]] HDC m_hrootdc = nullptr;
     pEnumDisplayDevices pd;
     LPSTR driverName = "mv video hook driver2";
     BOOL DriverFound;
@@ -104,7 +104,7 @@ bool CheckVideoDriver(const bool Box)
     ::FillMemory(&devmode, sizeof(DEVMODE), 0);
     devmode.dmSize = sizeof(DEVMODE);
     devmode.dmDriverExtra = 0;
-    const BOOL change = ::EnumDisplaySettings(nullptr, ENUM_CURRENT_SETTINGS, &devmode);
+    [[maybe_unused]] const BOOL change = ::EnumDisplaySettings(nullptr, ENUM_CURRENT_SETTINGS, &devmode);
     devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
     HMODULE hUser32 = ::LoadLibrary("USER32");
     pd = (pEnumDisplayDevices)::GetProcAddress(hUser32, "EnumDisplayDevicesA");

@@ -359,7 +359,7 @@ void des(unsigned char* const inblock, unsigned char* const outblock)
     unscrun(work.data(), outblock);
     return;
 }
-int vncEncryptPasswd(char* const passwd, char* const encryptedPasswd)
+int vncEncryptPasswd(char* const passwdLocal, char* const encryptedPasswd)
 {
     std::size_t i;
 
@@ -367,9 +367,9 @@ int vncEncryptPasswd(char* const passwd, char* const encryptedPasswd)
 
     for (i = 0; i < MAXPWLEN; ++i)
     {
-        if (i < std::strlen(passwd))
+        if (i < std::strlen(passwdLocal))
         {
-            encryptedPasswd[i] = passwd[i];
+            encryptedPasswd[i] = passwdLocal[i];
         }
         else
         {
@@ -388,14 +388,14 @@ int vncEncryptPasswd(char* const passwd, char* const encryptedPasswd)
 
 char* vncDecryptPasswd(char* const inouttext)
 {
-    unsigned char* passwd = (unsigned char*)std::malloc(9);
+    unsigned char* passwdLocal = (unsigned char*)std::malloc(9);
 
     deskey(fixedkey.data(), DE1);
-    des((unsigned char*)inouttext, passwd);
+    des((unsigned char*)inouttext, passwdLocal);
 
-    passwd[8U] = 0;
+    passwdLocal[8U] = 0;
 
-    return (char*)passwd;
+    return (char*)passwdLocal;
 }
 
 BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
@@ -447,7 +447,7 @@ BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, co
             if (::SendMessage(hPlugin, BM_GETCHECK, 0, 0) == BST_CHECKED)
             {
                 std::array<TCHAR, MAX_PATH> szPlugin;
-                ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), szPlugin.size());
+                ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), static_cast<int>(szPlugin.size()));
                 if (!GetDSMPluginPointer()->IsLoaded())
                 {
                     GetDSMPluginPointer()->LoadPlugin(szPlugin.data(), false);
@@ -514,7 +514,7 @@ BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, co
                 typedef void (*vncEditSecurityFn)(HWND hwnd, HINSTANCE hInstance);
                 vncEditSecurityFn vncEditSecurity = 0;
                 std::array<char, MAX_PATH> szCurrentDir;
-                if (::GetModuleFileName(nullptr, szCurrentDir.data(), szCurrentDir.size()))
+                if (::GetModuleFileName(nullptr, szCurrentDir.data(), static_cast<DWORD>(szCurrentDir.size())))
                 {
                     char* p = std::strrchr(szCurrentDir.data(), '\\');
                     *p = '\0';
@@ -524,7 +524,7 @@ BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, co
                 if (hModule)
                 {
                     vncEditSecurity = (vncEditSecurityFn)::GetProcAddress(hModule, "vncEditSecurity");
-                    HRESULT hr = ::CoInitialize(nullptr);
+                    [[maybe_unused]] HRESULT hr = ::CoInitialize(nullptr);
                     vncEditSecurity(nullptr, hInst);
                     ::CoUninitialize();
                     ::FreeLibrary(hModule);
@@ -566,7 +566,7 @@ BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, co
             UseDSMPlugin = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_PLUGIN_CHECK, BM_GETCHECK, 0, 0));
             ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, DSMPlugin.data(), 128);                        //PGM
             std::array<char, MAXPWLEN + 1> plaintext1;                                                  //PGM
-            int len = ::GetDlgItemText(hwnd, IDC_PASSWORD, (LPSTR)plaintext1.data(), plaintext1.size()); //PGM
+            int len = ::GetDlgItemText(hwnd, IDC_PASSWORD, (LPSTR)plaintext1.data(), static_cast<int>(plaintext1.size())); //PGM
             if (len == 0)
             {
                 std::strcpy(passwd, "");
@@ -578,7 +578,7 @@ BOOL CALLBACK security(const HWND hwnd, const UINT uMsg, const WPARAM wParam, co
 
             std::memset(plaintext1.data(), '\0', 9);                                            //PGM
             len = 0;                                                                     //PGM
-            len = ::GetDlgItemText(hwnd, IDC_PASSWORD2, (LPSTR)plaintext1.data(), plaintext1.size()); //PGM
+            len = ::GetDlgItemText(hwnd, IDC_PASSWORD2, (LPSTR)plaintext1.data(), static_cast<int>(plaintext1.size())); //PGM
             if (len == 0)                                                                //PGM
             {                                                                            //PGM
                 std::strcpy(passwd2, "");                                                //PGM

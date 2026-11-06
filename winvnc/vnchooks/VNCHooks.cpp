@@ -134,7 +134,7 @@ BOOL ExitInstance();
 // The DLL's main procedure
 BOOL WINAPI DllMain(const HANDLE hInst, const ULONG ul_reason_for_call, const LPVOID lpReserved)
 {
-    HANDLE filemapping = nullptr;
+    HANDLE filemappingLocal = nullptr;
     // Find out why we're being called
     switch (ul_reason_for_call)
     {
@@ -144,27 +144,27 @@ BOOL WINAPI DllMain(const HANDLE hInst, const ULONG ul_reason_for_call, const LP
         _RPT0(_CRT_WARN, "vncHooks : Hook DLL loaded\n");
 #endif
 
-        filemapping =
+        filemappingLocal =
             ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, sizeof(shared_variables), "Local\\SeamlessRDPData");
 
-        if (filemapping)
+        if (filemappingLocal)
         {
             /* From MSDN: The initial contents of
                the pages in a file mapping object
                backed by the paging file are 0
                (zero)." */
-            g_shdata = (shared_variables*)::MapViewOfFile(filemapping, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+            g_shdata = (shared_variables*)::MapViewOfFile(filemappingLocal, FILE_MAP_ALL_ACCESS, 0, 0, 0);
         }
-        if (!filemapping || !g_shdata)
+        if (!filemappingLocal || !g_shdata)
         {
             /* Clean up in reverse order */
             if (g_shdata)
             {
                 ::UnmapViewOfFile(g_shdata);
             }
-            if (filemapping)
+            if (filemappingLocal)
             {
-                ::CloseHandle(filemapping);
+                ::CloseHandle(filemappingLocal);
             }
             return FALSE;
         }
@@ -197,9 +197,9 @@ BOOL WINAPI DllMain(const HANDLE hInst, const ULONG ul_reason_for_call, const LP
             {
                 ::UnmapViewOfFile(g_shdata);
             }
-            if (filemapping)
+            if (filemappingLocal)
             {
-                ::CloseHandle(filemapping);
+                ::CloseHandle(filemappingLocal);
             }
         }
         isAttached = FALSE;
@@ -311,7 +311,7 @@ DllExport BOOL SetHooks(DWORD thread_id, const UINT UpdateMsg, const UINT CopyMs
 
 // EnumWindows procedure to remove the extra property we added
 
-BOOL CALLBACK KillPropsProc(const HWND hwnd, const LPARAM lParam)
+BOOL CALLBACK KillPropsProc(const HWND hwnd, [[maybe_unused]] const LPARAM lParam)
 {
     // Remove our custom property...
     ::RemoveProp(hwnd, (LPCTSTR)MAKELONG(VNC_POPUPSELN_ATOM, 0));
@@ -563,7 +563,7 @@ inline void SendDeferredBorderRect(const HWND hWnd)
     }
 }
 // ddihook, we only need the mouse info
-inline BOOL HookHandleddi(const UINT MessageId, const HWND hWnd, const WPARAM wParam, const LPARAM lParam)
+inline BOOL HookHandleddi(const UINT MessageId, [[maybe_unused]] const HWND hWnd, [[maybe_unused]] const WPARAM wParam, [[maybe_unused]] const LPARAM lParam)
 {
     switch (MessageId)
     {
@@ -1152,7 +1152,7 @@ BOOL InitInstance()
     DWORD size;
 
     // Attempt to get the program/module name
-    if ((size = ::GetModuleFileName(::GetModuleHandle(nullptr), (char*)proc_name.data(), proc_name.size())) == 0)
+    if ((size = ::GetModuleFileName(::GetModuleHandle(nullptr), (char*)proc_name.data(), static_cast<DWORD>(proc_name.size()))) == 0)
     {
         return FALSE;
     }
@@ -1201,7 +1201,7 @@ BOOL ExitInstance()
         DWORD size;
 
         // Attempt to get the program/module name
-        if ((size = ::GetModuleFileName(::GetModuleHandle(nullptr), (char*)proc_name.data(), proc_name.size())) == 0)
+        if ((size = ::GetModuleFileName(::GetModuleHandle(nullptr), (char*)proc_name.data(), static_cast<DWORD>(proc_name.size()))) == 0)
         {
             return FALSE;
         }

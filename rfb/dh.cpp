@@ -257,7 +257,7 @@ bool vncWc2Mb(char* const multibyte, WCHAR* const widechar, const int length, co
     multibyte[0U] = '\0';
     /* Security fix: use wcsnlen with max length to prevent OOB read
      * if widechar is not properly null-terminated (FINDING-004) */
-    int origlen = wcsnlen(widechar, widechar_count);
+    int origlen = static_cast<int>(wcsnlen(widechar, widechar_count));
     if (origlen > length)
     {
         return false;

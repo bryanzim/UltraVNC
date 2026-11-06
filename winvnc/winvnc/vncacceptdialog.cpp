@@ -73,7 +73,7 @@ DWORD WINAPI DialogThread(const LPVOID lpParam)
     //	[v1.0.2-jp1 fix]
     //int retVal = DialogBoxParam(hAppInstance, MAKEINTRESOURCE(IDD_ACCEPT_CONN),
     int retVal =
-        ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_ACCEPT_CONN), nullptr, (DLGPROC)dialog->vncAcceptDlgProc, (LONG_PTR)dialog);
+        static_cast<int>(::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_ACCEPT_CONN), nullptr, (DLGPROC)dialog->vncAcceptDlgProc, (LONG_PTR)dialog));
 
     ::SetThreadDesktop(old_desktop);
     ::CloseDesktop(desktop);
@@ -121,7 +121,7 @@ BOOL CALLBACK vncAcceptDialog::vncAcceptDlgProc(const HWND hwnd, const UINT uMsg
         // Save the lParam into our user data so that subsequent calls have
         // access to the parent C++ object
         helper::SafeSetWindowUserData(hwnd, lParam);
-        vncAcceptDialog* _this = (vncAcceptDialog*)lParam;
+        vncAcceptDialog* _thisInner = (vncAcceptDialog*)lParam;
 
         // Set the IP-address string
         std::array<char, 512U> baseMsg;
@@ -135,20 +135,20 @@ BOOL CALLBACK vncAcceptDialog::vncAcceptDlgProc(const HWND hwnd, const UINT uMsg
         // Base accept/reject message is in the system/INI code page (CP_ACP).
         // The infoMsg is either UTF-8 (new Unicode path) or CP_ACP (legacy viewer).
         std::array<wchar_t, 512U> wAcceptReject{ 0 };
-        ::MultiByteToWideChar(CP_ACP, 0, baseMsg.data(), -1, wAcceptReject.data(), wAcceptReject.size());
+        ::MultiByteToWideChar(CP_ACP, 0, baseMsg.data(), -1, wAcceptReject.data(), static_cast<int>(wAcceptReject.size()));
 
-        if (std::strlen(_this->infoMsg) > 0)
+        if (std::strlen(_thisInner->infoMsg) > 0)
         {
             ::wcscat_s(wAcceptReject.data(), wAcceptReject.size(), L"\r\n");
             std::array<wchar_t, 256U> wInfo{ 0 };
-            UINT cp = _this->m_infoMsgIsUtf8 ? CP_UTF8 : CP_ACP;
-            ::MultiByteToWideChar(cp, 0, _this->infoMsg, -1, wInfo.data(), wInfo.size());
+            UINT cp = _thisInner->m_infoMsgIsUtf8 ? CP_UTF8 : CP_ACP;
+            ::MultiByteToWideChar(cp, 0, _thisInner->infoMsg, -1, wInfo.data(), static_cast<int>(wInfo.size()));
             ::wcscat_s(wAcceptReject.data(), wAcceptReject.size(), wInfo.data());
         }
         ::SetDlgItemTextW(hwnd, IDC_STATIC_TEXT1, wAcceptReject.data());
 
         std::array<wchar_t, 256U> wIpAddress{ 0 };
-        ::MultiByteToWideChar(CP_ACP, 0, _this->m_ipAddress, -1, wIpAddress.data(), wIpAddress.size());
+        ::MultiByteToWideChar(CP_ACP, 0, _thisInner->m_ipAddress, -1, wIpAddress.data(), static_cast<int>(wIpAddress.size()));
         ::SetDlgItemTextW(hwnd, IDC_ACCEPT_IP, wIpAddress.data());
 
         {
@@ -161,7 +161,7 @@ BOOL CALLBACK vncAcceptDialog::vncAcceptDlgProc(const HWND hwnd, const UINT uMsg
 
         if (::SetTimer(hwnd, 1, 1000, nullptr) == 0)
         {
-            if (_this->m_acceptOnTimeout)
+            if (_thisInner->m_acceptOnTimeout)
             {
                 ::EndDialog(hwnd, IDACCEPT);
             }
@@ -170,20 +170,20 @@ BOOL CALLBACK vncAcceptDialog::vncAcceptDlgProc(const HWND hwnd, const UINT uMsg
                 ::EndDialog(hwnd, IDREJECT);
             }
         }
-        _this->m_timeoutCount = _this->m_timeoutSecs;
+        _thisInner->m_timeoutCount = _thisInner->m_timeoutSecs;
 
         std::array<char, 256U> temp;
-        if (_this->m_acceptOnTimeout)
+        if (_thisInner->m_acceptOnTimeout)
         {
-            ::sprintf_s(temp.data(), temp.size(), "AutoAccept:%u", (_this->m_timeoutCount));
+            ::sprintf_s(temp.data(), temp.size(), "AutoAccept:%u", (_thisInner->m_timeoutCount));
         }
         else
         {
-            ::sprintf_s(temp.data(), temp.size(), "AutoReject:%u", (_this->m_timeoutCount));
+            ::sprintf_s(temp.data(), temp.size(), "AutoReject:%u", (_thisInner->m_timeoutCount));
         }
         ::SetDlgItemText(hwnd, IDC_ACCEPT_TIMEOUT, temp.data());
 
-        if (!_this->m_foreground_hack)
+        if (!_thisInner->m_foreground_hack)
         {
             ::SetForegroundWindow(hwnd);
         }

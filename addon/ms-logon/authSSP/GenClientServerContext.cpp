@@ -22,7 +22,7 @@
 extern Fn fn;
 
 
-BOOL APIENTRY DllMain(const HANDLE hModule, const DWORD ul_reason_for_call, const LPVOID lpReserved)
+BOOL APIENTRY DllMain([[maybe_unused]] const HANDLE hModule, const DWORD ul_reason_for_call, [[maybe_unused]] const LPVOID lpReserved)
 {
     switch (ul_reason_for_call)
     {

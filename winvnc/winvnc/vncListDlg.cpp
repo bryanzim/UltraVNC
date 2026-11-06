@@ -77,7 +77,7 @@ BOOL CALLBACK vncListDlg::DialogProc(const HWND hwnd, const UINT uMsg, const WPA
         HWND hList = ::GetDlgItem(hwnd, IDC_VIEWERS_LISTBOX);
 
         _this->m_pServer->ListAuthClients(hList);
-        ::SendMessage(hList, LB_SETCURSEL, -1, 0);
+        ::SendMessage(hList, LB_SETCURSEL, static_cast<WPARAM>(-1), 0);
 
         // adzm 2009-07-05
         HWND hPendingList = ::GetDlgItem(hwnd, IDC_PENDING_LISTBOX);
@@ -151,7 +151,7 @@ BOOL CALLBACK vncListDlg::DialogProc(const HWND hwnd, const UINT uMsg, const WPA
     case WM_UPDATEVIEWERS: {
         HWND hList = ::GetDlgItem(hwnd, IDC_VIEWERS_LISTBOX);
         _this->m_pServer->ListAuthClients(hList);
-        ::SendMessage(hList, LB_SETCURSEL, -1, 0);
+        ::SendMessage(hList, LB_SETCURSEL, static_cast<WPARAM>(-1), 0);
         HWND hPendingList = ::GetDlgItem(hwnd, IDC_PENDING_LISTBOX);
         _this->m_pServer->ListUnauthClients(hPendingList);
 

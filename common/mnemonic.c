@@ -424,7 +424,7 @@ mn_encode (void *src, int srcsize, char *dest, int destsize, char *format)
 	}
       word = mn_encode_word (src, srcsize, n);
       for (size_t i = 0; i < strlen(word); i++)
-        capitalword[i] = (i == 0 && (n == 0 || n == 3)) ? toupper(word[i]) : word[i];
+        capitalword[i] = (char)((i == 0 && (n == 0 || n == 3)) ? toupper(word[i]) : word[i]);
       if (word == 0)
 	return MN_EOVERRUN;	/* shouldn't happen, actually */
       capitalwordPtr = capitalword;

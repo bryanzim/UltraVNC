@@ -101,14 +101,14 @@ void convertToISO8601(const char* const input, char* const output, const std::si
     std::sscanf(input, "%3s %d %d %d:%d:%d", monthStr.data(), &day, &year, &hour, &minute, &second);
 
     // Convert month abbreviation to number (1-12)
-    month = (std::strstr(months, monthStr.data()) - months) / 3 + 1;
+    month = static_cast<int>((std::strstr(months, monthStr.data()) - months) / 3 + 1);
 
     // Format into ISO 8601 format "YYYY-MM-DDTHH:MM:SS"
     std::snprintf(output, size, "%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
 }
 
 // Process the About dialog.
-static LRESULT CALLBACK AboutDlgProc(const HWND hwnd, const UINT iMsg, const WPARAM wParam, const LPARAM lParam)
+static LRESULT CALLBACK AboutDlgProc(const HWND hwnd, const UINT iMsg, const WPARAM wParam, [[maybe_unused]] const LPARAM lParam)
 {
     switch (iMsg)
     {
@@ -158,4 +158,6 @@ static LRESULT CALLBACK AboutDlgProc(const HWND hwnd, const UINT iMsg, const WPA
 }
 
 void ShowAboutBox()
-{ const int res = ::DialogBox(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_APP_ABOUT), nullptr, (DLGPROC)AboutDlgProc); }
+{
+    [[maybe_unused]] const int res = static_cast<int>(::DialogBox(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_APP_ABOUT), nullptr, (DLGPROC)AboutDlgProc));
+}

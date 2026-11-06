@@ -33,7 +33,7 @@ namespace rdr
         void reposition(const int pos) { ptr = start + pos; }
 
     private:
-        int overrun(const int itemSize, const int nItems) { throw EndOfStream("overrun"); }
+        int overrun([[maybe_unused]] int itemSize, [[maybe_unused]] int nItems) { throw EndOfStream("overrun"); }
         const U8* start;
     };
 

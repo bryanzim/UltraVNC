@@ -61,7 +61,7 @@ namespace serviceHelpers
     void Set_stop_service_as_admin()
     {
         std::array<char, MAX_PATH> exe_file_name;
-        ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+        ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
         SHELLEXECUTEINFO shExecInfo{};
 
@@ -98,7 +98,7 @@ namespace serviceHelpers
         }
 
         std::array<char, MAX_PATH> szSystemDir;
-        if (::GetSystemDirectoryA(szSystemDir.data(), szSystemDir.size()) == 0)
+        if (::GetSystemDirectoryA(szSystemDir.data(), static_cast<UINT>(szSystemDir.size())) == 0)
         {
             return;
         }
@@ -113,7 +113,7 @@ namespace serviceHelpers
     void Set_start_service_as_admin()
     {
         std::array<char, MAX_PATH> exe_file_name;
-        ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+        ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
         SHELLEXECUTEINFO shExecInfo{};
 
@@ -134,7 +134,7 @@ namespace serviceHelpers
     void Set_install_service_as_admin()
     {
         std::array<char, MAX_PATH> exe_file_name;
-        ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+        ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
         SHELLEXECUTEINFO shExecInfo{};
 
@@ -153,7 +153,7 @@ namespace serviceHelpers
     void Set_uninstall_service_as_admin()
     {
         std::array<char, MAX_PATH> exe_file_name;
-        ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+        ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
         SHELLEXECUTEINFO shExecInfo{};
 
@@ -172,7 +172,7 @@ namespace serviceHelpers
     void winvncSecurityEditorHelper_as_admin()
     {
         std::array<char, MAX_PATH> exe_file_name;
-        ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+        ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
         SHELLEXECUTEINFO shExecInfo{};
 

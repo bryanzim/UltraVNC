@@ -93,7 +93,7 @@ int FdInStream::pos()
   return (int)(offset + ptr - start);
 }
 
-void FdInStream::readBytes(void* data, int length)
+void FdInStream::readBytes(void* const data, const int length)
 {
 	// sf@2003 - Seems to fix the ZRLE+DSM bug... 
 	if (!m_fDSMMode)
@@ -106,19 +106,20 @@ void FdInStream::readBytes(void* data, int length)
 	}
 	
 	U8* dataPtr = (U8*)data;
+	int remaining = length;
 	
 	int	n = (int)(end - ptr);
-	if (n > length) n = length;
+	if (n > remaining) n = remaining;
 	
 	memcpy(dataPtr, ptr, n);
 	dataPtr += n;
-	length -= n;
+	remaining -= n;
 	ptr += n;
 
-	while (length > 0) {
-		n = readWithTimeoutOrCallback(dataPtr, length);
+	while (remaining > 0) {
+		n = readWithTimeoutOrCallback(dataPtr, remaining);
 		dataPtr += n;
-		length -= n;
+		remaining -= n;
 		offset += n;
 	}
 }
@@ -163,18 +164,18 @@ int FdInStream::Check_if_buffer_has_data()
  return checkReadable(fd, 500);
 }
 
-int FdInStream::checkReadable(int fd, int timeout)
+int FdInStream::checkReadable(int fdIn, int timeoutIn)
 {
   while (true) {
     fd_set rfds;
     struct timeval tv;
     
-    tv.tv_sec = timeout / 1000;
-    tv.tv_usec = (timeout % 1000) * 1000;
+    tv.tv_sec = timeoutIn / 1000;
+    tv.tv_usec = (timeoutIn % 1000) * 1000;
 
     FD_ZERO(&rfds);
-    FD_SET(fd, &rfds);
-    int n = select(fd+1, &rfds, 0, 0, &tv);
+    FD_SET(fdIn, &rfds);
+    int n = select(fdIn+1, &rfds, 0, 0, &tv);
     if (n != -1 || errno != EINTR)
       return n;
     fprintf(stderr,"select returned EINTR\n");

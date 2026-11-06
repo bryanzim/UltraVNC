@@ -44,7 +44,7 @@ void UdpEchoServer(int port)
     sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = htonl(INADDR_ANY); // Listen on any interface
-    serverAddr.sin_port = htons(port);              // Use port 12345
+    serverAddr.sin_port = htons(static_cast<u_short>(port));              // Use port 12345
     if (bind(serverSocket, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR)
     {
         closesocket(serverSocket);

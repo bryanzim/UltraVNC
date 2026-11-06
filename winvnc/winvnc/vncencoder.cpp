@@ -89,7 +89,7 @@ void vncEncoder::Init()
 UINT vncEncoder::RequiredBuffSize(const UINT width, const UINT height)
 { return sz_rfbFramebufferUpdateRectHeader + (width * height * m_remoteformat.bitsPerPixel) / 8; }
 
-UINT vncEncoder::NumCodedRects(const rfb::Rect& rect) { return 1; }
+UINT vncEncoder::NumCodedRects([[maybe_unused]] const rfb::Rect& rect) { return 1; }
 
 void vncEncoder::set_use_zstd(bool use_zstd) { m_use_zstd = use_zstd; }
 
@@ -140,16 +140,16 @@ inline UINT vncEncoder::EncodeRect(BYTE* const source, BYTE* const dest, const r
            ((rect.br.x - rect.tl.x) * (rect.br.y - rect.tl.y) * m_remoteformat.bitsPerPixel) / 8;
 }
 
-inline UINT vncEncoder::EncodeRect(BYTE* const source, VSocket* const outConn, BYTE* const dest, const rfb::Rect& rect,
-                                   const bool queue_enabled)
+inline UINT vncEncoder::EncodeRect(BYTE* const source, [[maybe_unused]] VSocket* const outConn, BYTE* const dest, const rfb::Rect& rect,
+                                   [[maybe_unused]] const bool queue_enabled)
 { return EncodeRect(source, dest, rect); }
 
-inline UINT vncEncoder::EncodeRect(BYTE* const source, VSocket* const outConn, BYTE* const dest, const rfb::Rect& rect)
+inline UINT vncEncoder::EncodeRect(BYTE* const source, [[maybe_unused]] VSocket* const outConn, BYTE* const dest, const rfb::Rect& rect)
 { return EncodeRect(source, dest, rect); }
 
 
 // Tight
-inline UINT vncEncoder::EncodeRect(BYTE* const source, VSocket* const outConn, BYTE* const dest, const RECT& rect)
+inline UINT vncEncoder::EncodeRect(BYTE* const source, [[maybe_unused]] VSocket* const outConn, BYTE* const dest, const RECT& rect)
 {
     rfb::Rect TRect;
     TRect.br.x = rect.right;
@@ -204,9 +204,9 @@ BOOL vncEncoder::GetRemotePalette(RGBQUAD* const quadlist, const UINT ncolours)
 
             for (int i{ 0 }; i < ncolors; ++i)
             {
-                colour[i].rgbBlue = (((i >> m_transformat.blueShift) & m_transformat.blueMax) * 255) / m_transformat.blueMax;
-                colour[i].rgbRed = (((i >> m_transformat.redShift) & m_transformat.redMax) * 255) / m_transformat.redMax;
-                colour[i].rgbGreen = (((i >> m_transformat.greenShift) & m_transformat.greenMax) * 255) / m_transformat.greenMax;
+                colour[i].rgbBlue = static_cast<BYTE>((((i >> m_transformat.blueShift) & m_transformat.blueMax) * 255) / m_transformat.blueMax);
+                colour[i].rgbRed = static_cast<BYTE>((((i >> m_transformat.redShift) & m_transformat.redMax) * 255) / m_transformat.redMax);
+                colour[i].rgbGreen = static_cast<BYTE>((((i >> m_transformat.greenShift) & m_transformat.greenMax) * 255) / m_transformat.greenMax);
             }
         }
     }
@@ -396,4 +396,4 @@ void vncEncoder::SetFineQualityLevel(int level) { m_finequalitylevel = ((level >
 
 void vncEncoder::SetSubsampling(const subsamp_type subsamp) { m_subsampling = subsamp; }
 
-inline void vncEncoder::LastRect(VSocket* const outConn) {}
+inline void vncEncoder::LastRect([[maybe_unused]] VSocket* const outConn) {}

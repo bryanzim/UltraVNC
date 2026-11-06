@@ -125,11 +125,11 @@ struct TLSSession
         SecInvalidateHandle(&hCredentials);
         SecInvalidateHandle(&hContext);
         inDesc.ulVersion = SECBUFFER_VERSION;
-        inDesc.cBuffers = inBuffers.size();
+        inDesc.cBuffers = static_cast<unsigned long>(inBuffers.size());
         inDesc.pBuffers = inBuffers.data();
         std::memset(inBuffers.data(), 0, sizeof(inBuffers));
         outDesc.ulVersion = SECBUFFER_VERSION;
-        outDesc.cBuffers = outBuffers.size();
+        outDesc.cBuffers = static_cast<unsigned long>(outBuffers.size());
         outDesc.pBuffers = outBuffers.data();
         std::memset(outBuffers.data(), 0, sizeof(outBuffers));
     }
@@ -416,9 +416,9 @@ struct TLSSession
             outBuffers[2U].BufferType = SECBUFFER_STREAM_TRAILER;
             outBuffers[2U].pvBuffer = dst;
             outBuffers[2U].cbBuffer = tlsSizes.cbTrailer;
-            for (DWORD i{ 3U }; i < inDesc.cBuffers; ++i)
+            for (DWORD iInner{ 3U }; iInner < inDesc.cBuffers; ++iInner)
             {
-                outBuffers[i].BufferType = SECBUFFER_EMPTY;
+                outBuffers[iInner].BufferType = SECBUFFER_EMPTY;
             }
             HRESULT hr = ::EncryptMessage(&hContext, 0, &outDesc, 0);
             if (FAILED(hr))
@@ -697,7 +697,7 @@ private:
         if (hr != S_OK)
         {
             std::array<wchar_t, 1024U> wmsg;
-            ::FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, hr, 0, wmsg.data(), wmsg.size(),
+            ::FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, hr, 0, wmsg.data(), static_cast<DWORD>(wmsg.size()),
                            nullptr);
             for (int i = static_cast<int>(std::wcslen(wmsg.data())) - 1; (i >= 0) && !wmsg[i + 1]; --i)
             {
@@ -738,7 +738,7 @@ struct TLSPlugin : public IPlugin
 
     virtual ~TLSPlugin() {}
 
-    virtual BYTE* TransformBuffer(BYTE* const pDataBuffer, const int nDataLen, int* pnTransformedDataLen)
+    virtual BYTE* TransformBuffer(BYTE* pDataBuffer, int nDataLen, int* pnTransformedDataLen)
     {
         if (!session.Send(pDataBuffer, nDataLen, encBuffer))
         {
@@ -749,7 +749,7 @@ struct TLSPlugin : public IPlugin
         return encBuffer.buffer;
     }
 
-    virtual BYTE* RestoreBuffer(BYTE* const pTransBuffer, const int nTransDataLen, int* pnRestoredDataLen)
+    virtual BYTE* RestoreBuffer(BYTE* pTransBuffer, int nTransDataLen, int* pnRestoredDataLen)
     {
         if (!pTransBuffer)
         {
@@ -813,7 +813,7 @@ struct ThumbHost
     bool CompareThumbprint(char* const hex)
     {
         std::array<TCHAR, 64U> buf{ 0 };
-        ::GetPrivateProfileString(ThumbprintSection, key, nullptr, buf.data(), buf.size(), fname);
+        ::GetPrivateProfileString(ThumbprintSection, key, nullptr, buf.data(), static_cast<DWORD>(buf.size()), fname);
         return ::_tcscmp((LPCTSTR)hex, buf.data()) == 0;
     }
 

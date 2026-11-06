@@ -381,7 +381,7 @@ void SettingsManager::load()
     {
         // Default to TokenValidator.dll in the same directory as winvnc.exe.
         std::array<char, MAX_PATH> modulePath{};
-        if (::GetModuleFileNameA(nullptr, modulePath.data(), modulePath.size() - 1) > 0)
+        if (::GetModuleFileNameA(nullptr, modulePath.data(), static_cast<DWORD>(modulePath.size()) - 1) > 0)
         {
             char* lastSlash = std::strrchr(modulePath.data(), '\\');
             if (lastSlash)
@@ -429,8 +429,8 @@ void SettingsManager::load()
     m_pref_QueryIfNoLogon = iniFile.ReadInt("admin", "QueryIfNoLogon", m_pref_QueryIfNoLogon);
     std::memset(m_pref_passwd.data(), 0, sizeof(m_pref_passwd));
     std::memset(m_pref_passwdViewOnly.data(), 0, sizeof(m_pref_passwdViewOnly));
-    iniFile.ReadPassword(m_pref_passwd.data(), m_pref_passwd.size());
-    iniFile.ReadPasswordViewOnly(m_pref_passwdViewOnly.data(), m_pref_passwdViewOnly.size()); //PGM
+    iniFile.ReadPassword(m_pref_passwd.data(), static_cast<int>(m_pref_passwd.size()));
+    iniFile.ReadPasswordViewOnly(m_pref_passwdViewOnly.data(), static_cast<int>(m_pref_passwdViewOnly.size())); //PGM
     m_pref_EnableRemoteInputs = iniFile.ReadInt("admin", "InputsEnabled", m_pref_EnableRemoteInputs);
     m_pref_LockSettings = iniFile.ReadInt("admin", "LockSetting", m_pref_LockSettings);
     m_pref_DisableLocalInputs = iniFile.ReadInt("admin", "LocalInputsDisabled", m_pref_DisableLocalInputs);
@@ -453,7 +453,7 @@ void SettingsManager::load()
     ::_tcscpy_s(m_pref_group3.data(), m_pref_group3.size(), "VNCVIEWONLY");
     iniFile.ReadString("admin_auth", "group3", m_pref_group3.data(), 150);
 
-    iniFile.ReadString("admin", "cloudServer", m_pref_cloudServer.data(), m_pref_cloudServer.size());
+    iniFile.ReadString("admin", "cloudServer", m_pref_cloudServer.data(), static_cast<int>(m_pref_cloudServer.size()));
     m_pref_cloudEnabled = iniFile.ReadInt("admin", "cloudEnabled", m_pref_cloudEnabled);
 
     iniFile.ReadString("admin", "alternate_shell", m_pref_alternateShell.data(), 1024);
@@ -661,7 +661,7 @@ bool SettingsManager::IsRunninAsAdministrator()
 extern HINSTANCE hInstResDLL;
 char password[1024U] = "";
 
-INT_PTR CALLBACK PasswordDlgProc(const HWND hDlg, const UINT message, const WPARAM wParam, const LPARAM lParam)
+INT_PTR CALLBACK PasswordDlgProc(const HWND hDlg, const UINT message, const WPARAM wParam, [[maybe_unused]] const LPARAM lParam)
 {
     switch (message)
     {
@@ -702,7 +702,7 @@ bool SettingsManager::checkAdminPassword()
         if (ret == IDOK)
         {
             std::array<char, crypto_pwhash_STRBYTES> hashed_password{};
-            iniFile.ReadHash(hashed_password.data(), hashed_password.size());
+            iniFile.ReadHash(hashed_password.data(), static_cast<int>(hashed_password.size()));
             if (crypto_pwhash_str_verify(hashed_password.data(), password, std::strlen(password)) == 0)
             {
                 return true;
@@ -731,7 +731,7 @@ bool SettingsManager::checkAdminPassword()
 bool SettingsManager::isAdminPasswordSet()
 {
     std::array<char, crypto_pwhash_STRBYTES> hashed_password{};
-    iniFile.ReadHash(hashed_password.data(), hashed_password.size());
+    iniFile.ReadHash(hashed_password.data(), static_cast<int>(hashed_password.size()));
     if (std::strlen(hashed_password.data()) == 0)
     {
         return false;
@@ -739,19 +739,19 @@ bool SettingsManager::isAdminPasswordSet()
     return true;
 }
 
-void SettingsManager::setAdminPasswordHash(char* const password)
+void SettingsManager::setAdminPasswordHash(char* const passwordLocal)
 {
-    if (std::strlen(password) == 0)
+    if (std::strlen(passwordLocal) == 0)
     {
         iniFile.WriteString("UltraVNC", "hash", "");
         return;
     }
 
     std::array<char, crypto_pwhash_STRBYTES> hashed_password{};
-    crypto_pwhash_str(hashed_password.data(), password, std::strlen(password), crypto_pwhash_OPSLIMIT_INTERACTIVE,
+    crypto_pwhash_str(hashed_password.data(), passwordLocal, std::strlen(passwordLocal), crypto_pwhash_OPSLIMIT_INTERACTIVE,
                       crypto_pwhash_MEMLIMIT_INTERACTIVE);
 
-    iniFile.WriteHash(hashed_password.data(), hashed_password.size());
+    iniFile.WriteHash(hashed_password.data(), static_cast<int>(hashed_password.size()));
 }
 
 bool SettingsManager::getShowSettings() { return showSettings; };

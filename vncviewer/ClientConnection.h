@@ -536,7 +536,7 @@ private:
     void UpdateStatusFields(); // sf@2002
 
     // This is what controls the thread
-    void* run_undetached(void* arg);
+    void* run_undetached(void* const arg);
 
 
     // Modif sf@2002 - File Transfer
@@ -570,7 +570,7 @@ private:
     // Normally this is an inline call to a GDI method.
     inline void FillSolidRect(RECT* const pRect, const COLORREF color)
     {
-        COLORREF oldbgcol = ::SetBkColor(m_hBitmapDC, color);
+        [[maybe_unused]] COLORREF oldbgcol = ::SetBkColor(m_hBitmapDC, color);
         // This is the call MFC uses for FillSolidRect. Who am I to argue?
         ::ExtTextOut(m_hBitmapDC, 0, 0, ETO_OPAQUE, pRect, nullptr, 0, nullptr);
     };
@@ -986,12 +986,12 @@ public:
 
 // read a pixel from the given address, and return a color value
 #define SETUP_COLOR_SHORTCUTS                                                                                                      \
-    CARD8 rs = m_myFormat.redShift;                                                                                                \
-    CARD16 rm = m_myFormat.redMax;                                                                                                 \
-    CARD8 gs = m_myFormat.greenShift;                                                                                              \
-    CARD16 gm = m_myFormat.greenMax;                                                                                               \
-    CARD8 bs = m_myFormat.blueShift;                                                                                               \
-    CARD16 bm = m_myFormat.blueMax;
+    [[maybe_unused]] CARD8 rs = m_myFormat.redShift;                                                                               \
+    [[maybe_unused]] CARD16 rm = m_myFormat.redMax;                                                                                \
+    [[maybe_unused]] CARD8 gs = m_myFormat.greenShift;                                                                             \
+    [[maybe_unused]] CARD16 gm = m_myFormat.greenMax;                                                                              \
+    [[maybe_unused]] CARD8 bs = m_myFormat.blueShift;                                                                              \
+    [[maybe_unused]] CARD16 bm = m_myFormat.blueMax;
 
 #define COLOR_FROM_PIXEL8_ADDRESS(p)                                                                                               \
     (PALETTERGB(static_cast<int>((((*(CARD8*)(p) >> rs) & rm) * 255 / rm)),                                                        \
