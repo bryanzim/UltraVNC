@@ -4894,7 +4894,7 @@ void ClientConnection::ReadServerInit([[maybe_unused]] const bool reconnect)
         bool yes = yesnoUVNCMessageBox(m_hInstResDLL, nullptr, str50289.data(), str50290.data(), str50293.data(), str50294.data(), L"", bCheckboxChecked);
         if (!yes)
         {
-            exit(nullptr);
+            exit(0);
         }
         m_si.nameLength = 2024;
     }
@@ -12944,7 +12944,7 @@ void ClientConnection::checkParemeters()
         bool yes = yesnoUVNCMessageBox(m_hInstResDLL, nullptr, str50297.data(), str50290.data(), str50293.data(), str50294.data(), L"", somebool);
         if (!yes)
         {
-            exit(nullptr);
+            exit(0);
         }
         m_si.framebufferWidth = 1024;
         m_si.framebufferHeight = 800;
