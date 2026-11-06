@@ -216,7 +216,7 @@ void ClientConnection::ReadTightRect(rfbFramebufferUpdateRectHeader* const pfbur
 
             (this->*m_tightCurrentFilter)(numRows);
 
-            extraBytes = static_cast<UINT>(beforeBufferSize) - static_cast<int>(avail_out - numRows * rowSize);
+            extraBytes = beforeBufferSize - static_cast<int>(avail_out) - numRows * rowSize;
             if (extraBytes > 0)
             {
                 std::memcpy(m_netbuf, &m_netbuf[numRows * rowSize], static_cast<size_t>(extraBytes));

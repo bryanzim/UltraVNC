@@ -166,6 +166,64 @@ static bool IsLoopbackAddress(const char* const addr)
 
 // Canonicalize a file-transfer destination path and pin it to the configured root.
 // Returns true if the path is acceptable; on success outCanonical holds the canonical UTF-8 path.
+// True when any component of an absolute path is a junction or symlink.
+// GetFullPathNameW does not resolve reparse points, so a junction inside the
+// file-transfer root would otherwise satisfy the prefix check and then follow
+// out of the root.
+static bool PathContainsReparsePoint(const WCHAR* const canon)
+{
+    std::array<WCHAR, MAX_PATH * 4> walk{};
+    if (::wcscpy_s(walk.data(), walk.size(), canon) != 0)
+    {
+        return true;
+    }
+
+    WCHAR* p = walk.data();
+    if ((p[0U] != L'\0') && (p[1U] == L':') && (p[2U] == L'\\'))
+    {
+        p += 3;
+    }
+    else if ((p[0U] == L'\\') && (p[1U] == L'\\'))
+    {
+        int slashes{ 0 };
+        p += 2;
+        while ((*p != L'\0') && (slashes < 2))
+        {
+            if (*p == L'\\')
+            {
+                ++slashes;
+            }
+            ++p;
+        }
+    }
+    else
+    {
+        return true;
+    }
+
+    while (*p != L'\0')
+    {
+        while ((*p != L'\0') && (*p != L'\\'))
+        {
+            ++p;
+        }
+        const WCHAR saved = *p;
+        *p = L'\0';
+        const DWORD attr = ::GetFileAttributesW(walk.data());
+        *p = saved;
+        if ((attr != INVALID_FILE_ATTRIBUTES) && ((attr & FILE_ATTRIBUTE_REPARSE_POINT) != 0))
+        {
+            return true;
+        }
+        if (saved == L'\0')
+        {
+            break;
+        }
+        ++p;
+    }
+    return false;
+}
+
 static bool ValidateFileTransferPath(const char* const szPath, const char* szUtf8Root, std::string& outCanonical,
                                      const UINT cp = CP_UTF8)
 {
@@ -253,6 +311,10 @@ static bool ValidateFileTransferPath(const char* const szPath, const char* szUtf
         {
             return false;
         }
+        if (PathContainsReparsePoint(szCanonW.data()))
+        {
+            return false;
+        }
     }
 
     std::array<char, MAX_PATH * 4> szCanonA;
@@ -272,10 +334,20 @@ bool DeleteFileOrDirectory(WCHAR* srcpath)
     // For files: use DeleteFileW with \\?\ prefix to support long paths (>260 chars).
     // For directories: use SHFileOperationW (recursive delete); \\?\ not supported there.
     DWORD attr = ::GetFileAttributesW(srcpath);
-    if ((attr != INVALID_FILE_ATTRIBUTES) && !(attr & FILE_ATTRIBUTE_DIRECTORY))
+    if (attr == INVALID_FILE_ATTRIBUTES)
+    {
+        return false;
+    }
+    // Remove the link itself. SHFileOperationW follows a directory junction and
+    // can delete the target tree.
+    if ((attr & FILE_ATTRIBUTE_REPARSE_POINT) && (attr & FILE_ATTRIBUTE_DIRECTORY))
+    {
+        return ::RemoveDirectoryW(srcpath) ? true : false;
+    }
+    if (!(attr & FILE_ATTRIBUTE_DIRECTORY))
     {
         // It's a file - use DeleteFileW with long path prefix
-        std::array<WCHAR, MAX_PATH * 4 + 4> longpath;
+        std::array<WCHAR, MAX_PATH * 4 + 4> longpath{};
         if (srcpath[0U] && (srcpath[1U] == L':'))
         {
             ::_snwprintf_s(longpath.data(), longpath.size(), _TRUNCATE, L"\\\\?\\%s", srcpath);
@@ -287,11 +359,14 @@ bool DeleteFileOrDirectory(WCHAR* srcpath)
         return ::DeleteFileW(longpath.data()) ? true : false;
     }
 
-    // It's a directory (or doesn't exist) - use SHFileOperationW for recursive delete
-    std::array<WCHAR, MAX_PATH * 4 + 2> path; // double null terminator required by SHFileOperationW
-    std::memset(path.data(), 0, sizeof path);
+    // It's a directory - use SHFileOperationW for recursive delete
+    std::array<WCHAR, MAX_PATH * 4 + 2> path{}; // double null terminator required by SHFileOperationW
     ::wcsncpy_s(path.data(), path.size(), srcpath, MAX_PATH * 4);
-    path[std::wcslen(srcpath) + 1] = 0;
+    const std::size_t copied = std::wcslen(path.data());
+    if ((copied + 1) < path.size())
+    {
+        path[copied + 1] = L'\0';
+    }
 
     SHFILEOPSTRUCTW op;
     std::memset(&op, 0, sizeof(SHFILEOPSTRUCTW));
@@ -306,8 +381,16 @@ bool DeleteFileOrDirectory(WCHAR* srcpath)
 
 static void MakeLongPath(const char* const utf8, WCHAR* const outW, const int outLen)
 {
-    std::array<WCHAR, MAX_PATH * 4> tmp;
-    ::MultiByteToWideChar(CP_UTF8, 0, utf8, -1, tmp.data(), static_cast<int>(tmp.size()));
+    if ((outW == nullptr) || (outLen <= 0))
+    {
+        return;
+    }
+    outW[0U] = L'\0';
+    std::array<WCHAR, MAX_PATH * 4> tmp{};
+    if (::MultiByteToWideChar(CP_UTF8, 0, utf8, -1, tmp.data(), static_cast<int>(tmp.size())) <= 0)
+    {
+        return;
+    }
     if (tmp[0U] && (tmp[1U] == L':'))
     {
         ::_snwprintf_s(outW, static_cast<size_t>(outLen), _TRUNCATE, L"\\\\?\\%s", tmp.data());
@@ -380,17 +463,27 @@ std::string AddDirPrefixAndSuffix(const char* const name)
 
 bool isDirectory(const char* const name)
 {
-    struct _stat statbuf;
+    struct _stat statbuf{};
     // Convert UTF-8 to Unicode for Chinese character support
-    std::array<WCHAR, MAX_PATH> nameW;
-    ::MultiByteToWideChar(CP_UTF8, 0, name, -1, nameW.data(), static_cast<int>(nameW.size()));
-    ::_wstat(nameW.data(), &statbuf);
+    std::array<WCHAR, MAX_PATH * 4> nameW{};
+    if (::MultiByteToWideChar(CP_UTF8, 0, name, -1, nameW.data(), static_cast<int>(nameW.size())) <= 0)
+    {
+        return false;
+    }
+    if (::_wstat(nameW.data(), &statbuf) != 0)
+    {
+        return false;
+    }
     return (statbuf.st_mode & _S_IFDIR) == _S_IFDIR;
 }
 bool isDirectoryTransfer(const char* const szFileName)
 {
-    return (std::strncmp(strrchr(const_cast<char*>(szFileName), '\\') + 1, rfbZipDirectoryPrefix,
-                         std::strlen(rfbZipDirectoryPrefix)) == 0);
+    const char* const base = strrchr(const_cast<char*>(szFileName), '\\');
+    if (base == nullptr)
+    {
+        return false;
+    }
+    return (std::strncmp(base + 1, rfbZipDirectoryPrefix, std::strlen(rfbZipDirectoryPrefix)) == 0);
 }
 
 void GetZippedFolderPathName(const char* const szZipFile, char* const path)
@@ -5914,15 +6007,22 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                             // Unicode path: client sent UTF-8 (or special folder resolved directly to wchar_t above)
                             if (!fSpecialFolderResolvedW)
                             {
-                                ::MultiByteToWideChar(CP_UTF8, 0, szDir.data(), -1, szDirW.data(), MAX_PATH + 2);
+                                if (::MultiByteToWideChar(CP_UTF8, 0, szDir.data(), -1, szDirW.data(), static_cast<int>(szDirW.size())) <= 0)
+                                {
+                                    fShortError = true;
+                                }
                             }
 
-                            WIN32_FIND_DATAW fdW;
-                            HANDLE ff = ::FindFirstFileW(szDirW.data(), &fdW);
+                            WIN32_FIND_DATAW fdW{};
+                            HANDLE ff = INVALID_HANDLE_VALUE;
+                            if (!fShortError)
+                            {
+                                ff = ::FindFirstFileW(szDirW.data(), &fdW);
+                            }
                             ::SetErrorMode(errmode);
 
                             // Case of media not accessible
-                            if ((ff == INVALID_HANDLE_VALUE) || fShortError)
+                            if (ff == INVALID_HANDLE_VALUE)
                             {
                                 // Send rfbADirInaccessible so new viewers can mark the folder red.
                                 // Old viewers see an unrecognised contentParam with length=0 and treat it as end-of-dir.
@@ -5933,15 +6033,18 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                             }
 
                             // Send back the full directory path as UTF-8 (strip trailing '*')
-                            std::array<char, MAX_PATH * 3 + 2> szDirNoStar;
+                            std::array<char, MAX_PATH * 3 + 2> szDirNoStar{};
                             if (fSpecialFolderResolvedW)
                             {
                                 // Convert resolved Unicode path to UTF-8 for the wire
                                 std::array<wchar_t, MAX_PATH * 4> szDirWNoStar;
                                 ::wcscpy_s(szDirWNoStar.data(), szDirWNoStar.size(), szDirW.data());
                                 szDirWNoStar[std::wcslen(szDirWNoStar.data()) - 1] = L'\0'; // strip '*'
-                                ::WideCharToMultiByte(CP_UTF8, 0, szDirWNoStar.data(), -1, szDirNoStar.data(), MAX_PATH * 3, nullptr,
-                                                    nullptr);
+                                if (::WideCharToMultiByte(CP_UTF8, 0, szDirWNoStar.data(), -1, szDirNoStar.data(), MAX_PATH * 3, nullptr,
+                                                        nullptr) <= 0)
+                                {
+                                    szDirNoStar[0U] = '\0';
+                                }
                             }
                             else
                             {
@@ -6023,12 +6126,16 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         else
                         {
                             // ANSI path: original behaviour
-                            WIN32_FIND_DATA fd;
-                            HANDLE ff = ::FindFirstFile(szDir.data(), &fd);
+                            WIN32_FIND_DATA fd{};
+                            HANDLE ff = INVALID_HANDLE_VALUE;
+                            if (!fShortError)
+                            {
+                                ff = ::FindFirstFile(szDir.data(), &fd);
+                            }
                             ::SetErrorMode(errmode);
 
                             // Case of media not accessible
-                            if ((ff == INVALID_HANDLE_VALUE) || fShortError)
+                            if (ff == INVALID_HANDLE_VALUE)
                             {
                                 ft.contentParam = rfbADirInaccessible;
                                 ft.length = Swap32IfLE(0);
@@ -6071,7 +6178,11 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
 
                                     // Serialize the interesting part of WIN32_FIND_DATA
                                     std::array<char, sizeof(WIN32_FIND_DATA)> szFileSpec;
-                                    int nOptLen = sizeof(WIN32_FIND_DATA) - MAX_PATH - static_cast<int>(14 + ::lstrlen(fd.cFileName));
+                                    int nOptLen = static_cast<int>(sizeof(WIN32_FIND_DATA)) - MAX_PATH - 14 + ::lstrlen(fd.cFileName);
+                                    if ((nOptLen < 0) || (nOptLen > static_cast<int>(sizeof(WIN32_FIND_DATA))))
+                                    {
+                                        nOptLen = static_cast<int>(sizeof(WIN32_FIND_DATA));
+                                    }
                                     std::memcpy(szFileSpec.data(), &fd, static_cast<size_t>(nOptLen));
 
                                     ft.length = static_cast<unsigned int>(Swap32IfLE(nOptLen));
@@ -6085,7 +6196,11 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                                     // Get rid of the trailing blank chars. It makes a BIG
                                     // difference when there's a lot of files in the dir.
                                     std::array<char, sizeof(WIN32_FIND_DATA)> szFileSpec;
-                                    int nOptLen = sizeof(WIN32_FIND_DATA) - MAX_PATH - static_cast<int>(14 + ::lstrlen(fd.cFileName));
+                                    int nOptLen = static_cast<int>(sizeof(WIN32_FIND_DATA)) - MAX_PATH - 14 + ::lstrlen(fd.cFileName);
+                                    if ((nOptLen < 0) || (nOptLen > static_cast<int>(sizeof(WIN32_FIND_DATA))))
+                                    {
+                                        nOptLen = static_cast<int>(sizeof(WIN32_FIND_DATA));
+                                    }
                                     std::memcpy(szFileSpec.data(), &fd, static_cast<size_t>(nOptLen));
 
                                     ft.length = static_cast<unsigned int>(Swap32IfLE(nOptLen));
@@ -6135,12 +6250,12 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         // Create the Dir
                         // Convert UTF-8 to Unicode for Chinese character support
                         // Enforce the configured file-transfer root on mkdir
-                        std::array<WCHAR, MAX_PATH * 4> szDirW;
+                        std::array<WCHAR, MAX_PATH * 4> szDirW{};
                         BOOL fRet = FALSE;
                         std::string canonDirCreate;
-                        if (ValidateFileTransferPath(szDir.data(), settings->getFileTransferRoot(), canonDirCreate))
+                        if (ValidateFileTransferPath(szDir.data(), settings->getFileTransferRoot(), canonDirCreate) &&
+                            (::MultiByteToWideChar(CP_UTF8, 0, canonDirCreate.c_str(), -1, szDirW.data(), static_cast<int>(szDirW.size())) > 0))
                         {
-                            ::MultiByteToWideChar(CP_UTF8, 0, canonDirCreate.c_str(), -1, szDirW.data(), static_cast<int>(szDirW.size()));
                             fRet = ::CreateDirectoryW(szDirW.data(), nullptr);
                         }
 
@@ -6197,12 +6312,12 @@ void vncClientThread::run([[maybe_unused]] void* const arg)
                         length = static_cast<UINT>((newname.length() + 1));
                         // Convert UTF-8 to Unicode for Chinese character support
                         // Enforce the configured file-transfer root on delete
-                        std::array<WCHAR, MAX_PATH * 4> szFileW;
+                        std::array<WCHAR, MAX_PATH * 4> szFileW{};
                         BOOL fRet = FALSE;
                         std::string canonFileDel;
-                        if (ValidateFileTransferPath(szFile.data(), settings->getFileTransferRoot(), canonFileDel))
+                        if (ValidateFileTransferPath(szFile.data(), settings->getFileTransferRoot(), canonFileDel) &&
+                            (::MultiByteToWideChar(CP_UTF8, 0, canonFileDel.c_str(), -1, szFileW.data(), static_cast<int>(szFileW.size())) > 0))
                         {
-                            ::MultiByteToWideChar(CP_UTF8, 0, canonFileDel.c_str(), -1, szFileW.data(), static_cast<int>(szFileW.size()));
                             fRet = DeleteFileOrDirectory(szFileW.data());
                         }
 
