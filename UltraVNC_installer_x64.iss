@@ -9,14 +9,28 @@
 #define Minor
 #define Rev
 #define Build
-#define MyAppVersion GetVersionComponents('64\xp\winvnc.exe', Major, Minor, Rev, Build)
+; ISCC /DClang packs the clang-cl tree and names the setup *_Clang_Setup.
+; ISCC /DSkipSign compiles without SignTool. Inno Setup 7 rejects a tool that does not sign.
+; ISCC /DSkipSas omits sas.dll, which is not in this tree.
+#ifdef Clang
+#define BinRoot "64-clang"
+#define SetupTag "_Clang"
+#define VariantName " Clang"
+#define InfoFile "text\info-clang.txt"
+#else
+#define BinRoot "64"
+#define SetupTag ""
+#define VariantName ""
+#define InfoFile "text\info.txt"
+#endif
+#define MyAppVersion GetVersionComponents(BinRoot + '\xp\winvnc.exe', Major, Minor, Rev, Build)
 #define MyAppOutputVersion Str(Major) + Str(Minor) + Str(Rev) + Str(Build) 
 
 [Setup]
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 VersionInfoVersion={#MyAppVersion}
-AppVerName={#MyAppName} {#MyAppVersion}
+AppVerName={#MyAppName} {#MyAppVersion}{#VariantName}
 
 
 AppPublisher={#MyAppPublisher}
@@ -38,7 +52,7 @@ AppID={#MyAppID}
 UninstallRestartComputer=false
 DirExistsWarning=no
 OutputDir=setupfile
-OutputBaseFilename=UltraVNC_{#MyAppOutputVersion}_x64_Setup
+OutputBaseFilename=UltraVNC_{#MyAppOutputVersion}_x64{#SetupTag}_Setup
 UserInfoPage=false
 ShowLanguageDialog=yes
 LanguageDetectionMethod=uilanguage
@@ -48,23 +62,25 @@ WindowStartMaximized=false
 WindowResizable=false
 Compression=lzma/Ultra
 AlwaysRestart=false
-VersionInfoDescription={#MyAppName} installer
+VersionInfoDescription={#MyAppName}{#VariantName} installer
 WizardImageBackColor=clWhite
 WizardImageStretch=false
 SetupIconFile=icon\UltraVNC.ico
 WizardImageFile=bmp\UltraVNC-splash.bmp
 WizardSmallImageFile=bmp\UltraVNC-logo.bmp
-InfoAfterFile=text\info.txt
+InfoAfterFile={#InfoFile}
 InfoBeforeFile=text\Changes.txt
 LicenseFile=text\Licence.txt
 InternalCompressLevel=Ultra
 SolidCompression=true
+#ifndef SkipSign
 SignTool=signtool
+#endif
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoCopyright={#MyAppCopyright}
 VersionInfoProductName={#MyAppName}
 VersionInfoProductVersion={#MyAppVersion}
-UninstallDisplayName={#MyAppName}
+UninstallDisplayName={#MyAppName}{#VariantName}
 ArchitecturesInstallIn64BitMode=x64
 ArchitecturesAllowed=x64
 UninstallIconFile={app}\winvnc.exe
@@ -220,45 +236,47 @@ Source: "helper/check_install.exe"; Flags: dontcopy; Components: UltraVNC_Server
 
 Source: "text\Changes.txt"; DestDir: "{app}"
 Source: "text\Licence.txt"; DestDir: "{app}"
-Source: "text\Info.txt"; DestDir: "{app}"
+Source: "{#InfoFile}"; DestDir: "{app}"; DestName: "Info.txt"
 
 Source: "ultravnc.cer"; DestDir: "{app}"; Flags: deleteafterinstall
 
 ; server files
 ; winvnc.exe needs to be first here because it triggers stopping UltraVNC Server service/app.
-Source: "64\xp\winvnc.exe"; DestDir: "{app}"; DestName: "winvnc.exe"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\vnchooks.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\ddengine64.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\UVncVirtualDisplay64\*"; DestDir: "{app}\UVncVirtualDisplay64"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\repeater.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Repeater
-Source: "64\xp\SecureVNCPlugin64.dsm"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Viewer UltraVNC_Server
-Source: "64\xp\uvnckeyboardhelper.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\winvnc.exe"; DestDir: "{app}"; DestName: "winvnc.exe"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\vnchooks.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\ddengine64.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\UVncVirtualDisplay64\*"; DestDir: "{app}\UVncVirtualDisplay64"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\repeater.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Repeater
+Source: "{#BinRoot}\xp\SecureVNCPlugin64.dsm"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Viewer UltraVNC_Server
+Source: "{#BinRoot}\xp\uvnckeyboardhelper.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
 ; MS-Logon I files
-Source: "64\xp\logging.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\authadmin.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\workgrpdomnt4.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\ldapauth.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\ldapauthnt4.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\logmessages.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\ldapauth9x.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\logging.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\authadmin.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\workgrpdomnt4.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\ldapauth.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\ldapauthnt4.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\logmessages.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\ldapauth9x.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
 ; MS-Logon II files
-Source: "64\xp\authSSP.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\MSLogonACL.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\authSSP.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\MSLogonACL.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
 ; viewer files
-Source: "64\xp\vncviewer.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Viewer
-Source: "64\UVNC_Launch.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Viewer
-Source: "64\xp\setcad.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\setpasswd.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\createpassword.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-;Source: "64\xp\uvnc_settings.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
-Source: "64\xp\testauth.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\vncviewer.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Viewer
+Source: "{#BinRoot}\UVNC_Launch.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Viewer
+Source: "{#BinRoot}\xp\setcad.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\setpasswd.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\createpassword.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+;Source: "{#BinRoot}\xp\uvnc_settings.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
+Source: "{#BinRoot}\xp\testauth.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Server
 ;Source: "preconfig\ultravnc.ini"; DestDir: "{app}"; Flags: onlyifdoesntexist; MinVersion: 0,5.01; Components: UltraVNC_Server
 
-Source: "64\xp\languages\*.dll"; DestDir: "{app}\languages\"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Viewer
+Source: "{#BinRoot}\xp\languages\*.dll"; DestDir: "{app}\languages\"; Flags: ignoreversion restartreplace; MinVersion: 0,5.01; Components: UltraVNC_Viewer
 
 
 ; Vista doesn't have a sas.dll
-Source: "64\xp\sas.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,6.0; OnlyBelowVersion: 0,6.1; Components: UltraVNC_Server
+#ifndef SkipSas
+Source: "{#BinRoot}\xp\sas.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace; MinVersion: 0,6.0; OnlyBelowVersion: 0,6.1; Components: UltraVNC_Server
+#endif
 
 [InstallDelete]
 ; Remove old uvnc_settings.exe from xp subdirectory (moved to root in new installer)
