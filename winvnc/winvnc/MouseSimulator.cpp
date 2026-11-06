@@ -160,7 +160,7 @@ HWND SimulateCursor::create_window(SimulateCursor* const simulateCursor)
                                reinterpret_cast<HINSTANCE>(sc->hInst), nullptr);
 
 #if !defined(_WIN64)
-    ::SetWindowLong(hWnd, GWL_USERDATA, static_cast<long>(sc));
+    ::SetWindowLong(hWnd, GWL_USERDATA, static_cast<long>(reinterpret_cast<INT_PTR>(sc)));
 #else
     ::SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(sc));
 #endif

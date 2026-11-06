@@ -582,7 +582,7 @@ void UltraVNCService::Set_Safemode()
                 ::strcpy_s(parameters.data(), parameters.size(), "/set safeboot network");
                 SHELLEXECUTEINFO shExecInfo;
                 shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-                shExecInfo.fMask = nullptr;
+                shExecInfo.fMask = 0;
                 shExecInfo.hwnd = ::GetForegroundWindow();
                 shExecInfo.lpVerb = "runas";
                 shExecInfo.lpFile = exe_file_name.data();
@@ -605,7 +605,7 @@ void UltraVNCService::Set_Safemode()
                 ::strcpy_s(parameters.data(), parameters.size(), "/set safeboot network");
                 SHELLEXECUTEINFO shExecInfo;
                 shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-                shExecInfo.fMask = nullptr;
+                shExecInfo.fMask = 0;
                 shExecInfo.hwnd = ::GetForegroundWindow();
                 shExecInfo.lpVerb = "runas";
                 shExecInfo.lpFile = exe_file_name.data();
@@ -628,7 +628,7 @@ void UltraVNCService::Set_Safemode()
             ::strcpy_s(parameters.data(), parameters.size(), "/set safeboot network");
             SHELLEXECUTEINFO shExecInfo;
             shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-            shExecInfo.fMask = nullptr;
+            shExecInfo.fMask = 0;
             shExecInfo.hwnd = ::GetForegroundWindow();
             shExecInfo.lpVerb = "runas";
             shExecInfo.lpFile = exe_file_name.data();
@@ -818,7 +818,7 @@ void UltraVNCService::Restore_safemode()
                 ::strcpy_s(parameters.data(), parameters.size(), "/deletevalue safeboot");
                 SHELLEXECUTEINFO shExecInfo;
                 shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-                shExecInfo.fMask = nullptr;
+                shExecInfo.fMask = 0;
                 shExecInfo.hwnd = ::GetForegroundWindow();
                 shExecInfo.lpVerb = "runas";
                 shExecInfo.lpFile = exe_file_name.data();
@@ -841,7 +841,7 @@ void UltraVNCService::Restore_safemode()
                 ::strcpy_s(parameters.data(), parameters.size(), "/deletevalue safeboot");
                 SHELLEXECUTEINFO shExecInfo;
                 shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-                shExecInfo.fMask = nullptr;
+                shExecInfo.fMask = 0;
                 shExecInfo.hwnd = ::GetForegroundWindow();
                 shExecInfo.lpVerb = "runas";
                 shExecInfo.lpFile = exe_file_name.data();
@@ -864,7 +864,7 @@ void UltraVNCService::Restore_safemode()
             ::strcpy_s(parameters.data(), parameters.size(), "/deletevalue safeboot");
             SHELLEXECUTEINFO shExecInfo;
             shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-            shExecInfo.fMask = nullptr;
+            shExecInfo.fMask = 0;
             shExecInfo.hwnd = ::GetForegroundWindow();
             shExecInfo.lpVerb = "runas";
             shExecInfo.lpFile = exe_file_name.data();

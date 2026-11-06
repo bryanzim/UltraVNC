@@ -49,7 +49,7 @@ LRESULT CALLBACK _HyperlinkParentProc(const HWND hwnd, const UINT message, const
         break;
     }
     case WM_DESTROY: {
-        ::SetWindowLong(hwnd, GWL_WNDPROC, static_cast<LONG>(pfnOrigProc));
+        ::SetWindowLong(hwnd, GWL_WNDPROC, static_cast<LONG>(reinterpret_cast<INT_PTR>(pfnOrigProc)));
         ::RemoveProp(hwnd, PROP_ORIGINAL_PROC);
         break;
     }
@@ -64,7 +64,7 @@ LRESULT CALLBACK _HyperlinkProc(const HWND hwnd, const UINT message, const WPARA
     switch (message)
     {
     case WM_DESTROY: {
-        ::SetWindowLong(hwnd, GWL_WNDPROC, static_cast<LONG>(pfnOrigProc));
+        ::SetWindowLong(hwnd, GWL_WNDPROC, static_cast<LONG>(reinterpret_cast<INT_PTR>(pfnOrigProc)));
         ::RemoveProp(hwnd, PROP_ORIGINAL_PROC);
 
         HFONT hOrigFont = (HFONT)::GetProp(hwnd, PROP_ORIGINAL_FONT);
