@@ -147,7 +147,7 @@ INT_PTR CALLBACK PasswdProc(const HWND hDlg, const UINT message, const WPARAM wP
         if ((LOWORD(wParam) == IDOK) || (LOWORD(wParam) == IDCANCEL))
         {
             std::array<char, MAXPWLEN + 1> plaintext1;                                                   //PGM
-            int len = ::GetDlgItemText(hDlg, IDC_SFXPASSWD, (LPSTR)plaintext1.data(), plaintext1.size()); //PGM
+            int len = ::GetDlgItemText(hDlg, IDC_SFXPASSWD, (LPSTR)plaintext1.data(), static_cast<int>(plaintext1.size())); //PGM
             if (len == 0)
             {
                 std::strcpy(passwd, "");
@@ -425,7 +425,7 @@ void Read_Settings_from_ini()
 }
 
 DWORD WINAPI upnpthread(LPVOID lpParam);
-int APIENTRY WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, const LPSTR lpCmdLine, const int nCmdShow)
+int APIENTRY WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, const LPSTR lpCmdLine, [[maybe_unused]] const int nCmdShow)
 {
     // InitCommonControlsEx() is required on Windows XP if an application
     // manifest specifies use of ComCtl32.dll version 6 or later to enable
@@ -445,7 +445,7 @@ int APIENTRY WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, c
     // Initialize global strings
     hInst = hInstance;
     ::LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    ::LoadString(hInstance, IDC_UVNC_SETTINGS, szWindowClass.data(), szWindowClass.size());
+    ::LoadString(hInstance, IDC_UVNC_SETTINGS, szWindowClass.data(), static_cast<int>(szWindowClass.size()));
     Read_Settings_from_ini();
     ::DialogBoxParam(hInstance, MAKEINTRESOURCE(IDD_PARENT), nullptr, (DLGPROC)DlgProc, 0);
 

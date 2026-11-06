@@ -16,7 +16,7 @@
 
 void error(const char* fmt, ...);
 
-int local_resolve(const char* const host, struct sockaddr_in* addr, struct sockaddr_in* const ns)
+int local_resolve(const char* const host, struct sockaddr_in* addr, [[maybe_unused]] struct sockaddr_in* const ns)
 {
     struct hostent* ent;
     if (strspn(host, "0123456789.") == std::strlen(host))
@@ -56,7 +56,7 @@ open_connection(const char* const host, u_short port)
     if (local_resolve(host, &saddr, nullptr) < 0)
     {
         error("can't resolve hostname: %s\n", host);
-        return SOCKET_ERROR;
+        return static_cast<SOCKET>(SOCKET_ERROR);
     }
     saddr.sin_port = htons(port);
 
@@ -107,7 +107,7 @@ open_connection(const char* const host, u_short port)
     }
     if (!found)
     {
-        return SOCKET_ERROR;
+        return static_cast<SOCKET>(SOCKET_ERROR);
     }
     s = socket(AF_INET, SOCK_STREAM, 0);
     // NAGLE
@@ -117,7 +117,7 @@ open_connection(const char* const host, u_short port)
     if (connect(s, (struct sockaddr*)&saddr, sizeof(saddr)) == SOCKET_ERROR)
     {
         debug("connect() failed.\n");
-        return SOCKET_ERROR;
+        return static_cast<SOCKET>(SOCKET_ERROR);
     }
     return s;
 }
@@ -125,7 +125,7 @@ open_connection(const char* const host, u_short port)
 HANDLE hmode12listener = nullptr;
 int sock{ 0 };
 
-DWORD WINAPI mode12listener(const LPVOID lpParam)
+DWORD WINAPI mode12listener([[maybe_unused]] const LPVOID lpParam)
 {
     std::array<TCHAR, 256U> dest_host{};
     u_short dest_port;
@@ -146,7 +146,7 @@ DWORD WINAPI mode12listener(const LPVOID lpParam)
     BOOL found2;
     char* ip_peer;
 
-    sock = socket(PF_INET, SOCK_STREAM, 0);
+    sock = static_cast<int>(socket(PF_INET, SOCK_STREAM, 0));
     if (sock < 0)
     {
         fatal("socket() failed, errno=%d\n", socket_errno());
@@ -159,7 +159,7 @@ DWORD WINAPI mode12listener(const LPVOID lpParam)
     setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&one, sizeof(one));
 
     name.sin_family = AF_INET;
-    name.sin_port = htons(saved_portA);
+    name.sin_port = htons(static_cast<u_short>(saved_portA));
     name.sin_addr.s_addr = htonl(INADDR_ANY);
     if (bind(sock, (struct sockaddr*)&name, sizeof(name)) < 0)
     {
@@ -186,7 +186,7 @@ DWORD WINAPI mode12listener(const LPVOID lpParam)
         std::memset(remotehost.data(), 0, 256);
         std::memset(pv, 0, sizeof(pv));
         //		debug ("Waiting for Viewer connection...\n");
-        connection = accept(sock, (struct sockaddr*)&client, &socklen);
+        connection = static_cast<int>(accept(sock, (struct sockaddr*)&client, &socklen));
         ::Sleep(1000);
         ip_peer = inet_ntoa(client.sin_addr);
         if (connection < 0)
@@ -229,7 +229,7 @@ DWORD WINAPI mode12listener(const LPVOID lpParam)
                 continue;
             }
             ::strcpy_s(dest_host.data(), dest_host.size(), remotehost.data());
-            dest_port = remoteport;
+            dest_port = static_cast<u_short>(remoteport);
             //debug ("Server %s port %d \n", dest_host,remoteport);
             shutdown(sock, 2);
             local_in = local_out = connection;

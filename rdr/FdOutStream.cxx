@@ -51,7 +51,7 @@ FdOutStream::~FdOutStream()
 }
 
 
-void FdOutStream::writeBytes(const void* data, int length)
+void FdOutStream::writeBytes(const void* const data, const int length)
 {
   if (length < MIN_BULK_SIZE) {
     OutStream::writeBytes(data, length);
@@ -59,15 +59,16 @@ void FdOutStream::writeBytes(const void* data, int length)
   }
 
   const U8* dataPtr = (const U8*)data;
+  int remaining = length;
 
   flush();
 
-  while (length > 0) {
-    int n = write(fd, dataPtr, length);
+  while (remaining > 0) {
+    int n = write(fd, dataPtr, remaining);
 
     if (n < 0) throw SystemException("write",errno);
 
-    length -= n;
+    remaining -= n;
     dataPtr += n;
     offset += n;
   }

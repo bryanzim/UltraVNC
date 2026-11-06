@@ -55,7 +55,7 @@ void ClientConnection::ReadUltraRect(rfbFramebufferUpdateRectHeader* const pfbur
     if (m_DIBbits)
     {
         ConvertAll_secure(pfburh->r.w, pfburh->r.h, pfburh->r.x, pfburh->r.y, m_myFormat.bitsPerPixel / 8, (BYTE*)m_zlibbuf,
-                          (BYTE*)m_DIBbits, m_si.framebufferWidth, new_len, m_si.framebufferHeight);
+                          (BYTE*)m_DIBbits, m_si.framebufferWidth, static_cast<int>(new_len), m_si.framebufferHeight);
     }
 }
 

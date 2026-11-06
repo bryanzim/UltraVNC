@@ -195,8 +195,8 @@ inline UINT vncEncodeUltra::EncodeOneRect(BYTE* const source, BYTE* const dest, 
     // Create the rectangle header
     rfbFramebufferUpdateRectHeader* surh = (rfbFramebufferUpdateRectHeader*)dest;
     // Modif rdv@2002 - v1.1.x - Application Resize
-    surh->r.x = (CARD16)rect.left - monitor_Offsetx;
-    surh->r.y = (CARD16)rect.top - monitor_Offsety;
+    surh->r.x = static_cast<CARD16>((CARD16)rect.left - monitor_Offsetx);
+    surh->r.y = static_cast<CARD16>((CARD16)rect.top - monitor_Offsety);
     surh->r.w = (CARD16)(rectW);
     surh->r.h = (CARD16)(rectH);
     surh->r.x = Swap16IfLE(surh->r.x);
@@ -275,7 +275,7 @@ inline UINT vncEncodeUltra::EncodeOneRect(BYTE* const source, BYTE* const dest, 
     rectangleOverhead += sz_rfbFramebufferUpdateRectHeader;
 
     // Return the amount of data sent
-    return sz_rfbFramebufferUpdateRectHeader + sz_rfbZlibHeader + out_len;
+    return static_cast<UINT>(sz_rfbFramebufferUpdateRectHeader + sz_rfbZlibHeader + out_len);
 }
 
 
@@ -299,7 +299,7 @@ void vncEncodeUltra::AddToQueu(BYTE* const source, const int sizerect, VSocket* 
     }
 }
 
-void vncEncodeUltra::AddToQueu2(BYTE* const source, const int sizerect, VSocket* const outConn, const int updatetype)
+void vncEncodeUltra::AddToQueu2(BYTE* const source, const int sizerect, VSocket* const outConn, [[maybe_unused]] const int updatetype)
 {
     BYTE* databegin = m_QueueCompressedbuffer + sz_rfbFramebufferUpdateRectHeader + sz_rfbZlibHeader;
     rfbFramebufferUpdateRectHeader* CacheRectsHeader = (rfbFramebufferUpdateRectHeader*)m_QueueCompressedbuffer;
@@ -315,7 +315,7 @@ void vncEncodeUltra::AddToQueu2(BYTE* const source, const int sizerect, VSocket*
         return;
     }
 
-    const int rawDataSize1 = rawDataSize / 65535;
+    const int rawDataSize1 = static_cast<int>(rawDataSize / 65535);
     const int rawDataSize2 = rawDataSize % 65535;
 
     CacheRectsHeader->r.x = (CARD16)(1);
@@ -331,7 +331,7 @@ void vncEncodeUltra::AddToQueu2(BYTE* const source, const int sizerect, VSocket*
     CacheZipHeader->nBytes = Swap32IfLE(out_len);
 
     vnclog.Print(LL_INTINFO, VNCLOG("********QUEUEQUEUE********** %d %d %d\r\n"), out_len, rawDataSize, 1);
-    outConn->SendExactQueue((char*)m_QueueCompressedbuffer, out_len + sz_rfbFramebufferUpdateRectHeader + sz_rfbZlibHeader);
+    outConn->SendExactQueue((char*)m_QueueCompressedbuffer, static_cast<VCard>(out_len + sz_rfbFramebufferUpdateRectHeader + sz_rfbZlibHeader));
     // Update statistics
     encodedSize += sz_rfbZlibHeader + out_len;
     rectangleOverhead += sz_rfbFramebufferUpdateRectHeader;
@@ -372,7 +372,7 @@ void vncEncodeUltra::SendUltrarects(VSocket* const outConn)
         return;
     }
 
-    const int rawDataSize1 = rawDataSize / 65535;
+    const int rawDataSize1 = static_cast<int>(rawDataSize / 65535);
     const int rawDataSize2 = rawDataSize % 65535;
 
     rfbFramebufferUpdateRectHeader CacheRectsHeader;
@@ -392,7 +392,7 @@ void vncEncodeUltra::SendUltrarects(VSocket* const outConn)
     vnclog.Print(LL_INTINFO, VNCLOG("********QUEUEQUEUE********** %d %d %d\r\n"), out_len, rawDataSize, NRects);
     outConn->SendExactQueue((char*)&CacheRectsHeader, sizeof(CacheRectsHeader));
     outConn->SendExactQueue((char*)&CacheZipHeader, sizeof(CacheZipHeader));
-    outConn->SendExactQueue((char*)m_QueueCompressedbuffer, out_len);
+    outConn->SendExactQueue((char*)m_QueueCompressedbuffer, static_cast<VCard>(out_len));
     // Update statistics
     encodedSize += sz_rfbZlibHeader + out_len;
     rectangleOverhead += sz_rfbFramebufferUpdateRectHeader;

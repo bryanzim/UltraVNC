@@ -72,7 +72,7 @@ using namespace rdr;
 
 #endif
 
-void XZ_DECODE_BPP(int x, int y, int w, int h, rdr::InStream* const is, rdr::xzInStream* const xzis, PIXEL_T* const buf)
+void XZ_DECODE_BPP(int x, int y, int w, int h, [[maybe_unused]] rdr::InStream* const is, rdr::xzInStream* const xzisIn, PIXEL_T* const buf)
 {
     for (int ty = y; ty < y + h; ty += rfbXZTileHeight)
     {
@@ -92,7 +92,7 @@ void XZ_DECODE_BPP(int x, int y, int w, int h, rdr::InStream* const is, rdr::xzI
 #if BPP != 8
         top:
 #endif
-            const int mode = xzis->readU8();
+            const int mode = xzisIn->readU8();
             BOOL rle = mode & 128;
             int palSize = mode & 127;
             std::array<PIXEL_T, 128U> palette;
@@ -101,7 +101,7 @@ void XZ_DECODE_BPP(int x, int y, int w, int h, rdr::InStream* const is, rdr::xzI
 
             for (int i{ 0 }; i < palSize; ++i)
             {
-                palette[i] = xzis->READ_PIXEL();
+                palette[i] = xzisIn->READ_PIXEL();
             }
 
             if (palSize == 1)
@@ -132,10 +132,10 @@ void XZ_DECODE_BPP(int x, int y, int w, int h, rdr::InStream* const is, rdr::xzI
 #ifdef CPIXEL
                         for (PIXEL_T* ptr = buf; ptr < buf + tw * th; ++ptr)
                         {
-                            *ptr = xzis->READ_PIXEL();
+                            *ptr = xzisIn->READ_PIXEL();
                         }
 #else
-                    xzis->readBytes(buf, tw * th * (BPPOUT / 8));
+                    xzisIn->readBytes(buf, tw * th * (BPPOUT / 8));
 #endif
                 }
                 else
@@ -156,7 +156,7 @@ void XZ_DECODE_BPP(int x, int y, int w, int h, rdr::InStream* const is, rdr::xzI
                         {
                             if (nbits == 0)
                             {
-                                byte = xzis->readU8();
+                                byte = xzisIn->readU8();
                                 nbits = 8;
                             }
                             nbits -= bppp;
@@ -187,12 +187,12 @@ void XZ_DECODE_BPP(int x, int y, int w, int h, rdr::InStream* const is, rdr::xzI
                     PIXEL_T* end = ptr + th * tw;
                     while (ptr < end)
                     {
-                        PIXEL_T pix = xzis->READ_PIXEL();
+                        PIXEL_T pix = xzisIn->READ_PIXEL();
                         int len{ 1 };
                         int b;
                         do
                         {
-                            b = xzis->readU8();
+                            b = xzisIn->readU8();
                             if (b > end - ptr - len)
                             {
                                 throw Exception("RLE run exceeds tile bounds");
@@ -248,14 +248,14 @@ void XZ_DECODE_BPP(int x, int y, int w, int h, rdr::InStream* const is, rdr::xzI
                     PIXEL_T* end = ptr + th * tw;
                     while (ptr < end)
                     {
-                        int index = xzis->readU8();
+                        int index = xzisIn->readU8();
                         int len{ 1 };
                         if (index & 128)
                         {
                             int b;
                             do
                             {
-                                b = xzis->readU8();
+                                b = xzisIn->readU8();
                                 if (b > end - ptr - len)
                                 {
                                     throw Exception("RLE run exceeds tile bounds");

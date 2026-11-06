@@ -123,7 +123,7 @@ public:
     void get_time_now(unsigned long* abs_sec, unsigned long* abs_nsec);
 
     // The main thread function
-    virtual void* run_undetached(void* arg);
+    virtual void* run_undetached(void* const arg);
 
 protected:
     virtual ~vncClientUpdateThread();
@@ -725,7 +725,7 @@ public:
     void ReleaseRA2();
 
     // The main thread function
-    virtual void run(void* arg);
+    virtual void run(void* const arg);
     bool m_autoreconnectcounter_quit;
 
     UINT m_AutoReconnectPort;

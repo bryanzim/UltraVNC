@@ -116,14 +116,14 @@ static void rfbInitTrueColourRGBTablesOUTVNC(char** table, rfbPixelFormat* const
     rfbInitOneRGBTableOUTVNC(blueTable, in->blueMax, out->blueMax, out->blueShift, (out->bigEndian != in->bigEndian));
 }
 
-static void rfbInitOneRGBTableOUTVNC(OUT_T* const table, const int inMax, const int outMax, const int outShift, const int swap)
+static void rfbInitOneRGBTableOUTVNC(OUT_T* const table, const int inMax, const int outMax, const int outShift, [[maybe_unused]] const int swap)
 {
     int i;
     const int nEntries = inMax + 1;
 
     for (i = 0; i < nEntries; ++i)
     {
-        table[i] = ((i * outMax + inMax / 2) / inMax) << outShift;
+        table[i] = static_cast<CARD8>(((i * outMax + inMax / 2) / inMax) << outShift);
 #if (OUTVNC != 8)
         if (swap)
         {

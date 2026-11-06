@@ -535,7 +535,7 @@ rdr::U16 ascii_to_x[256U] = {
 // doKeyboardEvent wraps the system keybd_event function and attempts to find
 // the appropriate scancode corresponding to the supplied virtual keycode.
 
-inline void doKeyboardEvent(const BYTE vkCode, const DWORD flags) { keybd_uni_event(vkCode, ::MapVirtualKey(vkCode, 0), flags, 0); }
+inline void doKeyboardEvent(const BYTE vkCode, const DWORD flags) { keybd_uni_event(vkCode, static_cast<BYTE>(::MapVirtualKey(vkCode, 0)), flags, 0); }
 
 // KeyStateModifier is a class which helps simplify generating a "fake" press
 // or release of shift, ctrl, alt, etc. An instance of the class is created
@@ -552,7 +552,7 @@ public:
     {
         if (!(::GetAsyncKeyState(vkCode) & 0x8000))
         {
-            doKeyboardEvent(vkCode, flags);
+            doKeyboardEvent(static_cast<BYTE>(vkCode), flags);
             vnclog.Print(LL_INTINFO, "fake %d down\n", vkCode);
             pressed = true;
         }
@@ -561,7 +561,7 @@ public:
     {
         if (::GetAsyncKeyState(vkCode) & 0x8000)
         {
-            doKeyboardEvent(vkCode, flags | KEYEVENTF_KEYUP);
+            doKeyboardEvent(static_cast<BYTE>(vkCode), flags | KEYEVENTF_KEYUP);
             vnclog.Print(LL_INTINFO, "fake %d up\n", vkCode);
             released = true;
         }
@@ -570,12 +570,12 @@ public:
     {
         if (pressed)
         {
-            doKeyboardEvent(vkCode, flags | KEYEVENTF_KEYUP);
+            doKeyboardEvent(static_cast<BYTE>(vkCode), flags | KEYEVENTF_KEYUP);
             vnclog.Print(LL_INTINFO, "fake %d up\n", vkCode);
         }
         else if (released)
         {
-            doKeyboardEvent(vkCode, flags);
+            doKeyboardEvent(static_cast<BYTE>(vkCode), flags);
             vnclog.Print(LL_INTINFO, "fake %d down\n", vkCode);
         }
     }
@@ -1201,7 +1201,7 @@ public:
             }
             // ordinary Latin-1 character
 
-            SHORT s = ::VkKeyScan(keysym);
+            SHORT s = ::VkKeyScan(static_cast<CHAR>(keysym));
 
             //	[v1.0.2-jp1 fix] yak!'s patch
             // This break Other keyboards, we need an easy way of fixing this
@@ -1248,11 +1248,11 @@ public:
                         if (ascii <= 255)
                         {
 
-                            rdr::U8 a0 = ascii / 100;
+                            rdr::U8 a0 = static_cast<rdr::U8>(ascii / 100);
                             ascii = ascii % 100;
-                            rdr::U8 a1 = ascii / 10;
+                            rdr::U8 a1 = static_cast<rdr::U8>(ascii / 10);
                             ascii = ascii % 10;
-                            rdr::U8 a2 = ascii;
+                            rdr::U8 a2 = static_cast<rdr::U8>(ascii);
 
                             KeyStateModifier shift(VK_SHIFT);
                             KeyStateModifier lshift(VK_LSHIFT);
@@ -1263,7 +1263,7 @@ public:
 
                             vnclog.Print(LL_INTWARN, " Simulating ALT+%d%d%d\n", a0, a1, a2);
 
-                            keybd_uni_event(VK_MENU, ::MapVirtualKey(VK_MENU, 0), 0, 0);
+                            keybd_uni_event(VK_MENU, static_cast<BYTE>(::MapVirtualKey(VK_MENU, 0)), 0, 0);
                             /**
                               Pressing the Alt+NNN combinations without leading zero (for example, Alt+20, Alt+130, Alt+221)
                               will insert characters from the Extended ASCII (or MS DOS ASCII, or OEM) table. The character
@@ -1280,15 +1280,15 @@ public:
 
                             **/
                             // jdp 11 December 2008 - Need the leading 0!
-                            keybd_uni_event(VK_NUMPAD0, ::MapVirtualKey(VK_NUMPAD0, 0), 0, 0);
-                            keybd_uni_event(VK_NUMPAD0, ::MapVirtualKey(VK_NUMPAD0, 0), KEYEVENTF_KEYUP, 0);
-                            keybd_uni_event(VK_NUMPAD0 + a0, ::MapVirtualKey(VK_NUMPAD0 + a0, 0), 0, 0);
-                            keybd_uni_event(VK_NUMPAD0 + a0, ::MapVirtualKey(VK_NUMPAD0 + a0, 0), KEYEVENTF_KEYUP, 0);
-                            keybd_uni_event(VK_NUMPAD0 + a1, ::MapVirtualKey(VK_NUMPAD0 + a1, 0), 0, 0);
-                            keybd_uni_event(VK_NUMPAD0 + a1, ::MapVirtualKey(VK_NUMPAD0 + a1, 0), KEYEVENTF_KEYUP, 0);
-                            keybd_uni_event(VK_NUMPAD0 + a2, ::MapVirtualKey(VK_NUMPAD0 + a2, 0), 0, 0);
-                            keybd_uni_event(VK_NUMPAD0 + a2, ::MapVirtualKey(VK_NUMPAD0 + a2, 0), KEYEVENTF_KEYUP, 0);
-                            keybd_uni_event(VK_MENU, ::MapVirtualKey(VK_MENU, 0), KEYEVENTF_KEYUP, 0);
+                            keybd_uni_event(VK_NUMPAD0, static_cast<BYTE>(::MapVirtualKey(VK_NUMPAD0, 0)), 0, 0);
+                            keybd_uni_event(VK_NUMPAD0, static_cast<BYTE>(::MapVirtualKey(VK_NUMPAD0, 0)), KEYEVENTF_KEYUP, 0);
+                            keybd_uni_event(VK_NUMPAD0 + a0, static_cast<BYTE>(::MapVirtualKey(VK_NUMPAD0 + a0, 0)), 0, 0);
+                            keybd_uni_event(VK_NUMPAD0 + a0, static_cast<BYTE>(::MapVirtualKey(VK_NUMPAD0 + a0, 0)), KEYEVENTF_KEYUP, 0);
+                            keybd_uni_event(VK_NUMPAD0 + a1, static_cast<BYTE>(::MapVirtualKey(VK_NUMPAD0 + a1, 0)), 0, 0);
+                            keybd_uni_event(VK_NUMPAD0 + a1, static_cast<BYTE>(::MapVirtualKey(VK_NUMPAD0 + a1, 0)), KEYEVENTF_KEYUP, 0);
+                            keybd_uni_event(VK_NUMPAD0 + a2, static_cast<BYTE>(::MapVirtualKey(VK_NUMPAD0 + a2, 0)), 0, 0);
+                            keybd_uni_event(VK_NUMPAD0 + a2, static_cast<BYTE>(::MapVirtualKey(VK_NUMPAD0 + a2, 0)), KEYEVENTF_KEYUP, 0);
+                            keybd_uni_event(VK_MENU, static_cast<BYTE>(::MapVirtualKey(VK_MENU, 0)), KEYEVENTF_KEYUP, 0);
                             return;
                         }
                     }

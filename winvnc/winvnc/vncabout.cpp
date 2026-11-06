@@ -163,7 +163,7 @@ void convertToISO8601(const char* const input, char* const output, const std::si
     std::sscanf(input, "%3s %d %d %d:%d:%d", monthStr.data(), &day, &year, &hour, &minute, &second);
 
     // Convert month abbreviation to number (1-12)
-    month = (std::strstr(months, monthStr.data()) - months) / 3 + 1;
+    month = static_cast<int>((std::strstr(months, monthStr.data()) - months) / 3 + 1);
 
     // Format into ISO 8601 format "YYYY-MM-DDTHH:MM:SS"
     std::snprintf(output, size, "%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);

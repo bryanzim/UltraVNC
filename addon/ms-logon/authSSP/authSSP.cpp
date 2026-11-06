@@ -36,9 +36,9 @@ BOOL CUPSD2(const char* const domainuser, const char* const password, const PSEC
     std::array<TCHAR, MAXLEN> user2;
     std::array<TCHAR, MAXLEN> domain2;
     std::array<TCHAR, MAXLEN> password2;
-    TCHAR* prefix = nullptr;
+    [[maybe_unused]] TCHAR* prefix = nullptr;
 
-    user = SplitString(domainuser, '\\', domain.data(), domain.size());
+    user = SplitString(domainuser, '\\', domain.data(), static_cast<int>(domain.size()));
 
 #if defined(_UNICODE) || defined(UNICODE)
     std::size_t pnconv;

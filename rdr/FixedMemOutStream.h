@@ -38,7 +38,7 @@ namespace rdr
         const void* data() { return (const void*)start; }
 
     private:
-        int overrun(const int itemSize, const int nItems) { throw EndOfStream("overrun"); }
+        int overrun(int itemSize, int nItems) { throw EndOfStream("overrun"); }
         U8* start;
     };
 

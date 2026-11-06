@@ -55,7 +55,7 @@ namespace rdr
         // overrun() either doubles the buffer or adds enough space for nItems of
         // size itemSize bytes.
 
-        int overrun(const int itemSize, const int nItems)
+        int overrun(int itemSize, int nItems)
         {
             int len = static_cast<int>((ptr - start + itemSize * nItems));
             if (len < (end - start) * 2)

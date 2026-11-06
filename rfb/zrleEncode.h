@@ -114,7 +114,7 @@ public:
                 return;
             }
 
-            index[i] = size;
+            index[i] = static_cast<rdr::U8>(size);
             key[i] = pix;
             palette[size] = pix;
         }
@@ -219,7 +219,7 @@ void ZRLE_ENCODE_TILE(PIXEL_T* const data, const int w, const int h, rdr::OutStr
     if (ph.size == 1)
     {
         os->writeU8(1);
-        os->WRITE_PIXEL(ph.palette[0U]);
+        os->WRITE_PIXEL(static_cast<rdr::U8>(ph.palette[0U]));
         return;
     }
 
@@ -277,43 +277,43 @@ void ZRLE_ENCODE_TILE(PIXEL_T* const data, const int w, const int h, rdr::OutStr
         ph.size = 0;
     }
 
-    os->writeU8((useRle ? 128 : 0) | ph.size);
+    os->writeU8(static_cast<rdr::U8>((useRle ? 128 : 0) | ph.size));
 
     for (int i{ 0 }; i < ph.size; ++i)
     {
-        os->WRITE_PIXEL(ph.palette[i]);
+        os->WRITE_PIXEL(static_cast<rdr::U8>(ph.palette[i]));
     }
 
     if (useRle)
     {
 
-        PIXEL_T* ptr = data;
-        PIXEL_T* end = ptr + w * h;
+        PIXEL_T* ptrInner = data;
+        PIXEL_T* endInner = ptrInner + w * h;
         PIXEL_T* runStart;
         PIXEL_T pix;
-        while (ptr < end)
+        while (ptrInner < endInner)
         {
-            runStart = ptr;
-            pix = *ptr++;
-            while ((*ptr == pix) && (ptr < end))
+            runStart = ptrInner;
+            pix = *ptrInner++;
+            while ((*ptrInner == pix) && (ptrInner < endInner))
             {
-                ++ptr;
+                ++ptrInner;
             }
-            int len = static_cast<int>((ptr - runStart));
+            int len = static_cast<int>((ptrInner - runStart));
             if ((len <= 2) && usePalette)
             {
                 int index = ph.lookup(pix);
                 if (len == 2)
                 {
-                    os->writeU8(index);
+                    os->writeU8(static_cast<rdr::U8>(index));
                 }
-                os->writeU8(index);
+                os->writeU8(static_cast<rdr::U8>(index));
                 continue;
             }
             if (usePalette)
             {
                 int index = ph.lookup(pix);
-                os->writeU8(index | 128);
+                os->writeU8(static_cast<rdr::U8>(index | 128));
             }
             else
             {
@@ -325,7 +325,7 @@ void ZRLE_ENCODE_TILE(PIXEL_T* const data, const int w, const int h, rdr::OutStr
                 os->writeU8(255);
                 len -= 255;
             }
-            os->writeU8(len);
+            os->writeU8(static_cast<rdr::U8>(len));
         }
     }
     else
@@ -342,19 +342,19 @@ void ZRLE_ENCODE_TILE(PIXEL_T* const data, const int w, const int h, rdr::OutStr
 
             const int bppp = bitsPerPackedPixel[ph.size - 1];
 
-            PIXEL_T* ptr = data;
+            PIXEL_T* ptrInner = data;
 
             for (int i{ 0 }; i < h; ++i)
             {
                 U8 nbits = 0;
                 U8 byte = 0;
 
-                PIXEL_T* eol = ptr + w;
+                PIXEL_T* eol = ptrInner + w;
 
-                while (ptr < eol)
+                while (ptrInner < eol)
                 {
-                    PIXEL_T pix = *ptr++;
-                    U8 index = ph.lookup(pix);
+                    PIXEL_T pix = *ptrInner++;
+                    U8 index = static_cast<rdr::U8>(ph.lookup(pix));
                     byte = (byte << bppp) | index;
                     nbits += bppp;
                     if (nbits >= 8)
@@ -386,9 +386,9 @@ void ZRLE_ENCODE_TILE(PIXEL_T* const data, const int w, const int h, rdr::OutStr
             else
 #endif
 #ifdef CPIXEL
-                for (PIXEL_T* ptr = data; ptr < data + w * h; ++ptr)
+                for (PIXEL_T* ptrInner = data; ptrInner < data + w * h; ++ptrInner)
                 {
-                    os->WRITE_PIXEL(*ptr);
+                    os->WRITE_PIXEL(*ptrInner);
                 }
 #else
             os->writeBytes(data, w * h * (BPPOUT / 8));

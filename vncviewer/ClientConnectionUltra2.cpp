@@ -45,7 +45,7 @@ static boolean JpegFillInputBuffer(const j_decompress_ptr cinfo) { return Viewer
 
 static void JpegSkipInputData(const j_decompress_ptr cinfo, const long num_bytes) { ViewerJpeg::skipInputData(cinfo, num_bytes); }
 
-static void JpegTermSource(const j_decompress_ptr cinfo) { /* No work necessary here. */ }
+static void JpegTermSource([[maybe_unused]] const j_decompress_ptr cinfo) { /* No work necessary here. */ }
 
 /*static void
 JpegSetSrcManager(j_decompress_ptr cinfo, char *compressedData, int compressedLen)

@@ -73,7 +73,7 @@ void vncEncodeTight::Init() { vncEncoder::Init(); }
  *
  */
 
-UINT vncEncodeTight::RequiredBuffSize(const UINT width, const UINT height)
+UINT vncEncodeTight::RequiredBuffSize([[maybe_unused]] const UINT width, [[maybe_unused]] const UINT height)
 {
     int result = m_conf[0U].maxRectSize * (m_remoteformat.bitsPerPixel / 8);
     result += result / 100 + 16;
@@ -183,10 +183,10 @@ UINT vncEncodeTight::EncodeRect(BYTE* const source, VSocket* const outConn, BYTE
 
     int nMaxRows;
     {
-        int maxRectSize = m_conf[m_turboCompressLevel].maxRectSize;
+        int maxRectSizeInner = m_conf[m_turboCompressLevel].maxRectSize;
         const int maxRectWidth = m_conf[m_turboCompressLevel].maxRectWidth;
         const int nMaxWidth = (w > maxRectWidth) ? maxRectWidth : w;
-        nMaxRows = maxRectSize / nMaxWidth;
+        nMaxRows = maxRectSizeInner / nMaxWidth;
     }
 
     // Try to find large solid-color areas and send them separately.
@@ -227,9 +227,9 @@ UINT vncEncodeTight::EncodeRect(BYTE* const source, VSocket* const outConn, BYTE
                     CARD32 r = (colorValue >> 16) & 0xFF;
                     CARD32 g = (colorValue >> 8) & 0xFF;
                     CARD32 b = (colorValue) & 0xFF;
-                    double y = (0.257 * static_cast<double>(r)) + (0.504 * static_cast<double>(g)) +
+                    double yInner = (0.257 * static_cast<double>(r)) + (0.504 * static_cast<double>(g)) +
                                (0.098 * static_cast<double>(b)) + 16.;
-                    colorValue = static_cast<int>(y) + ((static_cast<int>(y)) << 8) + ((static_cast<int>(y)) << 16);
+                    colorValue = static_cast<int>(yInner) + ((static_cast<int>(yInner)) << 8) + ((static_cast<int>(yInner)) << 16);
                 }
 
                 // Get dimensions of solid-color area.
@@ -753,7 +753,7 @@ int vncEncodeTight::SendFullColorRect(BYTE* const dest, const int w, const int h
 }
 
 int vncEncodeTight::CompressData(BYTE* const dest, const int streamId, const int dataLen, const int zlibLevel,
-                                 const int zlibStrategy)
+                                 [[maybe_unused]] const int zlibStrategy)
 {
     if (dataLen < TIGHT_MIN_TO_COMPRESS)
     {
@@ -1517,14 +1517,14 @@ static void JpegInitDestination(j_compress_ptr cinfo);
 static boolean JpegEmptyOutputBuffer(j_compress_ptr cinfo);
 static void JpegTermDestination(j_compress_ptr cinfo);
 
-static void JpegInitDestination(const j_compress_ptr cinfo)
+static void JpegInitDestination([[maybe_unused]] const j_compress_ptr cinfo)
 {
     jpegError = false;
     jpegDstManager.next_output_byte = jpegDstBuffer;
     jpegDstManager.free_in_buffer = jpegDstBufferLen;
 }
 
-static boolean JpegEmptyOutputBuffer(const j_compress_ptr cinfo)
+static boolean JpegEmptyOutputBuffer([[maybe_unused]] const j_compress_ptr cinfo)
 {
     jpegError = true;
     jpegDstManager.next_output_byte = jpegDstBuffer;
@@ -1533,7 +1533,7 @@ static boolean JpegEmptyOutputBuffer(const j_compress_ptr cinfo)
     return TRUE;
 }
 
-static void JpegTermDestination(const j_compress_ptr cinfo) { jpegDstDataLen = jpegDstBufferLen - jpegDstManager.free_in_buffer; }
+static void JpegTermDestination([[maybe_unused]] const j_compress_ptr cinfo) { jpegDstDataLen = static_cast<int>(jpegDstBufferLen - jpegDstManager.free_in_buffer); }
 
 static void JpegSetDstManager(const j_compress_ptr cinfo, JOCTET* const buf, const std::size_t buflen)
 {

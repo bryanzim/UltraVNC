@@ -95,6 +95,7 @@ extern socktype wi_listen;
 
 DWORD WINAPI ThreadStartWeb(LPVOID lpParam)
 {
+	(void)lpParam;
 	int   sessions = 0;
 	while(notwebstopped)
 	{
@@ -194,6 +195,7 @@ panic(char * msg)
 int
 mode1_ssi(wi_sess * sess, EOFILE * eofile)
 {
+   (void)eofile;
    if (saved_mode1) wi_printf(sess, "checked=\"checked\"");
    return 0;
 }
@@ -201,6 +203,7 @@ mode1_ssi(wi_sess * sess, EOFILE * eofile)
 int
 keepalive_ssi(wi_sess * sess, EOFILE * eofile)
 {
+   (void)eofile;
    if (saved_keepalive) wi_printf(sess, "checked=\"checked\"");
    return 0;
 }
@@ -216,6 +219,7 @@ keepalive_ssi(wi_sess * sess, EOFILE * eofile)
 int
 mode2_ssi(wi_sess * sess, EOFILE * eofile)
 {
+	(void)eofile;
 	if (saved_mode2) wi_printf(sess, "checked=\"checked\"");
    /* Add your code here */
    return 0;
@@ -231,6 +235,7 @@ mode2_ssi(wi_sess * sess, EOFILE * eofile)
 int
 sport_ssi(wi_sess * sess, EOFILE * eofile)
 {
+   (void)eofile;
    wi_printf(sess, "value=\"%i\"",saved_portA);
    return 0;
 }
@@ -245,6 +250,7 @@ sport_ssi(wi_sess * sess, EOFILE * eofile)
 int
 vport_ssi(wi_sess * sess, EOFILE * eofile)
 {
+	(void)eofile;
 	wi_printf(sess, "value=\"%i\"",saved_portB);
    /* Add your code here */
    return 0;
@@ -260,6 +266,7 @@ vport_ssi(wi_sess * sess, EOFILE * eofile)
 int
 acon_ssi(wi_sess * sess, EOFILE * eofile)
 {
+	(void)eofile;
 	if (saved_allow) wi_printf(sess, "checked=\"checked\"");
    /* Add your code here */
    return 0;
@@ -275,6 +282,7 @@ acon_ssi(wi_sess * sess, EOFILE * eofile)
 int
 rcon_ssi(wi_sess * sess, EOFILE * eofile)
 {
+	(void)eofile;
 	if (saved_refuse) wi_printf(sess, "checked=\"checked\"");
    /* Add your code here */
    return 0;
@@ -283,6 +291,7 @@ rcon_ssi(wi_sess * sess, EOFILE * eofile)
 int
 ucom_ssi(wi_sess * sess, EOFILE * eofile)
 {
+	(void)eofile;
 	if (saved_usecom) wi_printf(sess, "checked=\"checked\"");
    /* Add your code here */
    return 0;
@@ -298,6 +307,7 @@ ucom_ssi(wi_sess * sess, EOFILE * eofile)
 int
 aid_ssi(wi_sess * sess, EOFILE * eofile)
 {
+	(void)eofile;
 	if (saved_refuse2) wi_printf(sess, "checked=\"checked\"");
    /* Add your code here */
    return 0;
@@ -313,6 +323,7 @@ aid_ssi(wi_sess * sess, EOFILE * eofile)
 int
 acons_ssi(wi_sess * sess, EOFILE * eofile)
 {
+   (void)eofile;
    wi_printf(sess, "value=\"%s\"",saved_sample1);
    return 0;
 }
@@ -327,6 +338,7 @@ acons_ssi(wi_sess * sess, EOFILE * eofile)
 int
 rcons_ssi(wi_sess * sess, EOFILE * eofile)
 {
+  (void)eofile;
   wi_printf(sess, "value=\"%s\"",saved_sample2);
    return 0;
 }
@@ -334,6 +346,7 @@ rcons_ssi(wi_sess * sess, EOFILE * eofile)
 int
 webport_ssi(wi_sess * sess, EOFILE * eofile)
 {
+  (void)eofile;
   wi_printf(sess, "value=\"%i\"",saved_portHTTP);
    return 0;
 }
@@ -348,6 +361,7 @@ webport_ssi(wi_sess * sess, EOFILE * eofile)
 int
 aids_ssi(wi_sess * sess, EOFILE * eofile)
 {
+  (void)eofile;
   wi_printf(sess, "value=\"%s\"",saved_sample3);
    return 0;
 }
@@ -355,6 +369,7 @@ aids_ssi(wi_sess * sess, EOFILE * eofile)
 int 
 memory_ssi(wi_sess * sess, EOFILE * eofile)
 {
+	(void)eofile;
 	char txt[4000];
 	struct hostent *remoteHost;
 	struct in_addr addr;
@@ -393,6 +408,7 @@ memory_ssi(wi_sess * sess, EOFILE * eofile)
 int 
 log_ssi(wi_sess * sess, EOFILE * eofile)
 {
+		(void)eofile;
 		char *txt;
 	txt=log_txt();
 	wi_printf(sess, "%s", txt);
@@ -418,13 +434,14 @@ wi_cvariables(wi_sess * sess, int token)
 char * 
 testaction2_cgi(wi_sess * sess,  EOFILE * eofile)
 {
+   (void)eofile;
    char *   id;
-   char *   comment;
+   char *   commentLocal;
    id = wi_formvalue(sess, "id");  
-   comment = wi_formvalue(sess, "comment"); 
-   if (id && comment) 
+   commentLocal = wi_formvalue(sess, "comment"); 
+   if (id && commentLocal) 
 	   {
-		   add_comment(atol(id), comment);
+		   add_comment(atol(id), commentLocal);
 		   Save_comment();
 		}
    wi_redirect(sess, "comment.html");
@@ -435,8 +452,9 @@ testaction2_cgi(wi_sess * sess,  EOFILE * eofile)
 char * 
 testaction3_cgi(wi_sess * sess,  EOFILE * eofile)
 {
+   (void)eofile;
    char *   id;
-   char *   comment;
+   char *   commentLocal;
    int i;
    for (i=0;i<MAX_LIST*2;i++)
 	{
@@ -445,10 +463,10 @@ testaction3_cgi(wi_sess * sess,  EOFILE * eofile)
 	   sprintf_s(idnr,50,"%s%i","id",i);
 	   sprintf_s(commentnr,50, "%s%i","comment",i);
 	   id = wi_formvalue(sess, idnr);  
-	   comment = wi_formvalue(sess, commentnr); 
-	   if (id && comment) 
+	   commentLocal = wi_formvalue(sess, commentnr); 
+	   if (id && commentLocal) 
 		   {
-			   add_comment(atol(id), comment);			  
+			   add_comment(atol(id), commentLocal);			  
 			}
    }
     Save_comment();
@@ -461,6 +479,7 @@ testaction3_cgi(wi_sess * sess,  EOFILE * eofile)
 char * 
 testaction4_cgi(wi_sess * sess,  EOFILE * eofile)
 {
+   (void)eofile;
    char *   id;
    id = wi_formvalue(sess, "id");  
    if (id) 
@@ -476,6 +495,7 @@ testaction4_cgi(wi_sess * sess,  EOFILE * eofile)
 char * 
 testaction5_cgi(wi_sess * sess,  EOFILE * eofile)
 {
+   (void)eofile;
    Read_comment();
    wi_redirect(sess, "comment.html");
    return( NULL );
@@ -484,6 +504,7 @@ testaction5_cgi(wi_sess * sess,  EOFILE * eofile)
 int 
 listcomment_ssi(wi_sess * sess, EOFILE * eofile)
 {
+	(void)eofile;
 	int i;
 	char txt[1000];
 	for (i=0;i<MAX_LIST*2;i++)
@@ -513,10 +534,12 @@ listcomment_ssi(wi_sess * sess, EOFILE * eofile)
 int 
 connections_ssi(wi_sess * sess, EOFILE * eofile)
 {	
+	(void)eofile;
 	char str[1024];
 	char szFileName[MAX_PATH];
 //	char tempchar[128];
     HANDLE hFile=NULL;
+    (void)hFile;
 	FILE *f;
 	if (GetModuleFileName(NULL, szFileName, MAX_PATH))
 					{
@@ -540,10 +563,12 @@ connections_ssi(wi_sess * sess, EOFILE * eofile)
 int 
 server_access_ssi(wi_sess * sess, EOFILE * eofile)
 {	
+	(void)eofile;
 	char str[1024];
 	char szFileName[MAX_PATH];
 //	char tempchar[128];
     HANDLE hFile=NULL;
+    (void)hFile;
 	FILE *f;
 	if (GetModuleFileName(NULL, szFileName, MAX_PATH))
 					{
@@ -567,10 +592,12 @@ server_access_ssi(wi_sess * sess, EOFILE * eofile)
 int 
 viewer_access_ssi(wi_sess * sess, EOFILE * eofile)
 {	
+	(void)eofile;
 	char str[1024];
 	char szFileName[MAX_PATH];
 //	char tempchar[128];
     HANDLE hFile=NULL;
+    (void)hFile;
 	FILE *f;
 	if (GetModuleFileName(NULL, szFileName, MAX_PATH))
 					{
@@ -603,6 +630,7 @@ char username[512];
 char * 
 testaction_cgi(wi_sess * sess,  EOFILE * eofile)
 {
+   (void)eofile;
    char *   mode1;
    char *   mode2;
    char *   keepalive;
@@ -682,6 +710,7 @@ int VerifyPass(char *passwd)
 char * 
 passwd_cgi(wi_sess * sess,  EOFILE * eofile)
 {
+   (void)eofile;
    char *   old_pass;
    char *   new_pass;
     int result=0;
@@ -718,6 +747,7 @@ passwd_cgi(wi_sess * sess,  EOFILE * eofile)
 int
 getname_ssi(wi_sess * sess, EOFILE * eofile)
 {
+    (void)eofile;
     /* output saved user name to session, if it's set */
     if(username[0] == 0)
         wi_printf(sess, "(no user name)");
@@ -735,6 +765,8 @@ getname_ssi(wi_sess * sess, EOFILE * eofile)
 int
 pushtest_func(wi_sess * sess, EOFILE * eofile)
 {
+   (void)eofile;
+   (void)sess;
    /* Add your code here */
    return 0;
 }

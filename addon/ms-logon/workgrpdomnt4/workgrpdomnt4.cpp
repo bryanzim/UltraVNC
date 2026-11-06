@@ -22,7 +22,7 @@
 #include <cwchar>
 /////////////////////////
 
-BOOL APIENTRY DllMain(const HANDLE hModule, const DWORD ul_reason_for_call, const LPVOID lpReserved)
+BOOL APIENTRY DllMain([[maybe_unused]] const HANDLE hModule, const DWORD ul_reason_for_call, [[maybe_unused]] const LPVOID lpReserved)
 {
     switch (ul_reason_for_call)
     {
@@ -524,14 +524,14 @@ BOOL WINAPI SSPLogonUser(const LPTSTR szDomain, const LPTSTR szUser, const LPTST
 
 ///////////////////////////////////////////////////////////////////////////////
 WORKGRPDOMNT4_API
-BOOL CUGP(char* const userin, char* const password, char* const machine, char* const groupin, const int locdom)
+BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const machine, char* const groupin, const int locdom)
 {
     //	FILE *file;
     bool isNT{ true };
     bool isXP{ false };
     bool access_vnc = FALSE;
     bool laccess_vnc = FALSE;
-    const bool localdatabase{ false };
+    [[maybe_unused]] const bool localdatabase{ false };
     ad_access = false;
     OSVERSIONINFO ovi{ sizeof ovi };
     // determine OS and load appropriate library
@@ -665,7 +665,7 @@ BOOL CUGP(char* const userin, char* const password, char* const machine, char* c
         if ((locdom == 1) || (locdom == 3))
         {
             LOCALGROUP_MEMBERS_INFO_2 *bufLMI, *cur;
-            DWORD read, total, resumeh, rc, i;
+            DWORD readInner, totalInner, resumeh, rcInner, iInner;
             std::array<wchar_t, MAXLEN> tempbuf;
             std::array<wchar_t, MAXLEN> seperator;
 
@@ -674,18 +674,18 @@ BOOL CUGP(char* const userin, char* const password, char* const machine, char* c
             netlocalgroupgetmembers = (netlocalgroupgetmembers_t)::GetProcAddress(h, "NetLocalGroupGetMembers");
 
             ////////////////////// GROUPS///////////////////////////////////////
-            std::size_t pnconv;
-            ::mbstowcs_s(&pnconv, seperator.data(), 256, "\\", 5);
+            std::size_t pnconvInner;
+            ::mbstowcs_s(&pnconvInner, seperator.data(), 256, "\\", 5);
             ///////////////////////GROUP1/////////////////////////////////////
             resumeh = 0;
             do
             {
                 bufLMI = nullptr;
-                rc = netlocalgroupgetmembers(nullptr, (wchar_t*)group.data(), 2, (BYTE**)&bufLMI, BUFSIZE, &read, &total, &resumeh);
-                if ((rc == ERROR_MORE_DATA) || (rc == ERROR_SUCCESS))
+                rcInner = netlocalgroupgetmembers(nullptr, (wchar_t*)group.data(), 2, (BYTE**)&bufLMI, BUFSIZE, &readInner, &totalInner, &resumeh);
+                if ((rcInner == ERROR_MORE_DATA) || (rcInner == ERROR_SUCCESS))
                 {
 
-                    for (i = 0, cur = bufLMI; i < read; ++i, ++cur)
+                    for (iInner = 0, cur = bufLMI; iInner < readInner; ++iInner, ++cur)
                     {
                         // Note: the capital S in the format string will expect Unicode
                         // strings, as this is a program written/compiled for ANSI.
@@ -705,7 +705,7 @@ BOOL CUGP(char* const userin, char* const password, char* const machine, char* c
                         NetApiBufferFree(bufLMI);
                     }
                 }
-            } while (rc == ERROR_MORE_DATA);
+            } while (rcInner == ERROR_MORE_DATA);
 
             ///////////////////////////////////////////////////////////////////////
             if (h != 0)
@@ -717,19 +717,19 @@ BOOL CUGP(char* const userin, char* const password, char* const machine, char* c
 
         if (!rcdomain)
         {
-            DWORD rc;
+            DWORD rcInner;
             std::printf("New added ----  just for testing \n");
             ::wcscpy_s((wchar_t*)server.data(), MAXLEN, (wchar_t*)buf);
             byte* buf2 = 0;
             rc2 = NetWkstaGetInfoNT(0, 100, &buf2);
-            std::size_t pnconv;
+            std::size_t pnconvInner725;
             if (rc2)
             {
                 std::printf("NetWkstaGetInfoA() returned %lu \n", rc2);
             }
             else
             {
-                ::wcstombs_s(&pnconv, domain.data(), MAXLEN, ((WKSTA_INFO_100_NT*)buf2)->wki100_langroup, MAXLEN);
+                ::wcstombs_s(&pnconvInner725, domain.data(), MAXLEN, ((WKSTA_INFO_100_NT*)buf2)->wki100_langroup, MAXLEN);
             }
             NetApiBufferFree(buf2);
             domain[MAXLEN - 1] = '\0';
@@ -740,15 +740,15 @@ BOOL CUGP(char* const userin, char* const password, char* const machine, char* c
             ::strcpy_s(userdom.data(), userdom.size(), domain.data());
             ::strcat_s(userdom.data(), userdom.size(), "\\");
             ::strcat_s(userdom.data(), userdom.size(), userin);
-            ::mbstowcs_s(&pnconv, (wchar_t*)userdomain.data(), MAXLEN, userdom.data(), userdom.size());
+            ::mbstowcs_s(&pnconvInner725, (wchar_t*)userdomain.data(), MAXLEN, userdom.data(), userdom.size());
             std::printf("%S\n", (wchar_t*)userdomain.data());
-            rc = NetUserGetGroupsNT(nullptr, (wchar_t*)userdomain.data(), 0, 1, &buf2, MAX_PREFERRED_LENGTH, &read, &total);
-            if (rc == NERR_Success)
+            rcInner = NetUserGetGroupsNT(nullptr, (wchar_t*)userdomain.data(), 0, 1, &buf2, MAX_PREFERRED_LENGTH, &read, &total);
+            if (rcInner == NERR_Success)
             {
                 for (i = 0; i < read; ++i)
                 {
-                    std::size_t pnconv;
-                    ::wcstombs_s(&pnconv, groupname.data(), groupname.size(), ((LPLOCALGROUP_USERS_INFO_0_NT*)buf2)[i].grui0_name, MAXLEN);
+                    std::size_t pnconvInner;
+                    ::wcstombs_s(&pnconvInner, groupname.data(), groupname.size(), ((LPLOCALGROUP_USERS_INFO_0_NT*)buf2)[i].grui0_name, MAXLEN);
                     groupname[MAXLEN - 1] = '\0'; // because strncpy won't do this if overflow
 #ifdef _MSC_VER
                     _strupr(groupname.data());
@@ -784,19 +784,19 @@ BOOL CUGP(char* const userin, char* const password, char* const machine, char* c
         if ((locdom == 2) || (locdom == 3))
             if (!rcdomain)
             {
-                DWORD rc;
+                DWORD rcInner;
                 std::printf("New added ----  just for testing \n");
                 ::wcscpy_s((wchar_t*)server.data(), MAXLEN, (wchar_t*)buf);
                 byte* buf2 = 0;
                 rc2 = NetWkstaGetInfoNT(0, 100, &buf2);
-                std::size_t pnconv;
+                std::size_t pnconvInner792;
                 if (rc2)
                 {
                     std::printf("NetWkstaGetInfoA() returned %lu \n", rc2);
                 }
                 else
                 {
-                    ::wcstombs_s(&pnconv, domain.data(), MAXLEN, ((WKSTA_INFO_100_NT*)buf2)->wki100_langroup, MAXLEN);
+                    ::wcstombs_s(&pnconvInner792, domain.data(), MAXLEN, ((WKSTA_INFO_100_NT*)buf2)->wki100_langroup, MAXLEN);
                 }
                 NetApiBufferFree(buf2);
                 domain[MAXLEN - 1] = '\0';
@@ -807,16 +807,16 @@ BOOL CUGP(char* const userin, char* const password, char* const machine, char* c
                 //strcpy(_s(userdom,domain);
                 //strcat_s(userdom,"\\");
                 ::strcpy_s(userdom.data(), userdom.size(), userin);
-                ::mbstowcs_s(&pnconv, (wchar_t*)userdomain.data(), MAXLEN, userdom.data(), userdom.size());
+                ::mbstowcs_s(&pnconvInner792, (wchar_t*)userdomain.data(), MAXLEN, userdom.data(), userdom.size());
                 std::printf("%S\n", (wchar_t*)userdomain.data());
-                rc = NetUserGetGroupsNT2((wchar_t*)server.data(), (wchar_t*)userdomain.data(), 0, &buf2, MAX_PREFERRED_LENGTH,
+                rcInner = NetUserGetGroupsNT2((wchar_t*)server.data(), (wchar_t*)userdomain.data(), 0, &buf2, MAX_PREFERRED_LENGTH,
                                          &read, &total);
-                if (rc == NERR_Success)
+                if (rcInner == NERR_Success)
                 {
                     for (i = 0; i < read; ++i)
                     {
-                        std::size_t pnconv;
-                        ::wcstombs_s(&pnconv, groupname.data(), groupname.size(), ((LPLOCALGROUP_USERS_INFO_0_NT*)buf2)[i].grui0_name, MAXLEN);
+                        std::size_t pnconvInner;
+                        ::wcstombs_s(&pnconvInner, groupname.data(), groupname.size(), ((LPLOCALGROUP_USERS_INFO_0_NT*)buf2)[i].grui0_name, MAXLEN);
                         groupname[MAXLEN - 1] = '\0'; // because strncpy won't do this if overflow
 #ifdef _MSC_VER
                         _strupr(groupname.data());

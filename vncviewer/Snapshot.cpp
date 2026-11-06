@@ -32,7 +32,7 @@
 
 #pragma comment(lib, "gdiplus")
 
-static int CALLBACK BrowseCallbackProc(const HWND hwnd, const UINT uMsg, const LPARAM lParam, const LPARAM lpData)
+static int CALLBACK BrowseCallbackProc(const HWND hwnd, const UINT uMsg, [[maybe_unused]] const LPARAM lParam, const LPARAM lpData)
 {
 
     if (uMsg == BFFM_INITIALIZED)
@@ -156,7 +156,7 @@ void Snapshot::SaveJpeg(const HBITMAP membit, TCHAR folder[MAX_PATH], TCHAR pref
     // Replace %hostname% token with the connected server's name
     std::basic_string<TCHAR> filenameExpanded =
         ReplaceToken(filename.data(), _T("%hostname%"), SanitizeFileName(hostname ? hostname : _T("")));
-    ::ExpandEnvironmentStrings(filenameExpanded.c_str(), expanded_filename.data(), expanded_filename.size());
+    ::ExpandEnvironmentStrings(filenameExpanded.c_str(), expanded_filename.data(), static_cast<DWORD>(expanded_filename.size()));
     using namespace Gdiplus;
     GdiplusStartupInput gdiplusStartupInput;
     ULONG_PTR gdiplusToken;
@@ -230,7 +230,7 @@ int Snapshot::DoDialogSnapshot(TCHAR folder[MAX_PATH], TCHAR prefix[56U])
     extern HINSTANCE m_hInstResDLL;
     ::_tcscpy_s(m_folder.data(), m_folder.size(), folder);
     ::_tcscpy_s(m_prefix, prefix);
-    return ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_SAVEIMAGE), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this);
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_SAVEIMAGE), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this));
 }
 
 BOOL CALLBACK Snapshot::DlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)

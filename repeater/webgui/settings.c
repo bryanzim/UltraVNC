@@ -103,7 +103,7 @@ void Read_comment()
 	{
 		
 		char temp[10];
-		char temp2[256];
+		char temp2Local[256];
 		char seps[]   = ":";
 		char *token;
 		char *next_token = NULL;
@@ -111,13 +111,14 @@ void Read_comment()
 		comment[i].code=0;
 		memset(comment[i].comment,0,256);
 
-		memset(temp2,0,256);
+		memset(temp2Local,0,256);
 		sprintf_s(temp, 10, "%i",i);
-		ReadString("comment", temp,temp2,256);
-		token = strtok_s( temp2, seps , &next_token);
+		ReadString("comment", temp,temp2Local,256);
+		token = strtok_s( temp2Local, seps , &next_token);
 		if ( token != NULL )
 		{
 			int a=0;
+			(void)a;
 			comment[i].code=atol(token);
 		}
 		token = strtok_s( NULL, seps,  &next_token);
@@ -140,14 +141,14 @@ void Save_comment()
 	for (i=0;i<MAX_LIST*2;i++)
 	{
 		char temp[10];
-		char temp3[10];
-		char temp2[256];
+		char temp3Local[10];
+		char temp2Local[256];
 		sprintf_s(temp,10, "%i",i);
-		sprintf_s(temp3, 10, "%u",comment[i].code);
-		strcpy_s(temp2,256,temp3);
-		strcat_s(temp2,256,":");
-		strcat_s(temp2,256,comment[i].comment);
-		WriteString("comment", temp,temp2);
+		sprintf_s(temp3Local, 10, "%u",comment[i].code);
+		strcpy_s(temp2Local,256,temp3Local);
+		strcat_s(temp2Local,256,":");
+		strcat_s(temp2Local,256,comment[i].comment);
+		WriteString("comment", temp,temp2Local);
 	}
 }
 
@@ -268,7 +269,7 @@ Read_settings()
 		rule1=0;
 		while (test)
 		{
-		int len=test-pos;
+		int len=(int)(test-pos);
 		if (len >= 25) len = 24;
 		strncpy_s(temp1[rule1], 25, pos,len);
 		temp1[rule1][len]=0;
@@ -285,7 +286,7 @@ Read_settings()
 		pos=saved_sample2;
 		while (test)
 		{
-		int len=test-pos;
+		int len=(int)(test-pos);
 		if (len >= 16) len = 15;
 		strncpy_s(temp2[rule2], 16, pos,len);
 		temp2[rule2][len]=0;
@@ -302,7 +303,7 @@ Read_settings()
 		pos=saved_sample3;
 		while (test)
 		{
-		int len=test-pos;
+		int len=(int)(test-pos);
 		if (len >= 16) len = 15;
 		strncpy_s(temp3[rule3], 16,pos,len);
 		temp3[rule3][len]=0;

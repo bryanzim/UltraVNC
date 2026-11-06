@@ -49,7 +49,7 @@ public:
             std::free(m_title);
         }
     };
-    virtual void run(void*)
+    virtual void run(void* const)
     {
         // Create the desired dialog box
         if (m_caption == nullptr)

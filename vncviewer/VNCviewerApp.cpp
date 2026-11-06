@@ -33,7 +33,7 @@ extern HINSTANCE m_hInstResDLL;
 
 VNCviewerApp* pApp;
 
-VNCviewerApp::VNCviewerApp(const HINSTANCE hInstance, const LPTSTR szCmdLine)
+VNCviewerApp::VNCviewerApp([[maybe_unused]] const HINSTANCE hInstance, const LPTSTR szCmdLine)
 {
     pApp = this;
     // m_instance points to the resource DLL (language DLL or main exe)

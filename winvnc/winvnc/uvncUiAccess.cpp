@@ -748,7 +748,7 @@ error:
 
 void comm_serv::Call_Fnction_no_feedback() { ::SetEvent(event_E_IN); }
 
-void comm_serv::Call_Fnction_no_feedback_data(char* const databuffer_IN, char* const databuffer_OUT)
+void comm_serv::Call_Fnction_no_feedback_data(char* const databuffer_IN, [[maybe_unused]] char* const databuffer_OUT)
 {
     ::EnterCriticalSection(&CriticalSection_IN);
     std::memcpy(data_IN, databuffer_IN, datasize_IN);

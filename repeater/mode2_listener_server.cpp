@@ -17,7 +17,7 @@
 HANDLE hserver_listen = nullptr;
 int sock_server_listen{ 0 };
 
-DWORD WINAPI server_listen(const LPVOID lpParam)
+DWORD WINAPI server_listen([[maybe_unused]] const LPVOID lpParam)
 {
     std::array<TCHAR, 256U> dest_host;
     u_short dest_port;
@@ -39,7 +39,7 @@ DWORD WINAPI server_listen(const LPVOID lpParam)
 
 
     ////////////
-    sock_server_listen = socket(PF_INET, SOCK_STREAM, 0);
+    sock_server_listen = static_cast<int>(socket(PF_INET, SOCK_STREAM, 0));
     if (sock_server_listen < 0)
     {
         fatal("socket() failed, errno=%d\n", socket_errno());
@@ -53,7 +53,7 @@ DWORD WINAPI server_listen(const LPVOID lpParam)
     setsockopt(sock_server_listen, IPPROTO_TCP, TCP_NODELAY, (char*)&one, sizeof(one));
 
     name.sin_family = AF_INET;
-    name.sin_port = htons(saved_portB);
+    name.sin_port = htons(static_cast<u_short>(saved_portB));
     name.sin_addr.s_addr = htonl(INADDR_ANY);
     if (bind(sock_server_listen, (struct sockaddr*)&name, sizeof(name)) < 0)
     {
@@ -78,7 +78,7 @@ DWORD WINAPI server_listen(const LPVOID lpParam)
         std::memset(proxyadress.data(), 0, 256);
         std::memset(remotehost.data(), 0, 256);
 
-        connection = accept(sock_server_listen, (struct sockaddr*)&client, &socklen);
+        connection = static_cast<int>(accept(sock_server_listen, (struct sockaddr*)&client, &socklen));
         ::Sleep(1000);
         ip_peer = inet_ntoa(client.sin_addr);
 
@@ -115,7 +115,7 @@ DWORD WINAPI server_listen(const LPVOID lpParam)
             }
 
             ::strcpy_s(dest_host.data(), dest_host.size(), remotehost.data());
-            dest_port = remoteport;
+            dest_port = static_cast<u_short>(remoteport);
             shutdown(sock_server_listen, 2);
             local_in = local_out = connection;
             if (std::strcmp(dest_host.data(), "ID") == 0)

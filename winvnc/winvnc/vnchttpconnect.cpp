@@ -616,7 +616,7 @@ public:
     void Inithttp(vncServer* const svr) { m_server = svr; }
 
     // Code to be executed by the thread
-    virtual void* run_undetached(void* arg);
+    virtual void* run_undetached(void* const arg);
     // Routines to handle HTTP requests
     virtual void DoHTTP(VSocket* socket);
     virtual char* ReadLine(VSocket* socket, char delimiter);
@@ -675,7 +675,7 @@ BOOL vncHTTPConnectThread::Init(VSocket* socket, vncServer* server)
 }
 
 // Code to be executed by the thread
-void* vncHTTPConnectThread::run_undetached(void* const arg)
+void* vncHTTPConnectThread::run_undetached([[maybe_unused]] void* const arg)
 {
 
     // Go into a loop, listening for connections on the given socket
@@ -683,19 +683,19 @@ void* vncHTTPConnectThread::run_undetached(void* const arg)
     while (!m_shutdown)
     {
         // Accept an incoming connection
-        VSocket* new_socket = m_socket->Accept();
-        if (new_socket == nullptr)
+        VSocket* new_socketInner = m_socket->Accept();
+        if (new_socketInner == nullptr)
         {
             break;
         }
         if (m_shutdown)
         {
-            delete new_socket;
+            delete new_socketInner;
             break;
         }
         vnclog.Print(LL_CLIENTS, VNCLOG("HTTP client connected\n"));
         // Successful accept - perform the transaction
-        new_socket->SetTimeout(15000); //ms
+        new_socketInner->SetTimeout(15000); //ms
 
         if (m_tlsEnabled)
         {
@@ -720,18 +720,18 @@ void* vncHTTPConnectThread::run_undetached(void* const arg)
                 }
             }
 
-            if (certOk && tls.ServerHandshake(new_socket))
+            if (certOk && tls.ServerHandshake(new_socketInner))
             {
                 // Install TLS callbacks so all HTTP/WebSocket I/O is encrypted
                 VSocket::TLSCallbacks cb;
-                cb.send = [&tls, new_socket](const char* b, int l) -> bool { return tls.Send(new_socket, b, l); };
-                cb.recv = [&tls, new_socket](char* b, int l, int* got) -> bool { return tls.Recv(new_socket, b, l, got); };
-                new_socket->SetTLSCallbacks(&cb);
+                cb.send = [&tls, new_socketInner](const char* b, int l) -> bool { return tls.Send(new_socketInner, b, l); };
+                cb.recv = [&tls, new_socketInner](char* b, int l, int* got) -> bool { return tls.Recv(new_socketInner, b, l, got); };
+                new_socketInner->SetTLSCallbacks(&cb);
 
-                DoHTTP(new_socket);
+                DoHTTP(new_socketInner);
 
-                new_socket->SetTLSCallbacks(nullptr);
-                tls.Shutdown(new_socket);
+                new_socketInner->SetTLSCallbacks(nullptr);
+                tls.Shutdown(new_socketInner);
             }
             else
             {
@@ -740,14 +740,14 @@ void* vncHTTPConnectThread::run_undetached(void* const arg)
         }
         else
         {
-            DoHTTP(new_socket);
+            DoHTTP(new_socketInner);
         }
 
         // And close the client
-        new_socket->Shutdown();
-        new_socket->Close();
-        delete new_socket;
-        new_socket = nullptr;
+        new_socketInner->Shutdown();
+        new_socketInner->Close();
+        delete new_socketInner;
+        new_socketInner = nullptr;
     }
     if (new_socket)
     {
@@ -818,7 +818,7 @@ static unsigned __stdcall WSRFBToClient(void* const arg)
     return 0;
 }
 
-static void BridgeWebSocketToRFB(VSocket* const clientSocket, vncServer* const server)
+static void BridgeWebSocketToRFB(VSocket* const clientSocket, [[maybe_unused]] vncServer* const server)
 {
     // Connect a second socket to the local RFB listener so that the
     // browser's WebSocket stream is forwarded to the VNC server.
@@ -844,7 +844,7 @@ static void BridgeWebSocketToRFB(VSocket* const clientSocket, vncServer* const s
     {
         std::array<HANDLE, 2U> handles{ h1, h2 };
         // Wait for either direction to fail.
-        const DWORD waitResult = ::WaitForMultipleObjects(2, handles.data(), FALSE, INFINITE);
+        [[maybe_unused]] const DWORD waitResult = ::WaitForMultipleObjects(2, handles.data(), FALSE, INFINITE);
         // Force the other direction out of its read by shutting both sockets down.
         clientSocket->Shutdown();
         rfbSocket->Shutdown();

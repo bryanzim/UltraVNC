@@ -72,9 +72,9 @@ namespace rdr
         {
             check(4);
             *ptr++ = u >> 24;
-            *ptr++ = u >> 16;
-            *ptr++ = u >> 8;
-            *ptr++ = u;
+            *ptr++ = static_cast<rdr::U8>(u >> 16);
+            *ptr++ = static_cast<rdr::U8>(u >> 8);
+            *ptr++ = static_cast<rdr::U8>(u);
         }
 
         inline void writeS8(const S8 s) { writeU8((U8)s); }

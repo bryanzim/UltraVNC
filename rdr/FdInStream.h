@@ -34,7 +34,7 @@ namespace rdr
 
         int getFd() { return fd; }
         int pos();
-        void readBytes(void* data, int length);
+        void readBytes(void* const data, const int length);
         int bytesInBuf() { return static_cast<int>((end - ptr)); }
 
         void startTiming();

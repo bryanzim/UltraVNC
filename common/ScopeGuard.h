@@ -217,7 +217,7 @@ inline ObjScopeGuardImpl2<Obj1, Ret (Obj2::*)(P1a, P2a), P1b, P2b> MakeGuard(Ret
 #define CONCATENATE(s1, s2) CONCATENATE_DIRECT(s1, s2)
 #define ANONYMOUS_VARIABLE(str) CONCATENATE(str, __LINE__)
 
-#define ON_BLOCK_EXIT ScopeGuard ANONYMOUS_VARIABLE(scopeGuard) = MakeGuard
-#define ON_BLOCK_EXIT_OBJ ScopeGuard ANONYMOUS_VARIABLE(scopeGuard) = MakeObjGuard
+#define ON_BLOCK_EXIT [[maybe_unused]] ScopeGuard ANONYMOUS_VARIABLE(scopeGuard) = MakeGuard
+#define ON_BLOCK_EXIT_OBJ [[maybe_unused]] ScopeGuard ANONYMOUS_VARIABLE(scopeGuard) = MakeObjGuard
 
 #endif //SCOPEGUARD_H_

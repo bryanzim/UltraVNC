@@ -125,7 +125,7 @@ extern CRITICAL_SECTION cs;
 }
 
 
-void main_initialize(char* const arg1, char* const arg2) { ::Read_settings(); }
+void main_initialize([[maybe_unused]] char* const arg1, [[maybe_unused]] char* const arg2) { ::Read_settings(); }
 
 
 int WINAPI WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, const LPSTR lpszCmdLine, const int nCmdShow)
@@ -136,7 +136,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, con
 
     ghInst = hInstance;
 
-    ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
     /* set current directory */
     ::strcpy_s(dir.data(), dir.size(), exe_file_name.data());
@@ -189,7 +189,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, con
 }
 
 
-static int win_main(HINSTANCE hInstance, const HINSTANCE hPrevInstance, const LPSTR lpszCmdLine, const int nCmdShow)
+static int win_main(HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE hPrevInstance, [[maybe_unused]] const LPSTR lpszCmdLine, [[maybe_unused]] const int nCmdShow)
 {
 
     ::InitializeCriticalSection(&cs);
@@ -263,7 +263,7 @@ static int win_main(HINSTANCE hInstance, const HINSTANCE hPrevInstance, const LP
         ::CloseHandle(webtemphandle);
     }
     ::DeleteCriticalSection(&cs);
-    return msg.wParam;
+    return static_cast<int>(msg.wParam);
 }
 
 static void update_taskbar(void)
@@ -296,7 +296,7 @@ static void update_taskbar(void)
     ::Shell_NotifyIcon(NIM_ADD, &nid); /* this adds the icon */
 }
 
-static DWORD WINAPI ThreadFunc(const LPVOID arg)
+static DWORD WINAPI ThreadFunc([[maybe_unused]] const LPVOID arg)
 {
     if (!setjmp(jump_buf))
     {
@@ -403,7 +403,7 @@ static LRESULT CALLBACK wndProc(const HWND hwnd_local, UINT message, const WPARA
     return ::DefWindowProc(hwnd_local, message, wParam, lParam);
 }
 
-static LRESULT CALLBACK settings_proc(const HWND hDlg, const UINT message, const WPARAM wParam, const LPARAM lParam)
+static LRESULT CALLBACK settings_proc(const HWND hDlg, const UINT message, const WPARAM wParam, [[maybe_unused]] const LPARAM lParam)
 {
     std::array<char, 25U> tempchar;
     switch (message)
@@ -819,7 +819,7 @@ static int uninstall_service(void)
     return 0;
 }
 
-static void WINAPI service_main(const DWORD argc, LPTSTR* const argv)
+static void WINAPI service_main([[maybe_unused]] const DWORD argc, [[maybe_unused]] LPTSTR* const argv)
 {
     /* initialise service status */
     serviceStatus.dwServiceType = SERVICE_WIN32;
@@ -901,7 +901,7 @@ static void WINAPI control_handler(DWORD controlCode)
     ::SetServiceStatus(serviceStatusHandle, &serviceStatus);
 }
 
-static LRESULT CALLBACK about_proc(const HWND hDlg, const UINT message, const WPARAM wParam, const LPARAM lParam)
+static LRESULT CALLBACK about_proc(const HWND hDlg, const UINT message, const WPARAM wParam, [[maybe_unused]] const LPARAM lParam)
 {
     switch (message)
     {

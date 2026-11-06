@@ -562,7 +562,7 @@ unsigned char* ViewerDirectxClass::Preupdate(unsigned char* bits)
     return (mybits);
 }
 
-unsigned char* ViewerDirectxClass::Preupdate2(unsigned char* const bits)
+unsigned char* ViewerDirectxClass::Preupdate2([[maybe_unused]] unsigned char* const bits)
 {
     omni_mutex_lock l(directxMutex);
     HRESULT result = pD3DDevice9->TestCooperativeLevel();

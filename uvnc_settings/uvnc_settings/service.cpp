@@ -66,7 +66,7 @@ static int pad()
     std::array<char, MAX_PATH> exe_file_name;
     std::array<char, MAX_PATH> dir;
     char* ptr;
-    ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
     /* set current directory */
     ::strcpy_s(dir.data(), dir.size(), exe_file_name.data());
@@ -102,7 +102,7 @@ bool existFile(char* const mychar)
     DWORD value1 = ::GetFileAttributes(mychar);
     if (value1 == INVALID_FILE_ATTRIBUTES)
     {
-        DWORD errnr = ::GetLastError();
+        [[maybe_unused]] DWORD errnr = ::GetLastError();
         return false;
     }
     return true;

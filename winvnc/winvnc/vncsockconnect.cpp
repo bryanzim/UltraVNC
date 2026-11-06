@@ -35,7 +35,7 @@ public:
     virtual BOOL Init(VSocket* socket, vncServer* server);
 
     // Code to be executed by the thread
-    virtual void* run_undetached(void* arg);
+    virtual void* run_undetached(void* const arg);
 
     // Fields used internally
     BOOL m_shutdown;
@@ -62,7 +62,7 @@ BOOL vncSockConnectThread::Init(VSocket* socket, vncServer* server)
 }
 
 // Code to be executed by the thread
-void* vncSockConnectThread::run_undetached(void* const arg)
+void* vncSockConnectThread::run_undetached([[maybe_unused]] void* const arg)
 {
     // Go into a loop, listening for connections on the given socket
     VSocket* new_socket = nullptr;

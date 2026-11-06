@@ -433,7 +433,7 @@ TCHAR* vncImportACL::AddComputername(const TCHAR* const user)
 
 TCHAR* vncImportACL::AddDomainname(const TCHAR* const user)
 {
-    unsigned const long buflen = MAXLEN;
+    [[maybe_unused]] unsigned const long buflen = MAXLEN;
     std::array<TCHAR, MAXLEN * sizeof(wchar_t)> domain;
     LPWKSTA_INFO_100 wkstainfo = nullptr;
     NET_API_STATUS nStatus;

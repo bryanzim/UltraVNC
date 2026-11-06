@@ -33,7 +33,7 @@ public:
 
 public:
     virtual BOOL Init(vncDesktop* desktop);
-    virtual void* run_undetached(void* arg);
+    virtual void* run_undetached(void* const arg);
     HWND logonhwnd;
     RECT rect;
 

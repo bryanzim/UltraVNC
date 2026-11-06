@@ -19,7 +19,7 @@
 #include <cstring>
 /////////////////////////
 
-BOOL APIENTRY DllMain(const HANDLE hModule, const DWORD ul_reason_for_call, const LPVOID lpReserved)
+BOOL APIENTRY DllMain([[maybe_unused]] const HANDLE hModule, const DWORD ul_reason_for_call, [[maybe_unused]] const LPVOID lpReserved)
 {
     switch (ul_reason_for_call)
     {
@@ -51,7 +51,7 @@ EventLogging::~EventLogging()
 
 
 
-void EventLogging::LogIt(const WORD CategoryID, const DWORD EventID, LPCTSTR* const ArrayOfStrings, const UINT NumOfArrayStr,
+void EventLogging::LogIt(const WORD CategoryID, const DWORD EventID, LPCTSTR* const ArrayOfStrings, [[maybe_unused]] const UINT NumOfArrayStr,
                          const LPVOID RawData, const DWORD RawDataSize)
 {
 
@@ -60,7 +60,7 @@ void EventLogging::LogIt(const WORD CategoryID, const DWORD EventID, LPCTSTR* co
 }
 
 
-void EventLogging::AddEventSourceToRegistry(const LPCTSTR lpszSourceName)
+void EventLogging::AddEventSourceToRegistry([[maybe_unused]] const LPCTSTR lpszSourceName)
 {
     HKEY hk;
     DWORD dwData;
@@ -75,7 +75,7 @@ void EventLogging::AddEventSourceToRegistry(const LPCTSTR lpszSourceName)
         return;
     }
 
-    if (::GetModuleFileName(nullptr, szServicePath.data(), szServicePath.size()))
+    if (::GetModuleFileName(nullptr, szServicePath.data(), static_cast<DWORD>(szServicePath.size())))
     {
         char* p = std::strrchr(szServicePath.data(), '\\');
         if (p == nullptr)
@@ -137,7 +137,7 @@ void LOGEXIT(char* const machine, char* const user, const int clientId, const bo
     log.LogIt(1, 0x00640003L, ps.data(), 1, nullptr, 0);
 
     std::array<char, MAX_PATH> szMslogonLog;
-    if (::GetModuleFileName(nullptr, szMslogonLog.data(), szMslogonLog.size()))
+    if (::GetModuleFileName(nullptr, szMslogonLog.data(), static_cast<DWORD>(szMslogonLog.size())))
     {
         char* p = std::strrchr(szMslogonLog.data(), '\\');
         if (p != nullptr)
@@ -216,7 +216,7 @@ void LOGLOGON(char* const machine, const int clientId, const bool isinteractive)
     log.LogIt(1, 0x00640001L, ps.data(), 1, nullptr, 0);
 
     std::array<char, MAX_PATH> szMslogonLog;
-    if (::GetModuleFileName(nullptr, szMslogonLog.data(), szMslogonLog.size()))
+    if (::GetModuleFileName(nullptr, szMslogonLog.data(), static_cast<DWORD>(szMslogonLog.size())))
     {
         char* p = std::strrchr(szMslogonLog.data(), '\\');
         if (p != nullptr)
@@ -264,7 +264,7 @@ void LOGLOGONV2(char* const machine, const int clientId, const bool isinteractiv
     }
 }
 
-void LOGCONN(char* const machine, const int clientId, const bool isinteractive)
+void LOGCONN(char* const machine, [[maybe_unused]] const int clientId, [[maybe_unused]] const bool isinteractive)
 {
     FILE* file;
     std::array<const char*, 3U> ps;
@@ -284,7 +284,7 @@ void LOGCONN(char* const machine, const int clientId, const bool isinteractive)
     log.LogIt(1, 0x00640001L, ps.data(), 1, nullptr, 0);
 
     std::array<char, MAX_PATH> szMslogonLog;
-    if (::GetModuleFileName(nullptr, szMslogonLog.data(), szMslogonLog.size()))
+    if (::GetModuleFileName(nullptr, szMslogonLog.data(), static_cast<DWORD>(szMslogonLog.size())))
     {
         char* p = std::strrchr(szMslogonLog.data(), '\\');
         if (p != nullptr)
@@ -301,7 +301,7 @@ void LOGCONN(char* const machine, const int clientId, const bool isinteractive)
     }
 }
 
-void LOGCONNV2(char* const machine, const int clientId, const bool isinteractive, char* const szMslogonLog)
+void LOGCONNV2(char* const machine, [[maybe_unused]] const int clientId, [[maybe_unused]] const bool isinteractive, char* const szMslogonLog)
 {
     FILE* file;
     std::array<const char*, 3U> ps;
@@ -349,7 +349,7 @@ void LOGFAILED(char* const machine)
     log.LogIt(1, 0x00640002L, ps.data(), 1, nullptr, 0);
 
     std::array<char, MAX_PATH> szMslogonLog;
-    if (::GetModuleFileName(nullptr, szMslogonLog.data(), szMslogonLog.size()))
+    if (::GetModuleFileName(nullptr, szMslogonLog.data(), static_cast<DWORD>(szMslogonLog.size())))
     {
         char* p = std::strrchr(szMslogonLog.data(), '\\');
         if (p != nullptr)
@@ -419,7 +419,7 @@ void LOGLOGONUSER(char* const machine, char* const user)
     log.LogIt(1, 0x00640001L, ps.data(), 1, nullptr, 0);
 
     std::array<char, MAX_PATH> szMslogonLog;
-    if (::GetModuleFileName(nullptr, szMslogonLog.data(), szMslogonLog.size()))
+    if (::GetModuleFileName(nullptr, szMslogonLog.data(), static_cast<DWORD>(szMslogonLog.size())))
     {
         char* p = std::strrchr(szMslogonLog.data(), '\\');
         if (p != nullptr)
@@ -491,7 +491,7 @@ void LOGFAILEDUSER(char* const machine, char* const user)
     log.LogIt(1, 0x00640002L, ps.data(), 1, nullptr, 0);
 
     std::array<char, MAX_PATH> szMslogonLog;
-    if (::GetModuleFileName(nullptr, szMslogonLog.data(), szMslogonLog.size()))
+    if (::GetModuleFileName(nullptr, szMslogonLog.data(), static_cast<DWORD>(szMslogonLog.size())))
     {
         char* p = std::strrchr(szMslogonLog.data(), '\\');
         if (p != nullptr)
@@ -560,7 +560,7 @@ void LOGEXTRAINFO(char* const info)
     log.LogIt(1, 0x00640002L, ps.data(), 1, nullptr, 0);
 
     std::array<char, MAX_PATH> szMslogonLog;
-    if (::GetModuleFileName(nullptr, szMslogonLog.data(), szMslogonLog.size()))
+    if (::GetModuleFileName(nullptr, szMslogonLog.data(), static_cast<DWORD>(szMslogonLog.size())))
     {
         char* p = std::strrchr(szMslogonLog.data(), '\\');
         if (p != nullptr)

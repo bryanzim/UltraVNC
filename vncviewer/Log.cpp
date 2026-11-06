@@ -31,7 +31,7 @@ const int Log::ToConsole = 4;
 
 const static int LINE_BUFFER_SIZE{ 1024 };
 
-Log::Log(const int mode, const int level, const LPTSTR filename, const bool append)
+Log::Log(const int mode, [[maybe_unused]] const int level, const LPTSTR filename, const bool append)
 {
     hlogfile = nullptr;
     m_todebug = false;
@@ -143,7 +143,7 @@ void Log::ReallyPrint(const LPCTSTR format, const va_list ap)
     if (m_tofile && (hlogfile != nullptr))
     {
         std::array<char, LINE_BUFFER_SIZE> lineA;
-        ::WideCharToMultiByte(CP_UTF8, 0, line.data(), -1, lineA.data(), lineA.size(), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_UTF8, 0, line.data(), -1, lineA.data(), static_cast<int>(lineA.size()), nullptr, nullptr);
         DWORD byteswritten;
         ::WriteFile(hlogfile, lineA.data(), static_cast<DWORD>(std::strlen(lineA.data())), &byteswritten, nullptr);
     }

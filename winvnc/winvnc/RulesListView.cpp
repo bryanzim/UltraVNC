@@ -25,25 +25,25 @@ extern HINSTANCE hInstResDLL;
 
 RulesListView::RulesListView() {}
 RulesListView::~RulesListView() {}
-void RulesListView::init(const HWND hListView)
+void RulesListView::init(const HWND hListViewIn)
 {
-    this->hListView = hListView;
+    this->hListView = hListViewIn;
     const char* delimiter = ":";
-    if (hListView)
+    if (hListViewIn)
     {
-        ListView_DeleteAllItems(hListView);
+        ListView_DeleteAllItems(hListViewIn);
 
         LVCOLUMN lvCol;
         lvCol.mask = LVCF_TEXT | LVCF_WIDTH;
         lvCol.cx = 100; // Column width
         lvCol.pszText = const_cast<char*>("Action");
-        ListView_InsertColumn(hListView, 0, &lvCol);
+        ListView_InsertColumn(hListViewIn, 0, &lvCol);
         lvCol.cx = 300; // Column width
         lvCol.pszText = const_cast<char*>("Rule");
-        ListView_InsertColumn(hListView, 1, &lvCol);
+        ListView_InsertColumn(hListViewIn, 1, &lvCol);
         lvCol.cx = 0;
         lvCol.pszText = const_cast<char*>("string");
-        ListView_InsertColumn(hListView, 2, &lvCol);
+        ListView_InsertColumn(hListViewIn, 2, &lvCol);
 
         index = 0;
         char* authHost = _strdup(settings->getAuthhosts());
@@ -63,25 +63,25 @@ void RulesListView::init(const HWND hListView)
                     {
                     case '-':
                         lvItem.pszText = "Refuse"; // Item text
-                        ListView_InsertItem(hListView, &lvItem);
+                        ListView_InsertItem(hListViewIn, &lvItem);
                         break;
                     case '+':
                         lvItem.pszText = "Allow"; // Item text
-                        ListView_InsertItem(hListView, &lvItem);
+                        ListView_InsertItem(hListViewIn, &lvItem);
                         break;
                     case '?':
                         lvItem.pszText = "Query"; // Item text
-                        ListView_InsertItem(hListView, &lvItem);
+                        ListView_InsertItem(hListViewIn, &lvItem);
                         break;
                     default:
                         lvItem.pszText = "Refuse"; // Item text
-                        ListView_InsertItem(hListView, &lvItem);
+                        ListView_InsertItem(hListViewIn, &lvItem);
                     }
                 }
                 std::array<char, 1024U> restOfString;
                 ::strcpy_s(restOfString.data(), restOfString.size(), token + 1);
-                ListView_SetItemText(hListView, index, 1, const_cast<char*>(restOfString.data()));
-                ListView_SetItemText(hListView, index, 2, const_cast<char*>(token));
+                ListView_SetItemText(hListViewIn, index, 1, const_cast<char*>(restOfString.data()));
+                ListView_SetItemText(hListViewIn, index, 2, const_cast<char*>(token));
 
                 ++index;
                 token = ::strtok_s(nullptr, delimiter, &context);
@@ -121,39 +121,39 @@ void RulesListView::addItem(char* const caption)
     ++index;
 }
 
-void RulesListView::updateItem(const int index, char* const caption)
+void RulesListView::updateItem(const int indexIn, char* const caption)
 {
     LVITEM lvItem;
     lvItem.mask = LVIF_TEXT; // Specifies that we're adding text
-    lvItem.iItem = index;    // Item index (position)
+    lvItem.iItem = indexIn;    // Item index (position)
     lvItem.iSubItem = 0;
     switch (caption[0U])
     {
     case '-':
         lvItem.pszText = "Refuse"; // Item text
-        ListView_SetItemText(hListView, index, 0, "Refuse");
+        ListView_SetItemText(hListView, indexIn, 0, "Refuse");
         break;
     case '+':
         lvItem.pszText = "Allow"; // Item text
-        ListView_SetItemText(hListView, index, 0, "Allow");
+        ListView_SetItemText(hListView, indexIn, 0, "Allow");
         break;
     case '?':
         lvItem.pszText = "Query"; // Item text
-        ListView_SetItemText(hListView, index, 0, "Query");
+        ListView_SetItemText(hListView, indexIn, 0, "Query");
         break;
     default:
         lvItem.pszText = "Refuse"; // Item text
-        ListView_SetItemText(hListView, index, 0, "Refuse");
+        ListView_SetItemText(hListView, indexIn, 0, "Refuse");
     }
     std::array<char, 1024U> restOfString;
     ::strcpy_s(restOfString.data(), restOfString.size(), caption + 1);
-    ListView_SetItemText(hListView, index, 1, const_cast<char*>(restOfString.data()));
-    ListView_SetItemText(hListView, index, 2, const_cast<char*>(caption));
+    ListView_SetItemText(hListView, indexIn, 1, const_cast<char*>(restOfString.data()));
+    ListView_SetItemText(hListView, indexIn, 2, const_cast<char*>(caption));
 }
 
-void RulesListView::selectItem(const int index)
+void RulesListView::selectItem(const int indexIn)
 {
-    WPARAM itemIndex = (WPARAM)index;
+    WPARAM itemIndex = (WPARAM)indexIn;
     ListView_SetItemState(hListView, -1, 0, LVIS_SELECTED);
     ::SendMessage(hListView, LVM_ENSUREVISIBLE, itemIndex, FALSE);
     ListView_SetItemState(hListView, itemIndex, LVIS_SELECTED, LVIS_SELECTED);
@@ -415,7 +415,7 @@ bool RulesListView::onCommand(const HWND hwnd, const UINT cID, const UINT nID)
 
 bool RulesListView::isValidNumber(const char* str)
 {
-    int len = std::strlen(str);
+    int len = static_cast<int>(std::strlen(str));
     if ((len == 0) || (len > 3))
     {
         return false;

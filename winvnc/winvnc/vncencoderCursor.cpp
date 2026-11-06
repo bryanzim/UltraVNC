@@ -319,14 +319,14 @@ BOOL vncEncoder::SendCursorShape(VSocket* const outConn, vncDesktop* const deskt
             // For enlarged accessibility cursors, generate mask from color data
             // Magenta (RGB 255,0,255) is used as transparency key
             // Mask bit 1 = visible pixel, bit 0 = transparent
-            const int bytes_pixel = m_localformat.bitsPerPixel / 8;
-            int bytes_row = width * bytes_pixel;
+            const int bytes_pixelInner = m_localformat.bitsPerPixel / 8;
+            int bytes_row = width * bytes_pixelInner;
             while (bytes_row % sizeof(DWORD))
             {
                 ++bytes_row;
             }
             const int packed_width_bytes = workMaskWidthBytes;
-            const BOOL hasAlpha = HasCursorAlpha(cbits, width, height, bytes_row, bytes_pixel);
+            const BOOL hasAlpha = HasCursorAlpha(cbits, width, height, bytes_row, bytes_pixelInner);
 
             for (int y{ 0 }; y < height; ++y)
             {
@@ -337,20 +337,20 @@ BOOL vncEncoder::SendCursorShape(VSocket* const outConn, vncDesktop* const deskt
 
                 for (int x{ 0 }; x < width; ++x)
                 {
-                    BYTE* pixel = srcRow + x * bytes_pixel;
+                    BYTE* pixel = srcRow + x * bytes_pixelInner;
                     BOOL isMagenta = FALSE;
 
                     // Check if pixel is magenta (transparency key)
-                    if (bytes_pixel == 4)
+                    if (bytes_pixelInner == 4)
                     {
                         // 32-bit BGRA: B=255, G=0, R=255
                         isMagenta = ((pixel[0U] == 255) && (pixel[1U] == 0) && (pixel[2U] == 255));
                     }
-                    else if (bytes_pixel == 3)
+                    else if (bytes_pixelInner == 3)
                     {
                         isMagenta = ((pixel[0U] == 255) && (pixel[1U] == 0) && (pixel[2U] == 255));
                     }
-                    else if (bytes_pixel == 2)
+                    else if (bytes_pixelInner == 2)
                     {
                         const WORD pixel16 = *(WORD*)pixel;
                         isMagenta = ((pixel16 == 0xF81F) || (pixel16 == 0x7C1F));
@@ -365,7 +365,7 @@ BOOL vncEncoder::SendCursorShape(VSocket* const outConn, vncDesktop* const deskt
                     else
                     {
                         // Transparent - clear color to black
-                        std::memset(pixel, 0, bytes_pixel);
+                        std::memset(pixel, 0, bytes_pixelInner);
                     }
                     if ((bitmask >>= 1) == 0)
                     {

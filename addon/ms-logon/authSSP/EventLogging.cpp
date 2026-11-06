@@ -31,7 +31,7 @@ EventLogging::~EventLogging()
 
 
 
-void EventLogging::LogIt(const WORD CategoryID, const DWORD EventID, LPCTSTR* const ArrayOfStrings, const UINT NumOfArrayStr,
+void EventLogging::LogIt(const WORD CategoryID, const DWORD EventID, LPCTSTR* const ArrayOfStrings, [[maybe_unused]] const UINT NumOfArrayStr,
                          const LPVOID RawData, const DWORD RawDataSize)
 {
 
@@ -40,7 +40,7 @@ void EventLogging::LogIt(const WORD CategoryID, const DWORD EventID, LPCTSTR* co
 }
 
 
-void EventLogging::AddEventSourceToRegistry(const LPCTSTR lpszSourceName)
+void EventLogging::AddEventSourceToRegistry([[maybe_unused]] const LPCTSTR lpszSourceName)
 {
     HKEY hk;
     DWORD dwData;
@@ -55,7 +55,7 @@ void EventLogging::AddEventSourceToRegistry(const LPCTSTR lpszSourceName)
         return;
     }
 
-    if (::GetModuleFileName(nullptr, szServicePath.data(), szServicePath.size()))
+    if (::GetModuleFileName(nullptr, szServicePath.data(), static_cast<DWORD>(szServicePath.size())))
     {
         TCHAR* p = ::_tcsrchr(szServicePath.data(), '\\');
         if (p == nullptr)
@@ -143,7 +143,7 @@ void LOG(const long EventID, const TCHAR* const format, ...)
     EventLogging log;
     log.AddEventSourceToRegistry(nullptr);
     log.LogIt(1, EventID, ps.data(), 1, nullptr, 0);
-    if (::GetModuleFileName(nullptr, szMslogonLog.data(), szMslogonLog.size()))
+    if (::GetModuleFileName(nullptr, szMslogonLog.data(), static_cast<DWORD>(szMslogonLog.size())))
     {
         TCHAR* p = ::_tcsrchr(szMslogonLog.data(), '\\');
         if (p != nullptr)

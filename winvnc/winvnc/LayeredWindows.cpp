@@ -64,14 +64,14 @@ LayeredWindows::~LayeredWindows()
     ::DeleteObject(hPen);
 }
 
-HBITMAP LayeredWindows::DoGetBkGndBitmap2(IN CONST UINT uBmpResId)
+HBITMAP LayeredWindows::DoGetBkGndBitmap2([[maybe_unused]] IN CONST UINT uBmpResId)
 {
     static HBITMAP hbmBkGnd = nullptr;
     if (nullptr == hbmBkGnd)
     {
         std::array<char, MAX_PATH> WORKDIR;
         std::array<char, MAX_PATH> mycommand;
-        if (::GetModuleFileName(nullptr, WORKDIR.data(), WORKDIR.size()))
+        if (::GetModuleFileName(nullptr, WORKDIR.data(), static_cast<DWORD>(WORKDIR.size())))
         {
             char* p = std::strrchr(WORKDIR.data(), '\\');
             if (p == nullptr)
@@ -144,17 +144,17 @@ BOOL LayeredWindows::DoSDKEraseBkGnd2(IN CONST HDC hDC, IN CONST COLORREF crBkGn
     return TRUE;
 }
 
-LRESULT CALLBACK LayeredWindows::WndProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
+LRESULT CALLBACK LayeredWindows::WndProc(const HWND hwndIn, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
     switch (uMsg)
     {
     case WM_CREATE:
-        ::SetTimer(hwnd, 100, 20, nullptr);
+        ::SetTimer(hwndIn, 100, 20, nullptr);
         break;
     case WM_TIMER:
         if (wParam == 100)
         {
-            ::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            ::SetWindowPos(hwndIn, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         }
 
     case WM_ERASEBKGND:
@@ -164,11 +164,11 @@ LRESULT CALLBACK LayeredWindows::WndProc(const HWND hwnd, const UINT uMsg, const
         ::SetBkMode((HDC)wParam, TRANSPARENT);
         return (LONG_PTR)::GetStockObject(NULL_BRUSH);
     case WM_DESTROY:
-        ::KillTimer(hwnd, 100);
+        ::KillTimer(hwndIn, 100);
         ::PostQuitMessage(0);
         break;
     default:
-        return ::DefWindowProc(hwnd, uMsg, wParam, lParam);
+        return ::DefWindowProc(hwndIn, uMsg, wParam, lParam);
     }
     return 0;
 }
@@ -253,7 +253,7 @@ bool LayeredWindows::create_black_window(void)
     return true;
 }
 
-DWORD WINAPI LayeredWindows::BlackWindow(const LPVOID lpParam)
+DWORD WINAPI LayeredWindows::BlackWindow([[maybe_unused]] const LPVOID lpParam)
 {
     HDESK desktop;
     desktop = ::OpenInputDesktop(0, FALSE,
@@ -287,7 +287,7 @@ DWORD WINAPI LayeredWindows::BlackWindow(const LPVOID lpParam)
     return 0;
 }
 
-LRESULT CALLBACK LayeredWindows::WndBorderProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
+LRESULT CALLBACK LayeredWindows::WndBorderProc(const HWND hwndIn, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
     PAINTSTRUCT ps;
     HDC hdc;
@@ -295,7 +295,7 @@ LRESULT CALLBACK LayeredWindows::WndBorderProc(const HWND hwnd, const UINT uMsg,
     {
     case WM_PAINT: {
         HGDIOBJ original = nullptr;
-        hdc = ::BeginPaint(hwnd, &ps);
+        hdc = ::BeginPaint(hwndIn, &ps);
         original = ::SelectObject(hdc, ::GetStockObject(DC_PEN));
         ::SelectObject(hdc, hPen);
         ::SelectObject(hdc, hFont);
@@ -307,30 +307,30 @@ LRESULT CALLBACK LayeredWindows::WndBorderProc(const HWND hwnd, const UINT uMsg,
         if (set_OSD)
         {
             RECT rc;
-            ::GetClientRect(hwnd, &rc);
+            ::GetClientRect(hwndIn, &rc);
             rc.left += 10;
             rc.top += 10;
-            ::DrawText(hdc, infoMsg, std::strlen(infoMsg), &rc, DT_LEFT);
+            ::DrawText(hdc, infoMsg, static_cast<int>(std::strlen(infoMsg)), &rc, DT_LEFT);
         }
 
         ::SelectObject(hdc, original);
         ::DeleteObject(hPen);
-        ::EndPaint(hwnd, &ps);
+        ::EndPaint(hwndIn, &ps);
     }
     break;
     case WM_CLOSE:
-        ::DestroyWindow(hwnd);
+        ::DestroyWindow(hwndIn);
         break;
     case WM_DESTROY:
         ::PostQuitMessage(0);
         break;
     default:
-        return ::DefWindowProc(hwnd, uMsg, wParam, lParam);
+        return ::DefWindowProc(hwndIn, uMsg, wParam, lParam);
     }
     return 0;
 }
 
-DWORD WINAPI LayeredWindows::BorderWindow(const LPVOID lpParam)
+DWORD WINAPI LayeredWindows::BorderWindow([[maybe_unused]] const LPVOID lpParam)
 {
     ::Sleep(1000);
     HDESK desktop;
@@ -364,7 +364,7 @@ DWORD WINAPI LayeredWindows::BorderWindow(const LPVOID lpParam)
     return 0;
 }
 
-bool LayeredWindows::create_border_window(const RECT rect)
+bool LayeredWindows::create_border_window(const RECT rectIn)
 {
     WNDCLASSEX wndClass;
     ::ZeroMemory(&wndClass, sizeof(wndClass));
@@ -383,7 +383,7 @@ bool LayeredWindows::create_border_window(const RECT rect)
 
     ::RegisterClassEx(&wndClass);
     hwnd = ::CreateWindowEx(WS_EX_TOOLWINDOW, "borderscreen", "borderscreen", WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
-                          CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, hInst,
+                          CW_USEDEFAULT, CW_USEDEFAULT, rectIn.right - rectIn.left, rectIn.bottom - rectIn.top, nullptr, nullptr, hInst,
                           nullptr);
     typedef DWORD(WINAPI * PSLWA)(HWND, DWORD, BYTE, DWORD);
 
@@ -420,7 +420,7 @@ bool LayeredWindows::create_border_window(const RECT rect)
     {
         pSetLayeredWindowAttributes(hwnd, RGB(255, 255, 255), 0, LWA_COLORKEY);
     }
-    ::SetWindowPos(hwnd, HWND_TOPMOST, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,
+    ::SetWindowPos(hwnd, HWND_TOPMOST, rectIn.left, rectIn.top, rectIn.right - rectIn.left, rectIn.bottom - rectIn.top,
                  SWP_FRAMECHANGED | SWP_NOACTIVATE);
     if (VNC_OSVersion::getInstance()->OS_WIN10_TRANS)
     {
@@ -430,7 +430,7 @@ bool LayeredWindows::create_border_window(const RECT rect)
 }
 
 bool LayeredWindows::SetBlankMonitor(const bool enabled, const bool blankMonitorEnabled, bool black_window_active,
-                                     bool& screen_in_powersave, const HWND hwnd)
+                                     bool& screen_in_powersave, const HWND hwndIn)
 {
     // Also Turn Off the Monitor if allowed ("Blank Screen", "Blank Monitor")
     if (blankMonitorEnabled)
@@ -441,17 +441,17 @@ bool LayeredWindows::SetBlankMonitor(const bool enabled, const bool blankMonitor
         {
             if (enabled)
             {
-                ::SendMessage(hwnd, WM_SYSCOMMAND, SC_MONITORPOWER, (LPARAM)2);
+                ::SendMessage(hwndIn, WM_SYSCOMMAND, SC_MONITORPOWER, (LPARAM)2);
                 screen_in_powersave = true;
             }
             else
             {
-                ::SendMessage(hwnd, WM_SYSCOMMAND, SC_MONITORPOWER, (LPARAM)-1);
+                ::SendMessage(hwndIn, WM_SYSCOMMAND, SC_MONITORPOWER, (LPARAM)-1);
                 screen_in_powersave = false;
                 //win8 require mouse move
                 mouse_event(MOUSEEVENTF_MOVE, 0, 1, 0, 0);
                 ::Sleep(40);
-                mouse_event(MOUSEEVENTF_MOVE, 0, -1, 0, 0);
+                mouse_event(MOUSEEVENTF_MOVE, 0, static_cast<DWORD>(-1), 0, 0);
                 //Just in case video driver state was changed
                 HWND Blackhnd = ::FindWindow(("blackscreen"), 0);
                 if (Blackhnd)
@@ -495,11 +495,11 @@ bool LayeredWindows::SetBlankMonitor(const bool enabled, const bool blankMonitor
     return black_window_active;
 }
 
-void LayeredWindows::SetBorderWindow(const bool enabled, const RECT rect, char* const infoMsg, const bool set_OSD)
+void LayeredWindows::SetBorderWindow(const bool enabled, const RECT rectIn, char* const infoMsgIn, const bool set_OSDIn)
 {
-    ::strcpy_s(this->infoMsg, infoMsg);
-    this->rect = rect;
-    this->set_OSD = set_OSD;
+    ::strcpy_s(this->infoMsg, infoMsgIn);
+    this->rect = rectIn;
+    this->set_OSD = set_OSDIn;
     if (enabled)
     {
         HANDLE ThreadHandle2 = nullptr;

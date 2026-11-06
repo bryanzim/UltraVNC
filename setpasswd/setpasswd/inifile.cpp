@@ -36,7 +36,7 @@ IniFile::IniFile()
     {
         // Failed to create directory, fall back to exe folder
         std::array<char, MAX_PATH> WORKDIR;
-        if (::GetModuleFileName(nullptr, WORKDIR.data(), WORKDIR.size()))
+        if (::GetModuleFileName(nullptr, WORKDIR.data(), static_cast<DWORD>(WORKDIR.size())))
         {
             char* p = std::strrchr(WORKDIR.data(), '\\');
             if (p != nullptr)
@@ -108,7 +108,7 @@ void IniFile::ReadString(const char* const key1, const char* const key2, char* c
     ::GetPrivateProfileString(key1, key2, "", value, valuesize, myInifile.data());
 }
 
-bool IniFile::ReadPassword(char* const value, const int valuesize)
+bool IniFile::ReadPassword(char* const value, [[maybe_unused]] const int valuesize)
 {
     //int size=ReadInt("UltraVNC", "passwdsize",0);
     //vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifilePasswd);
@@ -123,7 +123,7 @@ bool IniFile::WritePassword(char* const value)
 }
 
 bool                                                                            //PGM
-IniFile::ReadPassword2(char* const value, const int valuesize)                  //PGM
+IniFile::ReadPassword2(char* const value, [[maybe_unused]] const int valuesize)                  //PGM
 {                                                                               //PGM
     return ::GetPrivateProfileStruct("UltraVNC", "passwd2", value, 8, myInifile.data()); //PGM
 } //PGM

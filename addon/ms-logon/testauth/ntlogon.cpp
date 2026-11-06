@@ -133,7 +133,7 @@ int main(const int argc, char* argv[])
         if (hModule)
         {
             CheckUserGroupPassword = (CheckUserGroupPasswordFn)::GetProcAddress(hModule, "CUGP");
-            HRESULT hr = ::CoInitialize(nullptr);
+            [[maybe_unused]] HRESULT hr = ::CoInitialize(nullptr);
             returnvalue = ::CheckUserGroupPassword(pszBuffer.data(), pszBuffer2.data(), "test", pszBuffer3.data(), locdom);
             ::CoUninitialize();
             ::FreeLibrary(hModule);
@@ -172,7 +172,7 @@ int main(const int argc, char* argv[])
     if (hModule)
     {
         CheckUserGroupPassword = (CheckUserGroupPasswordFn)::GetProcAddress(hModule, "CUGP");
-        HRESULT hr = ::CoInitialize(nullptr);
+        [[maybe_unused]] HRESULT hr = ::CoInitialize(nullptr);
         returnvalue = ::CheckUserGroupPassword(pszBuffer.data(), pszBuffer2.data(), "test", pszBuffer3.data(), locdom);
         ::CoUninitialize();
         ::FreeLibrary(hModule);
@@ -207,14 +207,14 @@ int main(const int argc, char* argv[])
         std::printf("\nTrying authad.dll \n");
         std::printf("------------------------ \n");
         std::printf("------------------------ \n");
-        HMODULE hModule = ::LoadLibrary("authad.dll");
-        if (hModule)
+        HMODULE hModuleInner = ::LoadLibrary("authad.dll");
+        if (hModuleInner)
         {
-            CheckUserGroupPassword = (CheckUserGroupPasswordFn)::GetProcAddress(hModule, "CUGP");
-            HRESULT hr = ::CoInitialize(nullptr);
+            CheckUserGroupPassword = (CheckUserGroupPasswordFn)::GetProcAddress(hModuleInner, "CUGP");
+            [[maybe_unused]] HRESULT hr = ::CoInitialize(nullptr);
             returnvalue = ::CheckUserGroupPassword(pszBuffer.data(), pszBuffer2.data(), "test", pszBuffer3.data(), locdom);
             ::CoUninitialize();
-            ::FreeLibrary(hModule);
+            ::FreeLibrary(hModuleInner);
         }
         else
         {
@@ -257,14 +257,14 @@ int main(const int argc, char* argv[])
                 std::printf("\nTrying ldapauthNT4.dll \n");
                 std::printf("------------------------ \n");
                 std::printf("------------------------ \n");
-                HMODULE hModule = ::LoadLibrary("ldapauthnt4.dll");
-                if (hModule)
+                HMODULE hModuleInner = ::LoadLibrary("ldapauthnt4.dll");
+                if (hModuleInner)
                 {
-                    CheckUserGroupPassword = (CheckUserGroupPasswordFn)::GetProcAddress(hModule, "CUGP");
-                    HRESULT hr = ::CoInitialize(nullptr);
+                    CheckUserGroupPassword = (CheckUserGroupPasswordFn)::GetProcAddress(hModuleInner, "CUGP");
+                    [[maybe_unused]] HRESULT hr = ::CoInitialize(nullptr);
                     returnvalue = ::CheckUserGroupPassword(pszBuffer.data(), pszBuffer2.data(), "test", pszBuffer3.data(), locdom);
                     ::CoUninitialize();
-                    ::FreeLibrary(hModule);
+                    ::FreeLibrary(hModuleInner);
                 }
                 else
                 {
@@ -300,14 +300,14 @@ int main(const int argc, char* argv[])
                 std::printf("\nTrying ldapauth.dll \n");
                 std::printf("------------------------ \n");
                 std::printf("------------------------ \n");
-                HMODULE hModule = ::LoadLibrary("ldapauth.dll");
-                if (hModule)
+                HMODULE hModuleInner = ::LoadLibrary("ldapauth.dll");
+                if (hModuleInner)
                 {
-                    CheckUserGroupPassword = (CheckUserGroupPasswordFn)::GetProcAddress(hModule, "CUGP");
-                    HRESULT hr = ::CoInitialize(nullptr);
+                    CheckUserGroupPassword = (CheckUserGroupPasswordFn)::GetProcAddress(hModuleInner, "CUGP");
+                    [[maybe_unused]] HRESULT hr = ::CoInitialize(nullptr);
                     returnvalue = ::CheckUserGroupPassword(pszBuffer.data(), pszBuffer2.data(), "test", pszBuffer3.data(), locdom);
                     ::CoUninitialize();
-                    ::FreeLibrary(hModule);
+                    ::FreeLibrary(hModuleInner);
                 }
                 else
                 {

@@ -41,8 +41,8 @@ int CUPSD(const char* const userin, const char* const password, const char* cons
 {
     DWORD dwAccessGranted{ 0U };
     BOOL isAccessOK = FALSE;
-    const BOOL NT4OS = FALSE;
-    const BOOL W2KOS = FALSE;
+    [[maybe_unused]] const BOOL NT4OS = FALSE;
+    [[maybe_unused]] const BOOL W2KOS = FALSE;
     BOOL isAuthenticated = FALSE;
     bool isViewOnly{ false };
     bool isInteract{ false };
@@ -126,8 +126,8 @@ int CUPSDV2(const char* const userin, const char* const password, const char* co
 {
     DWORD dwAccessGranted{ 0U };
     BOOL isAccessOK = FALSE;
-    const BOOL NT4OS = FALSE;
-    const BOOL W2KOS = FALSE;
+    [[maybe_unused]] const BOOL NT4OS = FALSE;
+    [[maybe_unused]] const BOOL W2KOS = FALSE;
     BOOL isAuthenticated = FALSE;
     bool isViewOnly{ false };
     bool isInteract{ false };

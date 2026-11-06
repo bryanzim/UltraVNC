@@ -20,12 +20,12 @@ enum { DEFAULT_BUF_SIZE = 16384 };
 
 
 // adzm - 2010-07 - Custom compression level
-ZstdOutStream::ZstdOutStream(OutStream* os, int bufSize_, int compressionLevel)
+ZstdOutStream::ZstdOutStream(OutStream* os, int bufSize_, [[maybe_unused]] int compressionLevel)
   : underlying(os), bufSize(bufSize_ ? bufSize_ : DEFAULT_BUF_SIZE), offset(0)
 {
   zstds = ZSTD_createCStream();
-  unsigned int inSize = ZSTD_CStreamInSize();
-  unsigned int outSize = ZSTD_CStreamOutSize();
+  unsigned int inSize = static_cast<unsigned int>(ZSTD_CStreamInSize());
+  unsigned int outSize = static_cast<unsigned int>(ZSTD_CStreamOutSize());
   bufSize = inSize > outSize ? inSize : outSize;
   bufSize = bufSize_ > bufSize ? bufSize_ : bufSize;
   ZSTD_initCStream(zstds, ZSTD_CLEVEL_DEFAULT);
@@ -68,7 +68,7 @@ void ZstdOutStream::flush()
 			outBuffer->size = underlying->getend() - underlying->getptr();
 			outBuffer->pos = 0;
 
-			rc = ZSTD_compressStream2(zstds, outBuffer, inBuffer, ZSTD_e_flush);
+			rc = static_cast<unsigned int>(ZSTD_compressStream2(zstds, outBuffer, inBuffer, ZSTD_e_flush));
 			if (ZSTD_isError(rc)) {
 				auto error = ZSTD_getErrorName(rc);
 				throw Exception(error);

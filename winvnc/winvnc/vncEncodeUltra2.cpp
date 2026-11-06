@@ -85,7 +85,7 @@ UINT vncEncodeUltra2::RequiredBuffSize(const UINT width, const UINT height)
 }
 
 
-UINT vncEncodeUltra2::NumCodedRects(const rfb::Rect& rect) { return 0; }
+UINT vncEncodeUltra2::NumCodedRects([[maybe_unused]] const rfb::Rect& rect) { return 0; }
 
 /*****************************************************************************
  *
@@ -95,7 +95,7 @@ UINT vncEncodeUltra2::NumCodedRects(const rfb::Rect& rect) { return 0; }
 
 // Encode the rectangle using Ultra compression
 // Encode the rectangle using Ultra compression
-inline UINT vncEncodeUltra2::EncodeRect(BYTE* const source, VSocket* const outConn, BYTE* const dest, const rfb::Rect& rect)
+inline UINT vncEncodeUltra2::EncodeRect(BYTE* const source, [[maybe_unused]] VSocket* const outConn, BYTE* const dest, const rfb::Rect& rect)
 {
 
     int size{ 0 };
@@ -110,8 +110,8 @@ inline UINT vncEncodeUltra2::EncodeRect(BYTE* const source, VSocket* const outCo
 
     rfbFramebufferUpdateRectHeader* surh = (rfbFramebufferUpdateRectHeader*)dest;
     // Modif rdv@2002 - v1.1.x - Application Resize
-    surh->r.x = (CARD16)rect.tl.x - monitor_Offsetx;
-    surh->r.y = (CARD16)rect.tl.y - monitor_Offsety;
+    surh->r.x = static_cast<CARD16>((CARD16)rect.tl.x - monitor_Offsetx);
+    surh->r.y = static_cast<CARD16>((CARD16)rect.tl.y - monitor_Offsety);
     surh->r.w = (CARD16)(rectW);
     surh->r.h = (CARD16)(rectH);
     surh->r.x = Swap16IfLE(surh->r.x);
@@ -164,7 +164,7 @@ inline UINT vncEncodeUltra2::EncodeRect(BYTE* const source, VSocket* const outCo
         }
         surh->encoding = Swap32IfLE(rfbEncodingUltra);
         zlibh->nBytes = Swap32IfLE(out_len);
-        size = out_len;
+        size = static_cast<int>(out_len);
     }
     transmittedSize += sz_rfbFramebufferUpdateRectHeader + sz_rfbZlibHeader + size;
     return sz_rfbFramebufferUpdateRectHeader + sz_rfbZlibHeader + size;
@@ -184,7 +184,7 @@ void vncEncodeUltra2::checkRowPointer(const int h)
 }
 
 int vncEncodeUltra2::SendJpegRect(BYTE* const src, BYTE* const dst, const int dst_size, const int w, int h, int quality,
-                                  const rfbPixelFormat m_remoteformat)
+                                  const rfbPixelFormat m_remoteformatIn)
 {
     BYTE* srcBuf = src;
 
@@ -193,21 +193,21 @@ int vncEncodeUltra2::SendJpegRect(BYTE* const src, BYTE* const dst, const int ds
     cinfo.in_color_space = JCS_RGB;
     cinfo.input_components = 3;
 
-    if (m_remoteformat.bitsPerPixel == 32)
+    if (m_remoteformatIn.bitsPerPixel == 32)
     {
         int redShift, greenShift, blueShift;
 
-        if (m_remoteformat.bigEndian)
+        if (m_remoteformatIn.bigEndian)
         {
-            redShift = 24 - m_remoteformat.redShift;
-            greenShift = 24 - m_remoteformat.greenShift;
-            blueShift = 24 - m_remoteformat.blueShift;
+            redShift = 24 - m_remoteformatIn.redShift;
+            greenShift = 24 - m_remoteformatIn.greenShift;
+            blueShift = 24 - m_remoteformatIn.blueShift;
         }
         else
         {
-            redShift = m_remoteformat.redShift;
-            greenShift = m_remoteformat.greenShift;
-            blueShift = m_remoteformat.blueShift;
+            redShift = m_remoteformatIn.redShift;
+            greenShift = m_remoteformatIn.greenShift;
+            blueShift = m_remoteformatIn.blueShift;
         }
 
         if ((redShift == 0) && (greenShift == 8) && (blueShift == 16))
@@ -299,14 +299,14 @@ int vncEncodeUltra2::SendJpegRect(BYTE* const src, BYTE* const dst, const int ds
 }
 
 
-void JpegInitDestination(const j_compress_ptr cinfo)
+void JpegInitDestination([[maybe_unused]] const j_compress_ptr cinfo)
 {
     jpegError = false;
     jpegDstManager.next_output_byte = jpegDstBuffer;
     jpegDstManager.free_in_buffer = jpegDstBufferLen;
 }
 
-boolean JpegEmptyOutputBuffer(const j_compress_ptr cinfo)
+boolean JpegEmptyOutputBuffer([[maybe_unused]] const j_compress_ptr cinfo)
 {
     jpegError = true;
     jpegDstManager.next_output_byte = jpegDstBuffer;
@@ -315,7 +315,7 @@ boolean JpegEmptyOutputBuffer(const j_compress_ptr cinfo)
     return TRUE;
 }
 
-void JpegTermDestination(const j_compress_ptr cinfo) { jpegDstDataLen = jpegDstBufferLen - jpegDstManager.free_in_buffer; }
+void JpegTermDestination([[maybe_unused]] const j_compress_ptr cinfo) { jpegDstDataLen = static_cast<int>(jpegDstBufferLen - jpegDstManager.free_in_buffer); }
 
 void JpegSetDstManager(const j_compress_ptr cinfo, JOCTET* const buf, const std::size_t buflen)
 {

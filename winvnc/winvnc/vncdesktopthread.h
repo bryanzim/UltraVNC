@@ -94,7 +94,7 @@ private:
 
 public:
     virtual BOOL Init(vncDesktop* desktop, vncServer* server);
-    virtual void* run_undetached(void* arg);
+    virtual void* run_undetached(void* const arg);
     virtual void ReturnVal(DWORD result);
     void PollWindow(rfb::Region2D& rgn, HWND hwnd);
     // Modif rdv@2002 - v1.1.x - VideoDriver

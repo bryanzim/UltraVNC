@@ -400,7 +400,7 @@ wi_getline( char * linetype, char * httphdr )
    char *   cp;
    int      typelen;
 
-   typelen = strlen(linetype);
+   typelen = (int)(strlen(linetype));
    for(cp = httphdr; cp < (httphdr + WI_RXBUFSIZE); cp++)
    {
       if(*cp == *linetype)    /* Got a match for first char? */

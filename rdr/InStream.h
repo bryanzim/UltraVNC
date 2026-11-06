@@ -64,7 +64,7 @@ namespace rdr
             check(2);
             const int b0 = *ptr++;
             const int b1 = *ptr++;
-            return b0 << 8 | b1;
+            return static_cast<rdr::U16>(b0 << 8 | b1);
         }
         inline U32 readU32()
         {

@@ -44,7 +44,7 @@ void vncEncodeRRE::Init() { vncEncoder::Init(); }
 
 UINT vncEncodeRRE::RequiredBuffSize(const UINT width, const UINT height) { return vncEncoder::RequiredBuffSize(width, height); }
 
-UINT vncEncodeRRE::NumCodedRects(const rfb::Rect& rect) { return 1; }
+UINT vncEncodeRRE::NumCodedRects([[maybe_unused]] const rfb::Rect& rect) { return 1; }
 
 /*****************************************************************************
  *
