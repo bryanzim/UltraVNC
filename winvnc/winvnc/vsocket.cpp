@@ -590,7 +590,7 @@ VBool VSocket::Bind4(const VCard port, const VBool localOnly)
 
     // Set up the address to bind the socket to
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
+    addr.sin_port = htons(static_cast<u_short>(port));
     if (localOnly)
     {
         addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -620,7 +620,7 @@ VBool VSocket::Bind6(const VCard port, const VBool localOnly)
 
     // Set up the address to bind the socket to
     addr.sin6_family = AF_INET6;
-    addr.sin6_port = htons(port);
+    addr.sin6_port = htons(static_cast<u_short>(port));
     if (localOnly)
     {
         addr.sin6_addr = in6addr_loopback;
@@ -633,7 +633,7 @@ VBool VSocket::Bind6(const VCard port, const VBool localOnly)
     // And do the binding
     if (bind(sock6, (struct sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR)
     {
-        DWORD lerror = ::WSAGetLastError();
+        [[maybe_unused]] DWORD lerror = ::WSAGetLastError();
         return VFalse;
     }
 
@@ -652,7 +652,7 @@ VBool VSocket::Bind(const VCard port, const VBool localOnly)
 
     // Set up the address to bind the socket to
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
+    addr.sin_port = htons(static_cast<u_short>(port));
     if (localOnly)
     {
         addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -710,7 +710,7 @@ VBool VSocket::Connect(const VString address, const VCard port)
     }
 
     // Set the port number in the correct format
-    addr.sin_port = htons(port);
+    addr.sin_port = htons(static_cast<u_short>(port));
 
     // Actually connect the socket
     if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) != 0)
@@ -966,7 +966,7 @@ VString VSocket::GetPeerNameIPV6(const bool naam)
     }
     return "<unavailable>";
 }
-VString VSocket::GetPeerName4(const bool naam)
+VString VSocket::GetPeerName4([[maybe_unused]] const bool naam)
 {
     struct sockaddr_in sockinfo;
     struct in_addr address;
@@ -989,7 +989,7 @@ VString VSocket::GetPeerName4(const bool naam)
 }
 
 std::array<char, INET6_ADDRSTRLEN> straddr;
-VString VSocket::GetPeerName6(const bool naam)
+VString VSocket::GetPeerName6([[maybe_unused]] const bool naam)
 {
     struct sockaddr_in6 sockinfo;
     struct in6_addr address;
@@ -1179,8 +1179,8 @@ bool VSocket::GetPeerAddress6(char* const address, int size)
     struct sockaddr_in6 addr;
     std::memset(&addr, 0, sizeof(addr));
     int addrsize = sizeof(sockaddr_in6);
-    std::array<char, INET6_ADDRSTRLEN> straddr;
-    std::memset(straddr.data(), 0, INET6_ADDRSTRLEN);
+    std::array<char, INET6_ADDRSTRLEN> straddrLocal;
+    std::memset(straddrLocal.data(), 0, INET6_ADDRSTRLEN);
     if (sock6 == INVALID_SOCKET)
     {
         return false;
@@ -1189,8 +1189,8 @@ bool VSocket::GetPeerAddress6(char* const address, int size)
     {
         return false;
     }
-    inet_ntop(AF_INET6, &addr.sin6_addr, straddr.data(), sizeof(straddr));
-    ::_snprintf_s(address, size, size, "%s:%d", straddr.data(), ntohs(addr.sin6_port));
+    inet_ntop(AF_INET6, &addr.sin6_addr, straddrLocal.data(), sizeof(straddrLocal));
+    ::_snprintf_s(address, size, size, "%s:%d", straddrLocal.data(), ntohs(addr.sin6_port));
 
     return true;
 }
@@ -2329,9 +2329,9 @@ VInt VSocket::ReadSock(char* const buff, const VCard bufflen, const SOCKET allso
 {
     if (allsock == -1)
     {
-        return allsock;
+        return static_cast<VInt>(allsock);
     }
-    const int counter{ 0 };
+    [[maybe_unused]] const int counter{ 0 };
     int s{ 0 };
     s = recv(allsock, buff, bufflen, 0);
     return s;
@@ -2460,7 +2460,7 @@ VBool VSocket::ReadExactSock(char* buff, const VCard bufflen, const SOCKET allso
         int nRestDataLen{ 0 };
         nTransDataLen = nTransDataLenSave;
         //adzm 2009-06-20
-        BYTE* pPipo = RestoreBufferStep2((BYTE*)buff, nTransDataLen, &nRestDataLen);
+        [[maybe_unused]] BYTE* pPipo = RestoreBufferStep2((BYTE*)buff, nTransDataLen, &nRestDataLen);
 
         // Check if we actually get the real original data length
         if ((VCard)nRestDataLen != bufflen)
@@ -2854,7 +2854,7 @@ VBool VSocket::ReadSelectSock(const VCard to, const SOCKET allsock)
     struct timeval tv;
     tv.tv_sec = to / 1000;
     tv.tv_usec = (to % 1000) * 1000;
-    int rc = select(allsock + 1, &fds, 0, 0, &tv);
+    int rc = select(static_cast<int>(allsock + 1), &fds, 0, 0, &tv);
     if (rc > 0)
     {
         return true;
@@ -2892,7 +2892,7 @@ VBool VSocket::ReadSelect(const VCard to)
 
 
 extern bool fShutdownOrdered;
-bool sendall(const SOCKET RemoteSocket, char* const buff, const unsigned int bufflen, const int dummy)
+bool sendall(const SOCKET RemoteSocket, char* const buff, const unsigned int bufflen, [[maybe_unused]] const int dummy)
 {
     int val{ 0 };
     unsigned int totsend{ 0U };

@@ -34,7 +34,7 @@ int NullOutStream::length()
   return (int)(offset + ptr - start);
 }
 
-void NullOutStream::writeBytes(const void* data, int length)
+void NullOutStream::writeBytes([[maybe_unused]] const void* const data, const int length)
 {
   offset += length;
 }

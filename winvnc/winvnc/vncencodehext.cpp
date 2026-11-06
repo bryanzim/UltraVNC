@@ -38,7 +38,7 @@ void vncEncodeHexT::Init() { vncEncoder::Init(); }
 UINT vncEncodeHexT::RequiredBuffSize(const UINT width, const UINT height)
 { return vncEncoder::RequiredBuffSize(width, height) + (((width / 16) + 1) * ((height / 16) + 1)); }
 
-UINT vncEncodeHexT::NumCodedRects(const rfb::Rect& rect) { return 1; }
+UINT vncEncodeHexT::NumCodedRects([[maybe_unused]] const rfb::Rect& rect) { return 1; }
 
 /*
  * hextile.c
@@ -198,7 +198,7 @@ UINT vncEncodeHexT::EncodeRect(BYTE* const source, BYTE* const dest, const rfb::
         return destoffset;                                                                                                         \
     }                                                                                                                              \
                                                                                                                                    \
-    static UINT subrectEncode##bpp(CARD##bpp* src, BYTE* dest, int w, int h, CARD##bpp bg, CARD##bpp fg, BOOL mono)                \
+    static UINT subrectEncode##bpp(CARD##bpp* src, BYTE* dest, int w, int h, CARD##bpp bg, [[maybe_unused]] CARD##bpp fg, BOOL mono) \
     {                                                                                                                              \
         CARD##bpp cl;                                                                                                              \
         int x, y;                                                                                                                  \

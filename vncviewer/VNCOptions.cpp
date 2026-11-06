@@ -290,7 +290,7 @@ VNCOptions::VNCOptions()
 void VNCOptions::setDefaultOptionsFileName(wchar_t* const optionfile)
 {
     std::array<TCHAR, MAX_PATH> szFileName;
-    if (::GetModuleFileNameW(nullptr, szFileName.data(), szFileName.size()))
+    if (::GetModuleFileNameW(nullptr, szFileName.data(), static_cast<DWORD>(szFileName.size())))
     {
         TCHAR* p = std::wcsrchr(szFileName.data(), L'\\');
         if (p == nullptr)
@@ -543,20 +543,20 @@ void VNCOptions::FixScaling()
     }
 }
 
-void VNCOptions::SetFromCommandLine(const LPTSTR szCmdLine)
+void VNCOptions::SetFromCommandLine(const LPTSTR szCmdLineIn)
 {
     // We assume no quoting here.
     // Copy the command line - we don't know what might happen to the original
-    ::_tcscpy_s(this->szCmdLine.data(), this->szCmdLine.size(), szCmdLine);
+    ::_tcscpy_s(this->szCmdLine.data(), this->szCmdLine.size(), szCmdLineIn);
     config_specified = false;
-    int cmdlinelen = ::_tcslen(szCmdLine);
+    int cmdlinelen = static_cast<int>(::_tcslen(szCmdLineIn));
     if (cmdlinelen == 0)
     {
         return;
     }
 
     TCHAR* cmd = new TCHAR[cmdlinelen + 1];
-    ::_tcscpy_s(cmd, cmdlinelen + 1, szCmdLine);
+    ::_tcscpy_s(cmd, cmdlinelen + 1, szCmdLineIn);
 
     // Count the number of spaces
     // This may be more than the number of arguments, but that doesn't matter.
@@ -608,7 +608,8 @@ void VNCOptions::SetFromCommandLine(const LPTSTR szCmdLine)
     }
     ++i;
 
-    const bool hostGiven{ false }, portGiven = false;
+    [[maybe_unused]] const bool hostGiven{ false };
+    [[maybe_unused]] const bool portGiven = false;
     // take in order.
     for (int j{ 0 }; j < i; ++j)
     {
@@ -1073,7 +1074,7 @@ void VNCOptions::SetFromCommandLine(const LPTSTR szCmdLine)
                 ArgError(sz_D24.data());
                 continue;
             }
-            ::WideCharToMultiByte(CP_UTF8, 0, args[j], -1, m_cmdlnUser.data(), m_cmdlnUser.size(), nullptr, nullptr);
+            ::WideCharToMultiByte(CP_UTF8, 0, args[j], -1, m_cmdlnUser.data(), static_cast<int>(m_cmdlnUser.size()), nullptr, nullptr);
         } // act : add user option on command line
         // Modif sf@2002 : password in the command line
         else if (SwitchMatch(args[j], _T("password")))
@@ -1083,7 +1084,7 @@ void VNCOptions::SetFromCommandLine(const LPTSTR szCmdLine)
                 ArgError(sz_D24.data());
                 continue;
             }
-            ::WideCharToMultiByte(CP_ACP, 0, args[j], -1, m_clearPassword.data(), m_clearPassword.size(), nullptr, nullptr);
+            ::WideCharToMultiByte(CP_ACP, 0, args[j], -1, m_clearPassword.data(), static_cast<int>(m_clearPassword.size()), nullptr, nullptr);
         } // Modif sf@2002
         // VeNCrypt token-TLS: 64-character token supplied on the command line
         else if (SwitchMatch(args[j], _T("token")))
@@ -1093,7 +1094,7 @@ void VNCOptions::SetFromCommandLine(const LPTSTR szCmdLine)
                 ArgError(sz_D24.data());
                 continue;
             }
-            ::WideCharToMultiByte(CP_UTF8, 0, args[j], -1, m_token.data(), m_token.size(), nullptr, nullptr);
+            ::WideCharToMultiByte(CP_UTF8, 0, args[j], -1, m_token.data(), static_cast<int>(m_token.size()), nullptr, nullptr);
         }
         else if (SwitchMatch(args[j], _T("serverscale")))
         {
@@ -1165,7 +1166,7 @@ void VNCOptions::SetFromCommandLine(const LPTSTR szCmdLine)
             _stscanf_s(args[j - 2], _T("%d"), &m_y);
             _stscanf_s(args[j - 1], _T("%d"), &m_w);
             _stscanf_s(args[j], _T("%d"), &m_h);
-            const int a{ 0 };
+            [[maybe_unused]] const int a{ 0 };
         }
         else if (SwitchMatch(args[j], _T("noborder")))
         {
@@ -1290,7 +1291,7 @@ void VNCOptions::SetFromCommandLine(const LPTSTR szCmdLine)
             else
             {
                 std::array<TCHAR, MAX_HOST_NAME_LEN> phost;
-                if (!ParseDisplay(args[j], phost.data(), phost.size(), &m_port))
+                if (!ParseDisplay(args[j], phost.data(), static_cast<int>(phost.size()), &m_port))
                 {
                     ShowUsage(sz_D28.data());
                     ::PostQuitMessage(1);
@@ -1371,7 +1372,7 @@ void VNCOptions::CheckProxyAndHost()
                 }
             }
 
-            if (!ParseDisplay(actualProxy.data(), m_proxyhost.data(), m_proxyhost.size(), &m_proxyport))
+            if (!ParseDisplay(actualProxy.data(), m_proxyhost.data(), static_cast<int>(m_proxyhost.size()), &m_proxyport))
             {
                 ShowUsage(sz_D28.data());
                 ::PostQuitMessage(1);
@@ -1560,7 +1561,7 @@ void VNCOptions::LoadOptions(const wchar_t* const fname)
     m_quickoption = readInt(L"QuickOption", m_quickoption, fname);
     m_fUseDSMPlugin = readInt(L"UseDSMPlugin", m_fUseDSMPlugin, fname) != 0;
     m_connectionType = (ConnectionType)readInt(L"UseProxy", static_cast<int>(m_connectionType), fname);
-    ::GetPrivateProfileStringW(L"connection", L"proxyhost", L"", m_proxyhost.data(), m_proxyhost.size(), fname);
+    ::GetPrivateProfileStringW(L"connection", L"proxyhost", L"", m_proxyhost.data(), static_cast<DWORD>(m_proxyhost.size()), fname);
     m_proxyport = ::GetPrivateProfileIntW(L"connection", L"proxyport", 0, fname);
     m_allowMonitorSpanning = readInt(L"allowMonitorSpanning", m_allowMonitorSpanning, fname);
     m_ChangeServerRes = readInt(L"ChangeServerRes", m_ChangeServerRes, fname);
@@ -1573,11 +1574,11 @@ void VNCOptions::LoadOptions(const wchar_t* const fname)
 
     {
         ::GetPrivateProfileStringW(L"options", L"DSMPlugin", L"NoPlugin", m_szDSMPluginFilename.data(), MAX_PATH, fname);
-        ::GetPrivateProfileStringW(L"options", L"folder", m_document_folder.data(), m_document_folder.data(), m_document_folder.size(), fname);
+        ::GetPrivateProfileStringW(L"options", L"folder", m_document_folder.data(), m_document_folder.data(), static_cast<DWORD>(m_document_folder.size()), fname);
         ::GetPrivateProfileStringW(L"options", L"prefix", m_prefix, m_prefix, 56, fname);
         ::GetPrivateProfileStringW(L"options", L"imageFormat", m_imageFormat.data(), m_imageFormat.data(), 56, fname);
         ::GetPrivateProfileStringW(L"options", L"language", L"en", m_language.data(), 32, fname);
-        ::GetPrivateProfileStringW(L"options", L"InfoMsg", m_InfoMsg.data(), m_InfoMsg.data(), m_InfoMsg.size(), fname);
+        ::GetPrivateProfileStringW(L"options", L"InfoMsg", m_InfoMsg.data(), m_InfoMsg.data(), static_cast<DWORD>(m_InfoMsg.size()), fname);
     }
     if (!g_disable_sponsor)
     {
@@ -1589,7 +1590,7 @@ void VNCOptions::LoadOptions(const wchar_t* const fname)
     m_fExitCheck = readInt(L"ExitCheck", m_fExitCheck, fname) != 0; //PGM @ Advantig
     m_FTTimeout = readInt(L"FileTransferTimeout", m_FTTimeout, fname);
     m_listenPort = readInt(L"ListenPort", m_listenPort, fname);
-    ::GetPrivateProfileStringW(L"options", L"AuthHosts", L"", m_listenAuthHosts.data(), m_listenAuthHosts.size(), fname);
+    ::GetPrivateProfileStringW(L"options", L"AuthHosts", L"", m_listenAuthHosts.data(), static_cast<DWORD>(m_listenAuthHosts.size()), fname);
     if (m_FTTimeout > 600)
     {
         m_FTTimeout = 600;
@@ -1659,11 +1660,11 @@ void VNCOptions::ShowUsage(const LPTSTR info)
 }
 
 // The dialog box allows you to change the session-specific parameters
-int VNCOptions::DoDialog(bool running, const HWND hwnd)
+int VNCOptions::DoDialog(bool running, const HWND hwndIn)
 {
     extern HINSTANCE m_hInstResDLL;
     m_running = running;
-    return ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_OPTIONDIALOG), hwnd, (DLGPROC)OptDlgProc, (LONG_PTR)this);
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_OPTIONDIALOG), hwndIn, (DLGPROC)OptDlgProc, (LONG_PTR)this));
 }
 
 void VNCOptions::CancelDialog() { ::SendMessage(hwnd, WM_COMMAND, IDCANCEL, 0); }
@@ -2005,7 +2006,7 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
             HWND hAutoScalingEven = ::GetDlgItem(hwnd, IDC_SCALINGEVEN);
             _this->m_fAutoScalingEven = (::SendMessage(hAutoScalingEven, BM_GETCHECK, 0, 0) == BST_CHECKED);
 
-            HWND hViewerScaling = ::GetDlgItem(hwnd, IDC_SCALE_CB);
+            [[maybe_unused]] HWND hViewerScaling = ::GetDlgItem(hwnd, IDC_SCALE_CB);
             int nErr;
             int nPer = ::GetDlgItemInt(hwnd, IDC_SCALE_CB, &nErr, FALSE);
             if (nPer > 0)
@@ -2130,7 +2131,7 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
                 g_disable_sponsor = false;
             }
 
-            const DWORD val = g_disable_sponsor;
+            [[maybe_unused]] const DWORD val = g_disable_sponsor;
 
             //adzm 2010-07-04
             HWND hpreemptiveUpdates = ::GetDlgItem(hwnd, IDC_PREEMPTIVEUPDATES);

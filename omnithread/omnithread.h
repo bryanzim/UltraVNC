@@ -499,8 +499,8 @@ public:
     // plus the given relative offset.
 
 private:
-    virtual void run(void* const arg) {}
-    virtual void* run_undetached(void* const arg) { return nullptr; }
+    virtual void run([[maybe_unused]] void* const arg) {}
+    virtual void* run_undetached([[maybe_unused]] void* const arg) { return nullptr; }
     // can be overridden in a derived class. When constructed using the
     // the constructor omni_thread(void*, priority_t), these functions are
     // called by start() and start_undetached() respectively.

@@ -25,12 +25,12 @@ UltraVncZ::UltraVncZ()
     decompStreamInitedZstd = false;
     use_zstd = false;
 }
-void UltraVncZ::set_use_zstd(const bool use_zstd)
+void UltraVncZ::set_use_zstd(const bool use_zstdIn)
 {
-    this->use_zstd = use_zstd;
-    if (use_zstd)
+    this->use_zstd = use_zstdIn;
+    if (use_zstdIn)
     {
-        MAX_SIZE = ::ZSTD_CStreamInSize();
+        MAX_SIZE = static_cast<UINT>(::ZSTD_CStreamInSize());
     }
     else
     {
@@ -80,20 +80,20 @@ void UltraVncZ::endInflateStream(const bool zstd)
 }
 
 
-UINT UltraVncZ::compress(const int compresslevel, const UINT avail_in, const UINT avail_out, BYTE* const next_in,
+UINT UltraVncZ::compress(const int compresslevelIn, const UINT avail_in, const UINT avail_out, BYTE* const next_in,
                          BYTE* const next_out)
 {
     if (use_zstd)
     {
-        return compressZstd(compresslevel, avail_in, avail_out, next_in, next_out);
+        return compressZstd(compresslevelIn, avail_in, avail_out, next_in, next_out);
     }
     else
     {
-        return compressZlib(compresslevel, avail_in, avail_out, next_in, next_out);
+        return compressZlib(compresslevelIn, avail_in, avail_out, next_in, next_out);
     }
 }
 
-UINT UltraVncZ::compressZlib(const int compresslevel, UINT avail_in, UINT avail_out, BYTE* next_in, BYTE* next_out)
+UINT UltraVncZ::compressZlib(const int compresslevelIn, UINT avail_in, UINT avail_out, BYTE* next_in, BYTE* next_out)
 {
     compStream.next_in = next_in;
     compStream.avail_out = avail_out;
@@ -110,19 +110,19 @@ UINT UltraVncZ::compressZlib(const int compresslevel, UINT avail_in, UINT avail_
         compStream.zfree = Z_NULL;
         compStream.opaque = Z_NULL;
         compStream.data_type = Z_BINARY;
-        deflateResult = deflateInit2(&compStream, compresslevel, Z_DEFLATED, MAX_WBITS, MAX_MEM_LEVEL, Z_DEFAULT_STRATEGY);
+        deflateResult = deflateInit2(&compStream, compresslevelIn, Z_DEFLATED, MAX_WBITS, MAX_MEM_LEVEL, Z_DEFAULT_STRATEGY);
         if (deflateResult != Z_OK)
         {
             return 0;
         }
         compStreamInitedZlib = true;
-        this->compresslevel = compresslevel;
+        this->compresslevel = compresslevelIn;
     }
     previousTotalOut = compStream.total_out;
-    if (this->compresslevel != compresslevel)
+    if (this->compresslevel != compresslevelIn)
     {
-        deflateParams(&compStream, compresslevel, Z_DEFAULT_STRATEGY);
-        this->compresslevel = compresslevel;
+        deflateParams(&compStream, compresslevelIn, Z_DEFAULT_STRATEGY);
+        this->compresslevel = compresslevelIn;
     }
     deflateResult = deflate(&compStream, Z_SYNC_FLUSH);
     if (deflateResult != Z_OK)
@@ -132,10 +132,10 @@ UINT UltraVncZ::compressZlib(const int compresslevel, UINT avail_in, UINT avail_
     return compStream.total_out - previousTotalOut;
 }
 
-UINT UltraVncZ::compressZstd(int compresslevel, const UINT avail_in, const UINT avail_out, BYTE* const next_in,
+UINT UltraVncZ::compressZstd(int compresslevelIn, const UINT avail_in, const UINT avail_out, BYTE* const next_in,
                              BYTE* const next_out)
 {
-    compresslevel = compresslevel - 7;
+    compresslevelIn = compresslevelIn - 7;
     unsigned int rc{ 0U };
     if (!compStreamInitedZstd)
     {
@@ -144,12 +144,12 @@ UINT UltraVncZ::compressZstd(int compresslevel, const UINT avail_in, const UINT 
         {
             return 0;
         }
-        if (::ZSTD_isError(::ZSTD_initCStream(cstream, compresslevel)))
+        if (::ZSTD_isError(::ZSTD_initCStream(cstream, compresslevelIn)))
         {
             return 0;
         }
         {
-            ZSTD_strategy initStrategy = (compresslevel <= 1) ? ZSTD_fast : ZSTD_dfast;
+            ZSTD_strategy initStrategy = (compresslevelIn <= 1) ? ZSTD_fast : ZSTD_dfast;
             if (::ZSTD_isError(::ZSTD_CCtx_setParameter(cstream, ZSTD_c_strategy, initStrategy)))
             {
                 return 0;
@@ -158,7 +158,7 @@ UINT UltraVncZ::compressZstd(int compresslevel, const UINT avail_in, const UINT 
         outBufferC = new ZSTD_outBuffer;
         inBufferC = new ZSTD_inBuffer;
         compStreamInitedZstd = true;
-        this->compresslevel = compresslevel;
+        this->compresslevel = compresslevelIn;
     }
 
     inBufferC->src = next_in;
@@ -167,19 +167,19 @@ UINT UltraVncZ::compressZstd(int compresslevel, const UINT avail_in, const UINT 
     outBufferC->dst = next_out;
     outBufferC->size = avail_out;
     outBufferC->pos = 0;
-    if (this->compresslevel != compresslevel)
+    if (this->compresslevel != compresslevelIn)
     {
-        ::ZSTD_CCtx_setParameter(cstream, ZSTD_c_compressionLevel, compresslevel);
-        ZSTD_strategy strategy = (compresslevel <= 1) ? ZSTD_fast : ZSTD_dfast;
+        ::ZSTD_CCtx_setParameter(cstream, ZSTD_c_compressionLevel, compresslevelIn);
+        ZSTD_strategy strategy = (compresslevelIn <= 1) ? ZSTD_fast : ZSTD_dfast;
         ::ZSTD_CCtx_setParameter(cstream, ZSTD_c_strategy, strategy);
-        this->compresslevel = compresslevel;
+        this->compresslevel = compresslevelIn;
     }
-    rc = ::ZSTD_compressStream2(cstream, outBufferC, inBufferC, ZSTD_e_flush);
+    rc = static_cast<unsigned int>(::ZSTD_compressStream2(cstream, outBufferC, inBufferC, ZSTD_e_flush));
     if (::ZSTD_isError(rc))
     {
         return 0;
     }
-    return outBufferC->pos;
+    return static_cast<UINT>(outBufferC->pos);
 }
 
 int UltraVncZ::decompress(UINT& avail_in, UINT& avail_out, BYTE* const next_in, BYTE* const next_out, const bool zstd)
@@ -251,9 +251,9 @@ int UltraVncZ::decompressZstd(UINT& avail_in, UINT& avail_out, BYTE* const next_
     outBufferD->dst = next_out;
     outBufferD->size = avail_out;
     outBufferD->pos = 0;
-    rc = ::ZSTD_decompressStream(dstream, outBufferD, inBufferD);
-    avail_in = inBufferD->size;
-    avail_out = outBufferD->size - outBufferD->pos;
+    rc = static_cast<unsigned int>(::ZSTD_decompressStream(dstream, outBufferD, inBufferD));
+    avail_in = static_cast<UINT>(inBufferD->size);
+    avail_out = static_cast<UINT>(outBufferD->size - outBufferD->pos);
     if (!::ZSTD_isError(rc))
     {
         return Z_OK;

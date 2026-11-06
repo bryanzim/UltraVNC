@@ -207,13 +207,13 @@ int CTitleBar::ScaleDpi(const int i) { return (i * dpi) / 96; }
 
 //***************************************************************************************
 
-void CTitleBar::Create(const HINSTANCE hInst, const HWND ParentWindow, const bool Fit, VNCOptions* opts)
+void CTitleBar::Create(const HINSTANCE hInst, const HWND ParentWindow, const bool FitIn, VNCOptions* opts)
 {
     m_opts = opts;
     hInstance = hInst;
     Parent = ParentWindow;
     this->Init();
-    this->Fit = Fit;
+    this->Fit = FitIn;
 }
 
 //***************************************************************************************
@@ -642,7 +642,7 @@ LRESULT CALLBACK CTitleBar::WndProc(const HWND hwnd, const UINT iMsg, const WPAR
         {
             std::array<TCHAR, MAX_PATH> Text;
             ::ZeroMemory(Text.data(), sizeof(Text));
-            int res = ::GetMenuString(SubMenu, i, Text.data(), Text.size(), MF_BYPOSITION);
+            int res = ::GetMenuString(SubMenu, i, Text.data(), static_cast<int>(Text.size()), MF_BYPOSITION);
 
             if (res != 0)
             {
@@ -659,7 +659,7 @@ LRESULT CALLBACK CTitleBar::WndProc(const HWND hwnd, const UINT iMsg, const WPAR
             {
                 std::array<TCHAR, MAX_PATH> Text;
                 ::ZeroMemory(Text.data(), sizeof(Text));
-                int res = ::GetMenuString(SubMenu, i, Text.data(), Text.size(), MF_BYPOSITION);
+                int res = ::GetMenuString(SubMenu, i, Text.data(), static_cast<int>(Text.size()), MF_BYPOSITION);
 
                 if (res != 0)
                 {

@@ -342,7 +342,7 @@ FileTransfer::FileTransfer(VNCviewerApp* const l_pApp, ClientConnection* pCC)
     m_nNotSent = 0;
     m_dwLastChunkTime = 0;
     m_maxHistExtent = 0;
-    m_mmRes = -1;
+    m_mmRes = static_cast<MMRESULT>(-1);
     m_timerID = 0xFFFFFFFF;
     m_dwStartTick = ::GetTickCount();
 
@@ -435,7 +435,7 @@ void FileTransfer::KillFTTimer()
     {
         timeKillEvent(m_mmRes);
     }
-    m_mmRes = -1;
+    m_mmRes = static_cast<MMRESULT>(-1);
 #else
 
     if (m_timerID == 0xFFFFFFFF)
@@ -449,7 +449,7 @@ void FileTransfer::KillFTTimer()
 #endif
 }
 
-void CALLBACK FileTransfer::fpTimerProc(const HWND hwnd, const UINT uMsg, const UINT_PTR idEvent, const DWORD dwTime)
+void CALLBACK FileTransfer::fpTimerProc([[maybe_unused]] const HWND hwnd, [[maybe_unused]] const UINT uMsg, [[maybe_unused]] const UINT_PTR idEvent, [[maybe_unused]] const DWORD dwTime)
 {
     if (g_FileTransferSingleton != nullptr)
     {
@@ -457,8 +457,8 @@ void CALLBACK FileTransfer::fpTimerProc(const HWND hwnd, const UINT uMsg, const 
     }
 }
 
-void CALLBACK FileTransfer::fpTimer(const UINT uID, const UINT uMsg, const DWORD_PTR dwUser, const DWORD_PTR dw1,
-                                    const DWORD_PTR dw2)
+void CALLBACK FileTransfer::fpTimer([[maybe_unused]] const UINT uID, [[maybe_unused]] const UINT uMsg, const DWORD_PTR dwUser, [[maybe_unused]] const DWORD_PTR dw1,
+                                    [[maybe_unused]] const DWORD_PTR dw2)
 {
     FileTransfer* ft = (FileTransfer*)dwUser;
 
@@ -820,8 +820,8 @@ static int CALLBACK FolderFirstSort(const LPARAM lParam1, const LPARAM lParam2, 
     HWND hWndList = (HWND)lParamSort;
     std::array<WCHAR, MAX_PATH + 4> sz1{ 0 };
     std::array<WCHAR, MAX_PATH + 4> sz2{ 0 };
-    ListView_GetItemText(hWndList, lParam1, 0, sz1.data(), sz1.size());
-    ListView_GetItemText(hWndList, lParam2, 0, sz2.data(), sz2.size());
+    ListView_GetItemText(hWndList, lParam1, 0, sz1.data(), static_cast<int>(sz1.size()));
+    ListView_GetItemText(hWndList, lParam2, 0, sz2.data(), static_cast<int>(sz2.size()));
     bool b1folder = (sz1[0U] == L'[');
     bool b2folder = (sz2[0U] == L'[');
     if (b1folder != b2folder)
@@ -853,7 +853,7 @@ static void FTListViewClear(const HWND hWndList)
 //
 // Test if we are allowed to access File Transfer
 //
-bool FileTransfer::TestPermission(const long lSize, const int nVersion)
+bool FileTransfer::TestPermission(const long lSize, [[maybe_unused]] const int nVersion)
 {
     //	vnclog.Print(0, _T("TestPermission\n"));
     if (lSize == -1)
@@ -970,7 +970,7 @@ bool FileTransfer::RequestNextFile()
 
         // Convert full Unicode path to UTF-8 for sending to server
         std::array<char, MAX_PATH * 3> szDstFileUTF8;
-        ::WideCharToMultiByte(CP_UTF8, 0, szDstFileW.data(), -1, szDstFileUTF8.data(), szDstFileUTF8.size(), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_UTF8, 0, szDstFileW.data(), -1, szDstFileUTF8.data(), static_cast<int>(szDstFileUTF8.size()), nullptr, nullptr);
         RequestRemoteFile(szDstFileUTF8.data());
     }
     else // All the files have been processed and hopefully received
@@ -1046,7 +1046,7 @@ bool FileTransfer::OfferNextFile()
 
         // Build full local path in Unicode
         std::array<WCHAR, MAX_PATH * 4> szSrcFileW;
-        ::GetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szSrcFileW.data(), szSrcFileW.size());
+        ::GetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szSrcFileW.data(), static_cast<int>(szSrcFileW.size()));
         if (!std::wcslen(szSrcFileW.data()))
         {
             return false;
@@ -1064,7 +1064,7 @@ bool FileTransfer::OfferNextFile()
             // Fallback: try short path (handles bidi control chars like U+202B that
             // cause GetFileAttributesW to return INVALID_FILE_ATTRIBUTES)
             std::array<WCHAR, MAX_PATH * 4> szShortAttrW;
-            if (::GetShortPathNameW(szSrcFileW.data(), szShortAttrW.data(), szShortAttrW.size()))
+            if (::GetShortPathNameW(szSrcFileW.data(), szShortAttrW.data(), static_cast<DWORD>(szShortAttrW.size())))
             {
                 dwAttr = ::GetFileAttributesW(szShortAttrW.data());
             }
@@ -1080,7 +1080,7 @@ bool FileTransfer::OfferNextFile()
         if (bIsDir && pNameW)
         {
             // Rebuild as bracketed path: dir\[ name ] - ZipPossibleDirectory expects rfbDirPrefix/Suffix format
-            ::GetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szSrcFileW.data(), szSrcFileW.size());
+            ::GetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szSrcFileW.data(), static_cast<int>(szSrcFileW.size()));
             ::wcscat_s(szSrcFileW.data(), szSrcFileW.size(), L"[ ");
             ::wcscat_s(szSrcFileW.data(), szSrcFileW.size(), pNameW->c_str());
             ::wcscat_s(szSrcFileW.data(), szSrcFileW.size(), L" ]");
@@ -1090,7 +1090,7 @@ bool FileTransfer::OfferNextFile()
         ::wcscpy_s(m_szSrcFileNameW.data(), m_szSrcFileNameW.size(), szSrcFileW.data());
         // CP_ACP version for legacy code paths
         std::array<char, MAX_PATH * 4> szSrcFile;
-        ::WideCharToMultiByte(CP_ACP, 0, szSrcFileW.data(), -1, szSrcFile.data(), szSrcFile.size(), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_ACP, 0, szSrcFileW.data(), -1, szSrcFile.data(), static_cast<int>(szSrcFile.size()), nullptr, nullptr);
 
         if (!OfferLocalFile(szSrcFile.data()))
         {
@@ -1231,11 +1231,11 @@ bool FileTransfer::MyGetFileSize(const LPCWSTR szFilePath, ULARGE_INTEGER* const
 //
 // Add a file line to a ListView
 //
-void FileTransfer::AddFileToFileList(const HWND hWnd, const int nListId, WIN32_FIND_DATA& fd, const bool fLocalSide,
+void FileTransfer::AddFileToFileList(const HWND hWndIn, const int nListId, WIN32_FIND_DATA& fd, const bool fLocalSide,
                                      const WCHAR* const pszUnicodeFileName)
 {
     //	vnclog.Print(0, _T("AddFileToFileList\n"));
-    HWND hWndList = ::GetDlgItem(hWnd, nListId);
+    HWND hWndList = ::GetDlgItem(hWndIn, nListId);
 
     // Build Unicode filename: use pszUnicodeFileName if provided, else convert fd.cFileName from CP_ACP
     std::array<WCHAR, MAX_PATH + 2> szFileNameW;
@@ -1297,7 +1297,7 @@ void FileTransfer::AddFileToFileList(const HWND hWnd, const int nListId, WIN32_F
         if (fLocalSide && std::wcscmp(szFileNameW.data(), L".."))
         {
             std::array<WCHAR, MAX_PATH * 4> szCurrPathW;
-            ::GetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szCurrPathW.data(), szCurrPathW.size());
+            ::GetDlgItemTextW(hWndIn, IDC_CURR_LOCAL, szCurrPathW.data(), static_cast<int>(szCurrPathW.size()));
             if (std::wcslen(szCurrPathW.data()) > 0)
             {
                 std::array<WCHAR, MAX_PATH * 4> szProbeW;
@@ -1440,7 +1440,7 @@ bool FileTransfer::IsShortcutFolder(const LPCWSTR szPath)
 //
 //
 //
-bool FileTransfer::ResolvePossibleShortcutFolder(const HWND hWnd, const LPSTR szFolder)
+bool FileTransfer::ResolvePossibleShortcutFolder(const HWND hWndIn, const LPSTR szFolder)
 {
     //	vnclog.Print(0, _T("ResolvePossibleShortcutFolder\n"));
     std::array<TCHAR, MAX_PATH> szP;
@@ -1482,13 +1482,13 @@ bool FileTransfer::ResolvePossibleShortcutFolder(const HWND hWnd, const LPSTR sz
                 szP[len] = L'\\';
                 szP[len + 1] = L'\0';
             }
-            ::SetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szP.data());
+            ::SetDlgItemTextW(hWndIn, IDC_CURR_LOCAL, szP.data());
         }
         return true;
     }
     else
     {
-        ::MultiByteToWideChar(CP_ACP, 0, szFolder, -1, szP.data(), szP.size());
+        ::MultiByteToWideChar(CP_ACP, 0, szFolder, -1, szP.data(), static_cast<int>(szP.size()));
 
         //PGM len of "[ C: ] - Local Disk" is always > 2
 
@@ -1501,7 +1501,7 @@ bool FileTransfer::ResolvePossibleShortcutFolder(const HWND hWnd, const LPSTR sz
             {
                 if (::GetFileAttributesW(szP.data()) & FILE_ATTRIBUTE_DIRECTORY)
                 {
-                    ::SetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szP.data());
+                    ::SetDlgItemTextW(hWndIn, IDC_CURR_LOCAL, szP.data());
                     return true;
                 }
             }
@@ -1542,13 +1542,13 @@ bool FileTransfer::GetSpecialFolderPath(const int nId, char* const szPath)
 //
 // Unicode wrapper for PopulateLocalListBox
 //
-void FileTransfer::PopulateLocalListBoxW(const HWND hWnd, LPCWSTR szPathW)
+void FileTransfer::PopulateLocalListBoxW(const HWND hWndIn, LPCWSTR szPathW)
 {
     if (szPathW[0U] == L'\0')
     {
         // Empty string = double-click or refresh - delegate directly
         std::array<char, 1U> szPath{ 0 };
-        PopulateLocalListBox(hWnd, szPath.data());
+        PopulateLocalListBox(hWndIn, szPath.data());
         return;
     }
 
@@ -1559,7 +1559,7 @@ void FileTransfer::PopulateLocalListBoxW(const HWND hWnd, LPCWSTR szPathW)
     {
         // Go up one directory - read current path, strip last component
         std::array<WCHAR, MAX_PATH * 4> szCurrentW;
-        ::GetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szCurrentW.data(), szCurrentW.size());
+        ::GetDlgItemTextW(hWndIn, IDC_CURR_LOCAL, szCurrentW.data(), static_cast<int>(szCurrentW.size()));
         if (std::wcslen(szCurrentW.data()) < 1)
         {
             return;
@@ -1572,14 +1572,14 @@ void FileTransfer::PopulateLocalListBoxW(const HWND hWnd, LPCWSTR szPathW)
         WCHAR* p = std::wcsrchr(szCurrentW.data(), L'\\');
         if (p == nullptr)
         {
-            ListDrives(hWnd);
+            ListDrives(hWndIn);
             return;
         } // At root, show drives
         *(p + 1) = L'\0'; // Keep trailing backslash
-        ::SetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szCurrentW.data());
+        ::SetDlgItemTextW(hWndIn, IDC_CURR_LOCAL, szCurrentW.data());
         // IDC_CURR_LOCAL is set - PopulateLocalListBox will read it
         std::array<char, 1U> szEmpty{ 0 };
-        PopulateLocalListBox(hWnd, szEmpty.data());
+        PopulateLocalListBox(hWndIn, szEmpty.data());
         return;
     }
 
@@ -1614,10 +1614,10 @@ void FileTransfer::PopulateLocalListBoxW(const HWND hWnd, LPCWSTR szPathW)
                         szFolderW[len] = L'\\';
                         szFolderW[len + 1] = L'\0';
                     }
-                    ::SetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szFolderW.data());
-                    FTListViewClear(::GetDlgItem(hWnd, IDC_LOCAL_FILELIST));
+                    ::SetDlgItemTextW(hWndIn, IDC_CURR_LOCAL, szFolderW.data());
+                    FTListViewClear(::GetDlgItem(hWndIn, IDC_LOCAL_FILELIST));
                     std::array<char, 1U> szEmpty{ 0 };
-                    PopulateLocalListBox(hWnd, szEmpty.data());
+                    PopulateLocalListBox(hWndIn, szEmpty.data());
                     return;
                 }
             }
@@ -1634,10 +1634,10 @@ void FileTransfer::PopulateLocalListBoxW(const HWND hWnd, LPCWSTR szPathW)
         {
             std::array<WCHAR, 8U> szDrivePathW;
             ::_snwprintf_s(szDrivePathW.data(), 8, _TRUNCATE, L"%s\\", szDriveW.data());
-            ::SetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szDrivePathW.data());
-            FTListViewClear(::GetDlgItem(hWnd, IDC_LOCAL_FILELIST));
+            ::SetDlgItemTextW(hWndIn, IDC_CURR_LOCAL, szDrivePathW.data());
+            FTListViewClear(::GetDlgItem(hWndIn, IDC_LOCAL_FILELIST));
             std::array<char, 1U> szEmpty{ 0 };
-            PopulateLocalListBox(hWnd, szEmpty.data());
+            PopulateLocalListBox(hWndIn, szEmpty.data());
             return;
         }
     }
@@ -1645,13 +1645,13 @@ void FileTransfer::PopulateLocalListBoxW(const HWND hWnd, LPCWSTR szPathW)
     // Fallback: convert to ANSI for legacy code path
     std::array<char, MAX_PATH> szPath;
     ::WideCharToMultiByte(CP_ACP, 0, szPathW, -1, szPath.data(), MAX_PATH, nullptr, nullptr);
-    PopulateLocalListBox(hWnd, szPath.data());
+    PopulateLocalListBox(hWndIn, szPath.data());
 }
 
 //
 // Populate the local machine listbox with files located in szPath
 //
-void FileTransfer::PopulateLocalListBox(const HWND hWnd, const LPSTR szPath)
+void FileTransfer::PopulateLocalListBox(const HWND hWndIn, const LPSTR szPath)
 {
     //	vnclog.Print(0, _T("PopulateLocalListBox\n"));
     std::array<char, MAX_PATH> ofDir;
@@ -1663,8 +1663,8 @@ void FileTransfer::PopulateLocalListBox(const HWND hWnd, const LPSTR szPath)
     int nFileCount{ 0 };
 
 
-    HWND hWndLocalList = ::GetDlgItem(hWnd, IDC_LOCAL_FILELIST);
-    HWND hWndRemoteList = ::GetDlgItem(hWnd, IDC_REMOTE_FILELIST);
+    HWND hWndLocalList = ::GetDlgItem(hWndIn, IDC_LOCAL_FILELIST);
+    HWND hWndRemoteList = ::GetDlgItem(hWndIn, IDC_REMOTE_FILELIST);
 
     ofDir[0U] = '\0';
     ofDirT[0U] = '\0';
@@ -1713,7 +1713,7 @@ void FileTransfer::PopulateLocalListBox(const HWND hWnd, const LPSTR szPath)
 
                 // Now navigate to this folder - build full path in Unicode
                 std::array<WCHAR, MAX_PATH * 4> szCurrentPathW;
-                ::GetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szCurrentPathW.data(), szCurrentPathW.size());
+                ::GetDlgItemTextW(hWndIn, IDC_CURR_LOCAL, szCurrentPathW.data(), static_cast<int>(szCurrentPathW.size()));
 
                 std::array<WCHAR, MAX_PATH * 4> szNewPathW;
                 if (!::_wcsicmp(szFolderNameW.data(), L".."))
@@ -1732,7 +1732,7 @@ void FileTransfer::PopulateLocalListBox(const HWND hWnd, const LPSTR szPath)
                     if (p == nullptr)
                     {
                         // At root of drive, show drives list
-                        ListDrives(hWnd);
+                        ListDrives(hWndIn);
                         return;
                     }
                     *(p + 1) = L'\0'; // Keep trailing backslash
@@ -1779,7 +1779,7 @@ void FileTransfer::PopulateLocalListBox(const HWND hWnd, const LPSTR szPath)
                     ::_snwprintf_s(szNewPathW.data(), szNewPathW.size(), _TRUNCATE, L"%s%s\\", szCurrentPathW.data(), szFolderNameW.data());
                 }
 
-                ::SetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szNewPathW.data());
+                ::SetDlgItemTextW(hWndIn, IDC_CURR_LOCAL, szNewPathW.data());
 
                 // Build Unicode search path directly - no ANSI round-trip
                 ::_snwprintf_s(ofDirW.data(), ofDirW.size(), _TRUNCATE, L"%s*", szNewPathW.data());
@@ -1789,7 +1789,7 @@ void FileTransfer::PopulateLocalListBox(const HWND hWnd, const LPSTR szPath)
                 // Legacy tracking (ANSI - best effort)
                 ::WideCharToMultiByte(CP_ACP, 0, szNewPathW.data(), -1, ofDir.data(), MAX_PATH, nullptr, nullptr);
                 ::strcat_s(ofDir.data(), ofDir.size(), "*");
-                ::WideCharToMultiByte(CP_ACP, 0, szFolderNameW.data(), -1, ofDirT.data(), ofDirT.size(), nullptr, nullptr);
+                ::WideCharToMultiByte(CP_ACP, 0, szFolderNameW.data(), -1, ofDirT.data(), static_cast<int>(ofDirT.size()), nullptr, nullptr);
                 m_nLastLocalAttemptItem = nSelected;
                 ::strcpy_s(m_szLastLocalAttemptName.data(), m_szLastLocalAttemptName.size(), ofDirT.data());
 
@@ -1806,7 +1806,7 @@ void FileTransfer::PopulateLocalListBox(const HWND hWnd, const LPSTR szPath)
     else
     {
         // Usual shortcuts case
-        if (ResolvePossibleShortcutFolder(hWnd, szPath)) {}
+        if (ResolvePossibleShortcutFolder(hWndIn, szPath)) {}
         else
         {
             // General case
@@ -1825,7 +1825,7 @@ void FileTransfer::PopulateLocalListBox(const HWND hWnd, const LPSTR szPath)
             ::sprintf_s(szUpDirMask.data(), szUpDirMask.size(), "%s..%s", rfbDirPrefix, rfbDirSuffix);
             if (std::strcmp(ofDirT.data(), szUpDirMask.data()))
             {
-                ::SetDlgItemTextW(hWnd, IDC_CURR_LOCAL, L"");
+                ::SetDlgItemTextW(hWndIn, IDC_CURR_LOCAL, L"");
             }
         }
     }
@@ -1836,7 +1836,7 @@ void FileTransfer::PopulateLocalListBox(const HWND hWnd, const LPSTR szPath)
     if ((nSelected == nCount) || (lstrlenA(ofDirT.data()) == 0))
     {
         std::array<WCHAR, MAX_PATH * 4> _wb;
-        ::GetDlgItemTextW(hWnd, IDC_CURR_LOCAL, _wb.data(), _wb.size());
+        ::GetDlgItemTextW(hWndIn, IDC_CURR_LOCAL, _wb.data(), static_cast<int>(_wb.size()));
         if (std::wcslen(_wb.data()) == 0)
         {
             return;
@@ -1847,7 +1847,7 @@ void FileTransfer::PopulateLocalListBox(const HWND hWnd, const LPSTR szPath)
             ::_snwprintf_s(ofDirW.data(), ofDirW.size(), _TRUNCATE, L"%s*", _wb.data());
             ::wcscpy_s(szSavedParentPathW.data(), szSavedParentPathW.size(), _wb.data());
             // Legacy ANSI copies (best effort)
-            ::WideCharToMultiByte(CP_ACP, 0, _wb.data(), -1, ofDirT.data(), ofDirT.size(), nullptr, nullptr);
+            ::WideCharToMultiByte(CP_ACP, 0, _wb.data(), -1, ofDirT.data(), static_cast<int>(ofDirT.size()), nullptr, nullptr);
             ::strcpy_s(szSavedParentPath.data(), szSavedParentPath.size(), ofDirT.data());
             ::strcpy_s(ofDir.data(), ofDir.size(), ofDirT.data());
             ::strcat_s(ofDir.data(), ofDir.size(), "*");
@@ -1862,17 +1862,17 @@ void FileTransfer::PopulateLocalListBox(const HWND hWnd, const LPSTR szPath)
     }
 
     // Select the good drive in the drives combo box (the first time only)
-    int nIndex = ::SendDlgItemMessage(hWnd, IDC_LOCAL_DRIVECB, CB_GETCURSEL, 0, 0L);
+    int nIndex = static_cast<int>(::SendDlgItemMessage(hWndIn, IDC_LOCAL_DRIVECB, CB_GETCURSEL, 0, 0L));
     if (nIndex == LB_ERR)
     {
         std::array<char, 5U> szDrive;
         ::strcpy_s(szDrive.data(), szDrive.size(), rfbDirPrefix);
         ::strncat_s(szDrive.data(), szDrive.size(), ofDir.data(), 2);
-        nIndex = ::SendDlgItemMessage(hWnd, IDC_LOCAL_DRIVECB, CB_FINDSTRING, -1, (LPARAM)(LPSTR)szDrive.data());
-        ::SendDlgItemMessage(hWnd, IDC_LOCAL_DRIVECB, CB_SETCURSEL, nIndex, 0L);
+        nIndex = static_cast<int>(::SendDlgItemMessage(hWndIn, IDC_LOCAL_DRIVECB, CB_FINDSTRING, static_cast<WPARAM>(-1), (LPARAM)(LPSTR)szDrive.data()));
+        ::SendDlgItemMessage(hWndIn, IDC_LOCAL_DRIVECB, CB_SETCURSEL, nIndex, 0L);
     }
 
-    ::SetDlgItemTextW(hWnd, IDC_LOCAL_STATUS, sz_H8.data());
+    ::SetDlgItemTextW(hWndIn, IDC_LOCAL_STATUS, sz_H8.data());
 
 populate_folder:
     WIN32_FIND_DATA fd;
@@ -1902,7 +1902,7 @@ populate_folder:
 
     if (ff == INVALID_HANDLE_VALUE)
     {
-        ::SetDlgItemTextW(hWnd, IDC_LOCAL_STATUS, sz_H9.data());
+        ::SetDlgItemTextW(hWndIn, IDC_LOCAL_STATUS, sz_H9.data());
         if (m_nLastLocalAttemptItem >= 0)
         {
             LVITEMW ItemW;
@@ -1923,7 +1923,7 @@ populate_folder:
             ::UpdateWindow(hWndLocalList);
         }
         // Restore saved parent path and re-populate it using Unicode
-        ::SetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szSavedParentPathW.data());
+        ::SetDlgItemTextW(hWndIn, IDC_CURR_LOCAL, szSavedParentPathW.data());
         ::_snwprintf_s(ofDirW.data(), ofDirW.size(), _TRUNCATE, L"%s*", szSavedParentPathW.data());
         ff = ::FindFirstFileW(ofDirW.data(), &fdW);
         if (ff == INVALID_HANDLE_VALUE)
@@ -1951,9 +1951,9 @@ populate_folder:
 
     while (bRet != 0)
     {
-        AddFileToFileList(hWnd, IDC_LOCAL_FILELIST, fdW, true, fdW.cFileName);
+        AddFileToFileList(hWndIn, IDC_LOCAL_FILELIST, fdW, true, fdW.cFileName);
         ++nFileCount;
-        if (!PseudoYield(::GetParent(hWnd)))
+        if (!PseudoYield(::GetParent(hWndIn)))
         {
             ::FindClose(ff);
             return;
@@ -1969,7 +1969,7 @@ populate_folder:
     {
         std::array<wchar_t, 128U> _ws58;
         ::_snwprintf_s(_ws58.data(), 128, _TRUNCATE, L" > %d %s", nFileCount, sz_H58.data());
-        ::SetDlgItemTextW(hWnd, IDC_LOCAL_STATUS, _ws58.data());
+        ::SetDlgItemTextW(hWndIn, IDC_LOCAL_STATUS, _ws58.data());
     }
 
     // If some files have been received
@@ -1981,7 +1981,7 @@ populate_folder:
 //
 // Request the contents of a remote directory
 //
-void FileTransfer::RequestRemoteDirectoryContent(const HWND hWnd, const LPCWSTR szPath)
+void FileTransfer::RequestRemoteDirectoryContent(const HWND hWndIn, const LPCWSTR szPath)
 {
     //	vnclog.Print(0, _T("RequestRemoteDirectoryContent\n"));
 
@@ -2005,7 +2005,7 @@ void FileTransfer::RequestRemoteDirectoryContent(const HWND hWnd, const LPCWSTR 
     std::array<WCHAR, MAX_PATH * 4> szPathW; // Unicode copy of szPath for processing
     int nSelected = -1;
     int nCount{ 0 };
-    HWND hWndRemoteList = ::GetDlgItem(hWnd, IDC_REMOTE_FILELIST);
+    HWND hWndRemoteList = ::GetDlgItem(hWndIn, IDC_REMOTE_FILELIST);
 
     ofDir[0U] = '\0';
     ofDirW[0U] = L'\0';
@@ -2038,11 +2038,11 @@ void FileTransfer::RequestRemoteDirectoryContent(const HWND hWnd, const LPCWSTR 
                 ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, (LPARAM)&ItemW);
                 // Store display text for error tracking (convert to ANSI only for legacy m_szLastRemoteAttemptName)
                 std::array<char, MAX_PATH> szDispA;
-                ::WideCharToMultiByte(CP_ACP, 0, szDispW.data(), -1, szDispA.data(), szDispA.size(), nullptr, nullptr);
+                ::WideCharToMultiByte(CP_ACP, 0, szDispW.data(), -1, szDispA.data(), static_cast<int>(szDispA.size()), nullptr, nullptr);
                 m_nLastRemoteAttemptItem = nSelected;
                 ::strcpy_s(m_szLastRemoteAttemptName.data(), m_szLastRemoteAttemptName.size(), szDispA.data());
-                ::GetDlgItemTextW(hWnd, IDC_CURR_REMOTE, m_szLastRemotePathW.data(), m_szLastRemotePathW.size());
-                ::WideCharToMultiByte(CP_ACP, 0, m_szLastRemotePathW.data(), -1, m_szLastRemotePath.data(), m_szLastRemotePath.size(), nullptr, nullptr);
+                ::GetDlgItemTextW(hWndIn, IDC_CURR_REMOTE, m_szLastRemotePathW.data(), static_cast<int>(m_szLastRemotePathW.size()));
+                ::WideCharToMultiByte(CP_ACP, 0, m_szLastRemotePathW.data(), -1, m_szLastRemotePath.data(), static_cast<int>(m_szLastRemotePath.size()), nullptr, nullptr);
 
                 std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemLP.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
                 if (pNameW)
@@ -2086,7 +2086,7 @@ void FileTransfer::RequestRemoteDirectoryContent(const HWND hWnd, const LPCWSTR 
                         }
 
                         ::wcscpy_s(ofDirTW.data(), ofDirTW.size(), szNameW.data());
-                        ::SetDlgItemTextW(hWnd, IDC_CURR_REMOTE, szNameW.data());
+                        ::SetDlgItemTextW(hWndIn, IDC_CURR_REMOTE, szNameW.data());
                         // Convert to UTF-8 for server
                         ::WideCharToMultiByte(CP_UTF8, 0, ofDirTW.data(), -1, ofDir.data(), MAX_PATH * 3, nullptr, nullptr);
 
@@ -2119,7 +2119,7 @@ void FileTransfer::RequestRemoteDirectoryContent(const HWND hWnd, const LPCWSTR 
         {
             // Direct path - send as-is
             ::wcscpy_s(ofDirTW.data(), ofDirTW.size(), szPathW.data());
-            ::SetDlgItemTextW(hWnd, IDC_CURR_REMOTE, ofDirTW.data());
+            ::SetDlgItemTextW(hWndIn, IDC_CURR_REMOTE, ofDirTW.data());
             ::WideCharToMultiByte(CP_UTF8, 0, ofDirTW.data(), -1, ofDir.data(), MAX_PATH * 3, nullptr, nullptr);
 
 #if DEBUG_FT
@@ -2155,24 +2155,24 @@ void FileTransfer::RequestRemoteDirectoryContent(const HWND hWnd, const LPCWSTR 
         m_nLastRemoteAttemptItem = ListView_FindItem(hWndRemoteList, -1, &Info);
         // Convert to ANSI only for legacy m_szLastRemoteAttemptName
         std::array<char, MAX_PATH> ofDirTA;
-        ::WideCharToMultiByte(CP_ACP, 0, ofDirTW.data(), -1, ofDirTA.data(), ofDirTA.size(), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_ACP, 0, ofDirTW.data(), -1, ofDirTA.data(), static_cast<int>(ofDirTA.size()), nullptr, nullptr);
         ::strcpy_s(m_szLastRemoteAttemptName.data(), m_szLastRemoteAttemptName.size(), ofDirTA.data());
         // In the case of (..) we keep the current path intact
         std::array<WCHAR, 16U> szUpDirMaskW;
         ::_snwprintf_s(szUpDirMaskW.data(), 16, _TRUNCATE, L"%hs..%hs", rfbDirPrefix, rfbDirSuffix);
         // Save current path BEFORE clearing, so we can restore it if the folder is inaccessible
-        ::GetDlgItemTextW(hWnd, IDC_CURR_REMOTE, m_szLastRemotePathW.data(), m_szLastRemotePathW.size());
-        ::WideCharToMultiByte(CP_ACP, 0, m_szLastRemotePathW.data(), -1, m_szLastRemotePath.data(), m_szLastRemotePath.size(), nullptr, nullptr);
+        ::GetDlgItemTextW(hWndIn, IDC_CURR_REMOTE, m_szLastRemotePathW.data(), static_cast<int>(m_szLastRemotePathW.size()));
+        ::WideCharToMultiByte(CP_ACP, 0, m_szLastRemotePathW.data(), -1, m_szLastRemotePath.data(), static_cast<int>(m_szLastRemotePath.size()), nullptr, nullptr);
         if (std::wcscmp(ofDirTW.data(), szUpDirMaskW.data()))
         {
-            ::SetDlgItemTextW(hWnd, IDC_CURR_REMOTE, L"");
+            ::SetDlgItemTextW(hWndIn, IDC_CURR_REMOTE, L"");
         }
     }
 
     bool bDirectPath{ false };
     if ((nSelected == nCount) || (std::wcslen(ofDirTW.data()) == 0))
     {
-        ::GetDlgItemTextW(hWnd, IDC_CURR_REMOTE, ofDirTW.data(), MAX_PATH);
+        ::GetDlgItemTextW(hWndIn, IDC_CURR_REMOTE, ofDirTW.data(), MAX_PATH);
         if (std::wcslen(ofDirTW.data()) == 0)
         {
             m_fFileCommandPending = false;
@@ -2215,9 +2215,9 @@ void FileTransfer::RequestRemoteDirectoryContent(const HWND hWnd, const LPCWSTR 
                 if (lenW > 4) // Must have at least "[ X ]"
                 {
                     // Skip "[ " (2 chars) and remove " ]" (2 chars) from end
-                    std::size_t contentLenW = lenW - 4;
-                    ::wcsncpy_s(ofDirW.data(), ofDirW.size(), ofDirTW.data() + 2, contentLenW);
-                    ofDirW[contentLenW] = L'\0';
+                    std::size_t contentLenWInner = lenW - 4;
+                    ::wcsncpy_s(ofDirW.data(), ofDirW.size(), ofDirTW.data() + 2, contentLenWInner);
+                    ofDirW[contentLenWInner] = L'\0';
                 }
             }
         }
@@ -2228,7 +2228,7 @@ void FileTransfer::RequestRemoteDirectoryContent(const HWND hWnd, const LPCWSTR 
         }
 
         // Get current remote path in Unicode
-        ::GetDlgItemTextW(hWnd, IDC_CURR_REMOTE, ofDirTW.data(), MAX_PATH);
+        ::GetDlgItemTextW(hWndIn, IDC_CURR_REMOTE, ofDirTW.data(), MAX_PATH);
         if (!::_wcsicmp(ofDirStrippedW.data(), L".."))
         {
             if (std::wcslen(ofDirTW.data()) < 1)
@@ -2250,7 +2250,7 @@ void FileTransfer::RequestRemoteDirectoryContent(const HWND hWnd, const LPCWSTR 
         }
         ::wcscat_s(ofDirTW.data(), ofDirTW.size(), L"\\");
         // Update IDC_CURR_REMOTE display using Unicode directly (avoids CP_ACP corruption)
-        ::SetDlgItemTextW(hWnd, IDC_CURR_REMOTE, ofDirTW.data());
+        ::SetDlgItemTextW(hWndIn, IDC_CURR_REMOTE, ofDirTW.data());
         // Build ofDir as UTF-8 for server
         ::WideCharToMultiByte(CP_UTF8, 0, ofDirTW.data(), -1, ofDir.data(), MAX_PATH * 3, nullptr, nullptr);
 
@@ -2266,14 +2266,14 @@ void FileTransfer::RequestRemoteDirectoryContent(const HWND hWnd, const LPCWSTR 
     // Todo: In case of shortcuts dir, do a translation here !
 
     // Select the good drive in the drives combo box (the first time only)
-    int nIndex = ::SendDlgItemMessage(hWnd, IDC_REMOTE_DRIVECB, CB_GETCURSEL, 0, 0L);
+    int nIndex = static_cast<int>(::SendDlgItemMessage(hWndIn, IDC_REMOTE_DRIVECB, CB_GETCURSEL, 0, 0L));
     if (nIndex == LB_ERR)
     {
         std::array<char, 5U> szDrive;
         ::strcpy_s(szDrive.data(), szDrive.size(), rfbDirPrefix);
         ::strncat_s(szDrive.data(), szDrive.size(), ofDir.data(), 2);
-        nIndex = ::SendDlgItemMessage(hWnd, IDC_REMOTE_DRIVECB, CB_FINDSTRING, -1, (LPARAM)(LPSTR)szDrive.data());
-        ::SendDlgItemMessage(hWnd, IDC_REMOTE_DRIVECB, CB_SETCURSEL, nIndex, 0L);
+        nIndex = static_cast<int>(::SendDlgItemMessage(hWndIn, IDC_REMOTE_DRIVECB, CB_FINDSTRING, static_cast<WPARAM>(-1), (LPARAM)(LPSTR)szDrive.data()));
+        ::SendDlgItemMessage(hWndIn, IDC_REMOTE_DRIVECB, CB_SETCURSEL, nIndex, 0L);
     }
 
     // Don't clear list here - wait until we know folder is readable (in PopulateRemoteListBox)
@@ -2289,7 +2289,7 @@ send_request:
     ft.length = Swap32IfLE((UINT32)std::strlen(ofDir.data()));
     //adzm 2010-09
     m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-    m_pCC->WriteExact((char*)ofDir.data(), std::strlen(ofDir.data()));
+    m_pCC->WriteExact((char*)ofDir.data(), static_cast<int>(std::strlen(ofDir.data())));
 
     return;
 }
@@ -2298,15 +2298,15 @@ send_request:
 //
 // Populate the remote machine listbox with files received from server
 //
-void FileTransfer::PopulateRemoteListBox(const HWND hWnd, const UINT nLen, const bool fUnicodeEntry)
+void FileTransfer::PopulateRemoteListBox(const HWND hWndIn, const UINT nLen, [[maybe_unused]] const bool fUnicodeEntry)
 {
     //	vnclog.Print(0, _T("PopulateRemoteListBox\n"));
 
     // If the distant media is not browsable for some reason
     if (nLen == 0)
     {
-        ::SetDlgItemTextW(hWnd, IDC_REMOTE_STATUS, sz_H10.data());
-        HWND hWndRemoteList = ::GetDlgItem(hWnd, IDC_REMOTE_FILELIST);
+        ::SetDlgItemTextW(hWndIn, IDC_REMOTE_STATUS, sz_H10.data());
+        HWND hWndRemoteList = ::GetDlgItem(hWndIn, IDC_REMOTE_FILELIST);
         if (m_nLastRemoteAttemptItem >= 0)
         {
             LVITEMW ItemW;
@@ -2329,13 +2329,13 @@ void FileTransfer::PopulateRemoteListBox(const HWND hWnd, const UINT nLen, const
         // Restore previous path so user can navigate back
         if (m_szLastRemotePathW[0U] != L'\0')
         {
-            ::SetDlgItemTextW(hWnd, IDC_CURR_REMOTE, m_szLastRemotePathW.data());
+            ::SetDlgItemTextW(hWndIn, IDC_CURR_REMOTE, m_szLastRemotePathW.data());
         }
         else if (std::strlen(m_szLastRemotePath.data()) > 0)
         {
             std::array<WCHAR, MAX_PATH * 4> szLastW;
-            ::MultiByteToWideChar(CP_ACP, 0, m_szLastRemotePath.data(), -1, szLastW.data(), szLastW.size());
-            ::SetDlgItemTextW(hWnd, IDC_CURR_REMOTE, szLastW.data());
+            ::MultiByteToWideChar(CP_ACP, 0, m_szLastRemotePath.data(), -1, szLastW.data(), static_cast<int>(szLastW.size()));
+            ::SetDlgItemTextW(hWndIn, IDC_CURR_REMOTE, szLastW.data());
         }
         // Don't clear list - keep showing parent folder contents
         // User stays in parent folder with error message
@@ -2344,7 +2344,7 @@ void FileTransfer::PopulateRemoteListBox(const HWND hWnd, const UINT nLen, const
     }
 
     // Folder is readable, clear list and populate
-    HWND hWndRemoteList = ::GetDlgItem(hWnd, IDC_REMOTE_FILELIST);
+    HWND hWndRemoteList = ::GetDlgItem(hWndIn, IDC_REMOTE_FILELIST);
     FTListViewClear(hWndRemoteList);
 
     // sf@2004 - Read the returned Directory full path
@@ -2360,10 +2360,10 @@ void FileTransfer::PopulateRemoteListBox(const HWND hWnd, const UINT nLen, const
         // Decode to Unicode and store via SetDlgItemTextW so Chinese paths display correctly.
         std::array<WCHAR, MAX_PATH * 4> szPathW;
         ::MultiByteToWideChar(CP_UTF8, 0, szPath.data(), -1, szPathW.data(), MAX_PATH * 4);
-        ::SetDlgItemTextW(hWnd, IDC_CURR_REMOTE, szPathW.data());
+        ::SetDlgItemTextW(hWndIn, IDC_CURR_REMOTE, szPathW.data());
     }
 
-    ::SetDlgItemTextW(hWnd, IDC_REMOTE_STATUS, sz_H11.data());
+    ::SetDlgItemTextW(hWndIn, IDC_REMOTE_STATUS, sz_H11.data());
 
     // The dir in the current packet
     std::memset(&m_fd, '\0', sizeof(WIN32_FIND_DATA));
@@ -2385,7 +2385,7 @@ void FileTransfer::PopulateRemoteListBox(const HWND hWnd, const UINT nLen, const
 //
 //
 //
-void FileTransfer::ReceiveDirectoryItem(const HWND hWnd, const UINT nLen, const bool fUnicodeEntry)
+void FileTransfer::ReceiveDirectoryItem(const HWND hWndIn, const UINT nLen, const bool fUnicodeEntry)
 {
     //	vnclog.Print(0, _T("ReceiveDirectoryItem\n"));
     if (!m_fDirectoryReceptionRunning)
@@ -2431,11 +2431,11 @@ void FileTransfer::ReceiveDirectoryItem(const HWND hWnd, const UINT nLen, const 
         std::memcpy(&m_fd, m_szFileSpec.data(), nLen);
     }
     // Pass Unicode filename directly for Unicode entries so display is correct on all Windows locales
-    AddFileToFileList(hWnd, IDC_REMOTE_FILELIST, m_fd, false, fUnicodeEntry ? szUnicodeFileName.data() : nullptr);
+    AddFileToFileList(hWndIn, IDC_REMOTE_FILELIST, m_fd, false, fUnicodeEntry ? szUnicodeFileName.data() : nullptr);
     ++m_nFileCount;
 
     // PseudoYield(pFileTransfer->hWnd);
-    if (!PseudoYield(::GetParent(hWnd)))
+    if (!PseudoYield(::GetParent(hWndIn)))
     {
         return;
     }
@@ -2508,7 +2508,7 @@ void FileTransfer::RequestRemoteDrives()
 //
 // Fill the Remote FilesList and remote drives combo box
 //
-void FileTransfer::ListRemoteDrives(const HWND hWnd, const UINT nLen)
+void FileTransfer::ListRemoteDrives(const HWND hWndIn, const UINT nLen)
 {
     //	vnclog.Print(0, _T("ListRemoteDrives\n"));
     std::array<char, 256U> szDrivesList; // Format when filled : "C:t<NULL>D:t<NULL>....Z:t<NULL><NULL>" (ANSI protocol)
@@ -2525,11 +2525,11 @@ void FileTransfer::ListRemoteDrives(const HWND hWnd, const UINT nLen)
 
     m_pCC->ReadString(szDrivesList.data(), nLen);
 
-    HWND hWndRemoteList = ::GetDlgItem(hWnd, IDC_REMOTE_FILELIST);
+    HWND hWndRemoteList = ::GetDlgItem(hWndIn, IDC_REMOTE_FILELIST);
 
-    ::SendDlgItemMessage(hWnd, IDC_REMOTE_DRIVECB, CB_RESETCONTENT, 0, 0L);
+    ::SendDlgItemMessage(hWndIn, IDC_REMOTE_DRIVECB, CB_RESETCONTENT, 0, 0L);
     FTListViewClear(hWndRemoteList);
-    ::SetDlgItemTextW(hWnd, IDC_CURR_REMOTE, L"");
+    ::SetDlgItemTextW(hWndIn, IDC_CURR_REMOTE, L"");
 
     // Fill the tree with the remote drives
     while (ViewerBounds::range(nIndex, 4, nLen))
@@ -2592,7 +2592,7 @@ void FileTransfer::ListRemoteDrives(const HWND hWnd, const UINT nLen)
         }
 #endif
 
-        ::SendMessageW(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szTheDrive.data());
+        ::SendMessageW(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szTheDrive.data());
     }
 
     // List the usual shorcuts
@@ -2610,7 +2610,7 @@ void FileTransfer::ListRemoteDrives(const HWND hWnd, const UINT nLen)
         ::_sntprintf_s(szGUIDir2.data(), 64, _TRUNCATE, _T("%s%s%s"), L"[ ", _T("My Documents"), L" ]");
         Item.pszText = szGUIDir2.data(); // Todo: Fr/De
         ListView_InsertItem(hWndRemoteList, &Item);
-        ::SendMessageW(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir2.data());
+        ::SendMessageW(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir2.data());
 
         // Desktop
         Item.mask = LVIF_TEXT | LVIF_PARAM;
@@ -2620,7 +2620,7 @@ void FileTransfer::ListRemoteDrives(const HWND hWnd, const UINT nLen)
         ::_sntprintf_s(szGUIDir2.data(), 64, _TRUNCATE, _T("%s%s%s"), L"[ ", _T("Desktop"), L" ]");
         Item.pszText = szGUIDir2.data(); // Todo: Fr/De
         ListView_InsertItem(hWndRemoteList, &Item);
-        ::SendMessageW(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir2.data());
+        ::SendMessageW(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir2.data());
 
         Item.mask = LVIF_TEXT | LVIF_PARAM;
         Item.iItem = 0;
@@ -2629,17 +2629,17 @@ void FileTransfer::ListRemoteDrives(const HWND hWnd, const UINT nLen)
         ::_sntprintf_s(szGUIDir2.data(), 64, _TRUNCATE, _T("%s%s%s"), L"[ ", _T("Network Favorites"), L" ]");
         Item.pszText = szGUIDir2.data(); // Todo: Fr/De
         ListView_InsertItem(hWndRemoteList, &Item);
-        ::SendMessageW(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir2.data());
+        ::SendMessageW(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir2.data());
     }
 
-    ::SendMessage(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), CB_SETCURSEL, -1, 0);
+    ::SendMessage(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_SETCURSEL, static_cast<WPARAM>(-1), 0);
 }
 
 
 //
 // List local drives
 //
-void FileTransfer::ListDrives(const HWND hWnd)
+void FileTransfer::ListDrives(const HWND hWndIn)
 {
     //	vnclog.Print(0, _T("ListDrives\n"));
     std::array<TCHAR, 256U> szDrivesList{ 0 }; // Format when filled : "C:\<NULL>D:\<NULL>....Z:\<NULL><NULL>"
@@ -2651,11 +2651,11 @@ void FileTransfer::ListDrives(const HWND hWnd)
     DWORD nIndex{ 0U };
     dwLen = ::GetLogicalDriveStrings(256, szDrivesList.data());
 
-    HWND hWndLocalList = ::GetDlgItem(hWnd, IDC_LOCAL_FILELIST);
-    ::SendDlgItemMessage(hWnd, IDC_LOCAL_DRIVECB, CB_RESETCONTENT, 0, 0L);
+    HWND hWndLocalList = ::GetDlgItem(hWndIn, IDC_LOCAL_FILELIST);
+    ::SendDlgItemMessage(hWndIn, IDC_LOCAL_DRIVECB, CB_RESETCONTENT, 0, 0L);
 
     FTListViewClear(hWndLocalList);
-    ::SetDlgItemTextW(hWnd, IDC_CURR_LOCAL, L"");
+    ::SetDlgItemTextW(hWndIn, IDC_CURR_LOCAL, L"");
 
     // Parse the list of drives
     while (nIndex < dwLen - 3)
@@ -2719,7 +2719,7 @@ void FileTransfer::ListDrives(const HWND hWnd)
         ::_tcscat_s(szTheDrive.data(), 32, _T(" - "));
         ::_tcscat_s(szTheDrive.data(), 32, szType.data());
 
-        ::SendMessageW(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szTheDrive.data());
+        ::SendMessageW(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szTheDrive.data());
     }
 
     // List the usual shorcuts
@@ -2736,7 +2736,7 @@ void FileTransfer::ListDrives(const HWND hWnd)
     Item.pszText = szGUIDir.data(); // Todo: Fr/De
     Item.lParam = (LPARAM)(new std::wstring(L"My Documents"));
     ::SendMessageW(hWndLocalList, LVM_INSERTITEMW, 0, (LPARAM)&Item);
-    ::SendMessageW(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir.data());
+    ::SendMessageW(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir.data());
 
     // Desktop
     std::memset(&Item, 0, sizeof(Item));
@@ -2747,7 +2747,7 @@ void FileTransfer::ListDrives(const HWND hWnd)
     Item.pszText = szGUIDir.data(); // Todo: Fr/De
     Item.lParam = (LPARAM)(new std::wstring(L"Desktop"));
     ::SendMessageW(hWndLocalList, LVM_INSERTITEMW, 0, (LPARAM)&Item);
-    ::SendMessageW(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir.data());
+    ::SendMessageW(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir.data());
 
     // Network Favorites
     std::memset(&Item, 0, sizeof(Item));
@@ -2758,26 +2758,26 @@ void FileTransfer::ListDrives(const HWND hWnd)
     Item.pszText = szGUIDir.data(); // Todo: Fr/De
     Item.lParam = (LPARAM)(new std::wstring(L"Network Favorites"));
     ::SendMessageW(hWndLocalList, LVM_INSERTITEMW, 0, (LPARAM)&Item);
-    ::SendMessageW(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir.data());
+    ::SendMessageW(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir.data());
 
-    ::SendMessage(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), CB_SETCURSEL, -1, 0);
+    ::SendMessage(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_SETCURSEL, static_cast<WPARAM>(-1), 0);
 }
 
 
 //
 // Set gauge max value
 //
-void FileTransfer::SetTotalSize(const HWND hWnd, const DWORD dwTotalSize)
+void FileTransfer::SetTotalSize(const HWND hWndIn, [[maybe_unused]] const DWORD dwTotalSize)
 {
     //	vnclog.Print(0, _T("SetTotalSize\n"));
-    ::SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETPOS, (WPARAM)0, (LPARAM)0L);
-    ::SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETRANGE, (WPARAM)0, MAKELPARAM(0, m_nBlockSize));
+    ::SendDlgItemMessage(hWndIn, IDC_PROGRESS, PBM_SETPOS, (WPARAM)0, (LPARAM)0L);
+    ::SendDlgItemMessage(hWndIn, IDC_PROGRESS, PBM_SETRANGE, (WPARAM)0, MAKELPARAM(0, m_nBlockSize));
 }
 
 //
 // Set gauge value
 //
-void FileTransfer::SetGauge(const HWND hWnd, const __int64 dwCount)
+void FileTransfer::SetGauge(const HWND hWndIn, const __int64 dwCount)
 {
     //	vnclog.Print(0, _T("SetGauge\n"));
     const DWORD dwSmallerCount = static_cast<DWORD>((dwCount / m_nBlockSize));
@@ -2789,7 +2789,7 @@ void FileTransfer::SetGauge(const HWND hWnd, const __int64 dwCount)
     DWORD dwValue = static_cast<DWORD>(((((__int64)(dwSmallerCount)*m_nBlockSize / dwSmallerFileSize))));
     if (dwValue != m_dwCurrentValue)
     {
-        ::SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETPOS, dwValue, 0);
+        ::SendDlgItemMessage(hWndIn, IDC_PROGRESS, PBM_SETPOS, dwValue, 0);
         m_dwCurrentValue = dwValue;
     }
 
@@ -2802,7 +2802,7 @@ void FileTransfer::SetGauge(const HWND hWnd, const __int64 dwCount)
         double dKbTotal = double(dwCount) / 1024;
         double dKbps = (dKbTotal / (double(dwMsElapsed) / 1000));
         ::_snwprintf_s(szPercentAndSpeed.data(), 255, _TRUNCATE, L"%d%% (%4.0f kb @ ~%4.0f kb/s)", dwPercent, dKbTotal, dKbps);
-        ::SetDlgItemTextW(hWnd, IDC_PERCENT, szPercentAndSpeed.data());
+        ::SetDlgItemTextW(hWndIn, IDC_PERCENT, szPercentAndSpeed.data());
         m_dwCurrentPercent = dwPercent;
     }
 }
@@ -2923,14 +2923,14 @@ void FileTransfer::RequestRemoteFile(const LPSTR szRemoteFileName)
         // Old server: convert UTF-8 -> Unicode -> CP_ACP
         std::array<WCHAR, MAX_PATH * 4> szFileNameW;
         ::MultiByteToWideChar(CP_UTF8, 0, szRemoteFileName, -1, szFileNameW.data(), MAX_PATH * 4);
-        ::WideCharToMultiByte(CP_ACP, 0, szFileNameW.data(), -1, szFileNameToSend.data(), szFileNameToSend.size(), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_ACP, 0, szFileNameW.data(), -1, szFileNameToSend.data(), static_cast<int>(szFileNameToSend.size()), nullptr, nullptr);
     }
 
     ft.length = Swap32IfLE(std::strlen(szFileNameToSend.data()));
     ft.size = (m_pCC->kbitsPerSecond > 2048) ? Swap32IfLE(0) : Swap32IfLE(1); // 1 means "Enable compression"
                                                                               //adzm 2010-09
     m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-    m_pCC->WriteExact((char*)szFileNameToSend.data(), std::strlen(szFileNameToSend.data()));
+    m_pCC->WriteExact((char*)szFileNameToSend.data(), static_cast<int>(std::strlen(szFileNameToSend.data())));
     ::strncpy_s(szRemoteFileNameRequested.data(), sizeof(szRemoteFileNameRequested), szFileNameToSend.data(), _TRUNCATE);
     rfbFileHeaderRequested = true;
     return;
@@ -2997,7 +2997,7 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
     {
         {
             std::array<wchar_t, MAX_PATH * 4> _wrf;
-            ::MultiByteToWideChar(CP_UTF8, 0, szRemoteFileName, -1, _wrf.data(), _wrf.size());
+            ::MultiByteToWideChar(CP_UTF8, 0, szRemoteFileName, -1, _wrf.data(), static_cast<int>(_wrf.size()));
             std::array<wchar_t, 512U> szStatusW;
             ::_snwprintf_s(szStatusW.data(), 512, _TRUNCATE, L" %s < %s > %s", sz_H12.data(), _wrf.data(), sz_H13.data());
             SetStatus(szStatusW.data());
@@ -3009,7 +3009,7 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
 
     // Get the current path (destination path) in Unicode
     std::array<WCHAR, MAX_PATH * 4> szDestDirW;
-    ::GetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szDestDirW.data(), szDestDirW.size());
+    ::GetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szDestDirW.data(), static_cast<int>(szDestDirW.size()));
     // Also store as CP_ACP for legacy uses below
     ::WideCharToMultiByte(CP_ACP, 0, szDestDirW.data(), -1, m_szDestFileName.data(), sizeof(m_szDestFileName), nullptr, nullptr);
 
@@ -3093,10 +3093,10 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
         if (!fErrNoFileName)
         {
             std::array<wchar_t, MAX_PATH * 4> _wdn;
-            ::MultiByteToWideChar(CP_UTF8, 0, displayName.data(), -1, _wdn.data(), _wdn.size());
-            std::array<wchar_t, 512U> szStatusW4;
-            ::_snwprintf_s(szStatusW4.data(), 512, _TRUNCATE, L" %s < %s >", sz_H14.data(), _wdn.data());
-            SetStatus(szStatusW4.data());
+            ::MultiByteToWideChar(CP_UTF8, 0, displayName.data(), -1, _wdn.data(), static_cast<int>(_wdn.size()));
+            std::array<wchar_t, 512U> szStatusW4Inner;
+            ::_snwprintf_s(szStatusW4Inner.data(), 512, _TRUNCATE, L" %s < %s >", sz_H14.data(), _wdn.data());
+            SetStatus(szStatusW4Inner.data());
         }
         else
         {
@@ -3123,7 +3123,7 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
     {
         // Decode the UTF-8 remote filename to Unicode
         std::array<WCHAR, MAX_PATH * 4> szRemoteFileNameW;
-        ::MultiByteToWideChar(CP_UTF8, 0, szRemoteFileName, -1, szRemoteFileNameW.data(), szRemoteFileNameW.size());
+        ::MultiByteToWideChar(CP_UTF8, 0, szRemoteFileName, -1, szRemoteFileNameW.data(), static_cast<int>(szRemoteFileNameW.size()));
         // Get just the filename part (after last backslash)
         const WCHAR* pFilePartW = std::wcsrchr(szRemoteFileNameW.data(), L'\\');
         if (pFilePartW)
@@ -3136,10 +3136,10 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
         }
         // Apply temp filename logic on the Unicode filename
         std::array<char, MAX_PATH * 3> szFilePartUTF8;
-        ::WideCharToMultiByte(CP_UTF8, 0, pFilePartW, -1, szFilePartUTF8.data(), szFilePartUTF8.size(), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_UTF8, 0, pFilePartW, -1, szFilePartUTF8.data(), static_cast<int>(szFilePartUTF8.size()), nullptr, nullptr);
         std::string tempName = make_temp_filename(szFilePartUTF8.data());
         std::array<WCHAR, MAX_PATH * 4> szTempNameW;
-        ::MultiByteToWideChar(CP_UTF8, 0, tempName.c_str(), -1, szTempNameW.data(), szTempNameW.size());
+        ::MultiByteToWideChar(CP_UTF8, 0, tempName.c_str(), -1, szTempNameW.data(), static_cast<int>(szTempNameW.size()));
         // Build full Unicode dest path and store as member for FinishFileReception
         ::wcscpy_s(m_szDestFileNameW.data(), m_szDestFileNameW.size(), szDestDirW.data());
         ::wcscat_s(m_szDestFileNameW.data(), m_szDestFileNameW.size(), szTempNameW.data());
@@ -3150,7 +3150,7 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
         GetFriendlyFileSizeString(m_nnFileSize, szFFS.data(), 96);
         {
             std::array<wchar_t, MAX_PATH * 4> _wdn2;
-            ::MultiByteToWideChar(CP_UTF8, 0, displayName.data(), -1, _wdn2.data(), _wdn2.size());
+            ::MultiByteToWideChar(CP_UTF8, 0, displayName.data(), -1, _wdn2.data(), static_cast<int>(_wdn2.size()));
             std::array<wchar_t, 96U> _wffs;
             ::MultiByteToWideChar(CP_ACP, 0, szFFS.data(), -1, _wffs.data(), 96);
             std::array<wchar_t, 512U> szStatusW12;
@@ -3188,7 +3188,7 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
     {
         {
             std::array<wchar_t, MAX_PATH * 4> _wdn3;
-            ::MultiByteToWideChar(CP_UTF8, 0, displayName.data(), -1, _wdn3.data(), _wdn3.size());
+            ::MultiByteToWideChar(CP_UTF8, 0, displayName.data(), -1, _wdn3.data(), static_cast<int>(_wdn3.size()));
             std::array<wchar_t, 512U> szStatusW3;
             ::_snwprintf_s(szStatusW3.data(), 512, _TRUNCATE, L" %s < %s > %s", sz_H12.data(), _wdn3.data(), sz_H16.data());
             SetStatus(szStatusW3.data());
@@ -3494,21 +3494,21 @@ bool FileTransfer::FinishFileReception()
     std::array<wchar_t, 512 + 256> szStatusW4;
     {
         std::array<wchar_t, MAX_PATH * 4> _wrn;
-        ::MultiByteToWideChar(CP_UTF8, 0, realName.c_str(), -1, _wrn.data(), _wrn.size());
-        std::array<wchar_t, 512U> szStatusW4;
-        ::_snwprintf_s(szStatusW4.data(), 512, _TRUNCATE, L" %s < %s >", sz_H17.data(), _wrn.data());
-        SetStatus(szStatusW4.data());
+        ::MultiByteToWideChar(CP_UTF8, 0, realName.c_str(), -1, _wrn.data(), static_cast<int>(_wrn.size()));
+        std::array<wchar_t, 512U> szStatusW4Inner;
+        ::_snwprintf_s(szStatusW4Inner.data(), 512, _TRUNCATE, L" %s < %s >", sz_H17.data(), _wrn.data());
+        SetStatus(szStatusW4Inner.data());
     }
     // Set the DestFile Time Stamp
     if (std::strlen(m_szIncomingFileTime.data()))
     {
         FILETIME DestFileTime;
         SYSTEMTIME FileTime;
-        FileTime.wMonth = atoi(m_szIncomingFileTime.data());
-        FileTime.wDay = atoi(m_szIncomingFileTime.data() + 3);
-        FileTime.wYear = atoi(m_szIncomingFileTime.data() + 6);
-        FileTime.wHour = atoi(m_szIncomingFileTime.data() + 11);
-        FileTime.wMinute = atoi(m_szIncomingFileTime.data() + 14);
+        FileTime.wMonth = static_cast<WORD>(atoi(m_szIncomingFileTime.data()));
+        FileTime.wDay = static_cast<WORD>(atoi(m_szIncomingFileTime.data() + 3));
+        FileTime.wYear = static_cast<WORD>(atoi(m_szIncomingFileTime.data() + 6));
+        FileTime.wHour = static_cast<WORD>(atoi(m_szIncomingFileTime.data() + 11));
+        FileTime.wMinute = static_cast<WORD>(atoi(m_szIncomingFileTime.data() + 14));
         FileTime.wMilliseconds = 0;
         FileTime.wSecond = 0;
         ::SystemTimeToFileTime(&FileTime, &DestFileTime);
@@ -3590,7 +3590,7 @@ bool FileTransfer::FinishFileReception()
             // failure. Updated status
             {
                 std::array<wchar_t, MAX_PATH * 4> _wrn2;
-                ::MultiByteToWideChar(CP_UTF8, 0, realName.c_str(), -1, _wrn2.data(), _wrn2.size());
+                ::MultiByteToWideChar(CP_UTF8, 0, realName.c_str(), -1, _wrn2.data(), static_cast<int>(_wrn2.size()));
                 std::array<wchar_t, 512U> szStatusW5;
                 ::_snwprintf_s(szStatusW5.data(), 512, _TRUNCATE, L" %s < %s >", sz_H12.data(), _wrn2.data());
                 SetStatus(szStatusW5.data());
@@ -3684,7 +3684,7 @@ bool FileTransfer::UnzipPossibleDirectory(const LPCWSTR szFileName)
                 szUtf8[nBytes] = static_cast<char>(std::strtol(_hx, nullptr, 16));
             }
             szUtf8[nBytes] = '\0';
-            ::MultiByteToWideChar(CP_UTF8, 0, szUtf8.data(), -1, szFinalDirNameW.data(), szFinalDirNameW.size());
+            ::MultiByteToWideChar(CP_UTF8, 0, szUtf8.data(), -1, szFinalDirNameW.data(), static_cast<int>(szFinalDirNameW.size()));
 #if DEBUG_FT
             ::OutputDebugStringW(L"  Decoded dirname: ");
             ::OutputDebugStringW(szFinalDirNameW.data());
@@ -3696,7 +3696,7 @@ bool FileTransfer::UnzipPossibleDirectory(const LPCWSTR szFileName)
         // single plain folder name - reject "..", path separators, drive
         // specifiers and trailing dots/spaces before extracting anything.
         std::array<WCHAR, MAX_PATH * 4> szDirNameW2;
-        ::MultiByteToWideChar(CP_ACP, 0, szDirName.data(), -1, szDirNameW2.data(), szDirNameW2.size());
+        ::MultiByteToWideChar(CP_ACP, 0, szDirName.data(), -1, szDirNameW2.data(), static_cast<int>(szDirNameW2.size()));
         const WCHAR* szEffectiveNameW = (std::wcslen(szFinalDirNameW.data()) > 0) ? szFinalDirNameW.data() : szDirNameW2.data();
         if (!IsSafeFileNameW(szEffectiveNameW))
         {
@@ -3723,24 +3723,24 @@ bool FileTransfer::UnzipPossibleDirectory(const LPCWSTR szFileName)
 #if DEBUG_FT
         ::OutputDebugStringW(L"  szPath (ANSI): ");
         std::array<WCHAR, MAX_PATH * 4> _dbgPath;
-        ::MultiByteToWideChar(CP_ACP, 0, szPath.data(), -1, _dbgPath.data(), _dbgPath.size());
+        ::MultiByteToWideChar(CP_ACP, 0, szPath.data(), -1, _dbgPath.data(), static_cast<int>(_dbgPath.size()));
         ::OutputDebugStringW(_dbgPath.data());
         ::OutputDebugStringW(L"\n");
 
         ::OutputDebugStringW(L"  szExtractPath (ANSI): ");
         std::array<WCHAR, MAX_PATH * 4> _dbgExtract;
-        ::MultiByteToWideChar(CP_ACP, 0, szExtractPath.data(), -1, _dbgExtract.data(), _dbgExtract.size());
+        ::MultiByteToWideChar(CP_ACP, 0, szExtractPath.data(), -1, _dbgExtract.data(), static_cast<int>(_dbgExtract.size()));
         ::OutputDebugStringW(_dbgExtract.data());
         ::OutputDebugStringW(L"\n");
 #endif
 
         bool fUnzip{ false };
         std::array<WCHAR, MAX_PATH * 4> szExtractPathW;
-        ::MultiByteToWideChar(CP_ACP, 0, szExtractPath.data(), -1, szExtractPathW.data(), szExtractPathW.size());
+        ::MultiByteToWideChar(CP_ACP, 0, szExtractPath.data(), -1, szExtractPathW.data(), static_cast<int>(szExtractPathW.size()));
 
         {
             std::array<wchar_t, MAX_PATH * 4> _wdn4;
-            ::MultiByteToWideChar(CP_ACP, 0, szExtractName.data(), -1, _wdn4.data(), _wdn4.size());
+            ::MultiByteToWideChar(CP_ACP, 0, szExtractName.data(), -1, _wdn4.data(), static_cast<int>(_wdn4.size()));
             std::array<wchar_t, MAX_PATH * 4 + 64> szStatusW6;
             ::_snwprintf_s(szStatusW6.data(), szStatusW6.size(), _TRUNCATE, L" %s < %s >", sz_H59.data(), _wdn4.data());
             SetStatus(szStatusW6.data());
@@ -3818,18 +3818,18 @@ bool FileTransfer::UnzipPossibleDirectory(const LPCWSTR szFileName)
 #endif
 
             // Rename extracted temp folder to original Unicode dirname
-            std::array<WCHAR, MAX_PATH * 4> szExtractPathW;
+            std::array<WCHAR, MAX_PATH * 4> szExtractPathWInner;
             std::array<WCHAR, MAX_PATH * 4> szFinalPathW;
 
             // Use szParentPathW directly (Unicode, preserves national chars)
             std::array<WCHAR, 64U> szExtractNameW;
             ::MultiByteToWideChar(CP_ACP, 0, szExtractName.data(), -1, szExtractNameW.data(), 64);
-            ::_snwprintf_s(szExtractPathW.data(), szExtractPathW.size(), _TRUNCATE, L"%s%s", szParentPathW.data(), szExtractNameW.data());
+            ::_snwprintf_s(szExtractPathWInner.data(), szExtractPathWInner.size(), _TRUNCATE, L"%s%s", szParentPathW.data(), szExtractNameW.data());
 
             ::_snwprintf_s(szFinalPathW.data(), szFinalPathW.size(), _TRUNCATE, L"%s%s", szParentPathW.data(), szEffectiveNameW);
 #if DEBUG_FT
             ::OutputDebugStringW(L"  Renaming:\n    From: ");
-            ::OutputDebugStringW(szExtractPathW.data());
+            ::OutputDebugStringW(szExtractPathWInner.data());
             ::OutputDebugStringW(L"\n    To: ");
             ::OutputDebugStringW(szFinalPathW.data());
             ::OutputDebugStringW(L"\n");
@@ -3840,14 +3840,14 @@ bool FileTransfer::UnzipPossibleDirectory(const LPCWSTR szFileName)
             BOOL bMoved = FALSE;
             if (IsDirectChildPathW(szParentPathW.data(), szFinalPathW.data()))
             {
-                bMoved = ::MoveFileW(szExtractPathW.data(), szFinalPathW.data());
+                bMoved = ::MoveFileW(szExtractPathWInner.data(), szFinalPathW.data());
                 if (!bMoved)
                 {
                     // Destination folder already exists: merge extracted content into it
                     DWORD dwDstAttr = ::GetFileAttributesW(szFinalPathW.data());
                     if ((dwDstAttr != INVALID_FILE_ATTRIBUTES) && (dwDstAttr & FILE_ATTRIBUTE_DIRECTORY))
                     {
-                        bMoved = MoveDirContentsInto(szExtractPathW.data(), szFinalPathW.data());
+                        bMoved = MoveDirContentsInto(szExtractPathWInner.data(), szFinalPathW.data());
                     }
                 }
             }
@@ -3966,14 +3966,14 @@ bool FileTransfer::OfferLocalFile(const LPSTR szSrcFileName)
     if (nDirZipRet == 1)
     {
         // ZipPossibleDirectory updated m_szSrcFileName to a zip path (always ASCII-safe temp path)
-        ::MultiByteToWideChar(CP_ACP, 0, m_szSrcFileName.data(), -1, m_szSrcFileNameW.data(), m_szSrcFileNameW.size());
+        ::MultiByteToWideChar(CP_ACP, 0, m_szSrcFileName.data(), -1, m_szSrcFileNameW.data(), static_cast<int>(m_szSrcFileNameW.size()));
     }
 
     // Open local src file using Unicode path (m_szSrcFileNameW) to support Chinese filenames
     // If m_szSrcFileNameW is empty (legacy call), fall back to CP_ACP conversion
     if (m_szSrcFileNameW[0U] == L'\0')
     {
-        ::MultiByteToWideChar(CP_ACP, 0, m_szSrcFileName.data(), -1, m_szSrcFileNameW.data(), m_szSrcFileNameW.size());
+        ::MultiByteToWideChar(CP_ACP, 0, m_szSrcFileName.data(), -1, m_szSrcFileNameW.data(), static_cast<int>(m_szSrcFileNameW.size()));
     }
 
     // Build long-path version of Unicode source path
@@ -4011,7 +4011,7 @@ bool FileTransfer::OfferLocalFile(const LPSTR szSrcFileName)
         if ((_openErr == ERROR_ACCESS_DENIED) || (_openErr == ERROR_FILENAME_EXCED_RANGE))
         {
             std::array<WCHAR, MAX_PATH * 4> szShortW;
-            DWORD nShort = ::GetShortPathNameW(m_szSrcFileNameW.data(), szShortW.data(), szShortW.size());
+            DWORD nShort = ::GetShortPathNameW(m_szSrcFileNameW.data(), szShortW.data(), static_cast<DWORD>(szShortW.size()));
             if ((nShort > 0) && (nShort < MAX_PATH * 4))
             {
 #if DEBUG_FT
@@ -4068,7 +4068,7 @@ src_open_ok:
     {
         {
             std::array<wchar_t, MAX_PATH * 4> _wsf4;
-            ::MultiByteToWideChar(CP_ACP, 0, m_szSrcFileName.data(), -1, _wsf4.data(), _wsf4.size());
+            ::MultiByteToWideChar(CP_ACP, 0, m_szSrcFileName.data(), -1, _wsf4.data(), static_cast<int>(_wsf4.size()));
             std::array<wchar_t, 512U> szStatusW12;
             ::_snwprintf_s(szStatusW12.data(), 512, _TRUNCATE, L" %s < %s >", sz_H21.data(), _wsf4.data());
             SetStatus(szStatusW12.data());
@@ -4082,7 +4082,7 @@ src_open_ok:
     GetFriendlyFileSizeString(n2SrcSize.QuadPart, szFFS.data(), 96);
     {
         std::array<wchar_t, MAX_PATH * 4> _wsf2;
-        ::MultiByteToWideChar(CP_ACP, 0, m_szSrcFileName.data(), -1, _wsf2.data(), _wsf2.size());
+        ::MultiByteToWideChar(CP_ACP, 0, m_szSrcFileName.data(), -1, _wsf2.data(), static_cast<int>(_wsf2.size()));
         std::array<wchar_t, 96U> _wffs2;
         ::MultiByteToWideChar(CP_ACP, 0, szFFS.data(), -1, _wffs2.data(), 96);
         std::array<wchar_t, 512U> szStatusW8;
@@ -4101,7 +4101,7 @@ src_open_ok:
     {
         {
             std::array<wchar_t, MAX_PATH * 4> _wsf3;
-            ::MultiByteToWideChar(CP_ACP, 0, m_szSrcFileName.data(), -1, _wsf3.data(), _wsf3.size());
+            ::MultiByteToWideChar(CP_ACP, 0, m_szSrcFileName.data(), -1, _wsf3.data(), static_cast<int>(_wsf3.size()));
             std::array<wchar_t, 512U> szStatusW9;
             ::_snwprintf_s(szStatusW9.data(), 512, _TRUNCATE, L" %s < %s >", sz_H23.data(), _wsf3.data());
             SetStatus(szStatusW9.data());
@@ -4145,7 +4145,7 @@ src_open_ok:
     }
     // Convert full Unicode dest path to CP_ACP for legacy szDstFileName
     std::array<char, MAX_PATH * 4> szDstFileName;
-    ::WideCharToMultiByte(CP_ACP, 0, szDstFileNameW.data(), -1, szDstFileName.data(), szDstFileName.size(), nullptr, nullptr);
+    ::WideCharToMultiByte(CP_ACP, 0, szDstFileNameW.data(), -1, szDstFileName.data(), static_cast<int>(szDstFileName.size()), nullptr, nullptr);
 
     std::array<char, 18U> szSrcFileTime;
     // sf@2003
@@ -4193,7 +4193,7 @@ src_open_ok:
     if (m_fServerSupportsUnicode)
     {
         // szDstFileNameW already has the correct Unicode path (remote dir + local basename + timestamp)
-        ::WideCharToMultiByte(CP_UTF8, 0, szDstFileNameW.data(), -1, szDstFileNameToSend.data(), szDstFileNameToSend.size(), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_UTF8, 0, szDstFileNameW.data(), -1, szDstFileNameToSend.data(), static_cast<int>(szDstFileNameToSend.size()), nullptr, nullptr);
     }
     else
     {
@@ -4217,7 +4217,7 @@ src_open_ok:
     ft.length = Swap32IfLE(std::strlen(szDstFileNameToSend.data()));
     //adzm 2010-09
     m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-    m_pCC->WriteExactQueue((char*)szDstFileNameToSend.data(), std::strlen(szDstFileNameToSend.data()));
+    m_pCC->WriteExactQueue((char*)szDstFileNameToSend.data(), static_cast<int>(std::strlen(szDstFileNameToSend.data())));
     rfbFileTransferOfferRequested = true;
     if (!UsingOldProtocol())
     {
@@ -4264,7 +4264,7 @@ int FileTransfer::ZipPossibleDirectory(const LPSTR szSrcFileName)
         ::GetTempPathW(MAX_PATH, szWorkingDirW.data());
         if (szWorkingDirW[0U] == L'\0')
         {
-            if (::GetModuleFileNameW(nullptr, szWorkingDirW.data(), szWorkingDirW.size()))
+            if (::GetModuleFileNameW(nullptr, szWorkingDirW.data(), static_cast<DWORD>(szWorkingDirW.size())))
             {
                 WCHAR* p = std::wcsrchr(szWorkingDirW.data(), L'\\');
                 if (p == nullptr)
@@ -4313,7 +4313,7 @@ int FileTransfer::ZipPossibleDirectory(const LPSTR szSrcFileName)
         // recover the original name and rename the extracted folder.
         // Format: !UVNCDIR-<hexUTF8ofDirName>.zip
         std::array<char, MAX_PATH * 4> szDirNameUtf8;
-        ::WideCharToMultiByte(CP_UTF8, 0, szDirNameW.data(), -1, szDirNameUtf8.data(), szDirNameUtf8.size(), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_UTF8, 0, szDirNameW.data(), -1, szDirNameUtf8.data(), static_cast<int>(szDirNameUtf8.size()), nullptr, nullptr);
         std::array<char, MAX_PATH * 8> szHexName; // 2 hex chars per byte
         szHexName[0U] = '\0';
         for (int _hi{ 0 }; (szDirNameUtf8[_hi] != '\0') && (_hi < MAX_PATH * 4 - 1); ++_hi)
@@ -4330,7 +4330,7 @@ int FileTransfer::ZipPossibleDirectory(const LPSTR szSrcFileName)
 
         ::OutputDebugStringW(L"  Hex-encoded name: ");
         std::array<WCHAR, MAX_PATH * 8> _dbgHex;
-        ::MultiByteToWideChar(CP_ACP, 0, szHexName.data(), -1, _dbgHex.data(), _dbgHex.size());
+        ::MultiByteToWideChar(CP_ACP, 0, szHexName.data(), -1, _dbgHex.data(), static_cast<int>(_dbgHex.size()));
         ::OutputDebugStringW(_dbgHex.data());
         ::OutputDebugStringW(L"\n");
 
@@ -4350,7 +4350,7 @@ int FileTransfer::ZipPossibleDirectory(const LPSTR szSrcFileName)
         std::array<WCHAR, MAX_PATH * 4> szShortSrcWildW;
         std::array<WCHAR, MAX_PATH * 4> szShortZipW;
         // Try short path first; fall back to direct CP_ACP if GetShortPathNameW fails
-        if (!::GetShortPathNameW(szSrcDirW.data(), szShortSrcW.data(), szShortSrcW.size()))
+        if (!::GetShortPathNameW(szSrcDirW.data(), szShortSrcW.data(), static_cast<DWORD>(szShortSrcW.size())))
         {
             ::wcscpy_s(szShortSrcW.data(), szShortSrcW.size(), szSrcDirW.data());
         }
@@ -4359,9 +4359,9 @@ int FileTransfer::ZipPossibleDirectory(const LPSTR szSrcFileName)
         ::_snwprintf_s(szShortSrcWildW.data(), szShortSrcWildW.size(), _TRUNCATE, L"%s\\*.*", szShortSrcW.data());
         // Zip output is already in ASCII-safe temp dir
         ::wcscpy_s(szShortZipW.data(), szShortZipW.size(), szDirZipPathW.data());
-        ::WideCharToMultiByte(CP_ACP, 0, szShortSrcW.data(), -1, szSrcDirA.data(), szSrcDirA.size(), nullptr, nullptr);
-        ::WideCharToMultiByte(CP_ACP, 0, szShortSrcWildW.data(), -1, szSrcDirWildA.data(), szSrcDirWildA.size(), nullptr, nullptr);
-        ::WideCharToMultiByte(CP_ACP, 0, szShortZipW.data(), -1, szDirZipPathA.data(), szDirZipPathA.size(), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_ACP, 0, szShortSrcW.data(), -1, szSrcDirA.data(), static_cast<int>(szSrcDirA.size()), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_ACP, 0, szShortSrcWildW.data(), -1, szSrcDirWildA.data(), static_cast<int>(szSrcDirWildA.size()), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_ACP, 0, szShortZipW.data(), -1, szDirZipPathA.data(), static_cast<int>(szDirZipPathA.size()), nullptr, nullptr);
 
         bool fZip;
         {
@@ -4452,7 +4452,7 @@ int FileTransfer::ZipPossibleDirectory(const LPSTR szSrcFileName)
 // Destination file already exists
 // The server sends the checksums of this file in one shot.
 //
-bool FileTransfer::ReceiveDestinationFileChecksums(const int nSize, const UINT nLen)
+bool FileTransfer::ReceiveDestinationFileChecksums([[maybe_unused]] const int nSize, const UINT nLen)
 {
     //	vnclog.Print(0, _T("ReceiveDestinationFileChecksums\n"));
     if (!ViewerBounds::payload(nLen) || (nLen % 4 != 0))
@@ -4546,7 +4546,7 @@ bool FileTransfer::SendFile(const long lSize, const UINT nLen)
     {
         {
             std::array<wchar_t, MAX_PATH> _wrf3;
-            ::MultiByteToWideChar(CP_UTF8, 0, get_real_filename(szRemoteFileName).c_str(), -1, _wrf3.data(), _wrf3.size());
+            ::MultiByteToWideChar(CP_UTF8, 0, get_real_filename(szRemoteFileName).c_str(), -1, _wrf3.data(), static_cast<int>(_wrf3.size()));
             std::array<wchar_t, 512U> szStatusW11;
             ::_snwprintf_s(szStatusW11.data(), 512, _TRUNCATE, L" %s < %s > %s", sz_H12.data(), _wrf3.data(), sz_H24.data());
             SetStatus(szStatusW11.data());
@@ -4696,7 +4696,7 @@ bool FileTransfer::SendFileChunk()
         {
             DWORD dwElapsed = ::GetTickCount() - s_debugLastReport;
             __int64 bytesSent = m_dwTotalNbBytesRead - s_debugLastBytes;
-            const DWORD kbps = dwElapsed > 0 ? static_cast<DWORD>(((bytesSent * 8 / 1024) * 1000 / dwElapsed)) : 0;
+            [[maybe_unused]] const DWORD kbps = dwElapsed > 0 ? static_cast<DWORD>(((bytesSent * 8 / 1024) * 1000 / dwElapsed)) : 0;
 #if DEBUG_FT
             {
                 std::array<wchar_t, 256U> debugMsg;
@@ -4921,7 +4921,7 @@ bool FileTransfer::FinishFileSending()
     if (!std::strncmp(strrchr(m_szSrcFileName.data(), '\\') + 1, rfbZipDirectoryPrefix, std::strlen(rfbZipDirectoryPrefix)))
     {
         std::array<WCHAR, MAX_PATH * 3> szSrcFileNameW;
-        ::MultiByteToWideChar(CP_ACP, 0, m_szSrcFileName.data(), -1, szSrcFileNameW.data(), szSrcFileNameW.size());
+        ::MultiByteToWideChar(CP_ACP, 0, m_szSrcFileName.data(), -1, szSrcFileNameW.data(), static_cast<int>(szSrcFileNameW.size()));
         ::DeleteFileW(szSrcFileNameW.data());
         if (!m_fFileUploadError)
         {
@@ -4936,7 +4936,7 @@ bool FileTransfer::FinishFileSending()
                 // sprintf_s(szStatus, " %s < %s > %s - Not really sent: %ld", sz_H66, szDirectoryName, sz_H70, m_nNotSent);
                 {
                     std::array<wchar_t, MAX_PATH * 4> _wdn5;
-                    ::MultiByteToWideChar(CP_ACP, 0, szDirectoryName.data(), -1, _wdn5.data(), _wdn5.size());
+                    ::MultiByteToWideChar(CP_ACP, 0, szDirectoryName.data(), -1, _wdn5.data(), static_cast<int>(_wdn5.size()));
                     std::array<wchar_t, MAX_PATH * 4 + 64> szStatusW13;
                     ::_snwprintf_s(szStatusW13.data(), MAX_PATH * 4 + 64, _TRUNCATE, L" %s < %s > %s", sz_H66.data(), _wdn5.data(), sz_H70.data());
                     SetStatus(szStatusW13.data());
@@ -5035,13 +5035,13 @@ void FileTransfer::CreateRemoteDirectoryPath(const LPCWSTR szFullPathW)
     {
         *p = L'\0';
         std::array<char, MAX_PATH * 3> szDirUTF8;
-        ::WideCharToMultiByte(CP_UTF8, 0, szPath.data(), -1, szDirUTF8.data(), szDirUTF8.size(), nullptr, nullptr);
+        ::WideCharToMultiByte(CP_UTF8, 0, szPath.data(), -1, szDirUTF8.data(), static_cast<int>(szDirUTF8.size()), nullptr, nullptr);
         CreateRemoteDirectory(szDirUTF8.data());
         *p = L'\\';
     }
     // Create the full path itself
     std::array<char, MAX_PATH * 3> szDirUTF8;
-    ::WideCharToMultiByte(CP_UTF8, 0, szPath.data(), -1, szDirUTF8.data(), szDirUTF8.size(), nullptr, nullptr);
+    ::WideCharToMultiByte(CP_UTF8, 0, szPath.data(), -1, szDirUTF8.data(), static_cast<int>(szDirUTF8.size()), nullptr, nullptr);
     CreateRemoteDirectory(szDirUTF8.data());
 }
 
@@ -5065,14 +5065,14 @@ void FileTransfer::CreateRemoteDirectory(const LPSTR szDir)
     {
         // Old server: convert UTF-8 -> Unicode -> CP_ACP
         std::array<WCHAR, MAX_PATH> szDirW;
-        ::MultiByteToWideChar(CP_UTF8, 0, szDir, -1, szDirW.data(), szDirW.size());
-        ::WideCharToMultiByte(CP_ACP, 0, szDirW.data(), -1, szDirToSend.data(), szDirToSend.size(), nullptr, nullptr);
+        ::MultiByteToWideChar(CP_UTF8, 0, szDir, -1, szDirW.data(), static_cast<int>(szDirW.size()));
+        ::WideCharToMultiByte(CP_ACP, 0, szDirW.data(), -1, szDirToSend.data(), static_cast<int>(szDirToSend.size()), nullptr, nullptr);
     }
 
     ft.length = Swap32IfLE(std::strlen(szDirToSend.data()));
     //adzm 2010-09
     m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-    m_pCC->WriteExact((char*)szDirToSend.data(), std::strlen(szDirToSend.data()));
+    m_pCC->WriteExact((char*)szDirToSend.data(), static_cast<int>(std::strlen(szDirToSend.data())));
     return;
 }
 
@@ -5098,15 +5098,15 @@ void FileTransfer::DeleteRemoteFile(const std::string szFile)
     {
         // Old server: convert UTF-8 -> Unicode -> CP_ACP
         std::array<WCHAR, MAX_PATH> szFileW;
-        ::MultiByteToWideChar(CP_UTF8, 0, szFile.c_str(), -1, szFileW.data(), szFileW.size());
-        ::WideCharToMultiByte(CP_ACP, 0, szFileW.data(), -1, szFileToSend.data(), szFileToSend.size(), nullptr, nullptr);
+        ::MultiByteToWideChar(CP_UTF8, 0, szFile.c_str(), -1, szFileW.data(), static_cast<int>(szFileW.size()));
+        ::WideCharToMultiByte(CP_ACP, 0, szFileW.data(), -1, szFileToSend.data(), static_cast<int>(szFileToSend.size()), nullptr, nullptr);
     }
 
     std::size_t len = std::strlen(szFileToSend.data());
     ft.length = Swap32IfLE(len);
     //adzm 2010-09
     m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-    m_pCC->WriteExact((char*)szFileToSend.data(), len);
+    m_pCC->WriteExact((char*)szFileToSend.data(), static_cast<int>(len));
     return;
 }
 
@@ -5136,10 +5136,10 @@ void FileTransfer::RenameRemoteFileOrDirectory(const LPSTR szCurrentName, const 
         std::array<char, MAX_PATH> szCurrentACP;
         std::array<char, MAX_PATH> szNewACP;
         std::array<WCHAR, MAX_PATH> szW;
-        ::MultiByteToWideChar(CP_UTF8, 0, szCurrentName, -1, szW.data(), szW.size());
-        ::WideCharToMultiByte(CP_ACP, 0, szW.data(), -1, szCurrentACP.data(), szCurrentACP.size(), nullptr, nullptr);
-        ::MultiByteToWideChar(CP_UTF8, 0, szNewName, -1, szW.data(), szW.size());
-        ::WideCharToMultiByte(CP_ACP, 0, szW.data(), -1, szNewACP.data(), szNewACP.size(), nullptr, nullptr);
+        ::MultiByteToWideChar(CP_UTF8, 0, szCurrentName, -1, szW.data(), static_cast<int>(szW.size()));
+        ::WideCharToMultiByte(CP_ACP, 0, szW.data(), -1, szCurrentACP.data(), static_cast<int>(szCurrentACP.size()), nullptr, nullptr);
+        ::MultiByteToWideChar(CP_UTF8, 0, szNewName, -1, szW.data(), static_cast<int>(szW.size()));
+        ::WideCharToMultiByte(CP_ACP, 0, szW.data(), -1, szNewACP.data(), static_cast<int>(szNewACP.size()), nullptr, nullptr);
         ::sprintf_s(szMsgContentToSend.data(), szMsgContentToSend.size(), "%s*%s", szCurrentACP.data(), szNewACP.data());
     }
 
@@ -5151,7 +5151,7 @@ void FileTransfer::RenameRemoteFileOrDirectory(const LPSTR szCurrentName, const 
     ft.length = Swap32IfLE(std::strlen(szMsgContentToSend.data()));
     //adzm 2010-09
     m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-    m_pCC->WriteExact((char*)szMsgContentToSend.data(), std::strlen(szMsgContentToSend.data()));
+    m_pCC->WriteExact((char*)szMsgContentToSend.data(), static_cast<int>(std::strlen(szMsgContentToSend.data())));
     return;
 }
 
@@ -5176,7 +5176,7 @@ bool FileTransfer::CreateRemoteDirectoryFeedback(const long lSize, const UINT nL
 
     {
         std::array<wchar_t, MAX_PATH * 4> _wrn4;
-        ::MultiByteToWideChar(CP_UTF8, 0, szRemoteName, -1, _wrn4.data(), _wrn4.size());
+        ::MultiByteToWideChar(CP_UTF8, 0, szRemoteName, -1, _wrn4.data(), static_cast<int>(_wrn4.size()));
         std::array<wchar_t, MAX_PATH * 4 + 64> szStatusW14;
         if (lSize == -1)
         {
@@ -5219,7 +5219,7 @@ bool FileTransfer::DeleteRemoteFileFeedback(const long lSize, const UINT nLen)
 
     std::array<wchar_t, MAX_PATH * 4> szDisplayNameW{};
     UINT cp = m_fServerSupportsUnicode ? CP_UTF8 : CP_ACP;
-    ::MultiByteToWideChar(cp, 0, szRemoteName, -1, szDisplayNameW.data(), szDisplayNameW.size());
+    ::MultiByteToWideChar(cp, 0, szRemoteName, -1, szDisplayNameW.data(), static_cast<int>(szDisplayNameW.size()));
 
     std::array<wchar_t, MAX_PATH * 4 + 256> szStatusW;
     bool isDir = IsDirectoryGetIt(szRemoteName, nLen + 1);
@@ -5288,8 +5288,8 @@ bool FileTransfer::RenameRemoteFileOrDirectoryFeedback(const long lSize, const U
     {
         std::array<wchar_t, MAX_PATH * 4> _won;
         std::array<wchar_t, MAX_PATH * 4> _wcn;
-        ::MultiByteToWideChar(CP_UTF8, 0, szOldName.data(), -1, _won.data(), _won.size());
-        ::MultiByteToWideChar(CP_UTF8, 0, szCurrentName.data(), -1, _wcn.data(), _wcn.size());
+        ::MultiByteToWideChar(CP_UTF8, 0, szOldName.data(), -1, _won.data(), static_cast<int>(_won.size()));
+        ::MultiByteToWideChar(CP_UTF8, 0, szCurrentName.data(), -1, _wcn.data(), static_cast<int>(_wcn.size()));
         if (lSize == -1)
         {
             ::_snwprintf_s(szStatusW2.data(), szStatusW2.size(), _TRUNCATE, L" %s < %s > %s", sz_M5.data(), _won.data(), sz_H30.data());
@@ -5400,8 +5400,8 @@ bool FileTransfer::IsDirectoryGetIt(char* const szName, const int size)
 int FileTransfer::DoDialog()
 {
     extern HINSTANCE m_hInstResDLL;
-    return ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_FILETRANSFER_DLG), nullptr, (DLGPROC)FileTransferDlgProc,
-                          (LONG_PTR)this);
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_FILETRANSFER_DLG), nullptr, (DLGPROC)FileTransferDlgProc,
+                          (LONG_PTR)this));
 }
 
 
@@ -5482,7 +5482,7 @@ void FTAdjustFileNameColumns(const HWND hWnd)
 // Intercepts Enter key to trigger navigation to the typed/pasted path.
 //
 static LRESULT CALLBACK PathEditSubclassProc(const HWND hEdit, const UINT uMsg, WPARAM wParam, const LPARAM lParam,
-                                             const UINT_PTR uIdSubclass, const DWORD_PTR dwRefData)
+                                             const UINT_PTR uIdSubclass, [[maybe_unused]] const DWORD_PTR dwRefData)
 {
     if (uMsg == WM_GETDLGCODE)
     {
@@ -5640,7 +5640,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
         l_this->InitListViewImagesList(::GetDlgItem(hWnd, IDC_REMOTE_FILELIST));
 
         // Create the status bar
-        HWND hStatusBar = ::CreateStatusWindowW(WS_VISIBLE | WS_CHILD, sz_H36.data(), hWnd, IDC_STATUS);
+        [[maybe_unused]] HWND hStatusBar = ::CreateStatusWindowW(WS_VISIBLE | WS_CHILD, sz_H36.data(), hWnd, IDC_STATUS);
 
         // Populate the Local listboxes with local drives
         l_this->ListDrives(hWnd);
@@ -5649,7 +5649,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
         if (lstrlenA(l_this->m_szLastLocalPath.data()) > 0)
         {
             std::array<WCHAR, MAX_PATH> szLastLocalPathW;
-            ::MultiByteToWideChar(CP_UTF8, 0, l_this->m_szLastLocalPath.data(), -1, szLastLocalPathW.data(), szLastLocalPathW.size());
+            ::MultiByteToWideChar(CP_UTF8, 0, l_this->m_szLastLocalPath.data(), -1, szLastLocalPathW.data(), static_cast<int>(szLastLocalPathW.size()));
             if (::GetFileAttributesW(szLastLocalPathW.data()) & FILE_ATTRIBUTE_DIRECTORY)
             {
                 // let's try to use the last path
@@ -5672,7 +5672,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
         }
         else
         {
-            l_this->m_timer = ::SetTimer(hWnd, 3333, 1000, nullptr);
+            l_this->m_timer = static_cast<int>(::SetTimer(hWnd, 3333, 1000, nullptr));
             l_this->SetStatus(sz_H37.data());
         }
 
@@ -5713,13 +5713,13 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
     case WM_APP + 1:
         // Auto-setup FT dialog from command line paths, then trigger upload
         {
-            FileTransfer* _this = helper::SafeGetWindowUserData<FileTransfer>(hWnd);
-            if (!_this)
+            FileTransfer* _thisInner = helper::SafeGetWindowUserData<FileTransfer>(hWnd);
+            if (!_thisInner)
             {
                 return 0;
             }
-            LPCWSTR szLocalPath = _this->m_pCC->m_opts->m_szUploadLocal.data();
-            LPCWSTR szRemotePath = _this->m_pCC->m_opts->m_szUploadRemote.data();
+            LPCWSTR szLocalPath = _thisInner->m_pCC->m_opts->m_szUploadLocal.data();
+            LPCWSTR szRemotePath = _thisInner->m_pCC->m_opts->m_szUploadRemote.data();
             if ((szLocalPath[0U] == L'\0') || (szRemotePath[0U] == L'\0'))
             {
                 return 0;
@@ -5738,9 +5738,9 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
             }
 
             // Minimize viewer window NOW (after dialog is shown)
-            if (_this->m_pCC->m_hwndMain)
+            if (_thisInner->m_pCC->m_hwndMain)
             {
-                ::ShowWindow(_this->m_pCC->m_hwndMain, SW_MINIMIZE);
+                ::ShowWindow(_thisInner->m_pCC->m_hwndMain, SW_MINIMIZE);
             }
 
             // Extract local folder and filename
@@ -5778,7 +5778,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
             }
             // Set local path and populate list
             ::SetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szLocalDir.data());
-            _this->PopulateLocalListBoxW(hWnd, szLocalDir.data());
+            _thisInner->PopulateLocalListBoxW(hWnd, szLocalDir.data());
 
             // Find and select the file in the local list
             HWND hWndLocalList = ::GetDlgItem(hWnd, IDC_LOCAL_FILELIST);
@@ -5805,11 +5805,11 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
             // Create remote directory if it doesn't exist
             if (szRemoteDir[0U] != L'\0')
             {
-                _this->CreateRemoteDirectoryPath(szRemoteDir.data());
+                _thisInner->CreateRemoteDirectoryPath(szRemoteDir.data());
 
                 // Wait for directory creation
                 DWORD dwStart = ::GetTickCount();
-                while (_this->m_fFileCommandPending && (::GetTickCount() - dwStart < 3000))
+                while (_thisInner->m_fFileCommandPending && (::GetTickCount() - dwStart < 3000))
                 {
                     MSG msg;
                     while (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
@@ -5822,12 +5822,12 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
             }
 
             // Navigate to remote folder and wait for response
-            _this->m_fFileCommandPending = true;
-            _this->RequestRemoteDirectoryContent(hWnd, szRemoteDisplay.data());
+            _thisInner->m_fFileCommandPending = true;
+            _thisInner->RequestRemoteDirectoryContent(hWnd, szRemoteDisplay.data());
 
             // Wait for remote directory content to arrive
             DWORD dwStart = ::GetTickCount();
-            while (_this->m_fFileCommandPending && (::GetTickCount() - dwStart < 5000))
+            while (_thisInner->m_fFileCommandPending && (::GetTickCount() - dwStart < 5000))
             {
                 MSG msg;
                 while (::PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
@@ -5839,7 +5839,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
             }
 
             // Trigger upload
-            _this->CheckButtonState(hWnd);
+            _thisInner->CheckButtonState(hWnd);
             ::EnableWindow(::GetDlgItem(hWnd, IDC_UPLOAD_B), TRUE);
             ::PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_UPLOAD_B, BN_CLICKED), (LPARAM)::GetDlgItem(hWnd, IDC_UPLOAD_B));
         }
@@ -5991,7 +5991,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
             }
 
             _this->m_nFilesTransfered = 0;
-            _this->m_nFilesToTransfer = _this->m_FilesList.size();
+            _this->m_nFilesToTransfer = static_cast<int>(_this->m_FilesList.size());
 
             // Disable buttons
             _this->DisableButtons(_this->hWnd);
@@ -6024,7 +6024,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                 if (dwAttr0 == INVALID_FILE_ATTRIBUTES)
                 {
                     std::array<WCHAR, MAX_PATH * 4> szShortW0;
-                    if (::GetShortPathNameW(szCurrLocalW.data(), szShortW0.data(), szShortW0.size()))
+                    if (::GetShortPathNameW(szCurrLocalW.data(), szShortW0.data(), static_cast<DWORD>(szShortW0.size())))
                     {
                         dwAttr0 = ::GetFileAttributesW(szShortW0.data());
                     }
@@ -6063,7 +6063,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
 
                 // If no dst dir is selected, nothing to do
                 std::array<WCHAR, MAX_PATH> szCurrLocalCheckW;
-                ::GetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szCurrLocalCheckW.data(), szCurrLocalCheckW.size());
+                ::GetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szCurrLocalCheckW.data(), static_cast<int>(szCurrLocalCheckW.size()));
                 if (!std::wcslen(szCurrLocalCheckW.data()))
                 {
                     break;
@@ -6158,7 +6158,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                 }
 
                 _this->m_nFilesTransfered = 0;
-                _this->m_nFilesToTransfer = _this->m_FilesList.size();
+                _this->m_nFilesToTransfer = static_cast<int>(_this->m_FilesList.size());
 
                 // Disable buttons
                 _this->DisableButtons(_this->hWnd);
@@ -6213,7 +6213,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                     }
 
                     std::array<char, MAX_PATH * 3> szDstFileUTF8;
-                    ::WideCharToMultiByte(CP_UTF8, 0, szDstFileW.data(), -1, szDstFileUTF8.data(), szDstFileUTF8.size(), nullptr, nullptr);
+                    ::WideCharToMultiByte(CP_UTF8, 0, szDstFileW.data(), -1, szDstFileUTF8.data(), static_cast<int>(szDstFileUTF8.size()), nullptr, nullptr);
 
                     _this->m_fFileCommandPending = true;
                     _this->m_fAbort = false;
@@ -6227,7 +6227,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
 
         case IDC_LOCAL_ROOTB: {
             std::array<wchar_t, MAX_PATH * 4> ofDirW{ 0 };
-            int nSelected = ::SendMessage(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), CB_GETCURSEL, 0, 0);
+            int nSelected = static_cast<int>(::SendMessage(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), CB_GETCURSEL, 0, 0));
             if (nSelected == -1)
             {
                 break;
@@ -6247,7 +6247,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
             if (!_this->m_fFileCommandPending)
             {
                 std::array<WCHAR, MAX_PATH * 4> ofDirW{ 0 };
-                int nSelected = ::SendMessage(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), CB_GETCURSEL, 0, 0);
+                int nSelected = static_cast<int>(::SendMessage(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), CB_GETCURSEL, 0, 0));
                 if (nSelected == -1)
                 {
                     break;
@@ -6352,9 +6352,9 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
 
                         if ((_this->m_nConfirmAnswer == CONFIRM_YES) || (_this->m_nConfirmAnswer == CONFIRM_NO))
                         {
-                            std::array<wchar_t, MAX_PATH + 96> szMes;
-                            ::_snwprintf_s(szMes.data(), MAX_PATH + 96, _TRUNCATE, L"%s\n\n< %s > ?\n", isDir ? sz_H95.data() : sz_H48.data(), szSelW);
-                            _this->DoFTConfirmDialog(isDir ? sz_H94.data() : sz_H47.data(), szMes.data());
+                            std::array<wchar_t, MAX_PATH + 96> szMesInner;
+                            ::_snwprintf_s(szMesInner.data(), MAX_PATH + 96, _TRUNCATE, L"%s\n\n< %s > ?\n", isDir ? sz_H95.data() : sz_H48.data(), szSelW);
+                            _this->DoFTConfirmDialog(isDir ? sz_H94.data() : sz_H47.data(), szMesInner.data());
                             if (_this->m_nConfirmAnswer == CONFIRM_NO)
                             {
                                 continue;
@@ -6393,7 +6393,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                 HWND hWndRemoteList = ::GetDlgItem(hWnd, IDC_REMOTE_FILELIST);
 
                 std::array<WCHAR, MAX_PATH * 4> szCurrRemoteW;
-                ::GetDlgItemTextW(hWnd, IDC_CURR_REMOTE, szCurrRemoteW.data(), szCurrRemoteW.size());
+                ::GetDlgItemTextW(hWnd, IDC_CURR_REMOTE, szCurrRemoteW.data(), static_cast<int>(szCurrRemoteW.size()));
                 if (!std::wcslen(szCurrRemoteW.data()))
                 {
                     break;
@@ -6445,7 +6445,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         ::wcscpy_s(szFullW.data(), szFullW.size(), szCurrRemoteW.data());
                         ::wcscat_s(szFullW.data(), szFullW.size(), szSelW);
                         std::array<char, MAX_PATH * 3> szFullPathUTF8;
-                        ::WideCharToMultiByte(CP_UTF8, 0, szFullW.data(), -1, szFullPathUTF8.data(), szFullPathUTF8.size(), nullptr, nullptr);
+                        ::WideCharToMultiByte(CP_UTF8, 0, szFullW.data(), -1, szFullPathUTF8.data(), static_cast<int>(szFullPathUTF8.size()), nullptr, nullptr);
                         ++_this->m_nDeleteCount;
                         pathsToDelete.push_back(std::string(szFullPathUTF8.data()));
                     }
@@ -6515,7 +6515,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                     break;
                 }
                 std::array<WCHAR, MAX_PATH * 4> szCurrRemoteW;
-                ::GetDlgItemTextW(hWnd, IDC_CURR_REMOTE, szCurrRemoteW.data(), szCurrRemoteW.size());
+                ::GetDlgItemTextW(hWnd, IDC_CURR_REMOTE, szCurrRemoteW.data(), static_cast<int>(szCurrRemoteW.size()));
                 if (!std::wcslen(szCurrRemoteW.data()))
                 {
                     break;
@@ -6544,7 +6544,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                     // Build full Unicode path and convert to UTF-8 for server
                     ::wcscat_s(szCurrRemoteW.data(), szCurrRemoteW.size(), _this->m_szFTParamW.data());
                     std::array<char, MAX_PATH * 3> szCurrRemoteUTF8;
-                    ::WideCharToMultiByte(CP_UTF8, 0, szCurrRemoteW.data(), -1, szCurrRemoteUTF8.data(), szCurrRemoteUTF8.size(), nullptr,
+                    ::WideCharToMultiByte(CP_UTF8, 0, szCurrRemoteW.data(), -1, szCurrRemoteUTF8.data(), static_cast<int>(szCurrRemoteUTF8.size()), nullptr,
                                         nullptr);
                     _this->CreateRemoteDirectory(szCurrRemoteUTF8.data());
                 }
@@ -6588,7 +6588,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         const WCHAR* szSelW = pNameW->c_str();
                         std::array<WCHAR, MAX_PATH * 4> szSelW_copy;
                         ::wcscpy_s(szSelW_copy.data(), szSelW_copy.size(), szSelW);
-                        _this->IsDirectoryGetItW(szSelW_copy.data(), szSelW_copy.size());
+                        _this->IsDirectoryGetItW(szSelW_copy.data(), static_cast<int>(szSelW_copy.size()));
                         ::wcscpy_s(_this->m_szFTParam.data(), _this->m_szFTParam.size(), szSelW_copy.data());
                         _this->m_szFTParamW[0U] = L'\0';
                         _this->DoFTParamDialog(sz_M3.data(), sz_M4.data());
@@ -6640,7 +6640,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                 }
 
                 std::array<WCHAR, MAX_PATH * 4> szCurrRemoteW;
-                ::GetDlgItemTextW(hWnd, IDC_CURR_REMOTE, szCurrRemoteW.data(), szCurrRemoteW.size());
+                ::GetDlgItemTextW(hWnd, IDC_CURR_REMOTE, szCurrRemoteW.data(), static_cast<int>(szCurrRemoteW.size()));
                 if (!std::wcslen(szCurrRemoteW.data()))
                 {
                     break;
@@ -6664,7 +6664,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         const WCHAR* szSelW = pNameW->c_str();
                         std::array<WCHAR, MAX_PATH * 4> szSelW_copy;
                         ::wcscpy_s(szSelW_copy.data(), szSelW_copy.size(), szSelW);
-                        _this->IsDirectoryGetItW(szSelW_copy.data(), szSelW_copy.size());
+                        _this->IsDirectoryGetItW(szSelW_copy.data(), static_cast<int>(szSelW_copy.size()));
                         ::wcscpy_s(_this->m_szFTParam.data(), _this->m_szFTParam.size(), szSelW_copy.data());
                         _this->m_szFTParamW[0U] = L'\0';
                         _this->DoFTParamDialog(sz_M3.data(), sz_M4.data());
@@ -6692,9 +6692,9 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         ::wcscat_s(szNewPathW.data(), szNewPathW.size(), _this->m_szFTParamW.data());
                         std::array<char, MAX_PATH * 3> szOldPathUTF8;
                         std::array<char, MAX_PATH * 3> szNewPathUTF8;
-                        ::WideCharToMultiByte(CP_UTF8, 0, szOldPathW.data(), -1, szOldPathUTF8.data(), szOldPathUTF8.size(), nullptr,
+                        ::WideCharToMultiByte(CP_UTF8, 0, szOldPathW.data(), -1, szOldPathUTF8.data(), static_cast<int>(szOldPathUTF8.size()), nullptr,
                                             nullptr);
-                        ::WideCharToMultiByte(CP_UTF8, 0, szNewPathW.data(), -1, szNewPathUTF8.data(), szNewPathUTF8.size(), nullptr,
+                        ::WideCharToMultiByte(CP_UTF8, 0, szNewPathW.data(), -1, szNewPathUTF8.data(), static_cast<int>(szNewPathUTF8.size()), nullptr,
                                             nullptr);
                         _this->m_fFileCommandPending = true;
                         _this->RenameRemoteFileOrDirectory(szOldPathUTF8.data(), szNewPathUTF8.data());
@@ -6709,7 +6709,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
             {
             case CBN_SELCHANGE: {
                 std::array<wchar_t, MAX_PATH * 4> ofDirW{ 0 };
-                int nSelected = ::SendMessage(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), CB_GETCURSEL, 0, 0);
+                int nSelected = static_cast<int>(::SendMessage(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), CB_GETCURSEL, 0, 0));
                 if (nSelected == -1)
                 {
                     break;
@@ -6732,7 +6732,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
             {
             case CBN_SELCHANGE: {
                 std::array<WCHAR, MAX_PATH * 4> ofDirW{ 0 };
-                int nSelected = ::SendMessage(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), CB_GETCURSEL, 0, 0);
+                int nSelected = static_cast<int>(::SendMessage(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), CB_GETCURSEL, 0, 0));
                 if (nSelected == -1)
                 {
                     break;
@@ -6971,7 +6971,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
     // Messages from ListViews
     case WM_NOTIFY: {
         LPNMLISTVIEW lpNmlv = (LPNMLISTVIEW)lParam;
-        LV_DISPINFO* pLvdi = (LV_DISPINFO*)lParam;
+        [[maybe_unused]] LV_DISPINFO* pLvdi = (LV_DISPINFO*)lParam;
 
 
         switch (lpNmlv->hdr.code)
@@ -7029,11 +7029,11 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                     if (pSep)
                     {
                         // Draw the locale date ourselves and suppress default drawing
-                        RECT rc;
-                        rc.left = LVIR_BOUNDS; // Use BOUNDS for subitems, not LABEL
-                        rc.top = lpNmlvcd->iSubItem;
+                        RECT rcInner;
+                        rcInner.left = LVIR_BOUNDS; // Use BOUNDS for subitems, not LABEL
+                        rcInner.top = lpNmlvcd->iSubItem;
                         ::SendMessageW(lpNmlvcd->nmcd.hdr.hwndFrom, LVM_GETSUBITEMRECT, (WPARAM)lpNmlvcd->nmcd.dwItemSpec,
-                                     (LPARAM)&rc);
+                                     (LPARAM)&rcInner);
                         // Use actual selection state from ListView
                         BOOL bSelected = (ListView_GetItemState(lpNmlvcd->nmcd.hdr.hwndFrom,
                                                                 static_cast<int>(lpNmlvcd->nmcd.dwItemSpec), LVIS_SELECTED) &
@@ -7053,13 +7053,13 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         {
                             hBrush = ::CreateSolidBrush(::GetSysColor(COLOR_WINDOW));
                         }
-                        ::FillRect(lpNmlvcd->nmcd.hdc, &rc, hBrush);
+                        ::FillRect(lpNmlvcd->nmcd.hdc, &rcInner, hBrush);
                         ::DeleteObject(hBrush);
                         ::SetBkMode(lpNmlvcd->nmcd.hdc, TRANSPARENT);
                         ::SetTextColor(lpNmlvcd->nmcd.hdc,
                                      (bSelected && bFocused) ? ::GetSysColor(COLOR_HIGHLIGHTTEXT) : lpNmlvcd->clrText);
-                        rc.left += 4; // small indent
-                        ::DrawTextW(lpNmlvcd->nmcd.hdc, pSep + 1, -1, &rc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+                        rcInner.left += 4; // small indent
+                        ::DrawTextW(lpNmlvcd->nmcd.hdc, pSep + 1, -1, &rcInner, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
                         ::SetWindowLongPtr(hWnd, DWLP_MSGRESULT, CDRF_SKIPDEFAULT);
                         return TRUE;
                     }
@@ -7192,7 +7192,7 @@ int FileTransfer::DoFTParamDialog(const LPWSTR szTitle, const LPWSTR szComment)
     extern HINSTANCE m_hInstResDLL;
     ::wcscpy_s(m_szFTParamTitle.data(), m_szFTParamTitle.size(), szTitle);
     ::wcscpy_s(m_szFTParamComment.data(), m_szFTParamComment.size(), szComment);
-    return ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_FTPARAM_DLG), hWnd, (DLGPROC)FTParamDlgProc, (LONG_PTR)this);
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_FTPARAM_DLG), hWnd, (DLGPROC)FTParamDlgProc, (LONG_PTR)this));
 }
 
 
@@ -7276,8 +7276,8 @@ int FileTransfer::DoFTConfirmDialog(const LPWSTR szTitle, const LPWSTR szComment
     ::wcscpy_s(m_szFTConfirmTitle.data(), m_szFTConfirmTitle.size(), szTitle);
     ::wcscpy_s(m_szFTConfirmComment.data(), m_szFTConfirmComment.size(), szComment);
     m_nConfirmAnswer = CONFIRM_NO;
-    return ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_FTCONFIRM_DLG), hWnd, (DLGPROC)FTConfirmDlgProc,
-                          (LONG_PTR)this);
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_FTCONFIRM_DLG), hWnd, (DLGPROC)FTConfirmDlgProc,
+                          (LONG_PTR)this));
 }
 
 
@@ -7500,51 +7500,51 @@ void FileTransfer::DoUploadFile(const LPCWSTR szLocalPath, const LPCWSTR szRemot
 
 //
 //
-void FileTransfer::DisableButtons(const HWND hWnd, const bool X)
+void FileTransfer::DisableButtons(const HWND hWndIn, const bool X)
 {
-    ::ShowWindow(::GetDlgItem(hWnd, IDC_UPLOAD_B), SW_HIDE);
-    ::ShowWindow(::GetDlgItem(hWnd, IDC_DOWNLOAD_B), SW_HIDE);
-    ::ShowWindow(::GetDlgItem(hWnd, IDC_DELETE_B), SW_HIDE);
-    ::ShowWindow(::GetDlgItem(hWnd, IDC_NEWFOLDER_B), SW_HIDE);
-    ::ShowWindow(::GetDlgItem(hWnd, IDC_RENAME_B), SW_HIDE);
-    ::ShowWindow(::GetDlgItem(hWnd, IDCANCEL), SW_HIDE);
-    ::ShowWindow(::GetDlgItem(hWnd, IDCANCEL2), SW_HIDE);
-    ::ShowWindow(::GetDlgItem(hWnd, IDC_HIDE_B), SW_SHOW);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_LOCAL_FILELIST), FALSE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), FALSE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_LOCAL_ROOTB), FALSE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_LOCAL_UPB), FALSE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_REFRESH), FALSE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_REMOTE_FILELIST), FALSE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), FALSE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_REMOTE_ROOTB), FALSE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_REMOTE_UPB), FALSE);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDC_UPLOAD_B), SW_HIDE);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDC_DOWNLOAD_B), SW_HIDE);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDC_DELETE_B), SW_HIDE);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDC_NEWFOLDER_B), SW_HIDE);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDC_RENAME_B), SW_HIDE);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDCANCEL), SW_HIDE);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDCANCEL2), SW_HIDE);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDC_HIDE_B), SW_SHOW);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_LOCAL_FILELIST), FALSE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), FALSE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_LOCAL_ROOTB), FALSE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_LOCAL_UPB), FALSE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_REFRESH), FALSE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_REMOTE_FILELIST), FALSE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), FALSE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_REMOTE_ROOTB), FALSE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_REMOTE_UPB), FALSE);
 
     // Disable Close Window in in title bar
     if (X == true)
     {
-        HMENU hMenu = ::GetSystemMenu(hWnd, 0);
+        HMENU hMenu = ::GetSystemMenu(hWndIn, 0);
         int nCount = ::GetMenuItemCount(hMenu);
         ::EnableMenuItem(hMenu, nCount - 1, MF_DISABLED | MF_GRAYED | MF_BYPOSITION);
         ::EnableMenuItem(hMenu, nCount - 2, MF_DISABLED | MF_GRAYED | MF_BYPOSITION);
     }
-    ::DrawMenuBar(hWnd);
+    ::DrawMenuBar(hWndIn);
 }
-void FileTransfer::CheckButtonState(const HWND hWnd)
+void FileTransfer::CheckButtonState(const HWND hWndIn)
 {
     //    bool bEnable = m_fFocusLocal && ||
     bool bEnable;
     bool localDirSet, remoteDirSet;
 
-    localDirSet = ::GetWindowTextLength(::GetDlgItem(hWnd, IDC_CURR_LOCAL)) > 0;
-    remoteDirSet = ::GetWindowTextLength(::GetDlgItem(hWnd, IDC_CURR_REMOTE)) > 0;
+    localDirSet = ::GetWindowTextLength(::GetDlgItem(hWndIn, IDC_CURR_LOCAL)) > 0;
+    remoteDirSet = ::GetWindowTextLength(::GetDlgItem(hWndIn, IDC_CURR_REMOTE)) > 0;
     bEnable = m_fFocusLocal ? localDirSet : remoteDirSet;
 
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_UPLOAD_B), (localDirSet && remoteDirSet));
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_DOWNLOAD_B), (localDirSet && remoteDirSet));
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_DELETE_B), bEnable);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_NEWFOLDER_B), bEnable);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_RENAME_B), bEnable);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_UPLOAD_B), (localDirSet && remoteDirSet));
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_DOWNLOAD_B), (localDirSet && remoteDirSet));
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_DELETE_B), bEnable);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_NEWFOLDER_B), bEnable);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_RENAME_B), bEnable);
     //	EnableWindow(GetDlgItem(hWnd, IDCANCEL), bEnable);
     //	EnableWindow(GetDlgItem(hWnd, IDC_HIDE_B), bEnable);
 }
@@ -7552,43 +7552,43 @@ void FileTransfer::CheckButtonState(const HWND hWnd)
 //
 //
 //
-void FileTransfer::EnableButtons(const HWND hWnd)
+void FileTransfer::EnableButtons(const HWND hWndIn)
 {
-    ::ShowWindow(::GetDlgItem(hWnd, IDC_ABORT_B), SW_HIDE);
-    ::ShowWindow(::GetDlgItem(hWnd, IDC_ABORT_B2), SW_HIDE);
-    ::ShowWindow(::GetDlgItem(hWnd, IDC_UPLOAD_B), SW_SHOW);
-    ::ShowWindow(::GetDlgItem(hWnd, IDC_DOWNLOAD_B), SW_SHOW);
-    ::ShowWindow(::GetDlgItem(hWnd, IDCANCEL), SW_SHOW);
-    ::ShowWindow(::GetDlgItem(hWnd, IDCANCEL2), SW_SHOW);
-    ::ShowWindow(::GetDlgItem(hWnd, IDC_DELETE_B), SW_SHOW);
-    ::ShowWindow(::GetDlgItem(hWnd, IDC_NEWFOLDER_B), SW_SHOW);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDC_ABORT_B), SW_HIDE);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDC_ABORT_B2), SW_HIDE);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDC_UPLOAD_B), SW_SHOW);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDC_DOWNLOAD_B), SW_SHOW);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDCANCEL), SW_SHOW);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDCANCEL2), SW_SHOW);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDC_DELETE_B), SW_SHOW);
+    ::ShowWindow(::GetDlgItem(hWndIn, IDC_NEWFOLDER_B), SW_SHOW);
     if (!UsingOldProtocol())
     {
-        ::ShowWindow(::GetDlgItem(hWnd, IDC_RENAME_B), SW_SHOW);
+        ::ShowWindow(::GetDlgItem(hWndIn, IDC_RENAME_B), SW_SHOW);
     }
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_LOCAL_FILELIST), TRUE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), TRUE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_LOCAL_ROOTB), TRUE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_LOCAL_UPB), TRUE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_REFRESH), TRUE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_REMOTE_FILELIST), TRUE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), TRUE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_REMOTE_ROOTB), TRUE);
-    ::EnableWindow(::GetDlgItem(hWnd, IDC_REMOTE_UPB), TRUE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_LOCAL_FILELIST), TRUE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), TRUE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_LOCAL_ROOTB), TRUE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_LOCAL_UPB), TRUE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_REFRESH), TRUE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_REMOTE_FILELIST), TRUE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), TRUE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_REMOTE_ROOTB), TRUE);
+    ::EnableWindow(::GetDlgItem(hWndIn, IDC_REMOTE_UPB), TRUE);
     // Disable Close Window in in title bar
-    HMENU hMenu = ::GetSystemMenu(hWnd, 0);
+    HMENU hMenu = ::GetSystemMenu(hWndIn, 0);
     int nCount = ::GetMenuItemCount(hMenu);
     ::EnableMenuItem(hMenu, nCount - 1, MF_ENABLED | MF_BYPOSITION);
     ::EnableMenuItem(hMenu, nCount - 2, MF_ENABLED | MF_BYPOSITION);
-    ::DrawMenuBar(hWnd);
+    ::DrawMenuBar(hWndIn);
 
     // Reset progress bar and status after transfer completes or is aborted
-    HWND hProg = ::GetDlgItem(hWnd, IDC_PROGRESS);
+    HWND hProg = ::GetDlgItem(hWndIn, IDC_PROGRESS);
     ::SendMessage(hProg, PBM_SETMARQUEE, FALSE, 0);
     ::SetWindowLong(hProg, GWL_STYLE, ::GetWindowLong(hProg, GWL_STYLE) & ~PBS_MARQUEE);
     ::SendMessage(hProg, PBM_SETPOS, 0, 0);
-    ::SetDlgItemTextW(hWnd, IDC_PERCENT, L"");
-    ::SetDlgItemTextW(hWnd, IDC_GLOBAL_STATUS, L"");
+    ::SetDlgItemTextW(hWndIn, IDC_PERCENT, L"");
+    ::SetDlgItemTextW(hWndIn, IDC_GLOBAL_STATUS, L"");
 }
 
 
@@ -7639,8 +7639,8 @@ int CALLBACK FileTransfer::ListViewLocalCompareProc(const LPARAM lParam1, const 
 
     HWND hWndList = ::GetDlgItem(hFTWnd, bRemoteList ? IDC_REMOTE_FILELIST : IDC_LOCAL_FILELIST);
 
-    ListView_GetItemText(hWndList, lParam1, lParamSort, szBuf1.data(), sizeof(szBuf1));
-    ListView_GetItemText(hWndList, lParam2, lParamSort, szBuf2.data(), sizeof(szBuf2));
+    ListView_GetItemText(hWndList, static_cast<int>(lParam1), static_cast<int>(lParamSort), szBuf1.data(), sizeof(szBuf1));
+    ListView_GetItemText(hWndList, static_cast<int>(lParam2), static_cast<int>(lParamSort), szBuf2.data(), sizeof(szBuf2));
 
     switch (lParamSort)
     {

@@ -100,7 +100,7 @@ DWORD WINAPI LowLevelHook::HookThreadProc(const LPVOID lpParam)
     g_HookID = ::SetWindowsHookEx(WH_KEYBOARD_LL, VncLowLevelKbHookProc, hInstance, 0);
     if (g_HookID == 0)
     {
-        DWORD dw = ::GetLastError();
+        [[maybe_unused]] DWORD dw = ::GetLastError();
 
         //TODO:
         //Analyze why the error occured (might be because we're under Win98/95/ME?)

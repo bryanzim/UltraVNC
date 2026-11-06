@@ -147,9 +147,9 @@ void SessionDialog::SaveToFile(wchar_t* const fname, const bool asDefault)
     ::WritePrivateProfileStringW(L"connection", L"proxyport", buf.data(), fname);
     for (int i = rfbEncodingRaw; i <= LASTENCODING; ++i)
     {
-        std::array<wchar_t, 128U> buf;
-        ::swprintf_s(buf.data(), 128, L"use_encoding_%d", i);
-        saveInt(buf.data(), UseEnc[i], fname);
+        std::array<wchar_t, 128U> bufInner;
+        ::swprintf_s(bufInner.data(), 128, L"use_encoding_%d", i);
+        saveInt(bufInner.data(), UseEnc[i], fname);
     }
     if (!PreferredEncodings.empty())
     {
@@ -303,7 +303,7 @@ void SessionDialog::LoadFromFile(wchar_t* const fname)
     requestedHeight = readInt(L"requestedHeight", requestedHeight, fname);
 
     ::GetPrivateProfileStringW(L"options", L"DSMPlugin", L"NoPlugin", szDSMPluginFilename.data(), MAX_PATH, fname);
-    ::GetPrivateProfileStringW(L"options", L"folder", folder.data(), folder.data(), folder.size(), fname);
+    ::GetPrivateProfileStringW(L"options", L"folder", folder.data(), folder.data(), static_cast<DWORD>(folder.size()), fname);
     ::GetPrivateProfileStringW(L"options", L"prefix", prefix, prefix, 56, fname);
     ::GetPrivateProfileStringW(L"options", L"imageFormat", imageFormat.data(), imageFormat.data(), 56, fname);
     ::GetPrivateProfileStringW(L"options", L"InfoMsg", (LPCWSTR)InfoMsg.data(), (LPWSTR)InfoMsg.data(), 254, fname);
@@ -333,7 +333,7 @@ void SessionDialog::LoadFromFile(wchar_t* const fname)
     fUseTokenTLS = readInt(L"UseVeNCryptTLS", static_cast<int>(fUseTokenTLS), fname) ? true : false;
     preemptiveUpdates = readInt(L"PreemptiveUpdates", static_cast<int>(preemptiveUpdates), fname) ? true : false;
 
-    ::GetPrivateProfileStringW(L"connection", L"proxyhost", L"", m_proxyhost.data(), m_proxyhost.size(), fname);
+    ::GetPrivateProfileStringW(L"connection", L"proxyhost", L"", m_proxyhost.data(), static_cast<DWORD>(m_proxyhost.size()), fname);
     m_proxyport = ::GetPrivateProfileIntW(L"connection", L"proxyport", 0, fname);
     overwriteCommandLine();
 }
@@ -341,7 +341,7 @@ void SessionDialog::LoadFromFile(wchar_t* const fname)
 void SessionDialog::overwriteCommandLine()
 {
     TCHAR* szCmdLine = (TCHAR*)m_pOpt->szCmdLine.data();
-    int cmdlinelen = ::_tcslen(szCmdLine);
+    int cmdlinelen = static_cast<int>(::_tcslen(szCmdLine));
     if (cmdlinelen == 0)
     {
         return;
@@ -394,7 +394,8 @@ void SessionDialog::overwriteCommandLine()
     }
     ++i;
 
-    const bool hostGiven{ false }, portGiven = false;
+    [[maybe_unused]] const bool hostGiven{ false };
+    [[maybe_unused]] const bool portGiven = false;
     // take in order.
     for (int j{ 0 }; j < i; ++j)
     {
@@ -811,14 +812,16 @@ void SessionDialog::overwriteCommandLine()
 }
 
 void SessionDialog::getAppData(wchar_t* const buffer)
-{ const BOOL result = ::SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, false); }
+{
+    [[maybe_unused]] const BOOL result = ::SHGetSpecialFolderPathW(nullptr, buffer, CSIDL_APPDATA, false);
+}
 
 void SessionDialog::IfHostExistLoadSettings(wchar_t* const hostname)
 {
     //SetDefaults();
     std::array<TCHAR, MAX_HOST_NAME_LEN> tmphost;
     int port;
-    ParseDisplay(hostname, tmphost.data(), tmphost.size(), &port);
+    ParseDisplay(hostname, tmphost.data(), static_cast<int>(tmphost.size()), &port);
     std::array<wchar_t, _MAX_PATH> fname;
     int disp = PORT_TO_DISPLAY(port);
     ::swprintf_s(fname.data(), fname.size(), L"%.15s-%d.vnc", tmphost.data(), ((disp > 0) && (disp < 100)) ? disp : port);
@@ -857,7 +860,7 @@ void SessionDialog::IfHostExistLoadSettings(wchar_t* const hostname)
         {
             m_connectionType =
                 (ConnectionType)::GetPrivateProfileIntW(L"options", L"UseProxy", static_cast<int>(m_connectionType), buffer.data());
-            ::GetPrivateProfileStringW(L"connection", L"proxyhost", L"", m_proxyhost.data(), m_proxyhost.size(), buffer.data());
+            ::GetPrivateProfileStringW(L"connection", L"proxyhost", L"", m_proxyhost.data(), static_cast<DWORD>(m_proxyhost.size()), buffer.data());
             m_proxyport = ::GetPrivateProfileIntW(L"connection", L"proxyport", 0, buffer.data());
         }
         ::SetWindowText(::GetDlgItem(hTabConfig, IDC_CUSTOMCONFIG), _T(""));

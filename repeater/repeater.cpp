@@ -24,9 +24,9 @@ void LogStats(const int code, const long recv, const long send)
 {
     std::array<char, MAX_PATH> szFileName;
     std::array<char, 128U> tempchar;
-    HANDLE hFile = nullptr;
+    [[maybe_unused]] HANDLE hFile = nullptr;
     FILE* f;
-    if (::GetModuleFileName(nullptr, szFileName.data(), szFileName.size()))
+    if (::GetModuleFileName(nullptr, szFileName.data(), static_cast<DWORD>(szFileName.size())))
     {
         char* p = std::strrchr(szFileName.data(), '\\');
         *p = '\0';
@@ -73,9 +73,9 @@ void LogStats_server(const int code, const int nummer)
 {
     std::array<char, MAX_PATH> szFileName;
     //char tempchar[128];
-    HANDLE hFile = nullptr;
+    [[maybe_unused]] HANDLE hFile = nullptr;
     FILE* f;
-    if (::GetModuleFileName(nullptr, szFileName.data(), szFileName.size()))
+    if (::GetModuleFileName(nullptr, szFileName.data(), static_cast<DWORD>(szFileName.size())))
     {
         char* p = std::strrchr(szFileName.data(), '\\');
         *p = '\0';
@@ -117,9 +117,9 @@ void LogStats_viewer(const int code, const int nummer)
 {
     std::array<char, MAX_PATH> szFileName;
     //char tempchar[128];
-    HANDLE hFile = nullptr;
+    [[maybe_unused]] HANDLE hFile = nullptr;
     FILE* f;
-    if (::GetModuleFileName(nullptr, szFileName.data(), szFileName.size()))
+    if (::GetModuleFileName(nullptr, szFileName.data(), static_cast<DWORD>(szFileName.size())))
     {
         char* p = std::strrchr(szFileName.data(), '\\');
         *p = '\0';
@@ -161,9 +161,9 @@ void LogStats_access(char* const start, char* const stop, const int code, const 
 {
     std::array<char, MAX_PATH> szFileName;
     //	char tempchar[128];
-    HANDLE hFile = nullptr;
+    [[maybe_unused]] HANDLE hFile = nullptr;
     FILE* f;
-    if (::GetModuleFileName(nullptr, szFileName.data(), szFileName.size()))
+    if (::GetModuleFileName(nullptr, szFileName.data(), static_cast<DWORD>(szFileName.size())))
     {
         char* p = std::strrchr(szFileName.data(), '\\');
         *p = '\0';

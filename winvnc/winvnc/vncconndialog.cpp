@@ -80,7 +80,7 @@ BOOL CALLBACK vncConnDialog::vncConnDlgProc(const HWND hwnd, const UINT uMsg, co
         // access to the parent C++ object
         helper::SafeSetWindowUserData(hwnd, lParam);
 
-        vncConnDialog* _this = (vncConnDialog*)lParam;
+        vncConnDialog* _thisInner = (vncConnDialog*)lParam;
 
         //adzm 2009-06-20
         if (g_szRepeaterHost)
@@ -142,11 +142,11 @@ BOOL CALLBACK vncConnDialog::vncConnDlgProc(const HWND hwnd, const UINT uMsg, co
                         lf.lfWidth = 0;
                         lf.lfHeight = (lf.lfHeight * 6) / 4;
 
-                        _this->m_hfont = ::CreateFontIndirect(&lf);
+                        _thisInner->m_hfont = ::CreateFontIndirect(&lf);
 
-                        if (_this->m_hfont)
+                        if (_thisInner->m_hfont)
                         {
-                            ::SendMessage(hwndCaption, WM_SETFONT, (WPARAM)_this->m_hfont, (LPARAM)TRUE);
+                            ::SendMessage(hwndCaption, WM_SETFONT, (WPARAM)_thisInner->m_hfont, (LPARAM)TRUE);
                         }
                     }
                 }
@@ -160,7 +160,7 @@ BOOL CALLBACK vncConnDialog::vncConnDlgProc(const HWND hwnd, const UINT uMsg, co
         {
             // Make the text entry box active
             ::SetFocus(::GetDlgItem(hwnd, IDC_HOSTNAME_EDIT));
-            if (_this->m_repeater)
+            if (_thisInner->m_repeater)
             {
                 ::SetDlgItemText(hwnd, IDC_HOSTNAME_STATIC, "Repeater:");
             }
@@ -187,8 +187,8 @@ BOOL CALLBACK vncConnDialog::vncConnDlgProc(const HWND hwnd, const UINT uMsg, co
             bool id;
 
             // Get the hostname of the UltraVNC Viewer
-            ::GetDlgItemText(hwnd, IDC_HOSTNAME_EDIT, hostname.data(), hostname.size());
-            ::GetDlgItemText(hwnd, IDC_IDCODE, idcode.data(), idcode.size());
+            ::GetDlgItemText(hwnd, IDC_HOSTNAME_EDIT, hostname.data(), static_cast<int>(hostname.size()));
+            ::GetDlgItemText(hwnd, IDC_IDCODE, idcode.data(), static_cast<int>(idcode.size()));
             if (std::strcmp(idcode.data(), "") == 0)
             {
                 id = false;

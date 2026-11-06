@@ -312,7 +312,7 @@ vncClientId vncServer::AddClient(VSocket* const socket, const BOOL auth, const B
 { return AddClient(socket, auth, shared, 0, protocolMsg, outgoing); }
 
 // adzm 2009-07-05 - repeater IDs
-vncClientId vncServer::AddClient(VSocket* const socket, const BOOL auth, const BOOL shared, const int capability,
+vncClientId vncServer::AddClient(VSocket* const socket, const BOOL auth, const BOOL shared, [[maybe_unused]] const int capability,
                                  rfbProtocolVersionMsg* const protocolMsg, const BOOL outgoing)
 { return AddClient(socket, auth, shared, 0, protocolMsg, nullptr, nullptr, 0, outgoing); }
 
@@ -589,7 +589,7 @@ BOOL vncServer::Authenticated(const vncClientId clientid)
                 }
                 // client->infoMsg may be UTF-8 (new Unicode path) or CP_ACP (legacy viewer)
                 UINT cp = client->infoMsgIsUtf8 ? CP_UTF8 : CP_ACP;
-                ::MultiByteToWideChar(cp, 0, client->infoMsg, -1, szInfo.data(), szInfo.size());
+                ::MultiByteToWideChar(cp, 0, client->infoMsg, -1, szInfo.data(), static_cast<int>(szInfo.size()));
                 vncMenu::NotifyBalloon(szInfo.data(), szTitle.data());
             }
             else if (settings->getNotificationSelection() == 0)
@@ -1574,8 +1574,8 @@ void vncServer::GetScreenInfo(int& width, int& height, int& depth)
         }
         else
         {
-            scrinfo.framebufferWidth = ::GetDeviceCaps(hrootdc, HORZRES);
-            scrinfo.framebufferHeight = ::GetDeviceCaps(hrootdc, VERTRES);
+            scrinfo.framebufferWidth = static_cast<CARD16>(::GetDeviceCaps(hrootdc, HORZRES));
+            scrinfo.framebufferHeight = static_cast<CARD16>(::GetDeviceCaps(hrootdc, VERTRES));
             HBITMAP membitmap = ::CreateCompatibleBitmap(hrootdc, scrinfo.framebufferWidth, scrinfo.framebufferHeight);
             if (membitmap == nullptr)
             {
@@ -2160,7 +2160,7 @@ void vncServer::SetHookings()
 
 void vncServer::EnableXRichCursor(const BOOL fEnable) { m_fXRichCursor = fEnable; }
 
-void vncServer::SetNoScreensaver(const BOOL NoScreensaver)
+void vncServer::SetNoScreensaver([[maybe_unused]] const BOOL NoScreensaver)
 {
     if (m_desktop)
     {
@@ -2422,7 +2422,7 @@ short vncServer::getOldestViewer()
     return clientId;
 }
 
-UINT vncServer::getNumberViewers() { return m_authClients.size(); }
+UINT vncServer::getNumberViewers() { return static_cast<UINT>(m_authClients.size()); }
 
 UINT vncServer::QueryAccept()
 {

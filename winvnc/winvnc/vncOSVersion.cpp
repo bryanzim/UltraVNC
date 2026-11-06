@@ -289,7 +289,7 @@ void VNC_OSVersion::ResetAero(VOID)
 
 HWND GetConsoleHwnd(void) { return ::FindWindow("ConsoleWindowClass", nullptr); }
 
-BOOL CALLBACK speichereFenster(const HWND hwnd, const LPARAM substring)
+BOOL CALLBACK speichereFenster(const HWND hwnd, [[maybe_unused]] const LPARAM substring)
 {
     if (WS_EX_LAYERED == (::GetWindowLong(hwnd, GWL_EXSTYLE) & WS_EX_LAYERED))
     {

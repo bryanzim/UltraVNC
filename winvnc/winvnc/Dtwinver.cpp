@@ -4140,7 +4140,7 @@ _Success_(return != FALSE) BOOL COSVersion::GetWindows8Point1Or2012R2Update(cons
     //Form the location of HAL.dll
     std::array<TCHAR, _MAX_PATH> szFileName; //NOLINT(modernize-avoid-c-arrays)
     szFileName[0U] = _T('\0');
-    if (::GetSystemDirectory(szFileName.data(), szFileName.size()) == 0)
+    if (::GetSystemDirectory(szFileName.data(), static_cast<UINT>(szFileName.size())) == 0)
     {
         return FALSE;
     }

@@ -28,18 +28,18 @@ CursorColorManager::~CursorColorManager()
     }
 }
 
-void CursorColorManager::Init(const HINSTANCE hInst)
+void CursorColorManager::Init(const HINSTANCE hInstIn)
 {
     if (!this->hInst)
     {
-        this->hInst = hInst;
-        hCorsor[0U] = ::LoadCursor(hInst, MAKEINTRESOURCE(IDC_CURSORBLANK));
-        hCorsor[1U] = ::LoadCursor(hInst, MAKEINTRESOURCE(IDC_CURSOR1));
-        hCorsor[2U] = ::LoadCursor(hInst, MAKEINTRESOURCE(IDC_CURSOR2));
-        hCorsor[3U] = ::LoadCursor(hInst, MAKEINTRESOURCE(IDC_CURSOR3));
-        hCorsor[4U] = ::LoadCursor(hInst, MAKEINTRESOURCE(IDC_CURSOR4));
-        hCorsor[5U] = ::LoadCursor(hInst, MAKEINTRESOURCE(IDC_CURSOR6));
-        hCorsor[6U] = ::LoadCursor(hInst, MAKEINTRESOURCE(IDC_CURSOR7));
+        this->hInst = hInstIn;
+        hCorsor[0U] = ::LoadCursor(hInstIn, MAKEINTRESOURCE(IDC_CURSORBLANK));
+        hCorsor[1U] = ::LoadCursor(hInstIn, MAKEINTRESOURCE(IDC_CURSOR1));
+        hCorsor[2U] = ::LoadCursor(hInstIn, MAKEINTRESOURCE(IDC_CURSOR2));
+        hCorsor[3U] = ::LoadCursor(hInstIn, MAKEINTRESOURCE(IDC_CURSOR3));
+        hCorsor[4U] = ::LoadCursor(hInstIn, MAKEINTRESOURCE(IDC_CURSOR4));
+        hCorsor[5U] = ::LoadCursor(hInstIn, MAKEINTRESOURCE(IDC_CURSOR6));
+        hCorsor[6U] = ::LoadCursor(hInstIn, MAKEINTRESOURCE(IDC_CURSOR7));
         //hCorsor[7] = LoadCursor(hInst, MAKEINTRESOURCE(IDC_CURSOR8));
         //hCorsor[8] = LoadCursor(hInst, MAKEINTRESOURCE(IDC_CURSOR9));
         for (int i{ 0 }; i < 7; ++i)
@@ -192,7 +192,7 @@ HWND SimulateCursor::create_window(SimulateCursor* const simulateCursor)
     return hWnd;
 }
 
-void SimulateCursor::moveCursor(const int x, const int y)
+void SimulateCursor::moveCursor([[maybe_unused]] const int xIn, [[maybe_unused]] const int yIn)
 {
     /*this->x = x;
     this->y = y;
@@ -224,15 +224,15 @@ LRESULT CALLBACK SimulateCursor::WndProc(const HWND hWnd, const UINT message, co
 
 
 
-LRESULT CALLBACK SimulateCursor::realWndProc(const HWND hWnd, const UINT message, const WPARAM wParam, const LPARAM lParam)
+LRESULT CALLBACK SimulateCursor::realWndProc(const HWND hWndIn, const UINT message, const WPARAM wParam, const LPARAM lParam)
 {
     switch (message)
     {
     case WM_COMMAND:
-        return ::DefWindowProc(hWnd, message, wParam, lParam);
+        return ::DefWindowProc(hWndIn, message, wParam, lParam);
     case WM_PAINT: {
         PAINTSTRUCT ps;
-        HDC hdc = ::BeginPaint(hWnd, &ps);
+        HDC hdc = ::BeginPaint(hWndIn, &ps);
         if (drawn && ((x != oldx) || (y != oldy)))
         {
             ::DrawIcon(hdc, oldx, oldy, hIconErase);
@@ -240,14 +240,14 @@ LRESULT CALLBACK SimulateCursor::realWndProc(const HWND hWnd, const UINT message
         ::DrawIcon(hdc, x, y, hIconMouse);
         oldx = x, oldy = y;
         drawn = true;
-        ::EndPaint(hWnd, &ps);
+        ::EndPaint(hWndIn, &ps);
     }
     break;
     case WM_DESTROY:
         ::PostQuitMessage(0);
         break;
     default:
-        return ::DefWindowProc(hWnd, message, wParam, lParam);
+        return ::DefWindowProc(hWndIn, message, wParam, lParam);
     }
     return 0;
 }

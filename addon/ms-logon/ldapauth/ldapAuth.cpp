@@ -21,7 +21,7 @@
 #include <cwchar>
 /////////////////////////
 
-BOOL APIENTRY DllMain(const HANDLE hModule, const DWORD ul_reason_for_call, const LPVOID lpReserved)
+BOOL APIENTRY DllMain([[maybe_unused]] const HANDLE hModule, const DWORD ul_reason_for_call, [[maybe_unused]] const LPVOID lpReserved)
 {
     switch (ul_reason_for_call)
     {
@@ -38,7 +38,7 @@ BOOL APIENTRY DllMain(const HANDLE hModule, const DWORD ul_reason_for_call, cons
 
 
 LDAPAUTH_API
-BOOL CUGP(char* const userin, char* const password, char* const machine, char* const groupin, const int locdom)
+BOOL CUGP(char* const userin, char* const password, char* const machine, char* const groupin, [[maybe_unused]] const int locdom)
 {
     OSVERSIONINFO ovi{ sizeof ovi };
     GetVersionEx(&ovi);

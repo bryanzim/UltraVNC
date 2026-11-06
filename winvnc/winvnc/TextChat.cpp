@@ -76,7 +76,7 @@ BOOL PlayResource(const LPSTR lpName)
     } //PGM
 }
 #else
-BOOL PlayResource(const LPSTR lpName) { return TRUE; }
+BOOL PlayResource([[maybe_unused]] const LPSTR lpName) { return TRUE; }
 #endif
 
 ///////////////////////////////////////////////////////
@@ -489,7 +489,7 @@ void TextChat::PrintMessage(const char* const szMessage, const char* const szSen
 
         // Convert UTF-8 sender name to Unicode for better display
         std::array<wchar_t, MAXNAMESIZE> senderW;
-        ::MultiByteToWideChar(CP_UTF8, 0, szSender, -1, senderW.data(), senderW.size());
+        ::MultiByteToWideChar(CP_UTF8, 0, szSender, -1, senderW.data(), static_cast<int>(senderW.size()));
 
         std::array<wchar_t, MAXNAMESIZE + 10> bufferW;
         ::swprintf_s(bufferW.data(), bufferW.size(), L"<%s>: ", senderW.data());
@@ -514,7 +514,7 @@ void TextChat::PrintMessage(const char* const szMessage, const char* const szSen
 
         // Convert UTF-8 message to Unicode for better display
         std::array<wchar_t, TEXTMAXSIZE> messageW;
-        ::MultiByteToWideChar(CP_UTF8, 0, szMessage, -1, messageW.data(), messageW.size());
+        ::MultiByteToWideChar(CP_UTF8, 0, szMessage, -1, messageW.data(), static_cast<int>(messageW.size()));
 
         SETTEXTEX st;
         st.flags = ST_SELECTION;
@@ -553,7 +553,7 @@ void TextChat::SendLocalText(void)
     // Read input as UTF-16 from the control (Windows-native)
     std::array<wchar_t, TEXTMAXSIZE> wbuf;
     std::memset(wbuf.data(), 0, sizeof(wbuf));
-    ::GetDlgItemTextW(m_hDlg, IDC_INPUTAREA_EDIT, wbuf.data(), wbuf.size() - 2);
+    ::GetDlgItemTextW(m_hDlg, IDC_INPUTAREA_EDIT, wbuf.data(), static_cast<int>(wbuf.size()) - 2);
     if (wbuf[0U] == 0)
     {
         ::SetDlgItemText(m_hDlg, IDC_INPUTAREA_EDIT, "");
@@ -565,7 +565,7 @@ void TextChat::SendLocalText(void)
     // Always convert to UTF-8 for local display (RichEdit insertion uses CP_UTF8)
     std::array<char, TEXTMAXSIZE> displayUtf8;
     std::memset(displayUtf8.data(), 0, TEXTMAXSIZE);
-    if (!WideToUtf8(wbuf.data(), -1, displayUtf8.data(), displayUtf8.size()))
+    if (!WideToUtf8(wbuf.data(), -1, displayUtf8.data(), static_cast<int>(displayUtf8.size())))
     {
         displayUtf8[0U] = 0;
     }
@@ -582,10 +582,10 @@ void TextChat::SendLocalText(void)
     std::array<char, TEXTMAXSIZE> sendBytes;
     std::memset(sendBytes.data(), 0, TEXTMAXSIZE);
     UINT sendCp = m_pCC->m_supportsUnicodeTextChat ? CP_UTF8 : CP_ACP;
-    if (!WideToMultiByte(sendCp, wbuf.data(), -1, sendBytes.data(), sendBytes.size()))
+    if (!WideToMultiByte(sendCp, wbuf.data(), -1, sendBytes.data(), static_cast<int>(sendBytes.size())))
     {
         // final fallback: if ACP conversion fails, try UTF-8
-        if (!WideToUtf8(wbuf.data(), -1, sendBytes.data(), sendBytes.size()))
+        if (!WideToUtf8(wbuf.data(), -1, sendBytes.data(), static_cast<int>(sendBytes.size())))
         {
             sendBytes[0U] = 0;
         }
@@ -754,49 +754,49 @@ INT_PTR CALLBACK TextChat::TextChatDlgProc(HWND hWnd, const UINT uMsg, const WPA
         ::SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
         ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
         helper::SafeSetWindowUserData(hWnd, lParam);
-        TextChat* _this = (TextChat*)lParam;
+        TextChat* _thisInner = (TextChat*)lParam;
 
-        if ((_this->m_szLocalText == nullptr) || (_this->m_szRemoteText == nullptr))
+        if ((_thisInner->m_szLocalText == nullptr) || (_thisInner->m_szRemoteText == nullptr))
         {
             ::EndDialog(hWnd, FALSE);
         }
 
-        _this->m_hWnd = hWnd;
-        _this->m_hDlg = hWnd;
+        _thisInner->m_hWnd = hWnd;
+        _thisInner->m_hDlg = hWnd;
 
-        if (::_snprintf_s(_this->m_szRemoteName, MAXNAMESIZE, MAXNAMESIZE - 1, "%s", _this->m_pCC->GetClientNameName()) < 0)
+        if (::_snprintf_s(_thisInner->m_szRemoteName, MAXNAMESIZE, MAXNAMESIZE - 1, "%s", _thisInner->m_pCC->GetClientNameName()) < 0)
         {
-            _this->m_szRemoteName[MAXNAMESIZE - 4] = '.';
-            _this->m_szRemoteName[MAXNAMESIZE - 3] = '.';
-            _this->m_szRemoteName[MAXNAMESIZE - 2] = '.';
-            _this->m_szRemoteName[MAXNAMESIZE - 1] = 0x00;
+            _thisInner->m_szRemoteName[MAXNAMESIZE - 4] = '.';
+            _thisInner->m_szRemoteName[MAXNAMESIZE - 3] = '.';
+            _thisInner->m_szRemoteName[MAXNAMESIZE - 2] = '.';
+            _thisInner->m_szRemoteName[MAXNAMESIZE - 1] = 0x00;
         }
 
         const long lTitleBufSize{ 256 };
         std::array<char, lTitleBufSize> szTitle;
 
-        ::_snprintf_s(szTitle.data(), szTitle.size(), _TRUNCATE, sz_ID_CHAT_WITH_S_ULTRAVNC.data(), _this->m_szRemoteName);
+        ::_snprintf_s(szTitle.data(), szTitle.size(), _TRUNCATE, sz_ID_CHAT_WITH_S_ULTRAVNC.data(), _thisInner->m_szRemoteName);
         ::SetWindowText(hWnd, szTitle.data());
 
-        std::memset(_this->m_szLocalText, 0, TEXTMAXSIZE);
+        std::memset(_thisInner->m_szLocalText, 0, TEXTMAXSIZE);
 
         // Local message box
-        ::SetDlgItemText(hWnd, IDC_INPUTAREA_EDIT, _this->m_szLocalText);
+        ::SetDlgItemText(hWnd, IDC_INPUTAREA_EDIT, _thisInner->m_szLocalText);
 
         //  Chat area
-        _this->SetTextFormat(); //  Set character formatting and background color
+        _thisInner->SetTextFormat(); //  Set character formatting and background color
         ::SendDlgItemMessage(hWnd, IDC_CHATAREA_EDIT, EM_SETBKGNDCOLOR, FALSE, 0xFFFFFF);
 
-        std::memset(_this->m_szLastLocalText, 0, TEXTMAXSIZE); // Future retype functionnality
-        std::memset(_this->m_szTextBoxBuffer, 0, TEXTMAXSIZE); // Clear Chat area
+        std::memset(_thisInner->m_szLastLocalText, 0, TEXTMAXSIZE); // Future retype functionnality
+        std::memset(_thisInner->m_szTextBoxBuffer, 0, TEXTMAXSIZE); // Clear Chat area
                                                                //  Load and display diclaimer message
                                                                // sf@2005 - Only if the DSMplugin is used
-        if (!_this->m_pCC->m_server->GetDSMPluginPointer()->IsEnabled())
+        if (!_thisInner->m_pCC->m_server->GetDSMPluginPointer()->IsEnabled())
         {
             //	[v1.0.2-jp1 fix]
-            if (::LoadString(hInstResDLL, IDS_WARNING, _this->m_szRemoteText, TEXTMAXSIZE - 1))
+            if (::LoadString(hInstResDLL, IDS_WARNING, _thisInner->m_szRemoteText, TEXTMAXSIZE - 1))
             {
-                _this->PrintMessage(_this->m_szRemoteText, nullptr, GREY);
+                _thisInner->PrintMessage(_thisInner->m_szRemoteText, nullptr, GREY);
             }
         }
 

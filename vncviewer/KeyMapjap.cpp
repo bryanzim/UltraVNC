@@ -228,7 +228,7 @@ KeyActionSpec KeyMapJap::PCtoX(UINT virtkey, const DWORD keyData)
 
     if (numkeys != 0)
     {
-        UINT key = kas.keycodes[numkeys - 1];
+        [[maybe_unused]] UINT key = kas.keycodes[numkeys - 1];
         //        vnclog.Print(8, _T("keymap gives %u (%x) \n"), key, key);
     }
     else
@@ -309,9 +309,9 @@ KeyActionSpec KeyMapJap::PCtoX(UINT virtkey, const DWORD keyData)
 
             // [v1.0.2-jp1 fix]
             //int ret = ::ToAscii(virtkey, 0, keystate, (WORD *) buf, 0);
-            int ret = ToAsciiJp(virtkey);
+            int retInner = ToAsciiJp(virtkey);
 
-            if (ret < 0)
+            if (retInner < 0)
             {
                 //				vnclog.Print(8,_T("ret -> daedkey, %s %d\n "),buf,buf[0]);
                 switch (buf[0U])
@@ -334,11 +334,11 @@ KeyActionSpec KeyMapJap::PCtoX(UINT virtkey, const DWORD keyData)
                 }
             }
             // if this works, and it's a regular printable character, we just send that
-            if (ret >= 1)
+            if (retInner >= 1)
             {
                 //				vnclog.Print(8,_T("ret >=1 \n "));
                 //                vnclog.Print(8,_T("ToAscii (without ctrl) returns %d byte(s): "), ret);
-                if (ret == 2)
+                if (retInner == 2)
                 {
                     //also dead key strange.....
                     if ((buf[0U] == 180) && (buf[1U] == 249))
@@ -351,7 +351,7 @@ KeyActionSpec KeyMapJap::PCtoX(UINT virtkey, const DWORD keyData)
                     }
                 }
                 else
-                    for (int i{ 0 }; i < ret; ++i)
+                    for (int i{ 0 }; i < retInner; ++i)
                     {
                         kas.keycodes[numkeys++] = *(buf + i);
                         //                  vnclog.Print(8, _T("%02x (%c) %d %d %d"), *(buf+i) , *(buf+i),buf[0],buf[1],buf[2]);

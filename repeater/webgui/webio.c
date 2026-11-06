@@ -79,7 +79,7 @@ wi_init()
    int      error;
 
    /* Create the web server "listen" socket */
-   wi_listen = socket(AF_INET, SOCK_STREAM, 0);
+   wi_listen = (socktype)(socket(AF_INET, SOCK_STREAM, 0));
    if(wi_listen == INVALID_SOCKET)
    {
       dprintf("Error open socket for listen\n");
@@ -88,7 +88,7 @@ wi_init()
 
    wi_sin.sin_family = AF_INET;
    wi_sin.sin_addr.s_addr = htonl(INADDR_ANY);
-   wi_sin.sin_port = htons( saved_portHTTP);
+   wi_sin.sin_port = htons((u_short)saved_portHTTP);
    error = bind(wi_listen, (struct sockaddr*)&wi_sin, 
       sizeof(struct sockaddr_in));
    if(error)
@@ -277,7 +277,7 @@ another_state:
          {
             int   contentRx;
 
-            contentRx = sess->ws_rxsize - (data - sess->ws_rxbuf);
+            contentRx = (int)(sess->ws_rxsize - (data - sess->ws_rxbuf));
 
             if((contentRx >= sess->ws_contentLength) ||
                (error == ENOTCONN))
@@ -360,11 +360,13 @@ wi_sockaccept()
    int         error;
 
    sasize = sizeof(struct sockaddr_in);
-   newsock = accept(wi_listen, (struct sockaddr * )&sa, &sasize);
+   newsock = (socktype)(accept(wi_listen, (struct sockaddr * )&sa, &sasize));
    if (newsock==-1)
    {
 	   DWORD aa= GetLastError();
+	   (void)aa;
 	   int bb=1;
+	   (void)bb;
    }
    if(sasize != sizeof(struct sockaddr_in))
    {
@@ -783,7 +785,7 @@ readmore:
 
          if(ssi_end)
          {
-            int ssi_len = (ssi_end - &fi->wf_data[len]) + 3;
+            int ssi_len = (int)((ssi_end - &fi->wf_data[len]) + 3);
 
             fi->wf_nextbuf = len;      /* Set address of SSI text */
 

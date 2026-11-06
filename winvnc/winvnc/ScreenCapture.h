@@ -60,8 +60,8 @@ public:
     PCHAR getFramebuffer() { return pFramebuffer; }
     PCHANGES_BUF getChangeBuffer() { return pChangebuf; }
     int getPreviousCounter() { return oldAantal; }
-    void setPreviousCounter(const int oldAantal) { this->oldAantal = oldAantal; }
-    void setBlocked(const bool blocked) { this->blocked = blocked; }
+    void setPreviousCounter(const int oldAantalIn) { this->oldAantal = oldAantalIn; }
+    void setBlocked(const bool blockedIn) { this->blocked = blockedIn; }
     bool getBlocked() { return blocked; }
 
     virtual void videoDriver_start(int x, int y, int w, int h, bool onlyVirtual, int maxFPS) = 0;

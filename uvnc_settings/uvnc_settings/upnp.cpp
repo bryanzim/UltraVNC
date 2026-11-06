@@ -71,23 +71,23 @@ HRESULT UPnP::OpenPorts(const bool log)
 
     if (SUCCEEDED(hr))
     {
-        IStaticPortMappingCollection* pSPMC = nullptr;
-        hr = pUN->get_StaticPortMappingCollection(&pSPMC);
+        IStaticPortMappingCollection* pSPMCIn = nullptr;
+        hr = pUN->get_StaticPortMappingCollection(&pSPMCIn);
         int counter{ 0 };
-        while (SUCCEEDED(hr) && !pSPMC && (counter < 20))
+        while (SUCCEEDED(hr) && !pSPMCIn && (counter < 20))
         {
             debug("Retry StaticPortMappingCollection");
-            hr = pUN->get_StaticPortMappingCollection(&pSPMC);
+            hr = pUN->get_StaticPortMappingCollection(&pSPMCIn);
             ++counter;
             ::Sleep(1500);
         }
-        if (SUCCEEDED(hr) && pSPMC)
+        if (SUCCEEDED(hr) && pSPMCIn)
         {
             // see comment in "else"
             if (bstrProtocol && bstrInternalClient && bstrDescription)
             {
-                IStaticPortMapping* pSPM = nullptr;
-                hr = pSPMC->Add(PortNumber, bstrProtocol, PortNumber, bstrInternalClient, VARIANT_TRUE, bstrDescription, &pSPM);
+                IStaticPortMapping* pSPMIn = nullptr;
+                hr = pSPMCIn->Add(PortNumber, bstrProtocol, PortNumber, bstrInternalClient, VARIANT_TRUE, bstrDescription, &pSPMIn);
 
                 if (SUCCEEDED(hr))
                 {
@@ -142,12 +142,12 @@ HRESULT UPnP::ClosePorts(const bool log)
 
         if (bstrProtocol && bstrInternalClient && bstrDescription)
         {
-            IStaticPortMappingCollection* pSPMC = nullptr;
-            hr2 = pUN->get_StaticPortMappingCollection(&pSPMC);
+            IStaticPortMappingCollection* pSPMCIn = nullptr;
+            hr2 = pUN->get_StaticPortMappingCollection(&pSPMCIn);
 
-            if (SUCCEEDED(hr2) && pSPMC)
+            if (SUCCEEDED(hr2) && pSPMCIn)
             {
-                hr = pSPMC->Remove(PortNumber, bstrProtocol);
+                hr = pSPMCIn->Remove(PortNumber, bstrProtocol);
                 if (SUCCEEDED(hr))
                 {
                     if (log)
@@ -155,7 +155,7 @@ HRESULT UPnP::ClosePorts(const bool log)
                         debug("UPNP: closed port %i", PortNumber);
                     }
                 }
-                pSPMC->Release();
+                pSPMCIn->Release();
             }
 
             ::SysFreeString(bstrProtocol);

@@ -71,7 +71,7 @@ public:
     virtual UINT EncodeRect(BYTE* source, VSocket* outConn, BYTE* dest, const rfb::Rect& rect, bool queue_enabled);
     virtual UINT EncodeRect(BYTE* source, VSocket* outConn, BYTE* dest, const rfb::Rect& rect);
     virtual UINT EncodeRect(BYTE* source, VSocket* outConn, BYTE* dest, const RECT& rect); // sf@2002 - For Tight...
-    virtual UINT EncodeBulkRects(const rfb::RectVector& rects, BYTE* const source, BYTE* const dest, VSocket* const outConn)
+    virtual UINT EncodeBulkRects([[maybe_unused]] const rfb::RectVector& rects, [[maybe_unused]] BYTE* const source, [[maybe_unused]] BYTE* const dest, [[maybe_unused]] VSocket* const outConn)
     { return 0; };
 
     // CURSOR HANDLING

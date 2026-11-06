@@ -110,7 +110,7 @@ rfbTranslateFnType rfbTranslateWithRGBTablesFns[3U][3U] = {
 
 // rfbTranslateNone is used when no translation is required.
 
-void rfbTranslateNone(char* const table, rfbPixelFormat* const in, rfbPixelFormat* const out, char* iptr, char* optr,
+void rfbTranslateNone([[maybe_unused]] char* const table, [[maybe_unused]] rfbPixelFormat* const in, rfbPixelFormat* const out, char* iptr, char* optr,
                       const int bytesBetweenInputLines, const int width, int height)
 {
     int bytesPerOutputLine = width * (out->bitsPerPixel >> 3);

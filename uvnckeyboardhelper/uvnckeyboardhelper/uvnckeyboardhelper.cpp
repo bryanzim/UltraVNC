@@ -72,7 +72,7 @@ void comm_serv::create_sec_attribute()
     secAttr.lpSecurityDescriptor = &secDesc;
     ::InitializeSecurityDescriptor(secAttr.lpSecurityDescriptor, SECURITY_DESCRIPTOR_REVISION);
     ::SetSecurityDescriptorDacl(secAttr.lpSecurityDescriptor, TRUE, 0, FALSE);
-    TCHAR* szSD = TEXT("D:")         // Discretionary ACL
+    [[maybe_unused]] TCHAR* szSD = TEXT("D:")         // Discretionary ACL
                                      //TEXT("(D;OICI;GA;;;BG)")     // Deny access to built-in guests
                                      //TEXT("(D;OICI;GA;;;AN)")     // Deny access to anonymous logon
         TEXT("(A;OICI;GRGWGX;;;AU)") // Allow read/write/execute to authenticated users
@@ -80,7 +80,7 @@ void comm_serv::create_sec_attribute()
 
     PSECURITY_DESCRIPTOR pSD;
     BOOL retcode = ::ConvertStringSecurityDescriptorToSecurityDescriptor("S:(ML;;NW;;;LW)", SDDL_REVISION_1, &pSD, nullptr);
-    const DWORD aa = ::GetLastError();
+    [[maybe_unused]] const DWORD aa = ::GetLastError();
 
     if (retcode != 0)
     {
@@ -106,7 +106,7 @@ bool comm_serv::Init(char* const name, const int IN_datasize_IN, const int IN_da
     secAttr.lpSecurityDescriptor = &secDesc;
     ::InitializeSecurityDescriptor(secAttr.lpSecurityDescriptor, SECURITY_DESCRIPTOR_REVISION);
     ::SetSecurityDescriptorDacl(secAttr.lpSecurityDescriptor, TRUE, 0, FALSE);
-    TCHAR* szSD = TEXT("D:")         // Discretionary ACL
+    [[maybe_unused]] TCHAR* szSD = TEXT("D:")         // Discretionary ACL
                                      //TEXT("(D;OICI;GA;;;BG)")     // Deny access to built-in guests
                                      //TEXT("(D;OICI;GA;;;AN)")     // Deny access to anonymous logon
         TEXT("(A;OICI;GRGWGX;;;AU)") // Allow read/write/execute to authenticated users
@@ -114,7 +114,7 @@ bool comm_serv::Init(char* const name, const int IN_datasize_IN, const int IN_da
 
     PSECURITY_DESCRIPTOR pSD;
     BOOL retcode = ::ConvertStringSecurityDescriptorToSecurityDescriptor("S:(ML;;NW;;;LW)", SDDL_REVISION_1, &pSD, nullptr);
-    DWORD aa = ::GetLastError();
+    [[maybe_unused]] DWORD aa = ::GetLastError();
 
     if (retcode != 0)
     {
@@ -285,7 +285,7 @@ bool comm_serv::Init(char* const name, const int IN_datasize_IN, const int IN_da
             if (datasize_IN != 0)
             {
                 hMapFile_IN = ::OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, filemapping_IN.data());
-                DWORD aa = ::GetLastError();
+                [[maybe_unused]] DWORD aaInner = ::GetLastError();
                 if (hMapFile_IN == nullptr)
                 {
                     return false;
@@ -541,7 +541,7 @@ error:
 
 void comm_serv::Call_Fnction_no_feedback() { ::SetEvent(event_E_IN); }
 
-void comm_serv::Call_Fnction_no_feedback_data(char* const databuffer_IN, char* const databuffer_OUT)
+void comm_serv::Call_Fnction_no_feedback_data(char* const databuffer_IN, [[maybe_unused]] char* const databuffer_OUT)
 {
     ::EnterCriticalSection(&CriticalSection_IN);
     std::memcpy(data_IN, databuffer_IN, datasize_IN);
@@ -624,7 +624,7 @@ void comm_serv::SetData(char* const databuffer)
     }
     std::memcpy(data_OUT, databuffer, datasize_OUT);
     ::SetEvent(event_E_OUT);
-    const DWORD r = ::WaitForSingleObject(event_E_OUT_DONE, 2000);
+    [[maybe_unused]] const DWORD r = ::WaitForSingleObject(event_E_OUT_DONE, 2000);
 }
 
 void comm_serv::Force_unblock()
@@ -702,13 +702,13 @@ bool InputDesktopSelected()
     return TRUE;
 }
 
-DWORD WINAPI Cadthread(const LPVOID lpParam)
+DWORD WINAPI Cadthread([[maybe_unused]] const LPVOID lpParam)
 {
     HDESK inputdesktop = ::OpenInputDesktop(0, FALSE,
                                           DESKTOP_CREATEMENU | DESKTOP_CREATEWINDOW | DESKTOP_ENUMERATE | DESKTOP_HOOKCONTROL |
                                               DESKTOP_WRITEOBJECTS | DESKTOP_READOBJECTS | DESKTOP_SWITCHDESKTOP | GENERIC_WRITE);
     ::SetThreadDesktop(inputdesktop);
-    const DWORD yerror = ::GetLastError();
+    [[maybe_unused]] const DWORD yerror = ::GetLastError();
 
     comm_serv keyEventFn;
     comm_serv StopeventFn;
@@ -747,8 +747,8 @@ DWORD WINAPI Cadthread(const LPVOID lpParam)
     int counter{ 0 };
     while (true)
     {
-        DWORD dwEvent = ::WaitForMultipleObjects(3, Events.data(), FALSE, 1000);
-        switch (dwEvent)
+        DWORD dwEventInner = ::WaitForMultipleObjects(3, Events.data(), FALSE, 1000);
+        switch (dwEventInner)
         {
         case WAIT_OBJECT_0 + 0:
             keyEventdata ked;
@@ -780,7 +780,7 @@ error:
     return 0;
 }
 
-int APIENTRY _tWinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, const LPTSTR lpCmdLine, const int nCmdShow)
+int APIENTRY _tWinMain([[maybe_unused]] const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE hPrevInstance, [[maybe_unused]] const LPTSTR lpCmdLine, [[maybe_unused]] const int nCmdShow)
 {
     // thread is needed, else setthreaddesktop fail
     HANDLE ThreadHandle2;

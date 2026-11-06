@@ -176,7 +176,7 @@ static void RestoreFontSmoothing() { EnableFontSmoothing(); }
 
 vncMenu::vncMenu(vncServer* server)
 {
-    ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     vnclog.Print(LL_INTERR, VNCLOG("vncmenu(server)\n"));
     ports_set = false;
     ::CoInitialize(0);
@@ -703,8 +703,8 @@ void vncMenu::GetIPAddrString(char* buffer, int buflen)
                     std::memset(szText.data(), 0, 256);
                     ::strncpy_s(szText.data(), szText.size(), ipstringbuffer.data(), ipbufferlength - 4);
                     ::strcat_s(szText.data(), szText.size(), "-");
-                    int len = std::strlen(buffer);
-                    int len2 = std::strlen(szText.data());
+                    int len = static_cast<int>(std::strlen(buffer));
+                    int len2 = static_cast<int>(std::strlen(szText.data()));
                     if (len + len2 < buflen)
                     {
                         ::strcat_s(buffer, buflen, szText.data());
@@ -1830,11 +1830,11 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                 {
                     struct in6_addr address;
                     std::memset(&address, 0, sizeof(address));
-                    nport = _this->m_server->AutoReconnectPort();
-                    VCard32 ipaddress = VSocket::Resolve6(_this->m_server->AutoReconnectAdr(), &address);
+                    nport = static_cast<unsigned short>(_this->m_server->AutoReconnectPort());
+                    [[maybe_unused]] VCard32 ipaddress = VSocket::Resolve6(_this->m_server->AutoReconnectAdr(), &address);
                     std::array<char, INET6_ADDRSTRLEN> straddr;
                     std::memset(straddr.data(), 0, INET6_ADDRSTRLEN);
-                    PCSTR test = inet_ntop(AF_INET6, &address, straddr.data(), sizeof(straddr));
+                    [[maybe_unused]] PCSTR test = inet_ntop(AF_INET6, &address, straddr.data(), sizeof(straddr));
                     if (std::strlen(straddr.data()) == 0)
                     {
                         return 0;
@@ -1859,7 +1859,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                     std::array<char, INET6_ADDRSTRLEN> straddr;
                     std::memset(straddr.data(), 0, INET6_ADDRSTRLEN);
                     std::memcpy(&address, &postHelper::G_LPARAM_IN6, sizeof(in6_addr));
-                    PCSTR test = inet_ntop(AF_INET6, &address, straddr.data(), sizeof(straddr));
+                    [[maybe_unused]] PCSTR test = inet_ntop(AF_INET6, &address, straddr.data(), sizeof(straddr));
                     if (std::strlen(straddr.data()) == 0)
                     {
                         return 0;
@@ -2009,7 +2009,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                     (std::strlen(_this->m_server->AutoReconnectAdr()) > 0))
                 {
                     struct in_addr address;
-                    nport = _this->m_server->AutoReconnectPort();
+                    nport = static_cast<unsigned short>(_this->m_server->AutoReconnectPort());
                     VCard32 ipaddress = VSocket::Resolve(_this->m_server->AutoReconnectAdr());
                     unsigned long ipaddress_long = ipaddress;
                     address.S_un.S_addr = ipaddress_long;
@@ -2034,7 +2034,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                 {
                     // Get the IP address stringified
                     struct in_addr address;
-                    address.S_un.S_addr = lParam;
+                    address.S_un.S_addr = static_cast<ULONG>(lParam);
                     char* name = inet_ntoa(address);
                     if (name == 0)
                     {
@@ -2269,7 +2269,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                     (std::strlen(_this->m_server->AutoReconnectAdr()) > 0))
                 {
                     struct in_addr address{};
-                    nport = _this->m_server->AutoReconnectPort();
+                    nport = static_cast<unsigned short>(_this->m_server->AutoReconnectPort());
                     VCard32 ipaddress = VSocket::Resolve(_this->m_server->AutoReconnectAdr());
                     unsigned long ipaddress_long = ipaddress;
                     address.S_un.S_addr = ipaddress_long;
@@ -2294,7 +2294,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                 {
                     // Get the IP address stringified
                     struct in_addr address{};
-                    address.S_un.S_addr = lParam;
+                    address.S_un.S_addr = static_cast<ULONG>(lParam);
                     char* name = inet_ntoa(address);
                     if (name == 0)
                     {

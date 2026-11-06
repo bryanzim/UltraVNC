@@ -37,7 +37,7 @@ void Enable_softwareCAD()
     ::RegCloseKey(hkLocal);
 }
 
-int _tmain(const int argc, _TCHAR* argv[])
+int _tmain([[maybe_unused]] const int argc, [[maybe_unused]] _TCHAR* argv[])
 {
     Enable_softwareCAD();
     return 0;

@@ -339,7 +339,7 @@ int CDSMPlugin::ListPlugins(const HWND hComboBox)
     int nFiles{ 0 };
     std::array<wchar_t, MAX_PATH> szCurrentDir;
 
-    if (::GetModuleFileNameW(nullptr, szCurrentDir.data(), szCurrentDir.size()))
+    if (::GetModuleFileNameW(nullptr, szCurrentDir.data(), static_cast<DWORD>(szCurrentDir.size())))
     {
         wchar_t* p = std::wcsrchr(szCurrentDir.data(), L'\\');
         if (p == nullptr)
@@ -384,7 +384,7 @@ int CDSMPlugin::ListPlugins(const HWND hComboBox)
     int nFiles{ 0 };
     std::array<char, MAX_PATH> szCurrentDir;
 
-    if (::GetModuleFileNameA(nullptr, szCurrentDir.data(), szCurrentDir.size()))
+    if (::GetModuleFileNameA(nullptr, szCurrentDir.data(), static_cast<DWORD>(szCurrentDir.size())))
     {
         char* p = std::strrchr(szCurrentDir.data(), '\\');
         if (p == nullptr)
@@ -462,7 +462,7 @@ bool CDSMPlugin::LoadPlugin(char* const szPlugin, const bool fAllowMulti)
             {
 #ifdef UNICODE
                 std::array<wchar_t, MAX_PATH> szCurrentDir2;
-                if (::GetModuleFileNameW(nullptr, szCurrentDir2.data(), szCurrentDir2.size()))
+                if (::GetModuleFileNameW(nullptr, szCurrentDir2.data(), static_cast<DWORD>(szCurrentDir2.size())))
                 {
                     wchar_t* p = std::wcsrchr(szCurrentDir2.data(), L'\\');
                     *p = L'\0';
@@ -488,12 +488,12 @@ bool CDSMPlugin::LoadPlugin(char* const szPlugin, const bool fAllowMulti)
                 ::strcat_s(szCurrentDir_szDllCopyName.data(), szCurrentDir_szDllCopyName.size(), szDllCopyName.data());
                 std::array<wchar_t, MAX_PATH> szCurrentDir_szPluginW;
                 std::array<wchar_t, MAX_PATH> szCurrentDir_szDllCopyNameW;
-                ::MultiByteToWideChar(CP_ACP, 0, szCurrentDir_szPlugin.data(), -1, szCurrentDir_szPluginW.data(), szCurrentDir_szPluginW.size());
-                ::MultiByteToWideChar(CP_ACP, 0, szCurrentDir_szDllCopyName.data(), -1, szCurrentDir_szDllCopyNameW.data(), szCurrentDir_szDllCopyNameW.size());
+                ::MultiByteToWideChar(CP_ACP, 0, szCurrentDir_szPlugin.data(), -1, szCurrentDir_szPluginW.data(), static_cast<int>(szCurrentDir_szPluginW.size()));
+                ::MultiByteToWideChar(CP_ACP, 0, szCurrentDir_szDllCopyName.data(), -1, szCurrentDir_szDllCopyNameW.data(), static_cast<int>(szCurrentDir_szDllCopyNameW.size()));
                 fDllCopyCreated = (FALSE != ::CopyFileW(szCurrentDir_szPluginW.data(), szCurrentDir_szDllCopyNameW.data(), false));
 #else
                 std::array<char, MAX_PATH> szCurrentDir2;
-                if (::GetModuleFileNameA(nullptr, szCurrentDir2.data(), szCurrentDir2.size()))
+                if (::GetModuleFileNameA(nullptr, szCurrentDir2.data(), static_cast<DWORD>(szCurrentDir2.size())))
                 {
                     char* p = std::strrchr(szCurrentDir2.data(), '\\');
                     *p = '\0';
@@ -545,7 +545,7 @@ bool CDSMPlugin::LoadPlugin(char* const szPlugin, const bool fAllowMulti)
 #endif
 #ifdef UNICODE
         std::array<wchar_t, MAX_PATH> m_szDllNameW;
-        ::MultiByteToWideChar(CP_ACP, 0, m_szDllName.data(), -1, m_szDllNameW.data(), m_szDllNameW.size());
+        ::MultiByteToWideChar(CP_ACP, 0, m_szDllName.data(), -1, m_szDllNameW.data(), static_cast<int>(m_szDllNameW.size()));
         m_hPDll = ::LoadLibraryW(m_szDllNameW.data());
 #else
         m_hPDll = ::LoadLibraryA(m_szDllName.data());
@@ -566,7 +566,7 @@ bool CDSMPlugin::LoadPlugin(char* const szPlugin, const bool fAllowMulti)
 
 #ifdef UNICODE
         std::array<wchar_t, MAX_PATH> szPluginPathW{};
-        if (::GetModuleFileNameW(nullptr, szPluginPathW.data(), szPluginPathW.size()))
+        if (::GetModuleFileNameW(nullptr, szPluginPathW.data(), static_cast<DWORD>(szPluginPathW.size())))
         {
             wchar_t* p = std::wcsrchr(szPluginPathW.data(), L'\\');
             if (p)
@@ -579,7 +579,7 @@ bool CDSMPlugin::LoadPlugin(char* const szPlugin, const bool fAllowMulti)
             }
         }
         std::array<wchar_t, MAX_PATH> szPluginW2;
-        ::MultiByteToWideChar(CP_ACP, 0, szPlugin, -1, szPluginW2.data(), szPluginW2.size());
+        ::MultiByteToWideChar(CP_ACP, 0, szPlugin, -1, szPluginW2.data(), static_cast<int>(szPluginW2.size()));
         ::wcscat_s(szPluginPathW.data(), szPluginPathW.size(), szPluginW2.data());
 #ifdef _X64
         std::array<char, MAX_PATH> szPluginPathA;
@@ -609,7 +609,7 @@ bool CDSMPlugin::LoadPlugin(char* const szPlugin, const bool fAllowMulti)
         m_hPDll = ::LoadLibraryExW(szPluginPathW.data(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
 #else
         std::array<char, MAX_PATH> szPluginPathA{};
-        if (::GetModuleFileNameA(nullptr, szPluginPathA.data(), szPluginPathA.size()))
+        if (::GetModuleFileNameA(nullptr, szPluginPathA.data(), static_cast<DWORD>(szPluginPathA.size())))
         {
             char* p = std::strrchr(szPluginPathA.data(), '\\');
             if (p)
@@ -664,7 +664,7 @@ bool CDSMPlugin::LoadPlugin(char* const szPlugin, const bool fAllowMulti)
         {
 #ifdef UNICODE
             std::array<wchar_t, MAX_PATH> szDllNameW;
-            ::MultiByteToWideChar(CP_ACP, 0, m_szDllName.data(), -1, szDllNameW.data(), szDllNameW.size());
+            ::MultiByteToWideChar(CP_ACP, 0, m_szDllName.data(), -1, szDllNameW.data(), static_cast<int>(szDllNameW.size()));
             ::DeleteFileW(szDllNameW.data());
 #else
             ::DeleteFileA(m_szDllName.data());
@@ -709,7 +709,7 @@ bool CDSMPlugin::UnloadPlugin(void)
         {
 #ifdef UNICODE
             std::array<wchar_t, MAX_PATH> szDllNameW;
-            ::MultiByteToWideChar(CP_ACP, 0, m_szDllName.data(), -1, szDllNameW.data(), szDllNameW.size());
+            ::MultiByteToWideChar(CP_ACP, 0, m_szDllName.data(), -1, szDllNameW.data(), static_cast<int>(szDllNameW.size()));
             ::DeleteFileW(szDllNameW.data());
 #else
             ::DeleteFileA(m_szDllName.data());

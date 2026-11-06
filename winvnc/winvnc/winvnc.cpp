@@ -497,7 +497,7 @@ void extractConfig(char* szCmdLine)
 
 // WinMain parses the command line and either calls the main App
 // routine or, under NT, the main service routine.
-int WINAPI WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, const PSTR szCmdLine2, const int iCmdShow)
+int WINAPI WinMain(const HINSTANCE hInstance, [[maybe_unused]] const HINSTANCE hPrevInstance, const PSTR szCmdLine2, [[maybe_unused]] const int iCmdShow)
 {
     ::SetDllDirectory(TEXT(""));
     ::SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -516,7 +516,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, con
             pSetProcessMitigationPolicy(ProcessImageLoadPolicy, &policy, sizeof(policy));
         }
     }
-    if (::GetModuleFileName(nullptr, winvncFolder.data(), winvncFolder.size()))
+    if (::GetModuleFileName(nullptr, winvncFolder.data(), static_cast<DWORD>(winvncFolder.size())))
     {
         char* p = std::strrchr(winvncFolder.data(), '\\');
         if (p)
@@ -680,7 +680,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, con
         std::size_t i;
         for (i = 0; i < std::strlen(szCmdLine); ++i)
         {
-            szCmdLine[i] = std::tolower(szCmdLine[i]);
+            szCmdLine[i] = static_cast<char>(std::tolower(szCmdLine[i]));
         }
         BOOL argfound = FALSE;
         for (i = 0; i < std::strlen(szCmdLine); ++i)
@@ -1262,7 +1262,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, con
                             if (VSocket::Resolve6(name, &address))
                             {
                                 vnclog.Print(LL_INTERR, VNCLOG("PostAddNewClient III \n"));
-                                if (!postHelper::PostAddNewClientInit6(&address, port))
+                                if (!postHelper::PostAddNewClientInit6(&address, static_cast<unsigned short>(port)))
                                 {
                                     PostAddNewClient_bool = true;
                                     port_int = port;
@@ -1281,18 +1281,18 @@ int WINAPI WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, con
                             }
                             if (port_int == 0)
                             {
-                                VCard32 address = VSocket::Resolve4(name);
-                                if (address != 0)
+                                VCard32 addressInner = VSocket::Resolve4(name);
+                                if (addressInner != 0)
                                 {
                                     // Post the IP address to the server
                                     // We can not contact a runnning service, permissions, so we must store the settings
                                     // and process until the vncmenu has been started
                                     vnclog.Print(LL_INTERR, VNCLOG("PostAddNewClient III \n"));
-                                    if (!postHelper::PostAddNewClientInit4(address, port))
+                                    if (!postHelper::PostAddNewClientInit4(static_cast<unsigned short>(addressInner), static_cast<unsigned short>(port)))
                                     {
                                         PostAddNewClient_bool = true;
                                         port_int = port;
-                                        address_vcard4 = address;
+                                        address_vcard4 = addressInner;
                                     }
                                 }
                                 else
@@ -1329,7 +1329,7 @@ int WINAPI WinMain(const HINSTANCE hInstance, const HINSTANCE hPrevInstance, con
                                 // We can not contact a runnning service, permissions, so we must store the settings
                                 // and process until the vncmenu has been started
                                 vnclog.Print(LL_INTERR, VNCLOG("PostAddNewClient III \n"));
-                                if (!postHelper::PostAddNewClientInit(address, port))
+                                if (!postHelper::PostAddNewClientInit(address, static_cast<unsigned short>(port)))
                                 {
                                     PostAddNewClient_bool = true;
                                     port_int = port;
@@ -1558,11 +1558,11 @@ DWORD WINAPI imp_desktop_thread(const LPVOID lpParam)
         vnclog.Print(LL_INTERR, VNCLOG("PostAddNewClient IIIII\n"));
         if (settings->getIPV6())
         {
-            postHelper::PostAddNewClient6(&address_in6, port_int);
+            postHelper::PostAddNewClient6(&address_in6, static_cast<unsigned short>(port_int));
         }
         else
         {
-            postHelper::PostAddNewClient(address_vcard, port_int);
+            postHelper::PostAddNewClient(address_vcard, static_cast<unsigned short>(port_int));
         }
     }
     //adzm 2009-06-20
@@ -1660,7 +1660,7 @@ int WinVNCAppMain()
     }
     //vnclog.Print(LL_STATE, VNCLOG("***************** SDEvent created \n"));
     // Create the timer that looks periodicaly for shutdown event
-    mmRes = -1;
+    mmRes = static_cast<MMRESULT>(-1);
     //InitSDTimer();
 
     while (!fShutdownOrdered)

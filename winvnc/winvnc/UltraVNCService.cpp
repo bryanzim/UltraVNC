@@ -144,7 +144,7 @@ bool MigrateServiceIniToProgramData(const char* const installFolderPath, const c
 UltraVNCService::UltraVNCService() {}
 
 ////////////////////////////////////////////////////////////////////////////////
-void WINAPI UltraVNCService::service_main(const DWORD argc, LPTSTR* const argv)
+void WINAPI UltraVNCService::service_main([[maybe_unused]] const DWORD argc, LPTSTR* const argv)
 {
     ::SetDllDirectory(TEXT(""));
     ::SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -273,8 +273,8 @@ void WINAPI UltraVNCService::service_main(const DWORD argc, LPTSTR* const argv)
 }
 ////////////////////////////////////////////////////////////////////////////////
 void WINAPI UltraVNCService::control_handler(const DWORD controlCode) { control_handler_ex(controlCode, 0, 0, 0); }
-DWORD WINAPI UltraVNCService::control_handler_ex(DWORD controlCode, const DWORD dwEventType, const LPVOID lpEventData,
-                                                 const LPVOID lpContext)
+DWORD WINAPI UltraVNCService::control_handler_ex(DWORD controlCode, const DWORD dwEventType, [[maybe_unused]] const LPVOID lpEventData,
+                                                 [[maybe_unused]] const LPVOID lpContext)
 {
     switch (controlCode)
     {
@@ -344,7 +344,7 @@ void UltraVNCService::set_service_description()
     ::_snprintf_s(tempName.data(), tempName.size(), sizeof tempName, "SYSTEM\\CurrentControlSet\\Services\\%s", service_name.data());
     ::RegCreateKeyEx(HKEY_LOCAL_MACHINE, tempName.data(), 0, REG_NONE, REG_OPTION_NON_VOLATILE, KEY_READ | KEY_WRITE, nullptr, &hKey,
                    &dw);
-    ::RegSetValueEx(hKey, "Description", 0, REG_SZ, (const BYTE*)desc, std::strlen(desc) + 1);
+    ::RegSetValueEx(hKey, "Description", 0, REG_SZ, (const BYTE*)desc, static_cast<DWORD>(std::strlen(desc) + 1));
 
 
     ::RegCloseKey(hKey);
@@ -402,7 +402,7 @@ int UltraVNCService::install_service(void)
 int UltraVNCService::uninstall_service(void)
 {
     SC_HANDLE scm, service;
-    SERVICE_STATUS serviceStatus;
+    SERVICE_STATUS serviceStatusIn;
 
     scm = ::OpenSCManager(0, 0, SC_MANAGER_CONNECT);
     if (!scm)
@@ -435,14 +435,14 @@ int UltraVNCService::uninstall_service(void)
         ::CloseServiceHandle(scm);
         return 1;
     }
-    if (!::QueryServiceStatus(service, &serviceStatus))
+    if (!::QueryServiceStatus(service, &serviceStatusIn))
     {
         MessageBoxSecure(nullptr, sz_ID_FAILED_QUERY_SVC_STATUS.data(), app_name, MB_ICONERROR);
         ::CloseServiceHandle(service);
         ::CloseServiceHandle(scm);
         return 1;
     }
-    if (serviceStatus.dwCurrentState != SERVICE_STOPPED)
+    if (serviceStatusIn.dwCurrentState != SERVICE_STOPPED)
     {
         ::CloseServiceHandle(service);
         ::CloseServiceHandle(scm);
@@ -467,7 +467,7 @@ int UltraVNCService::pad()
     std::array<char, MAX_PATH> dir;
     char* ptr;
     std::array<char, MAX_PATH> exe_file_name;
-    ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     /* set current directory */
     ::strcpy_s(dir.data(), dir.size(), exe_file_name.data());
     ptr = std::strrchr(dir.data(), '\\'); /* last backslash */
@@ -534,7 +534,7 @@ void UltraVNCService::Set_Safemode()
         ::strcat_s(stringvalue.data(), stringvalue.size(), " /safeboot:network");
         ::SetFileAttributes(systemdrive.data(), FILE_ATTRIBUTE_NORMAL);
         ::WritePrivateProfileString("operating systems", drivepath.data(), stringvalue.data(), systemdrive.data());
-        const DWORD err = ::GetLastError();
+        [[maybe_unused]] const DWORD err = ::GetLastError();
     }
     else
     {
@@ -691,7 +691,7 @@ void UltraVNCService::Reboot_with_force_reboot() { Force_reboot(); }
 void UltraVNCService::Reboot_with_force_reboot_elevated()
 {
     std::array<char, MAX_PATH> exe_file_name;
-    ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     SHELLEXECUTEINFO shExecInfo;
     shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
     shExecInfo.fMask = 0;
@@ -717,7 +717,7 @@ void UltraVNCService::Reboot_in_safemode()
 void UltraVNCService::Reboot_in_safemode_elevated()
 {
     std::array<char, MAX_PATH> exe_file_name;
-    ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     SHELLEXECUTEINFO shExecInfo;
     shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
     shExecInfo.fMask = 0;
@@ -959,7 +959,7 @@ bool UltraVNCService::IsAnyRDPSessionActive()
 int UltraVNCService::createWinvncExeCall(const bool preconnect, const bool rdpselect)
 {
     std::array<char, MAX_PATH> exe_file_name;
-    ::GetModuleFileName(0, exe_file_name.data(), exe_file_name.size());
+    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     OSVERSIONINFO OSversion;
     OSversion.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
     GetVersionEx(&OSversion);
@@ -1022,7 +1022,7 @@ void UltraVNCService::monitorSessions()
     std::array<HANDLE, 2U> testevent2;
     IsShutdown = false;
     bool preconnect_start{ false };
-    HANDLE hEvent = nullptr;
+    HANDLE hEventIn = nullptr;
     HANDLE hEventcad = nullptr;
     HANDLE hEventPreConnect = nullptr;
     HANDLE hMapFile = nullptr;
@@ -1031,7 +1031,7 @@ void UltraVNCService::monitorSessions()
     //We use this event to notify the program that the session has changed
     //The program need to end so the service can restart the program in the correct session
     wait_for_existing_process();
-    hEvent = ::CreateEvent(nullptr, FALSE, FALSE, "Global\\SessionEventUltra");
+    hEventIn = ::CreateEvent(nullptr, FALSE, FALSE, "Global\\SessionEventUltra");
     hEventcad = ::CreateEvent(nullptr, FALSE, FALSE, "Global\\SessionEventUltraCad");
     hEventPreConnect = ::CreateEvent(nullptr, FALSE, FALSE, "Global\\SessionEventUltraPreConnect");
     hEndSessionEvent = ::CreateEvent(nullptr, FALSE, FALSE, "Global\\EndSessionEvent");
@@ -1067,7 +1067,7 @@ void UltraVNCService::monitorSessions()
             // We get some preconnect session selection input
         case WAIT_OBJECT_0 + 2: {
             //Tell UltraVNC Server to stop
-            ::SetEvent(hEvent);
+            ::SetEvent(hEventIn);
             requestedSessionID = *a;
             //We always have a process handle, else we could not get the signal from it.
             DWORD dwCode = STILL_ACTIVE;
@@ -1128,7 +1128,7 @@ void UltraVNCService::monitorSessions()
             {
                 std::array<char, MAX_PATH> WORKDIR;
                 std::array<char, MAX_PATH> mycommand;
-                if (::GetModuleFileName(nullptr, WORKDIR.data(), WORKDIR.size()))
+                if (::GetModuleFileName(nullptr, WORKDIR.data(), static_cast<DWORD>(WORKDIR.size())))
                 {
                     char* p = std::strrchr(WORKDIR.data(), '\\');
                     if (p == nullptr)
@@ -1188,7 +1188,7 @@ void UltraVNCService::monitorSessions()
                 {
                     if (!IsSessionStillActive(OlddwSessionId))
                     {
-                        ::SetEvent(hEvent);
+                        ::SetEvent(hEventIn);
                     }
                 }
 
@@ -1240,7 +1240,7 @@ void UltraVNCService::monitorSessions()
                 dwSessionId = ::WTSGetActiveConsoleSessionId();
                 if (OlddwSessionId != dwSessionId)
                 {
-                    ::SetEvent(hEvent);
+                    ::SetEvent(hEventIn);
                 }
                 if (dwSessionId != 0xFFFFFFFF)
                 {
@@ -1318,9 +1318,9 @@ void UltraVNCService::monitorSessions()
     whileloop:;
     } //while
 
-    if (hEvent)
+    if (hEventIn)
     {
-        ::SetEvent(hEvent);
+        ::SetEvent(hEventIn);
     }
     if (ProcessInfo.hProcess)
     {
@@ -1336,9 +1336,9 @@ void UltraVNCService::monitorSessions()
         ProcessInfo.hProcess = nullptr;
         ProcessInfo.hThread = nullptr;
     }
-    if (hEvent)
+    if (hEventIn)
     {
-        ::CloseHandle(hEvent);
+        ::CloseHandle(hEventIn);
     }
     if (hEventcad)
     {
@@ -1398,7 +1398,7 @@ BOOL UltraVNCService::LaunchProcessWin(const DWORD dwSessionId, const bool preco
             {
                 counter = 0;
                 bReturn = TRUE;
-                DWORD error = ::GetLastError();
+                [[maybe_unused]] DWORD error = ::GetLastError();
 #ifdef _DEBUG
                 std::array<char, 256U> szText;
                 ::sprintf_s(szText.data(), szText.size(), " ++++++ CreateProcessAsUser winlogon %d\n", error);
@@ -1461,7 +1461,7 @@ BOOL UltraVNCService::LaunchProcessWin(const DWORD dwSessionId, const bool preco
             {
                 counter = 0;
                 bReturn = TRUE;
-                DWORD error = ::GetLastError();
+                [[maybe_unused]] DWORD error = ::GetLastError();
 #ifdef _DEBUG
                 std::array<char, 256U> szText;
                 ::sprintf_s(szText.data(), szText.size(), " ++++++ CreateProcessAsUser winlogon %d\n", error);
@@ -1518,10 +1518,10 @@ BOOL UltraVNCService::LaunchProcessWin(const DWORD dwSessionId, const bool preco
 
 BOOL UltraVNCService::CreateRemoteSessionProcess(const IN DWORD dwSessionId, IN BOOL bUseDefaultToken, IN HANDLE hToken,
                                                  IN LPCWSTR lpApplicationName, const IN LPSTR A_lpCommandLine,
-                                                 const IN LPSECURITY_ATTRIBUTES lpProcessAttributes,
-                                                 const IN LPSECURITY_ATTRIBUTES lpThreadAttributes, IN BOOL bInheritHandles,
+                                                 [[maybe_unused]] const IN LPSECURITY_ATTRIBUTES lpProcessAttributes,
+                                                 [[maybe_unused]] const IN LPSECURITY_ATTRIBUTES lpThreadAttributes, IN BOOL bInheritHandles,
                                                  IN DWORD dwCreationFlags, IN LPVOID lpEnvironment,
-                                                 const IN LPCWSTR lpCurrentDirectory, const IN LPSTARTUPINFO A_lpStartupInfo,
+                                                 [[maybe_unused]] const IN LPCWSTR lpCurrentDirectory, [[maybe_unused]] const IN LPSTARTUPINFO A_lpStartupInfo,
                                                  OUT LPPROCESS_INFORMATION lpProcessInformation)
 {
     if (IsShutdown)
@@ -1542,7 +1542,7 @@ BOOL UltraVNCService::CreateRemoteSessionProcess(const IN DWORD dwSessionId, IN 
     DWORD dwNameLen;
     HINSTANCE hInstWinSta;
     HANDLE hNamedPipe;
-    LPVOID pData = nullptr;
+    [[maybe_unused]] LPVOID pData = nullptr;
     BOOL bRet = FALSE;
     DWORD cbReadBytes, cbWriteBytes;
     DWORD dwEnvLen{ 0U };
@@ -1554,7 +1554,7 @@ BOOL UltraVNCService::CreateRemoteSessionProcess(const IN DWORD dwSessionId, IN 
     CPAU_RET_PARAM cpauRetData;
     DWORD dwUsedBytes = sizeof(cpauData);
     LPBYTE pBuffer = (LPBYTE)(&cpauData + 1);
-    ::GetSystemDirectoryW(szWinStaPath.data(), szWinStaPath.size());
+    ::GetSystemDirectoryW(szWinStaPath.data(), static_cast<UINT>(szWinStaPath.size()));
     lstrcatW(szWinStaPath.data(), L"\\winsta.dll");
     hInstWinSta = ::LoadLibraryW(szWinStaPath.data());
 
@@ -1750,7 +1750,7 @@ BOOL UltraVNCService::get_winlogon_handle(const OUT LPHANDLE lphUserToken, const
 {
     BOOL bResult = FALSE;
     HANDLE hProcess;
-    HANDLE hAccessToken = nullptr;
+    [[maybe_unused]] HANDLE hAccessToken = nullptr;
     HANDLE hTokenThis = nullptr;
     DWORD ID_session{ 0U };
     ID_session = mysessionID;
@@ -1817,7 +1817,7 @@ DWORD UltraVNCService::Find_winlogon(const DWORD SessionId)
 {
     PWTS_PROCESS_INFO pProcessInfo = nullptr;
     DWORD ProcessCount{ 0U };
-    DWORD Id = -1;
+    DWORD Id = static_cast<DWORD>(-1);
 
     typedef BOOL(WINAPI * pfnWTSEnumerateProcesses)(HANDLE, DWORD, DWORD, PWTS_PROCESS_INFO*, DWORD*);
     typedef VOID(WINAPI * pfnWTSFreeMemory)(PVOID);

@@ -263,15 +263,15 @@ void ClientConnection::QuietException_helper(const wchar_t* const info) { throw 
 BOOL CALLBACK DialogProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
 
 // adzm - 2010-07 - Extended clipboard
-ClientConnection::ClientConnection(VNCviewerApp* pApp)
+ClientConnection::ClientConnection(VNCviewerApp* pAppLocal)
     : fis{ 0 }, zis{ 0 }, zstdis{ 0 }, m_clipboard(ClipboardSettings::defaultViewerCaps)
-{ Init(pApp); }
+{ Init(pAppLocal); }
 
 // adzm - 2010-07 - Extended clipboard
-ClientConnection::ClientConnection(VNCviewerApp* pApp, SOCKET sock)
+ClientConnection::ClientConnection(VNCviewerApp* pAppLocal, SOCKET sock)
     : fis{ 0 }, zis{ 0 }, zstdis{ 0 }, m_clipboard(ClipboardSettings::defaultViewerCaps)
 {
-    Init(pApp);
+    Init(pAppLocal);
     if (m_opts->autoDetect)
     {
         m_opts->m_Use8Bit = rfbPFFullColors; //true;
@@ -339,10 +339,10 @@ ClientConnection::ClientConnection(VNCviewerApp* pApp, SOCKET sock)
 }
 
 // adzm - 2010-07 - Extended clipboard
-ClientConnection::ClientConnection(VNCviewerApp* pApp, LPTSTR host, int port)
+ClientConnection::ClientConnection(VNCviewerApp* pAppLocal, LPTSTR host, int port)
     : fis{ 0 }, zis{ 0 }, zstdis{ 0 }, m_clipboard(ClipboardSettings::defaultViewerCaps)
 {
-    Init(pApp);
+    Init(pAppLocal);
     if (m_opts->autoDetect)
     {
         m_opts->m_Use8Bit = rfbPFFullColors; //true;
@@ -373,7 +373,7 @@ bool GetRealOSVersion(OSVERSIONINFOW& osInfo)
     return fxPtr(&osInfo) == 0;
 }
 
-void ClientConnection::Init(VNCviewerApp* pApp)
+void ClientConnection::Init(VNCviewerApp* pAppLocal)
 {
     ::InitializeCriticalSection(&crit);
     m_hSessionDialog = nullptr;
@@ -397,7 +397,7 @@ void ClientConnection::Init(VNCviewerApp* pApp)
     m_zlibbufsize = 0;
     // adzm - 2010-07 - Fix clipboard hangs
     m_hwndNextViewer = (HWND)INVALID_HANDLE_VALUE;
-    m_pApp = pApp;
+    m_pApp = pAppLocal;
     m_dormant = 0;
     m_hBitmapDC = nullptr;
     //m_hBitmap = NULL;
@@ -645,7 +645,7 @@ void ClientConnection::Init(VNCviewerApp* pApp)
     typedef BOOL(WINAPI * PFN_GetDpiForMonitor)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*);
     PFN_GetDpiForMonitor getDpiForMonitor = nullptr;
     HMODULE hShcore = nullptr;
-    HMODULE hUser32 = nullptr;
+    HMODULE hUser32In = nullptr;
 
     OSVERSIONINFOW osInfo{};
     GetRealOSVersion(osInfo);
@@ -696,11 +696,11 @@ void ClientConnection::Init(VNCviewerApp* pApp)
     m_FullScreenNotDone = false;
 
     // AdjustWindowRectExForDpi   Windows 10, version 1607 [desktop apps only]
-    hUser32 = ::LoadLibraryEx(_T("user32.dll"), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    hUser32In = ::LoadLibraryEx(_T("user32.dll"), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
     adjustWindowRectExForDpi = nullptr;
-    if (hUser32)
+    if (hUser32In)
     {
-        adjustWindowRectExForDpi = (PFN_AdjustWindowRectExForDpi)::GetProcAddress(hUser32, "AdjustWindowRectExForDpi");
+        adjustWindowRectExForDpi = (PFN_AdjustWindowRectExForDpi)::GetProcAddress(hUser32In, "AdjustWindowRectExForDpi");
     }
 }
 
@@ -1148,7 +1148,7 @@ void ClientConnection::CreateButtons(const BOOL mini, const BOOL ultra)
 
         tbab.hInst = m_hInstResDLL;
         tbab.nID = IDB_BITMAPl;
-        stdidx = ::SendMessage(m_hwndTB, TB_ADDBITMAP, 6, (LPARAM)&tbab);
+        stdidx = static_cast<int>(::SendMessage(m_hwndTB, TB_ADDBITMAP, 6, (LPARAM)&tbab));
         RECT tbrect;
         RECT wrect;
         RECT trect;
@@ -1245,7 +1245,7 @@ void ClientConnection::CreateButtons(const BOOL mini, const BOOL ultra)
 
         tbab.hInst = m_hInstResDLL;
         tbab.nID = IDB_BITMAPl;
-        stdidx = ::SendMessage(m_hwndTB, TB_ADDBITMAP, 6, (LPARAM)&tbab);
+        stdidx = static_cast<int>(::SendMessage(m_hwndTB, TB_ADDBITMAP, 6, (LPARAM)&tbab));
         RECT tbrect;
         RECT wrect;
         RECT trect;
@@ -1420,7 +1420,7 @@ void ClientConnection::GTGBS_CreateToolbar()
     for (int i{ 0 }; i < m_pMRU->NumItems(); ++i)
     {
         m_pMRU->GetItem(i, valname.data(), 255);
-        const int pos = ::SendMessageW(m_logo_wnd, CB_ADDSTRING, 0, (LPARAM)valname.data());
+        [[maybe_unused]] const int pos = static_cast<int>(::SendMessageW(m_logo_wnd, CB_ADDSTRING, 0, (LPARAM)valname.data()));
     }
     ::SendMessage(m_logo_wnd, CB_SETCURSEL, 0, 0);
     if (m_pMRU)
@@ -1503,9 +1503,9 @@ void ClientConnection::CreateDisplay()
             {
                 for (int b{ 5 }; b >= 0; --b)
                 {
-                    plp->palPalEntry[pepos].peRed = r * 255 / 5;
-                    plp->palPalEntry[pepos].peGreen = g * 255 / 5;
-                    plp->palPalEntry[pepos].peBlue = b * 255 / 5;
+                    plp->palPalEntry[pepos].peRed = static_cast<BYTE>(r * 255 / 5);
+                    plp->palPalEntry[pepos].peGreen = static_cast<BYTE>(g * 255 / 5);
+                    plp->palPalEntry[pepos].peBlue = static_cast<BYTE>(b * 255 / 5);
                     plp->palPalEntry[pepos].peFlags = 0;
                     ++pepos;
                 }
@@ -1727,7 +1727,7 @@ void ClientConnection::LoadDSMPlugin(bool fForceReload)
         {
             {
                 std::array<char, MAX_PATH> _plug;
-                ::WideCharToMultiByte(CP_ACP, 0, m_opts->m_szDSMPluginFilename.data(), -1, _plug.data(), _plug.size(), nullptr, nullptr);
+                ::WideCharToMultiByte(CP_ACP, 0, m_opts->m_szDSMPluginFilename.data(), -1, _plug.data(), static_cast<int>(_plug.size()), nullptr, nullptr);
                 m_pDSMPlugin->LoadPlugin(_plug.data(), m_opts->m_listening);
             }
             if (m_pDSMPlugin->IsLoaded())
@@ -2037,14 +2037,14 @@ void ClientConnection::Connect()
                 IsIpv6 = true;
                 ::InetPtonW(AF_INET6, m_host.data(), &(Ipv6Addr.sin6_addr));
                 Ipv6Addr.sin6_family = AF_INET6;
-                Ipv6Addr.sin6_port = htons(m_port);
+                Ipv6Addr.sin6_port = htons(static_cast<u_short>(m_port));
             }
             if (infoW->ai_family == AF_INET)
             {
                 IsIpv4 = true;
                 ::InetPtonW(AF_INET, m_host.data(), &(Ipv4Addr.sin_addr));
                 Ipv4Addr.sin_family = AF_INET;
-                Ipv4Addr.sin_port = htons(m_port);
+                Ipv4Addr.sin_port = htons(static_cast<u_short>(m_port));
             }
             ::FreeAddrInfoW(infoW);
         }
@@ -2071,14 +2071,14 @@ void ClientConnection::Connect()
                         pIpv4Addr = (struct sockaddr_in*)p->ai_addr;
                         std::memcpy(&Ipv4Addr, pIpv4Addr, sizeof(Ipv4Addr));
                         Ipv4Addr.sin_family = AF_INET;
-                        Ipv4Addr.sin_port = htons(m_port);
+                        Ipv4Addr.sin_port = htons(static_cast<u_short>(m_port));
                         break;
                     case AF_INET6:
                         IsIpv6 = true;
                         pIpv6Addr = (struct sockaddr_in6*)p->ai_addr;
                         std::memcpy(&Ipv6Addr, pIpv6Addr, sizeof(Ipv6Addr));
                         Ipv6Addr.sin6_family = AF_INET6;
-                        Ipv6Addr.sin6_port = htons(m_port);
+                        Ipv6Addr.sin6_port = htons(static_cast<u_short>(m_port));
 
                         sockaddr_ip = (LPSOCKADDR)p->ai_addr;
                         ipbufferlength = 46;
@@ -2419,7 +2419,7 @@ void ClientConnection::Connect()
             ::SetDlgItemInt(m_hwndStatus, IDC_PORT, m_port, FALSE);
         }
         thataddr.sin_family = AF_INET;
-        thataddr.sin_port = htons(m_port);
+        thataddr.sin_port = htons(static_cast<u_short>(m_port));
 
         DWORD threadID;
         if (ThreadSocketTimeout)
@@ -2470,7 +2470,8 @@ void ClientConnection::ConnectProxy()
         struct sockaddr_in Ipv4Addr;
         std::memset(&Ipv6Addr, 0, sizeof(Ipv6Addr));
         std::memset(&Ipv4Addr, 0, sizeof(Ipv4Addr));
-        struct addrinfo hint, *info = 0;
+        struct addrinfo hint;
+        [[maybe_unused]] struct addrinfo* info = 0;
         std::memset(&hint, 0, sizeof(hint));
 
         LPSOCKADDR sockaddr_ip;
@@ -2492,14 +2493,14 @@ void ClientConnection::ConnectProxy()
                 IsIpv6 = true;
                 ::InetPtonW(AF_INET6, m_proxyhost.data(), &(Ipv6Addr.sin6_addr));
                 Ipv6Addr.sin6_family = AF_INET6;
-                Ipv6Addr.sin6_port = htons(m_proxyport);
+                Ipv6Addr.sin6_port = htons(static_cast<u_short>(m_proxyport));
             }
             if (infoW->ai_family == AF_INET)
             {
                 IsIpv4 = true;
                 ::InetPtonW(AF_INET, m_proxyhost.data(), &(Ipv4Addr.sin_addr));
                 Ipv4Addr.sin_family = AF_INET;
-                Ipv4Addr.sin_port = htons(m_proxyport);
+                Ipv4Addr.sin_port = htons(static_cast<u_short>(m_proxyport));
             }
             ::FreeAddrInfoW(infoW);
         }
@@ -2526,14 +2527,14 @@ void ClientConnection::ConnectProxy()
                         pIpv4Addr = (struct sockaddr_in*)p->ai_addr;
                         std::memcpy(&Ipv4Addr, pIpv4Addr, sizeof(Ipv4Addr));
                         Ipv4Addr.sin_family = AF_INET;
-                        Ipv4Addr.sin_port = htons(m_proxyport);
+                        Ipv4Addr.sin_port = htons(static_cast<u_short>(m_proxyport));
                         break;
                     case AF_INET6:
                         IsIpv6 = true;
                         pIpv6Addr = (struct sockaddr_in6*)p->ai_addr;
                         std::memcpy(&Ipv6Addr, pIpv6Addr, sizeof(Ipv6Addr));
                         Ipv6Addr.sin6_family = AF_INET6;
-                        Ipv6Addr.sin6_port = htons(m_proxyport);
+                        Ipv6Addr.sin6_port = htons(static_cast<u_short>(m_proxyport));
 
                         sockaddr_ip = (LPSOCKADDR)p->ai_addr;
                         ipbufferlength = 46;
@@ -2852,7 +2853,7 @@ void ClientConnection::ConnectProxy()
             ::SetDlgItemInt(m_hwndStatus, IDC_PORT, m_proxyport, FALSE);
         }
         thataddr.sin_family = AF_INET;
-        thataddr.sin_port = htons(m_proxyport);
+        thataddr.sin_port = htons(static_cast<u_short>(m_proxyport));
 
         DWORD threadID;
         if (ThreadSocketTimeout)
@@ -2908,7 +2909,7 @@ void ClientConnection::SetSocketOptions()
         delete fis;
         fis = nullptr;
     }
-    fis = new rdr::FdInStream(m_sock);
+    fis = new rdr::FdInStream(static_cast<int>(m_sock));
     fis->SetDSMMode(m_pDSMPlugin->IsEnabled()); // sf@2003 - Special DSM mode for ZRLE encoding
 }
 
@@ -3137,7 +3138,7 @@ void ClientConnection::NegotiateProtocolVersion()
     if (m_Is_Listening)
     {
         std::array<wchar_t, MAX_PATH> szFileName;
-        if (::GetModuleFileNameW(nullptr, szFileName.data(), szFileName.size()))
+        if (::GetModuleFileNameW(nullptr, szFileName.data(), static_cast<DWORD>(szFileName.size())))
         {
             wchar_t* p = std::wcsrchr(szFileName.data(), L'\\');
             if (p != nullptr)
@@ -3298,8 +3299,8 @@ void ClientConnection::NegotiateProxy()
         }
         {
             std::array<char, MAX_HOST_NAME_LEN> _tmpA{ 0 };
-            ::WideCharToMultiByte(CP_UTF8, 0, tmphost.data(), -1, _tmpA.data(), _tmpA.size(), nullptr, nullptr);
-            WriteExactProxy(_tmpA.data(), _tmpA.size());
+            ::WideCharToMultiByte(CP_UTF8, 0, tmphost.data(), -1, _tmpA.data(), static_cast<int>(_tmpA.size()), nullptr, nullptr);
+            WriteExactProxy(_tmpA.data(), static_cast<int>(_tmpA.size()));
         }
 
         vnclog.Print(0, _T("Connected to RFB server, using protocol version %d.%d\n"), rfbProtocolMajorVersion, m_minorVersion);
@@ -3863,7 +3864,7 @@ void ClientConnection::AuthSecureVNCPlugin()
             {
                 if (!bTriedNoPassword && (std::strlen(passwd.data()) > 0))
                 {
-                    m_pIntegratedPluginInterface->SetPasswordData((const BYTE*)passwd.data(), std::strlen(passwd.data()));
+                    m_pIntegratedPluginInterface->SetPasswordData((const BYTE*)passwd.data(), static_cast<int>(std::strlen(passwd.data())));
                     bTriedNoPassword = true;
                 }
             }
@@ -4025,7 +4026,7 @@ void ClientConnection::AuthSecureVNCPlugin_old()
             {
                 if (!bTriedNoPassword && (std::strlen(passwd.data()) > 0))
                 {
-                    m_pIntegratedPluginInterface->SetPasswordData((const BYTE*)passwd.data(), std::strlen(passwd.data()));
+                    m_pIntegratedPluginInterface->SetPasswordData((const BYTE*)passwd.data(), static_cast<int>(std::strlen(passwd.data())));
                     bTriedNoPassword = true;
                 }
                 else
@@ -4057,7 +4058,7 @@ void ClientConnection::AuthSecureVNCPlugin_old()
                             passwd[8U] = '\0';
                         }
 
-                        m_pIntegratedPluginInterface->SetPasswordData((const BYTE*)passwd.data(), std::strlen(passwd.data()));
+                        m_pIntegratedPluginInterface->SetPasswordData((const BYTE*)passwd.data(), static_cast<int>(std::strlen(passwd.data())));
                     }
                     else
                     {
@@ -4348,9 +4349,9 @@ void ClientConnection::AuthMsLogonI()
     // m_ms_logon = false;
     if (m_ms_logon_I_legacy)
     {
-        ReadExact((char*)challengems.data(), challengems.size());
+        ReadExact((char*)challengems.data(), static_cast<int>(challengems.size()));
     }
-    ReadExact((char*)challenge.data(), challenge.size());
+    ReadExact((char*)challenge.data(), static_cast<int>(challenge.size()));
 
     // MS-Logon
     if (m_ms_logon_I_legacy)
@@ -4362,7 +4363,7 @@ void ClientConnection::AuthMsLogonI()
         }
         WriteExact((char*)user.data(), sizeof(char) * 256);
         WriteExact((char*)domain.data(), sizeof(char) * 256);
-        WriteExact((char*)challengems.data(), challengems.size());
+        WriteExact((char*)challengems.data(), static_cast<int>(challengems.size()));
         vncEncryptBytes(challenge.data(), passwd.data());
 
         /* Lose the plain-text password from memory */
@@ -4372,7 +4373,7 @@ void ClientConnection::AuthMsLogonI()
             passwd[i] = '\0';
         }
 
-        WriteExact((char*)challenge.data(), challenge.size());
+        WriteExact((char*)challenge.data(), static_cast<int>(challenge.size()));
     }
 }
 
@@ -4677,7 +4678,7 @@ void ClientConnection::AuthVnc()
             }
         }
     }
-    ReadExact((char*)challenge.data(), challenge.size());
+    ReadExact((char*)challenge.data(), static_cast<int>(challenge.size()));
     vncEncryptBytes(challenge.data(), passwd.data());
     /* Lose the plain-text password from memory */
     const int nLen = static_cast<int>(std::strlen(passwd.data()));
@@ -4685,7 +4686,7 @@ void ClientConnection::AuthVnc()
     {
         passwd[i] = '\0';
     }
-    WriteExact((char*)challenge.data(), challenge.size());
+    WriteExact((char*)challenge.data(), static_cast<int>(challenge.size()));
 }
 
 void ClientConnection::AuthXvp()
@@ -4822,8 +4823,8 @@ void ClientConnection::AuthSessionSelect()
     extern HINSTANCE m_hInstResDLL;
     InitCtrls.dwICC = ICC_LISTVIEW_CLASSES | ICC_INTERNET_CLASSES;
     InitCtrls.dwSize = sizeof(INITCOMMONCONTROLSEX);
-    const BOOL bRet = ::InitCommonControlsEx(&InitCtrls);
-    int tt = ::DialogBoxParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_SESSIONSELECTOR), nullptr, (DLGPROC)DialogProc, (LONG_PTR)this);
+    [[maybe_unused]] const BOOL bRet = ::InitCommonControlsEx(&InitCtrls);
+    int tt = static_cast<int>(::DialogBoxParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_SESSIONSELECTOR), nullptr, (DLGPROC)DialogProc, (LONG_PTR)this));
     WriteExact((char*)&tt, sizeof(int));
 }
 
@@ -4863,7 +4864,7 @@ void ClientConnection::SendClientInit()
     }
 }
 
-void ClientConnection::ReadServerInit(const bool reconnect)
+void ClientConnection::ReadServerInit([[maybe_unused]] const bool reconnect)
 {
     ReadExact((char*)&m_si, sz_rfbServerInitMsg);
 
@@ -5380,7 +5381,7 @@ void ClientConnection::SetupPixelFormat()
             // If we're using truecolor, and the server has more bits than we do
             if ((localBitsPerPixel > m_myFormat.depth) && !(localRasterCaps & RC_PALETTE))
             {
-                m_myFormat.depth = localBitsPerPixel;
+                m_myFormat.depth = static_cast<CARD8>(localBitsPerPixel);
 
                 // create a bitmap compatible with the current display
                 // call GetDIBits twice to get the colour info.
@@ -5652,9 +5653,9 @@ void ClientConnection::Createdib()
 
             for (int ii{ 0 }; ii < 256; ++ii)
             {
-                bi.color[ii].rgbRed = rgbQ[ii].r >> 8;
-                bi.color[ii].rgbGreen = rgbQ[ii].g >> 8;
-                bi.color[ii].rgbBlue = rgbQ[ii].b >> 8;
+                bi.color[ii].rgbRed = static_cast<BYTE>(rgbQ[ii].r >> 8);
+                bi.color[ii].rgbGreen = static_cast<BYTE>(rgbQ[ii].g >> 8);
+                bi.color[ii].rgbBlue = static_cast<BYTE>(rgbQ[ii].b >> 8);
                 bi.color[ii].rgbReserved = 0;
             }
             ::SetDIBColorTable(m_hmemdc, 0, 256, bi.color);
@@ -6075,7 +6076,7 @@ inline bool ClientConnection::ProcessPointerEvent(int x, int y, DWORD keyflags, 
                 m_PendingMouseMove.bValid = true;
 
                 m_flushMouseMoveTimer =
-                    ::SetTimer(m_hwndcn, IDT_FLUSHMOUSEMOVETIMER, m_PendingMouseMove.dwMinimumMouseMoveInterval, nullptr);
+                    static_cast<UINT>(::SetTimer(m_hwndcn, IDT_FLUSHMOUSEMOVETIMER, m_PendingMouseMove.dwMinimumMouseMoveInterval, nullptr));
 
                 // this is the only time we will return false!
                 return false;
@@ -6169,7 +6170,7 @@ inline bool ClientConnection::ProcessPointerEvent(int x, int y, DWORD keyflags, 
             if (((msg == WM_LBUTTONDOWN) && !(keyflags & MK_RBUTTON)) || ((msg == WM_RBUTTONDOWN) && !(keyflags & MK_LBUTTON)))
             {
                 // Start timer for emulation.
-                m_emulate3ButtonsTimer = ::SetTimer(m_hwndcn, IDT_EMULATE3BUTTONSTIMER, m_opts->m_Emul3Timeout, nullptr);
+                m_emulate3ButtonsTimer = static_cast<UINT>(::SetTimer(m_hwndcn, IDT_EMULATE3BUTTONSTIMER, m_opts->m_Emul3Timeout, nullptr));
 
                 if (!m_emulate3ButtonsTimer)
                 {
@@ -6427,7 +6428,7 @@ inline void ClientConnection::SendPointerEvent(int x, int y, int buttonMask)
     oldPointerY = y;
     oldButtonMask = buttonMask;
     pe.type = rfbPointerEvent;
-    pe.buttonMask = buttonMask;
+    pe.buttonMask = static_cast<CARD8>(buttonMask);
     if (x < 0)
     {
         x = 0;
@@ -6491,7 +6492,7 @@ inline void ClientConnection::ProcessKeyEvent(const int virtKey, const DWORD key
     {
         try
         {
-            m_keymap->PCtoX(virtKey, keyData, this);
+            m_keymap->PCtoX(static_cast<BYTE>(virtKey), keyData, this);
         }
         catch (Exception& e)
         {
@@ -6952,7 +6953,7 @@ void ClientConnection::ShowConnInfo()
 //  They finish the initialisation, then chiefly read data from the server.
 // ********************************************************************
 
-void* ClientConnection::run_undetached(void* const arg)
+void* ClientConnection::run_undetached([[maybe_unused]] void* const arg)
 {
     vnclog.Print(9, _T("Update-processing thread started\n"));
 
@@ -7313,7 +7314,7 @@ void ClientConnection::Internal_SendFramebufferUpdateRequest(int x, int y, int w
     WriteExact_timeout((char*)&fur, sz_rfbFramebufferUpdateRequestMsg, rfbFramebufferUpdateRequest, 5);
 }
 
-void ClientConnection::HandleFramebufferUpdateRequest(const WPARAM wParam, const LPARAM lParam)
+void ClientConnection::HandleFramebufferUpdateRequest(const WPARAM wParam, [[maybe_unused]] const LPARAM lParam)
 {
     switch (wParam)
     {
@@ -7458,7 +7459,7 @@ bool ClientConnection::SendServerScale(const int nScale)
 
 
     ssc.type = rfbSetScale;
-    ssc.scale = /*(unsigned short)*/ nScale;
+    ssc.scale = static_cast<CARD8>(/*(unsigned short)*/ nScale);
 
     WriteExact((char*)&ssc, sz_rfbSetScaleMsg, rfbSetScale);
 
@@ -7475,7 +7476,7 @@ bool ClientConnection::SendServerInput(const BOOL enabled)
 
 
     sim.type = rfbSetServerInput;
-    sim.status = enabled;
+    sim.status = static_cast<CARD8>(enabled);
 
     WriteExact((char*)&sim, sz_rfbSetServerInputMsg, rfbSetServerInput);
 
@@ -7491,7 +7492,7 @@ bool ClientConnection::SendSetMonitor(int nbr)
     rfbMonitorMsg mm;
     std::memset(&mm, 0, sizeof(mm));
     mm.type = rfbSetMonitor;
-    mm.nbr = nbr;
+    mm.nbr = static_cast<CARD8>(nbr);
     if (nbrMonitors != 0)
     { //we need to receiev the number of monitor to be sure the server support the set
         WriteExact_timeout((char*)&mm, sz_rfbMonitorMsg, rfbSetMonitor, 5);
@@ -7629,7 +7630,7 @@ inline void ClientConnection::ReadScreenUpdate()
             }
             if ((edsHdr.numberOfScreens == 1) && m_opts->m_GNOME)
             {
-                int height = Swap16IfLE(eds.height);
+                [[maybe_unused]] int height = Swap16IfLE(eds.height);
                 offsetXExtSDisplay = Swap16IfLE(eds.x) / m_nServerScale;
                 offsetYExtSDisplay = Swap16IfLE(eds.y) / m_nServerScale;
                 widthExtSDisplay = Swap16IfLE(eds.width) / m_nServerScale;
@@ -7639,8 +7640,8 @@ inline void ClientConnection::ReadScreenUpdate()
                     {
                         omni_mutex_lock l(m_bitmapdcMutex);
                         ClearCache();
-                        m_si.framebufferWidth = widthExtSDisplay;
-                        m_si.framebufferHeight = heightExtSDisplay;
+                        m_si.framebufferWidth = static_cast<CARD16>(widthExtSDisplay);
+                        m_si.framebufferHeight = static_cast<CARD16>(heightExtSDisplay);
                         checkParemeters();
                         Createdib();
                     }
@@ -7799,14 +7800,14 @@ inline void ClientConnection::ReadScreenUpdate()
 
         if (m_TrafficMonitor)
         {
-            HDC hdcX, hdcBits;
-            hdcX = ::GetDC(m_TrafficMonitor);
-            hdcBits = ::CreateCompatibleDC(hdcX);
-            HGDIOBJ hbrOld = ::SelectObject(hdcBits, m_bitmapBACK);
-            ::BitBlt(hdcX, 4, 2, 22, 20, hdcBits, 0, 0, SRCCOPY);
-            ::SelectObject(hdcBits, hbrOld);
-            ::DeleteDC(hdcBits);
-            ::ReleaseDC(m_TrafficMonitor, hdcX);
+            HDC hdcXInner, hdcBitsInner;
+            hdcXInner = ::GetDC(m_TrafficMonitor);
+            hdcBitsInner = ::CreateCompatibleDC(hdcXInner);
+            HGDIOBJ hbrOld = ::SelectObject(hdcBitsInner, m_bitmapBACK);
+            ::BitBlt(hdcXInner, 4, 2, 22, 20, hdcBitsInner, 0, 0, SRCCOPY);
+            ::SelectObject(hdcBitsInner, hbrOld);
+            ::DeleteDC(hdcBitsInner);
+            ::ReleaseDC(m_TrafficMonitor, hdcXInner);
         }
 
         // sf@2004
@@ -8051,7 +8052,7 @@ inline void ClientConnection::ReadScreenUpdate()
                     SoftCursorUnlockScreen();
                 }
 
-                iCurrentRect += rects.size() - 1;
+                iCurrentRect += static_cast<UINT>(rects.size()) - 1;
             }
             break;
 #endif
@@ -8894,7 +8895,7 @@ int ClientConnection::Send(const char* const buff, const unsigned int bufflen, c
     FD_SET(static_cast<unsigned int>(m_sock), &write_fds);
     tm.tv_sec = timeout;
     tm.tv_usec = 0;
-    count = select(m_sock + 1, nullptr, &write_fds, nullptr, &tm);
+    count = select(static_cast<int>(m_sock + 1), nullptr, &write_fds, nullptr, &tm);
 
     if (count == 0)
     {
@@ -9347,8 +9348,8 @@ void ClientConnection::ReadNewFBSize(rfbFramebufferUpdateRectHeader* const pfbur
             throw ErrorException(L"Invalid framebuffer resize dimensions.");
         }
 
-        m_si.framebufferWidth = pfburh->r.w / m_nServerScale;
-        m_si.framebufferHeight = pfburh->r.h / m_nServerScale;
+        m_si.framebufferWidth = static_cast<CARD16>(pfburh->r.w / m_nServerScale);
+        m_si.framebufferHeight = static_cast<CARD16>(pfburh->r.h / m_nServerScale);
 
         Createdib();
         m_pendingScaleChange = true;
@@ -9392,9 +9393,9 @@ void ClientConnection::SendMonitorSizes()
         tdc.Init();
         if (m_opts->m_useAllMonitors)
         {
-            sdmz.numberOfScreens = tdc.nr_monitors;
-            sdmz.height = tdc.monarray[0U].height;
-            sdmz.width = tdc.monarray[0U].width;
+            sdmz.numberOfScreens = static_cast<CARD8>(tdc.nr_monitors);
+            sdmz.height = static_cast<CARD16>(tdc.monarray[0U].height);
+            sdmz.width = static_cast<CARD16>(tdc.monarray[0U].width);
             sdmz.type = rfbSetDesktopSize;
             WriteExact((char*)&sdmz, sz_rfbSetDesktopSizeMsg);
             for (int i{ 1 }; i < tdc.nr_monitors + 1; ++i)
@@ -9412,8 +9413,8 @@ void ClientConnection::SendMonitorSizes()
         else
         {
             sdmz.numberOfScreens = 1;
-            sdmz.height = tdc.monarray[0U].height;
-            sdmz.width = tdc.monarray[0U].width;
+            sdmz.height = static_cast<CARD16>(tdc.monarray[0U].height);
+            sdmz.width = static_cast<CARD16>(tdc.monarray[0U].width);
             sdmz.type = rfbSetDesktopSize;
             WriteExact((char*)&sdmz, sz_rfbSetDesktopSizeMsg);
             rfbExtDesktopScreen eds;
@@ -9837,7 +9838,7 @@ LRESULT CALLBACK ClientConnection::GTGBS_StatusProc(const HWND hwnd, const UINT 
         ::SetWindowPos(hwnd, HWND_TOPMOST, Rect.left, Rect.top, Rect.right - Rect.left, Rect.bottom - Rect.top, SWP_SHOWWINDOW);
 
         std::array<char, MAX_PATH> wt{};
-        ClientConnection* _this = (ClientConnection*)lParam;
+        ClientConnection* _thisInner = (ClientConnection*)lParam;
         helper::SafeSetWindowUserData(hwnd, lParam);
 
         std::array<char, 50U> version{};
@@ -9846,13 +9847,13 @@ LRESULT CALLBACK ClientConnection::GTGBS_StatusProc(const HWND hwnd, const UINT 
         ::strcat_s(title.data(), title.size(), GetVersionFromResource(version.data()));
         ::SetDlgItemTextA(hwnd, IDC_UVVERSION, title.data());
 
-        ::SetDlgItemInt(hwnd, IDC_RECEIVED, static_cast<UINT>(_this->m_BytesRead), false);
-        ::SetDlgItemInt(hwnd, IDC_SEND, static_cast<UINT>(_this->m_BytesSend), false);
+        ::SetDlgItemInt(hwnd, IDC_RECEIVED, static_cast<UINT>(_thisInner->m_BytesRead), false);
+        ::SetDlgItemInt(hwnd, IDC_SEND, static_cast<UINT>(_thisInner->m_BytesSend), false);
 
-        if (_this->m_host.data() != nullptr)
+        if (_thisInner->m_host.data() != nullptr)
         {
-            ::SetDlgItemTextW(hwnd, IDC_VNCSERVER, _this->m_host.data());
-            ::_snwprintf_s((wchar_t*)wt.data(), wt.size(), _TRUNCATE, L"%s %s", sz_L72.data(), _this->m_host.data());
+            ::SetDlgItemTextW(hwnd, IDC_VNCSERVER, _thisInner->m_host.data());
+            ::_snwprintf_s((wchar_t*)wt.data(), wt.size(), _TRUNCATE, L"%s %s", sz_L72.data(), _thisInner->m_host.data());
             ::SetWindowTextW(hwnd, (LPCWSTR)wt.data());
         }
         else
@@ -9861,43 +9862,43 @@ LRESULT CALLBACK ClientConnection::GTGBS_StatusProc(const HWND hwnd, const UINT 
             ::SetWindowTextW(hwnd, sz_L73.data());
         }
 
-        if (_this->m_port != 0)
+        if (_thisInner->m_port != 0)
         {
-            ::SetDlgItemInt(hwnd, IDC_PORT, _this->m_port, FALSE);
+            ::SetDlgItemInt(hwnd, IDC_PORT, _thisInner->m_port, FALSE);
         }
         else
         {
             ::SetDlgItemTextW(hwnd, IDC_PORT, L"");
         }
 
-        if (_this->m_sock != 0)
+        if (_thisInner->m_sock != 0)
         {
-            if (_this->m_pDSMPlugin->IsEnabled())
+            if (_thisInner->m_pDSMPlugin->IsEnabled())
             {
                 std::array<char, 255U> szMess;
                 std::memset(szMess.data(), 0, 255);
                 {
                     std::array<wchar_t, 255U> _wm;
-                    ::_snwprintf_s(_wm.data(), 255, _TRUNCATE, L"%s (%hs-v%hs)", sz_L49.data(), _this->m_pDSMPlugin->GetPluginName(), _this->m_pDSMPlugin->GetPluginVersion());
+                    ::_snwprintf_s(_wm.data(), 255, _TRUNCATE, L"%s (%hs-v%hs)", sz_L49.data(), _thisInner->m_pDSMPlugin->GetPluginName(), _thisInner->m_pDSMPlugin->GetPluginVersion());
                     ::SetDlgItemTextW(hwnd, IDC_STATUS, _wm.data());
                 }
 
                 //adzm 2010-05-10
-                if (_this->m_pIntegratedPluginInterface)
+                if (_thisInner->m_pIntegratedPluginInterface)
                 {
                     {
                         std::array<wchar_t, 256U> _wdcs;
-                        ::MultiByteToWideChar(CP_UTF8, 0, _this->m_pIntegratedPluginInterface->DescribeCurrentSettings(), -1,
+                        ::MultiByteToWideChar(CP_UTF8, 0, _thisInner->m_pIntegratedPluginInterface->DescribeCurrentSettings(), -1,
                                             _wdcs.data(), 256);
                         ::SetDlgItemTextW(hwnd, IDC_PLUGIN_STATUS, _wdcs.data());
                     }
                 }
-                else if (_this->m_pPluginInterface)
+                else if (_thisInner->m_pPluginInterface)
                 {
-                    if (_this->m_veNCryptDesc[0U])
+                    if (_thisInner->m_veNCryptDesc[0U])
                     {
                         std::array<wchar_t, 300U> _wdcs;
-                        ::MultiByteToWideChar(CP_UTF8, 0, _this->m_veNCryptDesc.data(), -1, _wdcs.data(), _wdcs.size());
+                        ::MultiByteToWideChar(CP_UTF8, 0, _thisInner->m_veNCryptDesc.data(), -1, _wdcs.data(), static_cast<int>(_wdcs.size()));
                         ::SetDlgItemTextW(hwnd, IDC_PLUGIN_STATUS, _wdcs.data());
                     }
                     else
@@ -9907,9 +9908,9 @@ LRESULT CALLBACK ClientConnection::GTGBS_StatusProc(const HWND hwnd, const UINT 
                 }
                 else
                 {
-                    if (_this->m_opts->m_oldplugin)
+                    if (_thisInner->m_opts->m_oldplugin)
                     {
-                        if (::_stricmp(_this->m_pDSMPlugin->GetPluginParams(), "NoPassword") == 0)
+                        if (::_stricmp(_thisInner->m_pDSMPlugin->GetPluginParams(), "NoPassword") == 0)
                         {
                             ::SetDlgItemTextW(hwnd, IDC_PLUGIN_STATUS, L"(old plugin, rc4.key, encryption)");
                         }
@@ -9927,13 +9928,13 @@ LRESULT CALLBACK ClientConnection::GTGBS_StatusProc(const HWND hwnd, const UINT 
                 //Problem, old plugins don't have xxPluginInterface
                 // they always say no encryption
             }
-            else if (_this->m_pPluginInterface && _this->m_veNCryptDesc[0U])
+            else if (_thisInner->m_pPluginInterface && _thisInner->m_veNCryptDesc[0U])
             {
                 // TLS transport installed via VeNCrypt (no DSM plugin):
                 // show negotiated subtype, cipher suite and SASL mech.
                 ::SetDlgItemTextW(hwnd, IDC_STATUS, sz_L49.data());
                 std::array<wchar_t, 300U> _wtls;
-                ::MultiByteToWideChar(CP_UTF8, 0, _this->m_veNCryptDesc.data(), -1, _wtls.data(), _wtls.size());
+                ::MultiByteToWideChar(CP_UTF8, 0, _thisInner->m_veNCryptDesc.data(), -1, _wtls.data(), static_cast<int>(_wtls.size()));
                 ::SetDlgItemTextW(hwnd, IDC_PLUGIN_STATUS, _wtls.data());
             }
             else
@@ -9948,16 +9949,16 @@ LRESULT CALLBACK ClientConnection::GTGBS_StatusProc(const HWND hwnd, const UINT 
 
         //CentreWindow(hwnd);
         ::ShowWindow(hwnd, SW_SHOW);
-        _this->m_hwndStatus = hwnd;
-        if (_this->m_running)
+        _thisInner->m_hwndStatus = hwnd;
+        if (_thisInner->m_running)
         {
             //Normaler status
             ::ShowWindow(::GetDlgItem(hwnd, IDQUIT), SW_HIDE);
             ::ShowWindow(::GetDlgItem(hwnd, IDCLOSE), SW_SHOW);
             // sf@2002
-            if (!_this->m_nStatusTimer)
+            if (!_thisInner->m_nStatusTimer)
             {
-                _this->m_nStatusTimer = ::SetTimer(hwnd, 3333, 1000, nullptr);
+                _thisInner->m_nStatusTimer = static_cast<int>(::SetTimer(hwnd, 3333, 1000, nullptr));
             }
         }
         else
@@ -10025,7 +10026,7 @@ LRESULT CALLBACK ClientConnection::GTGBS_StatusProc(const HWND hwnd, const UINT 
 //
 //
 LRESULT CALLBACK ClientConnection::GTGBS_SendCustomKey_proc(const HWND Dlg, const UINT iMsg, const WPARAM wParam,
-                                                            const LPARAM lParam)
+                                                            [[maybe_unused]] const LPARAM lParam)
 {
     switch (iMsg)
     {
@@ -10979,7 +10980,7 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
         {
             std::array<char, 10U> temp;
             std::array<wchar_t, 150U> wtext;
-            _itoa(wParam, temp.data(), 10);
+            _itoa(static_cast<int>(wParam), temp.data(), 10);
             ::_snwprintf_s(wtext.data(), 150, _TRUNCATE, L"UltraVNC Viewer - Connection dropped, trying to reconnect (%hs)", temp.data());
             ::SetWindowTextW(_this->m_hwndMain, wtext.data());
             _this->m_opts->m_NoStatus = true;
@@ -11452,8 +11453,8 @@ LRESULT CALLBACK ClientConnection::WndProcTBwin(const HWND hwnd, const UINT iMsg
                 UINT Key;
                 //_this->SendKeyEvent(XK_Execute,     true);
                 //_this->SendKeyEvent(XK_Execute,     false);
-                Key = ::DialogBox(m_hInstResDLL, MAKEINTRESOURCE(IDD_CUSTUM_KEY), nullptr,
-                                (DLGPROC)ClientConnection::GTGBS_SendCustomKey_proc);
+                Key = static_cast<UINT>(::DialogBox(m_hInstResDLL, MAKEINTRESOURCE(IDD_CUSTUM_KEY), nullptr,
+                                (DLGPROC)ClientConnection::GTGBS_SendCustomKey_proc));
                 if (Key > 0)
                 {
                     vnclog.Print(0, _T("START Send Custom Key %d\n"), Key);
@@ -11639,7 +11640,7 @@ LRESULT CALLBACK ClientConnection::WndProchwnd(const HWND hwnd, UINT iMsg, WPARA
         _this->UpdateRemoteClipboardCaps();
         return 0;
     case WM_UPDATEREMOTECLIPBOARD:
-        _this->UpdateRemoteClipboard(wParam);
+        _this->UpdateRemoteClipboard(static_cast<CARD32>(wParam));
         return 0;
 
     case WM_HIGHRESOLUTIONWHEEL:
@@ -11709,8 +11710,8 @@ LRESULT CALLBACK ClientConnection::WndProchwnd(const HWND hwnd, UINT iMsg, WPARA
 #ifdef _Gii
             else if (wParam == TOUCH_REGISTER_TIMER)
             {
-                bool ret = ::RegisterTouchWindow(hwnd, 0);
-                DWORD err = ::GetLastError();
+                [[maybe_unused]] bool ret = ::RegisterTouchWindow(hwnd, 0);
+                [[maybe_unused]] DWORD err = ::GetLastError();
 #ifdef _DEBUG
                 std::array<wchar_t, 256U> szText;
                 if (ret != 0)
@@ -11795,7 +11796,7 @@ LRESULT CALLBACK ClientConnection::WndProchwnd(const HWND hwnd, UINT iMsg, WPARA
         }
 #endif
         //adzm 2010-09
-        if (_this->ProcessPointerEvent(x, y, wParam, iMsg))
+        if (_this->ProcessPointerEvent(x, y, static_cast<DWORD>(wParam), iMsg))
         {
             _this->FlushWriteQueue(true, 5);
         }
@@ -12062,8 +12063,8 @@ LRESULT CALLBACK ClientConnection::WndProchwnd(const HWND hwnd, UINT iMsg, WPARA
 
     case WM_SETSCALING: {
         _this->m_opts->m_scaling = true;
-        _this->m_opts->m_scale_num = wParam;
-        _this->m_opts->m_scale_den = lParam;
+        _this->m_opts->m_scale_num = static_cast<int>(wParam);
+        _this->m_opts->m_scale_den = static_cast<int>(lParam);
         if ((_this->m_opts->m_scale_num == 1) && (_this->m_opts->m_scale_den == 1))
         {
             _this->m_opts->m_scaling = false;
@@ -12184,7 +12185,7 @@ void ClientConnection::Copybuffer(int width, const int height, const int xx, con
 {
     int bytesPerOutputRow = framebufferWidth * bytes_per_pixel;
 
-    if (incorrectParameters(width, height, xx, yy, framebufferWidth, framebufferHeight))
+    if (incorrectParameters(static_cast<CARD16>(width), static_cast<CARD16>(height), static_cast<CARD16>(xx), static_cast<CARD16>(yy), framebufferWidth, framebufferHeight))
     {
         goto error;
     }
@@ -12248,7 +12249,7 @@ void ClientConnection::Copyfrom0buffer(int width, const int height, const int xx
 {
     int bytesPerOutputRow = framebufferWidth * bytes_per_pixel;
 
-    if (incorrectParameters(width, height, xx, yy, framebufferWidth, framebufferHeight))
+    if (incorrectParameters(static_cast<CARD16>(width), static_cast<CARD16>(height), static_cast<CARD16>(xx), static_cast<CARD16>(yy), framebufferWidth, framebufferHeight))
     {
         goto error;
     }
@@ -12577,7 +12578,7 @@ BOOL CALLBACK DialogProc(const HWND hWnd, const UINT Message, const WPARAM wPara
             {
                 int iSlected{ 0 };
 
-                iSlected = ::SendMessage(hList, LVM_GETNEXTITEM, -1, LVNI_FOCUSED);
+                iSlected = static_cast<int>(::SendMessage(hList, LVM_GETNEXTITEM, static_cast<WPARAM>(-1), LVNI_FOCUSED));
 
                 if (iSlected == -1)
                 {
@@ -12598,7 +12599,7 @@ BOOL CALLBACK DialogProc(const HWND hWnd, const UINT Message, const WPARAM wPara
             }
             if (((LPNMHDR)lParam)->code == NM_CLICK)
             {
-                iSelect = ::SendMessage(hList, LVM_GETNEXTITEM, -1, LVNI_FOCUSED);
+                iSelect = static_cast<int>(::SendMessage(hList, LVM_GETNEXTITEM, static_cast<WPARAM>(-1), LVNI_FOCUSED));
 
                 if (iSelect == -1)
                 {
@@ -12617,7 +12618,7 @@ BOOL CALLBACK DialogProc(const HWND hWnd, const UINT Message, const WPARAM wPara
             {
                 int iIndex;
                 std::array<wchar_t, 255U> text{};
-                iIndex = ::SendMessage(hList, LVM_GETNEXTITEM, -1, LVNI_FOCUSED);
+                iIndex = static_cast<int>(::SendMessage(hList, LVM_GETNEXTITEM, static_cast<WPARAM>(-1), LVNI_FOCUSED));
                 LVITEMW LvItemW2;
                 std::memset(&LvItemW2, 0, sizeof(LvItemW2));
                 LvItemW2.iSubItem = 0;
@@ -12678,7 +12679,7 @@ BOOL CALLBACK DialogProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         {
             std::memset(line.data(), 0, 128);
             cc->ReadExact((char*)line.data(), 128);
-            iItem = ::SendMessageW(hList, LVM_GETITEMCOUNT, 0, 0);
+            iItem = static_cast<int>(::SendMessageW(hList, LVM_GETITEMCOUNT, 0, 0));
             LvItem.iItem = iItem; // choose item
             LvItem.iSubItem = 0;  // Put in first coluom
             std::array<wchar_t, 128U> _lw;
@@ -12698,7 +12699,7 @@ BOOL CALLBACK DialogProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         {
         case IDOK: {
             int iSlected{ 0 };
-            iSlected = ::SendMessage(hList, LVM_GETNEXTITEM, -1, LVNI_FOCUSED);
+            iSlected = static_cast<int>(::SendMessage(hList, LVM_GETNEXTITEM, static_cast<WPARAM>(-1), LVNI_FOCUSED));
             if (iSlected == -1)
             {
                 yesUVNCMessageBox(m_hInstResDLL, hWnd, "No Items in ListView", "Error", MB_ICONINFORMATION);

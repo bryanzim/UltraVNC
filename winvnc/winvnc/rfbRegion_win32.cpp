@@ -21,7 +21,7 @@
 
 using namespace rfb;
 
-void dump_rects(char* const n, const HRGN rgn, const bool dbg = 0)
+void dump_rects([[maybe_unused]] char* const n, [[maybe_unused]] const HRGN rgn, [[maybe_unused]] const bool dbg = 0)
 {
     /*#if defined(_DEBUG)
       //vnclog.Print(LL_INTWARN, VNCLOG("Region %s %p contains rects:\n"), n, rgn);

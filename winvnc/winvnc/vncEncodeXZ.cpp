@@ -117,7 +117,7 @@ UINT vncEncodeXZ::RequiredBuffSize(const UINT width, const UINT height)
     return (sz_rfbFramebufferUpdateRectHeader + sz_rfbXZHeader + 128 + width * height * (m_remoteformat.bitsPerPixel / 8) * 2);
 }
 
-UINT vncEncodeXZ::EncodeBulkRects(const rfb::RectVector& allRects, BYTE* const source, BYTE* const dest, VSocket* const outConn)
+UINT vncEncodeXZ::EncodeBulkRects(const rfb::RectVector& allRects, BYTE* const source, [[maybe_unused]] BYTE* const dest, VSocket* const outConn)
 {
     if (allRects.empty())
     {

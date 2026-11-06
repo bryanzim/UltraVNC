@@ -159,11 +159,11 @@ DWORD WINAPI do_repeater_wait(const LPVOID lpParam)
     int sendkepalive_counter{ 0 };
 
     //SOCKET local_in=0;
-    SOCKET local_out = 0;
+    [[maybe_unused]] SOCKET local_out = 0;
     SOCKET remote = 0;
     ULONG code{ 0U };
     long recvbytes{ 0 };
-    const long sendbytes{ 0 };
+    [[maybe_unused]] const long sendbytes{ 0 };
     BOOL server;
     int nummer;
     pmystruct inout = (pmystruct)lpParam;
@@ -229,7 +229,7 @@ DWORD WINAPI do_repeater_wait(const LPVOID lpParam)
                 //Beep(1000,1000);
                 rfbProtocolVersionMsg pv;
                 ::sprintf_s(pv, rfbProtocolKeepAlive, rfbProtocolMajorVersion, rfbProtocolMinorVersion);
-                if (WriteExact(remote, pv, sz_rfbProtocolVersionMsg) < 0)
+                if (WriteExact(static_cast<int>(remote), pv, sz_rfbProtocolVersionMsg) < 0)
                 {
                     goto error;
                 }
@@ -466,7 +466,7 @@ DWORD WINAPI do_repeater(const LPVOID lpParam)
     }
 
     /* repeater between stdin/out and socket  */
-    nfds = ((local_in < remote) ? remote : local_in) + 1;
+    nfds = static_cast<int>(((local_in < remote) ? remote : local_in) + 1);
     f_local = 1;  /* yes, read from local */
     f_remote = 1; /* yes, read from remote */
     DWORD start{ 0U };

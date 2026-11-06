@@ -99,9 +99,9 @@ static int WideToNetBytes(const wchar_t* const w, const UINT codepage, char* con
 //
 //
 //
-TextChat::TextChat(VNCviewerApp* pApp, ClientConnection* pCC)
+TextChat::TextChat(VNCviewerApp* pAppLocal, ClientConnection* pCC)
 {
-    m_pApp = pApp;
+    m_pApp = pAppLocal;
     m_pCC = pCC;
     m_fTextChatRunning = false;
     //test m_fVisible always false
@@ -307,7 +307,7 @@ void TextChat::PrintMessage(const wchar_t* const szMessage, const wchar_t* const
     lpG.flags = GTL_NUMBYTES;
     lpG.codepage = CP_UTF8;
 
-    int nLen = ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_GETTEXTLENGTHEX, (WPARAM)&lpG, 0L);
+    int nLen = static_cast<int>(::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_GETTEXTLENGTHEX, (WPARAM)&lpG, 0L));
     if (nLen + 32 > TEXTMAXSIZE)
     {
         ::SetDlgItemTextW(m_hDlg, IDC_CHATAREA_EDIT,
@@ -319,7 +319,7 @@ void TextChat::PrintMessage(const wchar_t* const szMessage, const wchar_t* const
     // Helper: insert wide text at end of RichEdit using EM_SETTEXTEX with CP_UTF8
     auto InsertWide = [&](const wchar_t* const text) {
         std::array<char, TEXTMAXSIZE> utf8;
-        int n = ::WideCharToMultiByte(CP_UTF8, 0, text, -1, utf8.data(), utf8.size() - 1, nullptr, nullptr);
+        int n = ::WideCharToMultiByte(CP_UTF8, 0, text, -1, utf8.data(), static_cast<int>(utf8.size()) - 1, nullptr, nullptr);
         if (n <= 0)
         {
             return;
@@ -345,7 +345,7 @@ void TextChat::PrintMessage(const wchar_t* const szMessage, const wchar_t* const
         InsertWide(m_szTextBoxBuffer);
     }
 
-    nLen = ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_GETTEXTLENGTHEX, (WPARAM)&lpG, 0L);
+    nLen = static_cast<int>(::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_GETTEXTLENGTHEX, (WPARAM)&lpG, 0L));
     if (szMessage != nullptr) //print the sender's message
     {
         cr.cpMax = nLen;
@@ -427,8 +427,8 @@ void TextChat::SendLocalText(void)
 int TextChat::DoDialog()
 {
     extern HINSTANCE m_hInstResDLL;
-    return ::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_TEXTCHAT_DLG), nullptr, (DLGPROC)TextChatDlgProc,
-                          (LONG_PTR)this);
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_TEXTCHAT_DLG), nullptr, (DLGPROC)TextChatDlgProc,
+                          (LONG_PTR)this));
 }
 
 
@@ -521,14 +521,14 @@ BOOL CALLBACK TextChat::TextChatDlgProc(HWND hWnd, const UINT uMsg, const WPARAM
         ::SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
         ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
         helper::SafeSetWindowUserData(hWnd, lParam);
-        TextChat* _this = (TextChat*)lParam;
-        if ((_this->m_szLocalText == nullptr) || (_this->m_szRemoteText == nullptr))
+        TextChat* _thisInner = (TextChat*)lParam;
+        if ((_thisInner->m_szLocalText == nullptr) || (_thisInner->m_szRemoteText == nullptr))
         {
             ::EndDialog(hWnd, FALSE);
         }
 
         // Window always on top if Fullscreen On
-        if (_this->m_pCC->InFullScreenMode())
+        if (_thisInner->m_pCC->InFullScreenMode())
         {
             RECT Rect;
             ::GetWindowRect(hWnd, &Rect);
@@ -536,50 +536,50 @@ BOOL CALLBACK TextChat::TextChatDlgProc(HWND hWnd, const UINT uMsg, const WPARAM
         }
 
         // CentreWindow(hWnd);
-        _this->m_hWnd = hWnd;
-        _this->m_hDlg = hWnd;
+        _thisInner->m_hWnd = hWnd;
+        _thisInner->m_hDlg = hWnd;
 
-        ::wcsncpy_s(_this->m_szRemoteName, MAXNAMESIZE, _this->m_pCC->m_desktopName, _TRUNCATE);
+        ::wcsncpy_s(_thisInner->m_szRemoteName, MAXNAMESIZE, _thisInner->m_pCC->m_desktopName, _TRUNCATE);
 
         std::array<wchar_t, 256U> szTitle{};
-        ::_snwprintf_s(szTitle.data(), 256, _TRUNCATE, L"UltraVNC Viewer - Chat with <%s>", _this->m_szRemoteName);
+        ::_snwprintf_s(szTitle.data(), 256, _TRUNCATE, L"UltraVNC Viewer - Chat with <%s>", _thisInner->m_szRemoteName);
         ::SetWindowTextW(hWnd, szTitle.data());
 
         // Trunc the remote name for display in Chat Area before the first parenthesis, if any.
-        wchar_t* p = std::wcschr(_this->m_szRemoteName, L'(');
+        wchar_t* p = std::wcschr(_thisInner->m_szRemoteName, L'(');
         if (p != nullptr)
         {
             *(p - 1) = L'\0';
         }
 
         //  Chat area
-        _this->SetTextFormat(); //  Set character formatting and background color
+        _thisInner->SetTextFormat(); //  Set character formatting and background color
         ::SendDlgItemMessage(hWnd, IDC_CHATAREA_EDIT, EM_SETBKGNDCOLOR, FALSE, 0xFFFFFF);
 
-        std::memset(_this->m_szLocalText, 0, TEXTMAXSIZE * sizeof(wchar_t));
+        std::memset(_thisInner->m_szLocalText, 0, TEXTMAXSIZE * sizeof(wchar_t));
         // if (!_this->m_fPersistentTexts)
         {
-            std::memset(_this->m_szLastLocalText, 0, TEXTMAXSIZE * sizeof(wchar_t));
-            std::memset(_this->m_szTextBoxBuffer, 0, TEXTMAXSIZE * sizeof(wchar_t)); // Clear Chat area
+            std::memset(_thisInner->m_szLastLocalText, 0, TEXTMAXSIZE * sizeof(wchar_t));
+            std::memset(_thisInner->m_szTextBoxBuffer, 0, TEXTMAXSIZE * sizeof(wchar_t)); // Clear Chat area
                                                                                      //  Load and display diclaimer message
             // sf@2005 - Only if the DSMplugin is used
-            if (_this->m_szRemoteText)
-                if (!_this->m_pCC->m_fUsePlugin)
+            if (_thisInner->m_szRemoteText)
+                if (!_thisInner->m_pCC->m_fUsePlugin)
                 {
-                    if (::LoadStringW(m_hInstResDLL, IDS_WARNING, _this->m_szRemoteText, TEXTMAXSIZE - 1))
+                    if (::LoadStringW(m_hInstResDLL, IDS_WARNING, _thisInner->m_szRemoteText, TEXTMAXSIZE - 1))
                     {
-                        _this->PrintMessage(_this->m_szRemoteText, nullptr, GREY);
+                        _thisInner->PrintMessage(_thisInner->m_szRemoteText, nullptr, GREY);
                     }
                 }
         }
 
-        if (_this->m_szLocalText)
+        if (_thisInner->m_szLocalText)
         {
-            ::SetDlgItemTextW(hWnd, IDC_INPUTAREA_EDIT, _this->m_szLocalText);
+            ::SetDlgItemTextW(hWnd, IDC_INPUTAREA_EDIT, _thisInner->m_szLocalText);
         }
-        if (_this->m_szTextBoxBuffer)
+        if (_thisInner->m_szTextBoxBuffer)
         {
-            ::SetDlgItemTextW(hWnd, IDC_CHATAREA_EDIT, _this->m_szTextBoxBuffer);
+            ::SetDlgItemTextW(hWnd, IDC_CHATAREA_EDIT, _thisInner->m_szTextBoxBuffer);
         }
 
         // Scroll down the chat window
@@ -597,7 +597,7 @@ BOOL CALLBACK TextChat::TextChatDlgProc(HWND hWnd, const UINT uMsg, const WPARAM
         // SendDlgItemMessage(hWnd, IDC_PERSISTENT_CHECK, BM_SETCHECK, _this->m_fPersistentTexts, 0);
 
         // Tell the other side to open the Text Chat Window
-        _this->SendTextChatRequest(CHAT_OPEN);
+        _thisInner->SendTextChatRequest(CHAT_OPEN);
 
         ::SetForegroundWindow(hWnd);
 

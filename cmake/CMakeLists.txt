@@ -86,6 +86,15 @@ if(MSVC)
     add_compile_definitions("_CRT_SECURE_NO_WARNINGS")
     add_compile_definitions("_WINSOCK_DEPRECATED_NO_WARNINGS")
     add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:/MP>)
+    # CMake's MSVC default is /W3, for cl and clang-cl. /W4 is the next level
+    # that still reports first-party code. /Wall also warns through the Windows SDK.
+    foreach(_lang C CXX)
+        if(CMAKE_${_lang}_FLAGS MATCHES "/W[0-4]")
+            string(REGEX REPLACE "/W[0-4]" "/W4" CMAKE_${_lang}_FLAGS "${CMAKE_${_lang}_FLAGS}")
+        else()
+            string(APPEND CMAKE_${_lang}_FLAGS " /W4")
+        endif()
+    endforeach()
     # Resource scripts include afxres.h.
     set(CMAKE_MFC_FLAG 2)
 endif()
@@ -93,6 +102,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MS
     message(STATUS "Using clang-cl")
     # DES sources still use the C++17-removed register keyword.
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-register>)
+    # /W4 above is the MSVC-compatible level. These are clang's own groups.
+    add_compile_options(
+        $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-Wall>
+        $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-Wextra>)
 endif()
 if( ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64" OR ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64" )
     add_compile_definitions("_X64")

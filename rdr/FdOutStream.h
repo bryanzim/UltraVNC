@@ -33,7 +33,7 @@ namespace rdr
 
         void flush();
         [[nodiscard]] int length();
-        void writeBytes(const void* data, int length);
+        void writeBytes(const void* const data, const int length);
 
     private:
         int overrun(int itemSize, int nItems);

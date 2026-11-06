@@ -1002,7 +1002,7 @@ BOOL vncDesktop::InitDesktop()
 
 // Routine used to close the screen saver, if it's active...
 
-BOOL CALLBACK KillScreenSaverFunc(const HWND hwnd, const LPARAM lParam)
+BOOL CALLBACK KillScreenSaverFunc(const HWND hwnd, [[maybe_unused]] const LPARAM lParam)
 {
     std::array<char, 256U> buffer;
 
@@ -1315,7 +1315,7 @@ vncDesktop::SetPixFormat()
 
 
     // Examine the bitmapinfo structure to obtain the current pixel format
-    m_scrinfo.format.trueColour = m_bminfo.truecolour;
+    m_scrinfo.format.trueColour = static_cast<CARD8>(m_bminfo.truecolour);
     m_scrinfo.format.bigEndian = 0;
 
     // Set up the native buffer width, height and format
@@ -1706,25 +1706,25 @@ void vncDesktop::WriteMessageOnScreenPreConnect(BYTE* const scrBuff, const UINT 
                         std::memset(sesmsg[aantal_session].name, 0, 32);
                         ::strcpy_s(sesmsg[aantal_session].type, 32, "Active");
                         ::strcpy_s(sesmsg[aantal_session].name, 32, pSessions[i].pWinStationName);
-                        HMODULE handle = ::LoadLibraryEx("WTSAPI32.DLL", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-                        _WTSQUERYSESSIONINFORMATION pFunc;
-                        LPTSTR ppBuffer = nullptr;
-                        DWORD pBytesReturned{ 0U };
-                        if (handle)
+                        HMODULE handleInner = ::LoadLibraryEx("WTSAPI32.DLL", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+                        _WTSQUERYSESSIONINFORMATION pFuncInner;
+                        LPTSTR ppBufferInner = nullptr;
+                        DWORD pBytesReturnedInner{ 0U };
+                        if (handleInner)
                         {
-                            pFunc = (_WTSQUERYSESSIONINFORMATION)::GetProcAddress(handle, "WTSQuerySessionInformationA");
-                            if (pFunc(WTS_CURRENT_SERVER_HANDLE, pSessions[i].SessionId, WTSUserName, &ppBuffer, &pBytesReturned))
+                            pFuncInner = (_WTSQUERYSESSIONINFORMATION)::GetProcAddress(handleInner, "WTSQuerySessionInformationA");
+                            if (pFuncInner(WTS_CURRENT_SERVER_HANDLE, pSessions[i].SessionId, WTSUserName, &ppBufferInner, &pBytesReturnedInner))
                             {
                                 std::memset(sesmsg[aantal_session].username, 0, 32);
-                                ::strcpy_s(sesmsg[aantal_session].username, 32, ppBuffer);
+                                ::strcpy_s(sesmsg[aantal_session].username, 32, ppBufferInner);
                             }
                         }
                         ++aantal_session;
-                        if (handle)
+                        if (handleInner)
                         {
-                            ::FreeLibrary(handle);
+                            ::FreeLibrary(handleInner);
                         }
-                        (*pWTSFreeMemory)(ppBuffer);
+                        (*pWTSFreeMemory)(ppBufferInner);
                     }
                 }
                 (*pWTSFreeMemory)(pSessions);
@@ -2180,7 +2180,7 @@ inline void vncDesktop::MaskToMaxAndShift(DWORD mask, CARD16& max, CARD8& shift)
 }
 
 // Copy data from the memory bitmap into a buffer
-void vncDesktop::CopyToBuffer(const rfb::Rect& rect, BYTE* const destbuff, const UINT destbuffsize)
+void vncDesktop::CopyToBuffer(const rfb::Rect& rect, BYTE* const destbuff, [[maybe_unused]] const UINT destbuffsize)
 {
     // Finish drawing anything in this thread
     // Wish we could do this for the whole system - maybe we should
@@ -2451,7 +2451,7 @@ BOOL vncDesktop::VideoBuffer()
     return FALSE;
 }
 
-DWORD WINAPI Warningbox_non_locked(const LPVOID lpParam)
+DWORD WINAPI Warningbox_non_locked([[maybe_unused]] const LPVOID lpParam)
 {
     MessageBoxSecure(nullptr, sz_ID_CURRENT_DRIVER_OLD.data(), "", 0);
     return 0;

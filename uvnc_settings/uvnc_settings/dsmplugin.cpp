@@ -214,7 +214,7 @@ bool CDSMPlugin::SetPluginParams(const HWND hWnd, char* const szParams, char* co
     //adzm 2010-05-12 - dsmplugin config
     if (m_PConfig)
     {
-        char* szNewConfig{ nullptr };
+        [[maybe_unused]] char* szNewConfig{ nullptr };
         int nRes = (*m_PConfig)(hWnd, szParams, szConfig, pszNewConfig);
         if (nRes > 0)
         {
@@ -262,7 +262,7 @@ int CDSMPlugin::ListPlugins(const HWND hComboBox)
     int nFiles{ 0 };
     std::array<char, MAX_PATH> szCurrentDir;
 
-    if (::GetModuleFileName(nullptr, szCurrentDir.data(), szCurrentDir.size()))
+    if (::GetModuleFileName(nullptr, szCurrentDir.data(), static_cast<DWORD>(szCurrentDir.size())))
     {
         char* p = std::strrchr(szCurrentDir.data(), '\\');
         if (p == nullptr)
@@ -334,7 +334,7 @@ bool CDSMPlugin::LoadPlugin(char* const szPlugin, const bool fAllowMulti)
             //DWORD error=GetLastError();
             //if (error==2)
             {
-                if (::GetModuleFileName(nullptr, szCurrentDir.data(), szCurrentDir.size()))
+                if (::GetModuleFileName(nullptr, szCurrentDir.data(), static_cast<DWORD>(szCurrentDir.size())))
                 {
                     char* p = std::strrchr(szCurrentDir.data(), '\\');
                     *p = '\0';
@@ -377,7 +377,7 @@ bool CDSMPlugin::LoadPlugin(char* const szPlugin, const bool fAllowMulti)
         {
             std::array<char, MAX_PATH> szCurrentDir{};
             std::array<char, MAX_PATH> szCurrentDir_szPlugin{};
-            if (::GetModuleFileName(nullptr, szCurrentDir.data(), szCurrentDir.size()))
+            if (::GetModuleFileName(nullptr, szCurrentDir.data(), static_cast<DWORD>(szCurrentDir.size())))
             {
                 char* p = std::strrchr(szCurrentDir.data(), '\\');
                 *p = '\0';
@@ -565,7 +565,8 @@ void Base64::encode(const char* const szIn, char* const szOut)
 {
     std::array<BYTE, 3U> in;
     std::array<BYTE, 4U> out;
-    int i, len, blocksout = 0;
+    int i, len;
+    [[maybe_unused]] int blocksout = 0;
 
     const char* pIn = szIn;
     char* pOut = szOut;

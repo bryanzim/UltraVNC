@@ -224,14 +224,14 @@ Daemon::Daemon(int port, const bool ipv6)
         struct sockaddr_in6 addr6;
         std::memset(&addr6, 0, sizeof(addr6));
         addr6.sin6_family = AF_INET6;
-        addr6.sin6_port = htons(port);
+        addr6.sin6_port = htons(static_cast<u_short>(port));
         addr6.sin6_addr = in6addr_any;
         m_deamon_sock6 = socket(AF_INET6, SOCK_STREAM, 0);
 
         struct sockaddr_in addr4;
         std::memset(&addr4, 0, sizeof(addr4));
         addr4.sin_family = AF_INET;
-        addr4.sin_port = htons(port);
+        addr4.sin_port = htons(static_cast<u_short>(port));
         addr4.sin_addr.s_addr = INADDR_ANY;
         m_deamon_sock4 = socket(AF_INET6, SOCK_STREAM, 0);
         if (!m_deamon_sock6 && !m_deamon_sock4)
@@ -310,7 +310,7 @@ Daemon::Daemon(int port, const bool ipv6)
         struct sockaddr_in addr;
         std::memset(&addr, 0, sizeof(addr));
         addr.sin_family = AF_INET;
-        addr.sin_port = htons(port);
+        addr.sin_port = htons(static_cast<u_short>(port));
         addr.sin_addr.s_addr = INADDR_ANY;
         m_deamon_sock = socket(AF_INET, SOCK_STREAM, 0);
         if (!m_deamon_sock)
@@ -351,7 +351,7 @@ Daemon::Daemon(int port, const bool ipv6)
     AddTrayIcon();
 
     // A timer checks that the Tray icon is intact
-    m_timer = ::SetTimer(m_hwnd, IDT_TRAYTIMER, 15000, nullptr);
+    m_timer = static_cast<UINT>(::SetTimer(m_hwnd, IDT_TRAYTIMER, 15000, nullptr));
 }
 
 void Daemon::AddTrayIcon()

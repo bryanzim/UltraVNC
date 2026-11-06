@@ -119,7 +119,7 @@ short CProcessorUsage::GetUsage()
 
     if (m_bLocked)
     {
-        return s_lastCpu;
+        return static_cast<short>(s_lastCpu);
     }
     ::EnterCriticalSection(&m_cs);
     m_bLocked = true;
@@ -133,7 +133,7 @@ short CProcessorUsage::GetUsage()
             ::LeaveCriticalSection(&m_cs);
         }
         m_bLocked = false;
-        return sLastCpu;
+        return static_cast<short>(sLastCpu);
     }
 
     __int64 time;
@@ -177,7 +177,7 @@ short CProcessorUsage::GetUsage()
             ::LeaveCriticalSection(&m_cs);
         }
         m_bLocked = false;
-        return sLastCpu;
+        return static_cast<short>(sLastCpu);
     }
 
     GetSysTimes(idleTime, kernelTime, userTime);
@@ -246,5 +246,5 @@ short CProcessorUsage::GetUsage()
         ::LeaveCriticalSection(&m_cs);
     }
     m_bLocked = false;
-    return sLastCpu;
+    return static_cast<short>(sLastCpu);
 }

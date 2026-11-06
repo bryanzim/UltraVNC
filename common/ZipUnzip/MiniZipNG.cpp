@@ -72,7 +72,7 @@ bool CMiniZipNG::IsAbortRequested() const { return m_fAbortRequested; }
 void CMiniZipNG::ResetAbort() { m_fAbortRequested = false; }
 
 // Unicode version - Zip a directory
-bool CMiniZipNG::ZipDirectory(const LPCWSTR szDirPath, const LPCWSTR szWildcard, const LPCWSTR szZipPath, const bool bRecursive)
+bool CMiniZipNG::ZipDirectory(const LPCWSTR szDirPath, [[maybe_unused]] const LPCWSTR szWildcard, const LPCWSTR szZipPath, [[maybe_unused]] const bool bRecursive)
 {
     MZ_DEBUG(L"[MiniZipNG] ZipDirectory START\n");
     MZ_DEBUG(L"  DirPath: ");
@@ -247,7 +247,7 @@ bool CMiniZipNG::AddFileToZip(void* const zip_writer, const LPCWSTR szFilePath, 
     // Convert paths to UTF-8
     std::array<char, MAX_PATH * 4> szFilePathUtf8;
     std::array<char, MAX_PATH * 4> szZipPathUtf8;
-    const int nFilePathLen =
+    [[maybe_unused]] const int nFilePathLen =
         ::WideCharToMultiByte(CP_UTF8, 0, szFilePath, -1, szFilePathUtf8.data(), sizeof(szFilePathUtf8), nullptr, nullptr);
     int nZipPathLen = ::WideCharToMultiByte(CP_UTF8, 0, szZipPath, -1, szZipPathUtf8.data(), sizeof(szZipPathUtf8), nullptr, nullptr);
 
@@ -417,7 +417,7 @@ bool CMiniZipNG::UnZipDirectory(LPCWSTR szExtractPath, const LPCWSTR szZipPath)
 
         // Build full extraction path with \\?\ prefix
         std::array<WCHAR, MAX_PATH * 4> szEntryNameW;
-        ::MultiByteToWideChar(CP_UTF8, 0, file_info->filename, -1, szEntryNameW.data(), szEntryNameW.size());
+        ::MultiByteToWideChar(CP_UTF8, 0, file_info->filename, -1, szEntryNameW.data(), static_cast<int>(szEntryNameW.size()));
 
         // Check if entry is a directory (filename ends with / in ZIP format)
         bool bIsDir{ false };
@@ -451,7 +451,7 @@ bool CMiniZipNG::UnZipDirectory(LPCWSTR szExtractPath, const LPCWSTR szZipPath)
             std::array<WCHAR, MAX_PATH * 4> szJoinW;
             std::array<WCHAR, MAX_PATH * 4> szResolvedW;
             ::_snwprintf_s(szJoinW.data(), szJoinW.size(), _TRUNCATE, L"%s\\%s", szRootFullW.data(), szEntryNameW.data());
-            DWORD nRes = ::GetFullPathNameW(szJoinW.data(), szJoinW.size(), szResolvedW.data(), nullptr);
+            DWORD nRes = ::GetFullPathNameW(szJoinW.data(), static_cast<DWORD>(szJoinW.size()), szResolvedW.data(), nullptr);
             if ((nRes == 0) || (nRes >= MAX_PATH * 4) || (std::wcslen(szResolvedW.data()) <= nRootFullLen) ||
                 (::_wcsnicmp(szResolvedW.data(), szRootFullW.data(), nRootFullLen) != 0) || (szResolvedW[nRootFullLen] != L'\\'))
             {
@@ -514,7 +514,7 @@ bool CMiniZipNG::UnZipDirectory(LPCWSTR szExtractPath, const LPCWSTR szZipPath)
                 ::CreateFileW(szFullPathW.data(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
             if (hFile == INVALID_HANDLE_VALUE)
             {
-                DWORD dwErr = ::GetLastError();
+                [[maybe_unused]] DWORD dwErr = ::GetLastError();
                 MZ_DEBUG_FMT(L"[MiniZipNG] Failed to create file (err=%lu)\n", dwErr);
                 mz_zip_reader_entry_close(zip_reader);
                 ++num_errors;
@@ -596,9 +596,9 @@ bool CMiniZipNG::ZipDirectory(const LPCSTR szDirPath, const LPCSTR szWildcard, c
     std::array<WCHAR, MAX_PATH * 4> szWildcardW;
     std::array<WCHAR, MAX_PATH * 4> szZipPathW;
 
-    ::MultiByteToWideChar(CP_ACP, 0, szDirPath, -1, szDirPathW.data(), szDirPathW.size());
-    ::MultiByteToWideChar(CP_ACP, 0, szWildcard, -1, szWildcardW.data(), szWildcardW.size());
-    ::MultiByteToWideChar(CP_ACP, 0, szZipPath, -1, szZipPathW.data(), szZipPathW.size());
+    ::MultiByteToWideChar(CP_ACP, 0, szDirPath, -1, szDirPathW.data(), static_cast<int>(szDirPathW.size()));
+    ::MultiByteToWideChar(CP_ACP, 0, szWildcard, -1, szWildcardW.data(), static_cast<int>(szWildcardW.size()));
+    ::MultiByteToWideChar(CP_ACP, 0, szZipPath, -1, szZipPathW.data(), static_cast<int>(szZipPathW.size()));
 
     return ZipDirectory(szDirPathW.data(), szWildcardW.data(), szZipPathW.data(), bRecursive);
 }
@@ -608,8 +608,8 @@ bool CMiniZipNG::UnZipDirectory(const LPCSTR szExtractPath, const LPCSTR szZipPa
     std::array<WCHAR, MAX_PATH * 4> szExtractPathW;
     std::array<WCHAR, MAX_PATH * 4> szZipPathW;
 
-    ::MultiByteToWideChar(CP_ACP, 0, szExtractPath, -1, szExtractPathW.data(), szExtractPathW.size());
-    ::MultiByteToWideChar(CP_ACP, 0, szZipPath, -1, szZipPathW.data(), szZipPathW.size());
+    ::MultiByteToWideChar(CP_ACP, 0, szExtractPath, -1, szExtractPathW.data(), static_cast<int>(szExtractPathW.size()));
+    ::MultiByteToWideChar(CP_ACP, 0, szZipPath, -1, szZipPathW.data(), static_cast<int>(szZipPathW.size()));
 
     return UnZipDirectory(szExtractPathW.data(), szZipPathW.data());
 }

@@ -252,7 +252,7 @@ Find_viewer_list_id(mystruct* const Viewerstruct)
 
 HANDLE hcleanupthread = nullptr;
 
-DWORD WINAPI cleaupthread(const LPVOID lpParam)
+DWORD WINAPI cleaupthread([[maybe_unused]] const LPVOID lpParam)
 {
     while (notstopped)
     {

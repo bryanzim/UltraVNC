@@ -217,26 +217,26 @@ HANDLE DesktopUsersToken::getDesktopUsersToken()
 
 bool DesktopUsersToken::GetConsoleUser(char* const buffer, UINT size)
 {
-    HANDLE hPToken = DesktopUsersToken::getInstance()->getDesktopUsersToken();
-    if (hPToken == nullptr)
+    HANDLE hPTokenIn = DesktopUsersToken::getInstance()->getDesktopUsersToken();
+    if (hPTokenIn == nullptr)
     {
         ::strcpy_s(buffer, UNLEN + 1, "");
         return 0;
     }
 
-    if (hPToken == save_hPtoken)
+    if (hPTokenIn == save_hPtoken)
     {
         ::strcpy_s(buffer, UNLEN + 1, username);
         return std::strlen(username) != 0;
     }
 
-    save_hPtoken = hPToken;
+    save_hPtoken = hPTokenIn;
     std::array<char, 16384U> aa{};
     // token user
     TOKEN_USER* ptu;
     DWORD needed;
     ptu = (TOKEN_USER*)aa.data();
-    if (::GetTokenInformation(hPToken, TokenUser, ptu, 16384, &needed))
+    if (::GetTokenInformation(hPTokenIn, TokenUser, ptu, 16384, &needed))
     {
         std::array<char, 64U> DomainName;
         std::memset(DomainName.data(), 0, sizeof(DomainName));

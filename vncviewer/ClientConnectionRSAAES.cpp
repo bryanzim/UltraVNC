@@ -403,7 +403,7 @@ struct AESEAXPlugin : IPlugin
 
     virtual ~AESEAXPlugin() {}
 
-    virtual BYTE* TransformBuffer(BYTE* const pDataBuffer, const int nDataLen, int* pnTransformedDataLen)
+    virtual BYTE* TransformBuffer(BYTE* pDataBuffer, int nDataLen, int* pnTransformedDataLen)
     {
         *pnTransformedDataLen = AadSize + nDataLen + MacSize;
         encBuffer.size = 0;
@@ -423,7 +423,7 @@ struct AESEAXPlugin : IPlugin
         return dst;
     }
 
-    virtual BYTE* RestoreBuffer(BYTE* const pTransBuffer, const int nTransDataLen, int* pnRestoredDataLen)
+    virtual BYTE* RestoreBuffer(BYTE* pTransBuffer, int nTransDataLen, int* pnRestoredDataLen)
     {
         if (!pTransBuffer)
         {
@@ -520,10 +520,10 @@ struct RSAKEX
 
     struct IConnection
     {
-        virtual void ReadExact(char*, int) = 0;
-        virtual void WriteExact(char*, int) = 0;
-        virtual bool CompareFingerprint(char* hex) = 0;
-        virtual void SaveFingerprint(char* hex) = 0;
+        virtual void ReadExact(char* const, const int) = 0;
+        virtual void WriteExact(char* const, const int) = 0;
+        virtual bool CompareFingerprint(char* const hex) = 0;
+        virtual void SaveFingerprint(char* const hex) = 0;
     };
 
     IConnection& conn;
@@ -844,11 +844,11 @@ struct RSAKEX
     }
 
 private:
-    bool CalcKeysHash(RSAKeyInfo& clientKey, RSAKeyInfo serverKey, BYTE* const hash, DWORD& size)
+    bool CalcKeysHash(RSAKeyInfo& clientKeyIn, RSAKeyInfo serverKeyIn, BYTE* const hash, DWORD& size)
     {
         ALG_ID algId = (keySize == 128 ? CALG_SHA1 : CALG_SHA_256);
-        DWORD clientLength = Swap32IfLE(clientKey.length);
-        DWORD serverLength = Swap32IfLE(serverKey.length);
+        DWORD clientLength = Swap32IfLE(clientKeyIn.length);
+        DWORD serverLength = Swap32IfLE(serverKeyIn.length);
         DWORD hashSize = (keySize == 128 ? 20 : 32);
 
         if (hashSize > size)
@@ -856,9 +856,9 @@ private:
             ::swprintf_s(lastError, L"Keys hash buffer too small (%u vs %u)", size, hashSize);
             return false;
         }
-        if (!HashUpdate(algId, &clientLength, 4) || !HashUpdate(algId, clientKey.modulus, clientKey.bytes) ||
-            !HashUpdate(algId, clientKey.exp, clientKey.bytes) || !HashUpdate(algId, &serverLength, 4) ||
-            !HashUpdate(algId, serverKey.modulus, serverKey.bytes) || !HashUpdate(algId, serverKey.exp, serverKey.bytes) ||
+        if (!HashUpdate(algId, &clientLength, 4) || !HashUpdate(algId, clientKeyIn.modulus, clientKeyIn.bytes) ||
+            !HashUpdate(algId, clientKeyIn.exp, clientKeyIn.bytes) || !HashUpdate(algId, &serverLength, 4) ||
+            !HashUpdate(algId, serverKeyIn.modulus, serverKeyIn.bytes) || !HashUpdate(algId, serverKeyIn.exp, serverKeyIn.bytes) ||
             !HashDigest(hash, hashSize))
         {
             return false;
@@ -913,14 +913,14 @@ struct KEXHost : public RSAKEX::IConnection
 
     virtual void WriteExact(char* const buf, const int bytes) { pConn->WriteExact(buf, bytes); }
 
-    virtual bool CompareFingerprint(char* const hex)
+    virtual bool CompareFingerprint(char* const hexLocal)
     {
         std::array<TCHAR, 32U> buf{ 0 };
         ::GetPrivateProfileString(FingerprintSection, key, nullptr, buf.data(), sizeof(buf), fname);
-        return ::_tcscmp((LPCTSTR)hex, buf.data()) == 0;
+        return ::_tcscmp((LPCTSTR)hexLocal, buf.data()) == 0;
     }
 
-    virtual void SaveFingerprint(char* const hex) { ::WritePrivateProfileString(FingerprintSection, key, (LPCTSTR)hex, fname); }
+    virtual void SaveFingerprint(char* const hexLocal) { ::WritePrivateProfileString(FingerprintSection, key, (LPCTSTR)hexLocal, fname); }
 };
 
 void ClientConnection::AuthRSAAES(const int keySize, const bool encrypted)

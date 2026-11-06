@@ -76,7 +76,7 @@ namespace helper
         LONG pWndProc = ::GetWindowLong(hWnd, GWL_WNDPROC);
 #else
         //TODO: get rid of LONG_PTR return warning for x64
-        LONG pWndProc = ::GetWindowLongPtr(hWnd, GWLP_WNDPROC);
+        LONG pWndProc = static_cast<LONG>(::GetWindowLongPtr(hWnd, GWLP_WNDPROC));
 #endif
         return pWndProc;
     }
@@ -237,8 +237,8 @@ namespace helper
     {
         std::array<WCHAR, MAX_PATH * 4> srcL;
         std::array<WCHAR, MAX_PATH * 4> dstL;
-        PrefixLongPathW(srcDir, srcL.data(), srcL.size());
-        PrefixLongPathW(dstDir, dstL.data(), dstL.size());
+        PrefixLongPathW(srcDir, srcL.data(), static_cast<int>(srcL.size()));
+        PrefixLongPathW(dstDir, dstL.data(), static_cast<int>(dstL.size()));
 
         std::array<WCHAR, MAX_PATH * 4 + 64> info;
         ::_snwprintf_s(info.data(), info.size(), _TRUNCATE, L"[MoveDirContentsInto] %s -> %s\n", srcL.data(), dstL.data());
@@ -450,7 +450,7 @@ namespace helper
         std::memcpy(szMid.data(), mid, midLen);
         szMid[midLen] = '\0';
         std::array<WCHAR, MAX_PATH * 4> szMidW;
-        ::MultiByteToWideChar(CP_ACP, 0, szMid.data(), -1, szMidW.data(), szMidW.size());
+        ::MultiByteToWideChar(CP_ACP, 0, szMid.data(), -1, szMidW.data(), static_cast<int>(szMidW.size()));
         return IsSafeFileNameW(szMidW.data());
     }
 

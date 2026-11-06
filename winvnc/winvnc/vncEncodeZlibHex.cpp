@@ -86,7 +86,7 @@ UINT vncEncodeZlibHex::RequiredBuffSize(const UINT width, const UINT height)
     return accumSize;
 }
 
-UINT vncEncodeZlibHex::NumCodedRects(RECT& rect)
+UINT vncEncodeZlibHex::NumCodedRects([[maybe_unused]] RECT& rect)
 {
     return 0;
     return 1;
@@ -158,7 +158,7 @@ UINT vncEncodeZlibHex::zlibCompress(BYTE* const from_buf, BYTE* const to_buf, co
     int totalCompDataLen = compressor->compress(m_compresslevel, length, (2 * length), from_buf, to_buf);
     if (totalCompDataLen == 0)
     {
-        return -1;
+        return static_cast<UINT>(-1);
     }
     return totalCompDataLen;
 }
@@ -334,7 +334,7 @@ UINT vncEncodeZlibHex::zlibCompress(BYTE* const from_buf, BYTE* const to_buf, co
         return destoffset;                                                                                                         \
     }                                                                                                                              \
                                                                                                                                    \
-    static UINT subrectEncode##bpp(CARD##bpp* src, BYTE* dest, int w, int h, CARD##bpp bg, CARD##bpp fg, BOOL mono)                \
+    static UINT subrectEncode##bpp(CARD##bpp* src, BYTE* dest, int w, int h, CARD##bpp bg, [[maybe_unused]] CARD##bpp fg, BOOL mono) \
     {                                                                                                                              \
         CARD##bpp cl;                                                                                                              \
         int x, y;                                                                                                                  \

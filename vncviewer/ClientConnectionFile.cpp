@@ -203,7 +203,7 @@ int ClientConnection::LoadConnection(const wchar_t* fname, const bool fFromDialo
 
     if (!defaultOption)
     {
-        ::GetPrivateProfileString(_T("connection"), _T("host"), _T(""), m_host.data(), m_host.size(), fname);
+        ::GetPrivateProfileString(_T("connection"), _T("host"), _T(""), m_host.data(), static_cast<DWORD>(m_host.size()), fname);
         if ((m_port = ::GetPrivateProfileInt(_T("connection"), _T("port"), 0, fname)) == 0)
         {
             return -1;
@@ -214,7 +214,7 @@ int ClientConnection::LoadConnection(const wchar_t* fname, const bool fFromDialo
         m_host[0U] = _T('\0');
         m_port = -1;
     }
-    ::GetPrivateProfileString(_T("connection"), _T("proxyhost"), _T(""), m_proxyhost.data(), m_proxyhost.size(), fname);
+    ::GetPrivateProfileString(_T("connection"), _T("proxyhost"), _T(""), m_proxyhost.data(), static_cast<DWORD>(m_proxyhost.size()), fname);
     m_proxyport = ::GetPrivateProfileInt(_T("connection"), _T("proxyport"), 0, fname);
     m_connectionType = (ConnectionType)::GetPrivateProfileInt(_T("options"), _T("UseProxy"), DIRECT_TCP, fname);
 

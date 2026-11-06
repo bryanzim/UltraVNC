@@ -41,29 +41,29 @@ std::array<wchar_t, 128U> str50297;
 extern HINSTANCE m_hInstResDLL;
 
 
-void loadStrings(const HINSTANCE m_hInstResDLL)
+void loadStrings(const HINSTANCE m_hInstResDLLLocal)
 {
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50275, str50275.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50276, str50276.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50277, str50277.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50278, str50278.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50279, str50279.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50280, str50280.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50281, str50281.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50282, str50282.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50283, str50283.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50284, str50284.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50285, str50285.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50286, str50286.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50287, str50287.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50288, str50288.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50289, str50289.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50290, str50290.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50293, str50293.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50294, str50294.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50295, str50295.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50296, str50296.data(), 128 - 1);
-    ::LoadStringW(m_hInstResDLL, IDS_STRING50297, str50297.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50275, str50275.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50276, str50276.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50277, str50277.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50278, str50278.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50279, str50279.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50280, str50280.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50281, str50281.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50282, str50282.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50283, str50283.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50284, str50284.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50285, str50285.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50286, str50286.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50287, str50287.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50288, str50288.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50289, str50289.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50290, str50290.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50293, str50293.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50294, str50294.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50295, str50295.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50296, str50296.data(), 128 - 1);
+    ::LoadStringW(m_hInstResDLLLocal, IDS_STRING50297, str50297.data(), 128 - 1);
 }
 
 char* GetVersionFromResource(char* const version)

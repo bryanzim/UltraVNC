@@ -267,7 +267,7 @@ bool vnctouch::IsFlagSet(const DWORD flag, DWORD value) { return (flag & value);
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Time functions
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-int vnctouch::gettimeofday(struct timeval* const p, void* const tz)
+int vnctouch::gettimeofday(struct timeval* const p, [[maybe_unused]] void* const tz)
 {
     union
     {
@@ -555,7 +555,7 @@ int vnctouch::_handle_gii_version_message(rfbGIIMsg* const msg, const int gii_bi
     {
         return 0;
     }
-    if ((cmsg.version = _find_gii_version(min, max)) == -1)
+    if ((cmsg.version = _find_gii_version(static_cast<uint16_t>(min), static_cast<uint16_t>(max))) == -1)
     {
         cc->m_opts->m_giiEnable = 0;
         return 0;
@@ -597,7 +597,7 @@ void vnctouch::rfb_gii_init_valuator(rfbGIIValuatorEventMsg* const val, const in
     val->header.messageType = rfbGIIMessage;
     val->header.subType = rfbGIIEventInjection;
     val->header.length = Swap16IfLE(16 + (6 * 4 * cnt)); // not used
-    val->eventSize = (16 + (6 * 4 * cnt));               // not used
+    val->eventSize = static_cast<uint8_t>(16 + (6 * 4 * cnt)); // not used
     val->eventType = 12;                                 // not used
     val->padding = 0;
     val->deviceOrigin = Swap32IfLE(gii_deviceOrigin);
