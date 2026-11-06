@@ -12,8 +12,8 @@
 // KeyMap.h
 // mapping of windows virtual key codes to X keysyms.
 
-#ifndef KEYMAP_H__
-#define KEYMAP_H__
+#ifndef KEYMAP_H
+#define KEYMAP_H
 
 #pragma once
 
@@ -23,18 +23,16 @@
 #define XK_KATAKANA
 
 #include "keysymdefjap.h"
-
 #include "rfb.h"
-
-// A single key press on the client may result in more than one 
+// A single key press on the client may result in more than one
 // going to the server.
 
-const unsigned int MaxKeysPerKey = 4;
+const unsigned int MaxKeysPerKey{ 4U };
 const CARD32 VoidKeyCode = XK_VoidSymbol;
 
 // keycodes contains the keysyms terminated by an VoidKeyCode.
-// The releaseModifiers is a set of ORed flags indicating whether 
-// particular modifier-up messages should be sent before the keys 
+// The releaseModifiers is a set of ORed flags indicating whether
+// particular modifier-up messages should be sent before the keys
 // and modifier-down after.
 
 //const CARD32 KEYMAP_LCONTROL = 0x0001;
@@ -42,30 +40,33 @@ const CARD32 VoidKeyCode = XK_VoidSymbol;
 //const CARD32 KEYMAP_LALT     = 0x0004;
 //const CARD32 KEYMAP_RALT     = 0x0008;
 
-typedef struct {
+typedef struct
+{
     CARD32 keycodes[MaxKeysPerKey];
     CARD32 releaseModifiers;
 } KeyActionSpec;
 
 
 
-class KeyMapJap {
+class KeyMapJap
+{
 public:
-	KeyMapJap();
-	KeyActionSpec PCtoX(UINT virtkey, DWORD keyData);
+    explicit KeyMapJap();
+    KeyActionSpec PCtoX(UINT virtkey, DWORD keyData);
+
 private:
-	// [v1.0.2-jp1 fix] yak!'s patch
-	int ToAsciiJp(UINT virtkey); // for Kanji-key patch fix
+    // [v1.0.2-jp1 fix] yak!'s patch
+    int ToAsciiJp(UINT virtkey); // for Kanji-key patch fix
 
-	// CARD32 keymap[256];
-	unsigned char buf[4]; // lots of space for now
-	BYTE keystate[256];
+    // CARD32 keymap[256];
+    unsigned char buf[4U]; // lots of space for now
+    BYTE keystate[256U];
 
-	DWORD   dwKeybId;
-    HKL     dwhkl;
-    unsigned char   storedDeadChar;
-    UINT    baseCharVK;
-    bool    sendDeadKey;
+    DWORD dwKeybId;
+    HKL dwhkl;
+    unsigned char storedDeadChar;
+    UINT baseCharVK;
+    bool sendDeadKey;
 };
 
 #endif

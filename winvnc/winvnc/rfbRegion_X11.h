@@ -12,67 +12,70 @@
 
 // Cross-platform Region class based on the X11 region implementation
 
-#ifndef __RFB_REGION_X11_INCLUDED__
-#define __RFB_REGION_X11_INCLUDED__
+#ifndef RFB_REGION_X11_INCLUDED
+#define RFB_REGION_X11_INCLUDED
 
 #include "rfbRect.h"
+
 #include <Xregion/Xregion.h>
+
 #include <vector>
 
-namespace rfb {
+namespace rfb
+{
 
-  // rfb::Region
-  // See Region.h for description of interface.
+    // rfb::Region
+    // See Region.h for description of interface.
 
-  class Region {
-  public:
-    // Create an empty region
-    Region();
-    // Create a rectangular region
-    Region(int x1, int y1, int x2, int y2);
-    Region(const Rect& r);
+    class Region
+    {
+    public:
+        // Create an empty region
+        explicit Region();
+        // Create a rectangular region
+        Region(int x1, int y1, int x2, int y2);
+        Region(const Rect& r);
 
-    Region(const Region& r);
-    Region &operator=(const Region& src);
+        Region(const Region& r);
+        Region& operator=(const Region& src);
 
-    ~Region();
+        ~Region();
 
-    // the following methods alter the region in place:
+        // the following methods alter the region in place:
 
-    void clear();
-    void reset(const Rect& r);
-    void translate(const rfb::Point& delta);
-    void setOrderedRects(const std::vector<Rect>& rects);
+        void clear();
+        void reset(const Rect& r);
+        void translate(const rfb::Point& delta);
+        void setOrderedRects(const std::vector<Rect>& rects);
 
-    void assign_intersect(const Region& r);
-    void assign_union(const Region& r);
-    void assign_subtract(const Region& r);
+        void assign_intersect(const Region& r);
+        void assign_union(const Region& r);
+        void assign_subtract(const Region& r);
 
-    // the following three operations return a new region:
+        // the following three operations return a new region:
 
-    Region intersect(const Region& r) const;
-    Region union_(const Region& r) const;
-    Region subtract(const Region& r) const;
+        Region intersect(const Region& r) const;
+        Region union_(const Region& r) const;
+        Region subtract(const Region& r) const;
 
-    bool equals(const Region& b) const;
-    bool is_empty() const;
+        bool equals(const Region& b) const;
+        bool is_empty() const;
 
-    bool get_rects(std::vector<Rect>& rects, bool left2right=true,
-                   bool topdown=true) const;
-    Rect get_bounding_rect() const;
-	int Numrects();
+        bool get_rects(std::vector<Rect>& rects, bool left2right = true, bool topdown = true) const;
+        Rect get_bounding_rect() const;
+        int Numrects();
 
-    void debug_print(const char *prefix) const;
+        void debug_print(const char* prefix) const;
 
-  protected:
-    Region(struct _XRegion* rgn);
-    struct _XRegion* replaceXrgn(struct _XRegion* newrgn);
+    protected:
+        explicit Region(struct _XRegion* rgn);
+        struct _XRegion* replaceXrgn(struct _XRegion* newrgn);
 
-    struct _XRegion*  Xrgn;
-  };
+        struct _XRegion* Xrgn;
+    };
 
-  typedef Region Region2D;
+    using Region2D = Region;
 
 }
 
-#endif // __RFB_REGION_X11_INCLUDED__
+#endif // RFB_REGION_X11_INCLUDED

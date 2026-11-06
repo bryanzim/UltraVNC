@@ -16,12 +16,18 @@ find_package(libjpeg-turbo CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(zstd CONFIG REQUIRED)
 find_package(LibLZMA REQUIRED)
+find_package(unofficial-sodium CONFIG REQUIRED)
 
 set(${PROJECT_NAME}_SOURCES
     ../DSMPlugin/DSMPlugin.cpp
     ../common/ZipUnzip/MiniZipNG.cpp
+    ../common/Base64.cpp
+    ../common/BcryptHelp.cpp
+    ../common/ChannelBinding.cpp
     ../common/Clipboard.cpp
     ../common/Hyperlinks.cpp
+    ../common/SaslWire.cpp
+    ../common/ScramSha256.cpp
     ../common/UltraVncZ.cpp
     ../common/mnemonic.c
     ../common/mn_wordlist.c
@@ -50,6 +56,7 @@ set(${PROJECT_NAME}_SOURCES
     ClientConnectionUltra2.cpp
     ClientConnectionZlib.cpp
     ClientConnectionZlibHex.cpp
+    CredentialManager.cpp
     Daemon.cpp
     Exception.cpp
     FileTransfer.cpp
@@ -87,18 +94,24 @@ foreach(file ${${PROJECT_NAME}_SOURCES})
 endforeach(file)
 target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/../vncviewer/res/vncviewer.rc")
 set_source_files_properties(${CMAKE_SOURCE_DIR}/../vncviewer/res/vncviewer.rc LANGUAGE RC)
-target_compile_definitions(${PROJECT_NAME} PRIVATE NDEBUG WIN32 _WINDOWS __NT__ _WINSTATIC __WIN32__ _VIEWER _XZ _VCPKG NOMINMAX)
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    $<$<CONFIG:Debug>:_DEBUG>
+    $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
+    WIN32 _WINDOWS __NT__ _WINSTATIC __WIN32__ _VIEWER _XZ _VCPKG _CLOUD UNICODE _UNICODE)
 target_link_libraries(${PROJECT_NAME}
     PRIVATE JPEG::JPEG
     PRIVATE $<IF:$<TARGET_EXISTS:libjpeg-turbo::turbojpeg>,libjpeg-turbo::turbojpeg,libjpeg-turbo::turbojpeg-static>
     PRIVATE ZLIB::ZLIB
     PRIVATE zstd::libzstd
     PRIVATE LibLZMA::LibLZMA
+    PRIVATE unofficial-sodium::sodium
+    PRIVATE ${ULTRAVNC_MINIZIP_TARGET}
     libomnithread
     librdr
     #libudtcloud
-    libzip32
-    libzipunzip
+    $<TARGET_NAME_IF_EXISTS:libzip32>
+    $<TARGET_NAME_IF_EXISTS:libzipunzip>
+    bcrypt
     comctl32
     comdlg32
     crypt32
@@ -106,6 +119,7 @@ target_link_libraries(${PROJECT_NAME}
     gdi32
     gdiplus
     imm32
+    ncrypt
     secur32
     shlwapi
     version

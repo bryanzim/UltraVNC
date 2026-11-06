@@ -11,13 +11,14 @@
 
 #include "SchannelTLS.h"
 #include "vsocket.h"
+
+#include <array>
 #include <cstdint>
-#include <vector>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
-
+#include <vector>
 // Server-side VeNCrypt handler.
 //
 // Implements the VeNCrypt 0.2 security type (rfbVeNCrypt = 19) on top of the
@@ -53,7 +54,7 @@ public:
     // Returns true on successful authentication, false on failure.
     bool Authenticate(std::string& outFailureMessage);
 
-    uint32_t GetChosenType() const { return m_chosenType; }
+    std::uint32_t GetChosenType() const { return m_chosenType; }
     bool ShouldSendTokenResponse() const { return m_requestSessionToken; }
 
     // Send the subtype-300 response requested by the client. The response is
@@ -80,7 +81,7 @@ private:
     bool SendVeNCryptVersion();
     bool ReadClientVersion();
     bool SendSubTypes();
-    bool ReadChosenType(uint32_t& outType);
+    bool ReadChosenType(std::uint32_t& outType);
     bool PerformTLSHandshake(std::string& outFailureMessage);
     bool ReadCredentials(std::string& outUsername, std::string& outToken);
     bool ValidateToken(const char* username, const char* token, std::string& outFailureMessage);
@@ -90,10 +91,10 @@ private:
     // SecurityResult block (same u32 + reason format QEMU uses).
     bool RunSaslAuth(std::string& outFailureMessage);
 
-    bool SendU8(uint8_t value);
-    bool SendU32(uint32_t value);
-    bool ReadU8(uint8_t& value);
-    bool ReadU32(uint32_t& value);
+    bool SendU8(std::uint8_t value);
+    bool SendU32(std::uint32_t value);
+    bool ReadU8(std::uint8_t& value);
+    bool ReadU32(std::uint32_t& value);
     bool ReadExact(char* buf, int len);
     bool SendExact(const char* buf, int len);
 
@@ -101,8 +102,8 @@ private:
     SchannelTLS m_tls;
     std::mutex m_tlsMutex; // serializes Schannel Send/Recv (context not thread-safe)
     std::unique_ptr<VSocket::TLSCallbacks> m_tlsCallbacks;
-    uint32_t m_chosenType;
-    uint32_t m_offeredTypes[9];
+    std::uint32_t m_chosenType;
+    std::array<std::uint32_t, 9U> m_offeredTypes;
     int m_offeredCount;
     std::string m_lastUsername;
     bool m_requestSessionToken;

@@ -1,0 +1,46 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "windows-base",
+      "hidden": true,
+      "architecture": {
+        "value": "x64",
+        "strategy": "set"
+      },
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static"
+      }
+    },
+    {
+      "name": "vs2026",
+      "displayName": "Visual Studio 2026 (MSVC)",
+      "description": "x64 build with the Visual Studio 2026 MSVC toolset (v145).",
+      "generator": "Visual Studio 18 2026",
+      "toolset": "v145",
+      "binaryDir": "${sourceDir}/../out/vs2026",
+      "inherits": "windows-base"
+    },
+    {
+      "name": "vs2026-clang",
+      "displayName": "Visual Studio 2026 (Clang)",
+      "description": "x64 build with clang-cl from the Visual Studio 2026 ClangCL toolset.",
+      "generator": "Visual Studio 18 2026",
+      "toolset": "ClangCL",
+      "binaryDir": "${sourceDir}/../out/vs2026-clang",
+      "inherits": "windows-base"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "vs2026",
+      "configurePreset": "vs2026",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2026-clang",
+      "configurePreset": "vs2026-clang",
+      "configuration": "Release"
+    }
+  ]
+}

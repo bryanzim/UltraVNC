@@ -6,17 +6,19 @@
 //
 // SPDX-FileCopyrightText: Copyright (C) 2025 UltraVNC Team Members. All Rights Reserved.
 
-#ifndef _MINIZIPNG_H
-#define _MINIZIPNG_H
+#ifndef MINIZIPNG_H
+#define MINIZIPNG_H
 
-#include <windows.h>
+#include <WinSock2.h>
 
+#include <Windows.h>
 // Unicode-aware zip/unzip wrapper using minizip-ng
 // Compatible interface with ZipUnZip32 but supports Unicode paths
+
 class CMiniZipNG
 {
 public:
-    CMiniZipNG();
+    explicit CMiniZipNG();
     ~CMiniZipNG();
 
     // Zip a directory (Unicode paths supported)
@@ -47,8 +49,8 @@ public:
 private:
     bool ZipDirectoryRecursive(void* zip_writer, LPCWSTR szBasePath, LPCWSTR szRelPath);
     bool AddFileToZip(void* zip_writer, LPCWSTR szFilePath, LPCWSTR szZipPath);
-    
+
     volatile bool m_fAbortRequested;
 };
 
-#endif // _MINIZIPNG_H
+#endif // MINIZIPNG_H

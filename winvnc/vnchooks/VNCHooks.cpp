@@ -16,10 +16,14 @@
 
 #include "VNCHooks.h"
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <crtdbg.h>
 
+#include <array>
+#include <cctype>
+#include <cstdlib>
+#include <cstring>
+#include <stdio.h>
+#include <stdlib.h>
 /////////////////////////////////////////////////////////////////////////////
 // Storage for the global data in the DLL
 
@@ -30,6 +34,7 @@
 // Storage for the global data in the DLL
 // Note: For Borland C++ compilers, this data segment is defined in a
 //       separate file, SharedData.cpp.
+
 /*
 #ifdef _MSC_VER
 
@@ -53,26 +58,28 @@ HHOOK hLLMouseHook = NULL;							// Handle to LowLevel mouse hook
 
 #include "SharedData.h"
 
+#include <array>
+#include <cstdlib>
 
 #endif // _MSC_VER
 */
 
 typedef struct _shared_variables
 {
-	DWORD vnc_thread_id;
-	UINT UpdateRectMessage;
-	UINT CopyRectMessage;
-	UINT MouseMoveMessage;
+    DWORD vnc_thread_id;
+    UINT UpdateRectMessage;
+    UINT CopyRectMessage;
+    UINT MouseMoveMessage;
 } shared_variables;
 
-static shared_variables *g_shdata = NULL;
+static shared_variables* g_shdata = nullptr;
 
-static HHOOK hCallWndHook = NULL;							// Handle to the CallWnd hook
-static HHOOK hGetMsgHook = NULL;							// Handle to the GetMsg hook
-static HHOOK hDialogMsgHook = NULL;						// Handle to the DialogMsg hook
-static HHOOK hLLKeyboardHook = NULL;						// Handle to LowLevel kbd hook
-static HHOOK hLLMouseHook = NULL;							// Handle to LowLevel mouse hookT
-static HANDLE filemapping = NULL;
+static HHOOK hCallWndHook = nullptr;    // Handle to the CallWnd hook
+static HHOOK hGetMsgHook = nullptr;     // Handle to the GetMsg hook
+static HHOOK hDialogMsgHook = nullptr;  // Handle to the DialogMsg hook
+static HHOOK hLLKeyboardHook = nullptr; // Handle to LowLevel kbd hook
+static HHOOK hLLMouseHook = nullptr;    // Handle to LowLevel mouse hookT
+static HANDLE filemapping = nullptr;
 static BOOL isAttached = FALSE;
 
 
@@ -80,21 +87,21 @@ static BOOL isAttached = FALSE;
 // Per-instance DLL variables
 
 const char sPrefSegment[] = "Application_Prefs";
-char *sModulePrefs = NULL;							// Name of the module that created us
-BOOL prf_use_GetUpdateRect = FALSE;					// Use the GetUpdateRect paint mode
-BOOL prf_use_Timer = FALSE;							// Use Timer events to trigger updates
-BOOL prf_use_KeyPress = FALSE;						// Use keyboard events
-BOOL prf_use_LButtonUp = TRUE;						// Use left mouse button up events
-BOOL prf_use_MButtonUp = FALSE;						// Use middle mouse button up events
-BOOL prf_use_RButtonUp = FALSE;						// Use right mouse button up events
-BOOL prf_use_Deferral = FALSE;						// Use deferred updates
+char* sModulePrefs{ nullptr };      // Name of the module that created us
+BOOL prf_use_GetUpdateRect = FALSE; // Use the GetUpdateRect paint mode
+BOOL prf_use_Timer = FALSE;         // Use Timer events to trigger updates
+BOOL prf_use_KeyPress = FALSE;      // Use keyboard events
+BOOL prf_use_LButtonUp = TRUE;      // Use left mouse button up events
+BOOL prf_use_MButtonUp = FALSE;     // Use middle mouse button up events
+BOOL prf_use_RButtonUp = FALSE;     // Use right mouse button up events
+BOOL prf_use_Deferral = FALSE;      // Use deferred updates
 
-HINSTANCE hInstance = NULL;							// This instance of the DLL
-BOOL HookMaster = FALSE;							// Is this instance WinVNC itself?
+HINSTANCE hInstance = nullptr; // This instance of the DLL
+BOOL HookMaster = FALSE;       // Is this instance WinVNC itself?
 
-BOOL appHookedOK = FALSE;							// Did InitInstance succeed?
+BOOL appHookedOK = FALSE; // Did InitInstance succeed?
 
-HICON old_cursor = NULL;							// Current Cursor icon handle
+HICON old_cursor = nullptr; // Current Cursor icon handle
 
 BOOL m_ddihook;
 
@@ -102,10 +109,10 @@ BOOL m_ddihook;
 // Registered messages & atoms to be used by VNCHooks.DLL
 
 // Messages
-const UINT VNC_DEFERRED_UPDATE = RegisterWindowMessage("VNCHooks.Deferred.UpdateMessage");
+const UINT VNC_DEFERRED_UPDATE = ::RegisterWindowMessage("VNCHooks.Deferred.UpdateMessage");
 
 // Atoms
-const char *VNC_POPUPSELN_ATOMNAME = "VNCHooks.PopUpMenu.Selected";
+const char* VNC_POPUPSELN_ATOMNAME = "VNCHooks.PopUpMenu.Selected";
 ATOM VNC_POPUPSELN_ATOM = INVALID_ATOM;
 
 /////////////////////////////////////////////////////////////////////////////
@@ -114,7 +121,7 @@ ATOM VNC_POPUPSELN_ATOM = INVALID_ATOM;
 // Forward definition of hook procedures
 
 BOOL HookHandle(UINT msg, HWND hWnd, WPARAM wParam, LPARAM lParam);
-LRESULT CALLBACK CallWndProc (int nCode, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK CallWndProc(int nCode, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK GetMessageProc(int nCode, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK DialogMessageProc(int nCode, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK LowLevelKeyboardFilterProc(int nCode, WPARAM wParam, LPARAM lParam);
@@ -125,179 +132,190 @@ BOOL InitInstance();
 BOOL ExitInstance();
 
 // The DLL's main procedure
-BOOL WINAPI DllMain (HANDLE hInst, ULONG ul_reason_for_call, LPVOID lpReserved)
+BOOL WINAPI DllMain(const HANDLE hInst, const ULONG ul_reason_for_call, const LPVOID lpReserved)
 {
-   HANDLE filemapping = NULL;
-	// Find out why we're being called
-	switch (ul_reason_for_call)
-	{
+    HANDLE filemappingLocal = nullptr;
+    // Find out why we're being called
+    switch (ul_reason_for_call)
+    {
 
-	case DLL_PROCESS_ATTACH:
-#ifdef _MSC_VER 
-		_RPT0(_CRT_WARN, "vncHooks : Hook DLL loaded\n");
+    case DLL_PROCESS_ATTACH:
+#ifdef _MSC_VER
+        _RPT0(_CRT_WARN, "vncHooks : Hook DLL loaded\n");
 #endif
 
-		filemapping = CreateFileMapping(INVALID_HANDLE_VALUE,
-							NULL,
-							PAGE_READWRITE,
-							0,
-							sizeof(shared_variables),
-							"Local\\SeamlessRDPData");
+        filemappingLocal =
+            ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, sizeof(shared_variables), "Local\\SeamlessRDPData");
 
-			if (filemapping)
-			{
-				/* From MSDN: The initial contents of
-				   the pages in a file mapping object
-				   backed by the paging file are 0
-				   (zero)." */
-				g_shdata = (shared_variables*)MapViewOfFile(filemapping, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-			}
-			if (!filemapping || !g_shdata)
-			{
-				/* Clean up in reverse order */
-				if (g_shdata)
-				{
-					UnmapViewOfFile(g_shdata);
-				}
-				if (filemapping)
-				{
-					CloseHandle(filemapping);
-				}
-				return FALSE;
-			}
+        if (filemappingLocal)
+        {
+            /* From MSDN: The initial contents of
+               the pages in a file mapping object
+               backed by the paging file are 0
+               (zero)." */
+            g_shdata = reinterpret_cast<shared_variables*>(::MapViewOfFile(filemappingLocal, FILE_MAP_ALL_ACCESS, 0, 0, 0));
+        }
+        if (!filemappingLocal || !g_shdata)
+        {
+            /* Clean up in reverse order */
+            if (g_shdata)
+            {
+                ::UnmapViewOfFile(g_shdata);
+            }
+            if (filemappingLocal)
+            {
+                ::CloseHandle(filemappingLocal);
+            }
+            return FALSE;
+        }
 
-		// Save the instance handle
-		hInstance = (HINSTANCE)hInst;
+        // Save the instance handle
+        hInstance = reinterpret_cast<HINSTANCE>(hInst);
 
-		// Call the initialisation function
-		appHookedOK = InitInstance();
+        // Call the initialisation function
+        appHookedOK = InitInstance();
 
-      isAttached = TRUE;
+        isAttached = TRUE;
 
-		// ALWAYS return TRUE to avoid breaking unhookable applications!!!
-		return TRUE;
+        // ALWAYS return TRUE to avoid breaking unhookable applications!!!
+        return TRUE;
 
-	case DLL_PROCESS_DETACH:
-#ifdef _MSC_VER 
-		_RPT0(_CRT_WARN, "vncHooks : Hook DLL unloaded\n");
+    case DLL_PROCESS_DETACH:
+#ifdef _MSC_VER
+        _RPT0(_CRT_WARN, "vncHooks : Hook DLL unloaded\n");
 #endif
-		
-      //lpReserved > 0 if owner process is about to exit/terminate
-      //in this case, no handles should be closed, because an entry point of the DLL can be called
-     if ( NULL == lpReserved )
-      {
-         //lpReserved == 0 if DLL is unloaded,
-         // Call the exit function
-		   // If the app failed to hook OK, ExitInstance will still operate OK (hopefully...)
-		   ExitInstance();
-		   if (g_shdata) UnmapViewOfFile(g_shdata);
-		   if (filemapping)CloseHandle(filemapping);
-      }
-      isAttached = FALSE;
 
-		return TRUE;
+        //lpReserved > 0 if owner process is about to exit/terminate
+        //in this case, no handles should be closed, because an entry point of the DLL can be called
+        if (nullptr == lpReserved)
+        {
+            //lpReserved == 0 if DLL is unloaded,
+            // Call the exit function
+            // If the app failed to hook OK, ExitInstance will still operate OK (hopefully...)
+            ExitInstance();
+            if (g_shdata)
+            {
+                ::UnmapViewOfFile(g_shdata);
+            }
+            if (filemappingLocal)
+            {
+                ::CloseHandle(filemappingLocal);
+            }
+        }
+        isAttached = FALSE;
 
-	default:
-		return TRUE;
-	}
+        return TRUE;
+
+    default:
+        return TRUE;
+    }
 }
 
 // Function used to find out whether VNCHooks uses "reliable" or "hint" hooks
 // Currently is always zero to indicate unreliable, hint hooks.
 DllExport DWORD HooksType()
 {
-	// Unreliable "hint" hooks
-	return 0;
+    // Unreliable "hint" hooks
+    return 0;
 }
 
 // Add the new hook
 
-DllExport BOOL SetHooks(DWORD thread_id, UINT UpdateMsg, UINT CopyMsg, UINT MouseMsg,BOOL ddihook)
+DllExport BOOL SetHooks(DWORD thread_id, const UINT UpdateMsg, const UINT CopyMsg, const UINT MouseMsg, BOOL ddihook)
 {
 
-	// Don't add the hook if the thread id is NULL
-	if (!thread_id)
-		return FALSE;
-	m_ddihook=ddihook;
-	
-	// Don't add a hook if there is already one added
-	if ( g_shdata->vnc_thread_id)
-		return FALSE;
-	// Add the CallWnd hook
-	hCallWndHook = SetWindowsHookEx(
-					WH_CALLWNDPROC,					// Hook in before msg reaches app
-					(HOOKPROC) CallWndProc,			// Hook procedure
-					hInstance,						// This DLL instance
-					0L								// Hook in to all apps
-//					GetCurrentThreadId()			// DEBUG : HOOK ONLY WinVNC
-					);
+    // Don't add the hook if the thread id is NULL
+    if (!thread_id)
+    {
+        return FALSE;
+    }
+    m_ddihook = ddihook;
 
-	// Add the GetMessage hook
-	hGetMsgHook = SetWindowsHookEx(
-					WH_GETMESSAGE,					// Hook in before msg reaches app
-					(HOOKPROC) GetMessageProc,			// Hook procedure
-					hInstance,						// This DLL instance
-					0L								// Hook in to all apps
-//					GetCurrentThreadId()			// DEBUG : HOOK ONLY WinVNC
-					);
+    // Don't add a hook if there is already one added
+    if (g_shdata->vnc_thread_id)
+    {
+        return FALSE;
+    }
+    // Add the CallWnd hook
+    hCallWndHook = ::SetWindowsHookEx(WH_CALLWNDPROC,        // Hook in before msg reaches app
+                                    reinterpret_cast<HOOKPROC>(CallWndProc), // Hook procedure
+                                    hInstance,             // This DLL instance
+                                    0L                     // Hook in to all apps
+                                                           //					GetCurrentThreadId()			// DEBUG : HOOK ONLY WinVNC
+    );
 
-		// Add the GetMessage hook
-	hDialogMsgHook = SetWindowsHookEx(
-					WH_SYSMSGFILTER,				// Hook in dialogs, menus and scrollbars
-					(HOOKPROC) DialogMessageProc,	// Hook procedure
-					hInstance,						// This DLL instance
-					0L								// Hook in to all apps
-					);
+    // Add the GetMessage hook
+    hGetMsgHook = ::SetWindowsHookEx(WH_GETMESSAGE,            // Hook in before msg reaches app
+                                   reinterpret_cast<HOOKPROC>(GetMessageProc), // Hook procedure
+                                   hInstance,                // This DLL instance
+                                   0L                        // Hook in to all apps
+                                                             //					GetCurrentThreadId()			// DEBUG : HOOK ONLY WinVNC
+    );
 
-	// Check that it worked
-	if ((hCallWndHook != NULL) && (hGetMsgHook != NULL) && (hDialogMsgHook != NULL))
-	{
-		 g_shdata->vnc_thread_id = thread_id;			// Save the WinVNC thread id
-		 g_shdata->UpdateRectMessage = UpdateMsg;		// Save the message ID to use for rectangle updates
-		 g_shdata->CopyRectMessage = CopyMsg;			// Save the message ID to use for copyrect
-		 g_shdata->MouseMoveMessage = MouseMsg;		// Save the message ID to send when mouse moves
-		HookMaster = TRUE;					// Set the HookMaster flag for this instance
-		return TRUE;
-	}
-	else
-	{
-		// Stop the keyboard hook
-		SetKeyboardFilterHook(FALSE);
-		SetMouseFilterHook(FALSE);
+    // Add the GetMessage hook
+    hDialogMsgHook = ::SetWindowsHookEx(WH_SYSMSGFILTER,             // Hook in dialogs, menus and scrollbars
+                                      reinterpret_cast<HOOKPROC>(DialogMessageProc), // Hook procedure
+                                      hInstance,                   // This DLL instance
+                                      0L                           // Hook in to all apps
+    );
 
-		// Kill the main hooks
-		if (hCallWndHook != NULL)
-			UnhookWindowsHookEx(hCallWndHook);
-		if (hGetMsgHook != NULL)
-			UnhookWindowsHookEx(hGetMsgHook);
-		if (hDialogMsgHook != NULL)
-			UnhookWindowsHookEx(hDialogMsgHook);
-		hCallWndHook = NULL;
-		hGetMsgHook = NULL;
-		hDialogMsgHook = NULL;
-	}
-	if (ddihook)
-	{
-		if (hCallWndHook != NULL)
-			UnhookWindowsHookEx(hCallWndHook);
-		if (hDialogMsgHook != NULL)
-			UnhookWindowsHookEx(hDialogMsgHook);
-		hCallWndHook = NULL;
-		hDialogMsgHook = NULL;
-	}
-	// The hook failed, so return an error code
-	return FALSE;
+    // Check that it worked
+    if ((hCallWndHook != nullptr) && (hGetMsgHook != nullptr) && (hDialogMsgHook != nullptr))
+    {
+        g_shdata->vnc_thread_id = thread_id;     // Save the WinVNC thread id
+        g_shdata->UpdateRectMessage = UpdateMsg; // Save the message ID to use for rectangle updates
+        g_shdata->CopyRectMessage = CopyMsg;     // Save the message ID to use for copyrect
+        g_shdata->MouseMoveMessage = MouseMsg;   // Save the message ID to send when mouse moves
+        HookMaster = TRUE;                       // Set the HookMaster flag for this instance
+        return TRUE;
+    }
+    else
+    {
+        // Stop the keyboard hook
+        SetKeyboardFilterHook(FALSE);
+        SetMouseFilterHook(FALSE);
 
+        // Kill the main hooks
+        if (hCallWndHook != nullptr)
+        {
+            ::UnhookWindowsHookEx(hCallWndHook);
+        }
+        if (hGetMsgHook != nullptr)
+        {
+            ::UnhookWindowsHookEx(hGetMsgHook);
+        }
+        if (hDialogMsgHook != nullptr)
+        {
+            ::UnhookWindowsHookEx(hDialogMsgHook);
+        }
+        hCallWndHook = nullptr;
+        hGetMsgHook = nullptr;
+        hDialogMsgHook = nullptr;
+    }
+    if (ddihook)
+    {
+        if (hCallWndHook != nullptr)
+        {
+            ::UnhookWindowsHookEx(hCallWndHook);
+        }
+        if (hDialogMsgHook != nullptr)
+        {
+            ::UnhookWindowsHookEx(hDialogMsgHook);
+        }
+        hCallWndHook = nullptr;
+        hDialogMsgHook = nullptr;
+    }
+    // The hook failed, so return an error code
+    return FALSE;
 }
 
 // EnumWindows procedure to remove the extra property we added
 
-BOOL CALLBACK
-KillPropsProc(HWND hwnd, LPARAM lParam)
+BOOL CALLBACK KillPropsProc(const HWND hwnd, [[maybe_unused]] const LPARAM lParam)
 {
-	// Remove our custom property...
-	RemoveProp(hwnd, (LPCTSTR) MAKELONG(VNC_POPUPSELN_ATOM, 0));
-	return TRUE;
+    // Remove our custom property...
+    ::RemoveProp(hwnd, reinterpret_cast<LPCTSTR>(MAKELONG(VNC_POPUPSELN_ATOM, 0)));
+    return TRUE;
 }
 
 // Remove the hook from the system
@@ -305,600 +323,605 @@ KillPropsProc(HWND hwnd, LPARAM lParam)
 DllExport BOOL UnSetHooks(DWORD thread_id)
 {
 
-	BOOL unHooked = TRUE;
-	
-	// Remove the extra property value from all local windows
-	EnumWindows((WNDENUMPROC) &KillPropsProc, 0);
+    BOOL unHooked = TRUE;
 
-	// Stop the keyboard & mouse hooks
-	unHooked = unHooked && SetKeyboardFilterHook(FALSE);
-	unHooked = unHooked && SetMouseFilterHook(FALSE);
+    // Remove the extra property value from all local windows
+    ::EnumWindows(reinterpret_cast<WNDENUMPROC>(&KillPropsProc), 0);
 
-	// Is the window handle valid?
-	if (thread_id !=  g_shdata->vnc_thread_id)
-		return FALSE;
+    // Stop the keyboard & mouse hooks
+    unHooked = unHooked && SetKeyboardFilterHook(FALSE);
+    unHooked = unHooked && SetMouseFilterHook(FALSE);
 
-	// Unhook the procs
-	if (hCallWndHook != NULL)
-	{
-		unHooked = unHooked && UnhookWindowsHookEx(hCallWndHook);
-		hCallWndHook = NULL;
-	}
+    // Is the window handle valid?
+    if (thread_id != g_shdata->vnc_thread_id)
+    {
+        return FALSE;
+    }
 
-	if (hGetMsgHook != NULL)
-	{
-		unHooked = unHooked && UnhookWindowsHookEx(hGetMsgHook);
-		hGetMsgHook = NULL;
-	}
+    // Unhook the procs
+    if (hCallWndHook != nullptr)
+    {
+        unHooked = unHooked && UnhookWindowsHookEx(hCallWndHook);
+        hCallWndHook = nullptr;
+    }
 
-	if (hDialogMsgHook != NULL)
-	{
-		unHooked = unHooked && UnhookWindowsHookEx(hDialogMsgHook);
-		hDialogMsgHook = NULL;
-	}
+    if (hGetMsgHook != nullptr)
+    {
+        unHooked = unHooked && UnhookWindowsHookEx(hGetMsgHook);
+        hGetMsgHook = nullptr;
+    }
 
-	// If we managed to unhook then reset
-	if (unHooked)
-	{
-		 g_shdata->vnc_thread_id = 0;
-		HookMaster = FALSE;
-	}
+    if (hDialogMsgHook != nullptr)
+    {
+        unHooked = unHooked && UnhookWindowsHookEx(hDialogMsgHook);
+        hDialogMsgHook = nullptr;
+    }
 
-	return unHooked;
+    // If we managed to unhook then reset
+    if (unHooked)
+    {
+        g_shdata->vnc_thread_id = 0;
+        HookMaster = FALSE;
+    }
 
+    return unHooked;
 }
 
 // Routine to start and stop local keyboard message filtering
-DllExport BOOL SetKeyboardFilterHook(BOOL activate)
+DllExport BOOL SetKeyboardFilterHook(const BOOL activate)
 {
-	if (activate)
-	{
+    if (activate)
+    {
 #ifdef WH_KEYBOARD_LL
-		if (hLLKeyboardHook == NULL)
-		{
-			// Start up the hook...
-			hLLKeyboardHook = SetWindowsHookEx(
-					WH_KEYBOARD_LL,					// Hook in before msg reaches app
-					(HOOKPROC) LowLevelKeyboardFilterProc,			// Hook procedure
-					hInstance,						// This DLL instance
-					0L								// Hook in to all apps
-					);
-			if (hLLKeyboardHook == NULL)
-				return FALSE;
-		}
-		return TRUE;
+        if (hLLKeyboardHook == nullptr)
+        {
+            // Start up the hook...
+            hLLKeyboardHook = ::SetWindowsHookEx(WH_KEYBOARD_LL,                       // Hook in before msg reaches app
+                                               reinterpret_cast<HOOKPROC>(LowLevelKeyboardFilterProc), // Hook procedure
+                                               hInstance,                            // This DLL instance
+                                               0L                                    // Hook in to all apps
+            );
+            if (hLLKeyboardHook == nullptr)
+            {
+                return FALSE;
+            }
+        }
+        return TRUE;
 #else
 #pragma message("warning:Low-Level Keyboard hook code omitted.")
-		return FALSE;
+        return FALSE;
 #endif
-	} else {
-		if (hLLKeyboardHook != NULL)
-		{
-			// Stop the hook...
-			if (!UnhookWindowsHookEx(hLLKeyboardHook))
-				return FALSE;
-			hLLKeyboardHook = NULL;
-		}
-		return TRUE;
-	}
+    }
+    else
+    {
+        if (hLLKeyboardHook != nullptr)
+        {
+            // Stop the hook...
+            if (!::UnhookWindowsHookEx(hLLKeyboardHook))
+            {
+                return FALSE;
+            }
+            hLLKeyboardHook = nullptr;
+        }
+        return TRUE;
+    }
 }
 
 // Routine to start and stop local mouse message filtering
-DllExport BOOL SetMouseFilterHook(BOOL activate)
+DllExport BOOL SetMouseFilterHook(const BOOL activate)
 {
-	if (activate)
-	{
+    if (activate)
+    {
 #ifdef WH_MOUSE_LL
-		if (hLLMouseHook == NULL)
-		{
-			// Start up the hook...
-			hLLMouseHook = SetWindowsHookEx(
-					WH_MOUSE_LL,					// Hook in before msg reaches app
-					(HOOKPROC) LowLevelMouseFilterProc,			// Hook procedure
-					hInstance,						// This DLL instance
-					0L								// Hook in to all apps
-					);
-			if (hLLMouseHook == NULL)
-				return FALSE;
-		}
-		return TRUE;
+        if (hLLMouseHook == nullptr)
+        {
+            // Start up the hook...
+            hLLMouseHook = ::SetWindowsHookEx(WH_MOUSE_LL,                       // Hook in before msg reaches app
+                                            reinterpret_cast<HOOKPROC>(LowLevelMouseFilterProc), // Hook procedure
+                                            hInstance,                         // This DLL instance
+                                            0L                                 // Hook in to all apps
+            );
+            if (hLLMouseHook == nullptr)
+            {
+                return FALSE;
+            }
+        }
+        return TRUE;
 #else
 #pragma message("warning:Low-Level Mouse hook code omitted.")
-		return FALSE;
+        return FALSE;
 #endif
-	} else {
-		if (hLLMouseHook != NULL)
-		{
-			// Stop the hook...
-			if (!UnhookWindowsHookEx(hLLMouseHook))
-				return FALSE;
-			hLLMouseHook = NULL;
-		}
-		return TRUE;
-	}
+    }
+    else
+    {
+        if (hLLMouseHook != nullptr)
+        {
+            // Stop the hook...
+            if (!::UnhookWindowsHookEx(hLLMouseHook))
+            {
+                return FALSE;
+            }
+            hLLMouseHook = nullptr;
+        }
+        return TRUE;
+    }
 }
 
 // Routine to get the window's client rectangle, in screen coordinates
-inline BOOL GetAbsoluteClientRect(HWND hwnd, RECT *rect)
+inline BOOL GetAbsoluteClientRect(const HWND hwnd, RECT* const rect)
 {
-	POINT topleft;
-	topleft.x = 0;
-	topleft.y = 0;
+    POINT topleft;
+    topleft.x = 0;
+    topleft.y = 0;
 
-	// Get the client rectangle size
-	if (!GetClientRect(hwnd, rect))
-		return FALSE;
+    // Get the client rectangle size
+    if (!::GetClientRect(hwnd, rect))
+    {
+        return FALSE;
+    }
 
-	// Get the client rectangle position
-	if (!ClientToScreen(hwnd, &topleft))
-		return FALSE;
+    // Get the client rectangle position
+    if (!::ClientToScreen(hwnd, &topleft))
+    {
+        return FALSE;
+    }
 
-	// Now adjust the window rectangle
-	rect->left += topleft.x;
-	rect->top += topleft.y;
-	rect->right += topleft.x;
-	rect->bottom += topleft.y;
+    // Now adjust the window rectangle
+    rect->left += topleft.x;
+    rect->top += topleft.y;
+    rect->right += topleft.x;
+    rect->bottom += topleft.y;
 
-	return TRUE;
+    return TRUE;
 }
 
 // Routine to send an UpdateRect message to WinVNC
-inline void SendUpdateRect(SHORT x, SHORT y, SHORT x2, SHORT y2)
+inline void SendUpdateRect(const SHORT x, const SHORT y, const SHORT x2, const SHORT y2)
 {
-	WPARAM vwParam;
-	LPARAM vlParam;
+    WPARAM vwParam;
+    LPARAM vlParam;
 
-	vwParam = MAKELONG(x, y);
-	vlParam = MAKELONG(x2, y2);
+    vwParam = static_cast<WPARAM>(MAKELONG(x, y));
+    vlParam = MAKELONG(x2, y2);
 
-	// Send the update to WinVNC
-	PostThreadMessage(
-		 g_shdata->vnc_thread_id,
-		 g_shdata->UpdateRectMessage,
-		vwParam,
-		vlParam
-		);
-	HWND hWndRemote=FindWindow("WinVNC desktop sink", "WinVNC");
-	if (hWndRemote==NULL) UnSetHooks( g_shdata->vnc_thread_id);
+    // Send the update to WinVNC
+    ::PostThreadMessage(g_shdata->vnc_thread_id, g_shdata->UpdateRectMessage, vwParam, vlParam);
+    HWND hWndRemote = ::FindWindow("WinVNC desktop sink", "WinVNC");
+    if (hWndRemote == nullptr)
+    {
+        UnSetHooks(g_shdata->vnc_thread_id);
+    }
 }
 
 // Send a window's position to WinVNC
 
-inline void SendWindowRect(HWND hWnd)
+inline void SendWindowRect(const HWND hWnd)
 {
-	RECT wrect;
+    RECT wrect;
 
-	// Get the rectangle position
-	if (IsWindowVisible(hWnd) && GetWindowRect(hWnd, &wrect))
-	{
-		// Send the position
-		SendUpdateRect(
-			(SHORT) wrect.left,
-			(SHORT) wrect.top,
-			(SHORT) wrect.right,
-			(SHORT) wrect.bottom
-			);
-	}
+    // Get the rectangle position
+    if (::IsWindowVisible(hWnd) && GetWindowRect(hWnd, &wrect))
+    {
+        // Send the position
+        SendUpdateRect(static_cast<SHORT>(wrect.left), static_cast<SHORT>(wrect.top), static_cast<SHORT>(wrect.right), static_cast<SHORT>(wrect.bottom));
+    }
 }
 
 // Send a deferred message into this Window's message queue, so that
 // we'll intercept it again only after the message that triggered it has been
 // handled
 
-inline void SendDeferredUpdateRect(HWND hWnd, SHORT x, SHORT y, SHORT x2, SHORT y2)
+inline void SendDeferredUpdateRect(const HWND hWnd, const SHORT x, const SHORT y, const SHORT x2, const SHORT y2)
 {
-	WPARAM vwParam;
-	LPARAM vlParam;
+    WPARAM vwParam;
+    LPARAM vlParam;
 
-	vwParam = MAKELONG(x, y);
-	vlParam = MAKELONG(x2, y2);
+    vwParam = static_cast<WPARAM>(MAKELONG(x, y));
+    vlParam = MAKELONG(x2, y2);
 
-	if (prf_use_Deferral)
-	{
-		// Send the update back to the window
-		PostMessage(
-			hWnd,
-			VNC_DEFERRED_UPDATE,
-			vwParam,
-			vlParam
-			);
-	}
-	else
-	{
-		// Send the update to WinVNC
-		PostThreadMessage(
-			 g_shdata->vnc_thread_id,
-			 g_shdata->UpdateRectMessage,
-			vwParam,
-			vlParam
-			);
-	}
+    if (prf_use_Deferral)
+    {
+        // Send the update back to the window
+        ::PostMessage(hWnd, VNC_DEFERRED_UPDATE, vwParam, vlParam);
+    }
+    else
+    {
+        // Send the update to WinVNC
+        ::PostThreadMessage(g_shdata->vnc_thread_id, g_shdata->UpdateRectMessage, vwParam, vlParam);
+    }
 }
 
-inline void SendDeferredWindowRect(HWND hWnd)
+inline void SendDeferredWindowRect(const HWND hWnd)
 {
-	RECT wrect;
+    RECT wrect;
 
-	// Get the rectangle position
-	if (IsWindowVisible(hWnd) && GetWindowRect(hWnd, &wrect))
-	{
-		// Send the position
-		SendDeferredUpdateRect(
-			hWnd,
-			(SHORT) wrect.left,
-			(SHORT) wrect.top,
-			(SHORT) wrect.right,
-			(SHORT) wrect.bottom
-			);
-	}
+    // Get the rectangle position
+    if (::IsWindowVisible(hWnd) && GetWindowRect(hWnd, &wrect))
+    {
+        // Send the position
+        SendDeferredUpdateRect(hWnd, static_cast<SHORT>(wrect.left), static_cast<SHORT>(wrect.top), static_cast<SHORT>(wrect.right), static_cast<SHORT>(wrect.bottom));
+    }
 }
 
-inline void SendDeferredBorderRect(HWND hWnd)
+inline void SendDeferredBorderRect(const HWND hWnd)
 {
-	RECT wrect;
-	RECT crect;
+    RECT wrect;
+    RECT crect;
 
-	// Get the rectangle position
-	if (IsWindowVisible(hWnd) && GetWindowRect(hWnd, &wrect))
-	{
-		// Get the client rectangle position
-		if (GetAbsoluteClientRect(hWnd, &crect))
-		{
-			// Send the four border rectangles
-			SendDeferredUpdateRect(hWnd, (SHORT) wrect.left, (SHORT) wrect.top, (SHORT) wrect.right, (SHORT) crect.top);
-			SendDeferredUpdateRect(hWnd, (SHORT) wrect.left, (SHORT) wrect.top, (SHORT) crect.left, (SHORT) wrect.bottom);
-			SendDeferredUpdateRect(hWnd, (SHORT) wrect.left, (SHORT) crect.bottom, (SHORT) wrect.right, (SHORT) wrect.bottom);
-			SendDeferredUpdateRect(hWnd, (SHORT) crect.right, (SHORT) wrect.top, (SHORT) wrect.right, (SHORT) wrect.bottom);
-		}
-	}
+    // Get the rectangle position
+    if (::IsWindowVisible(hWnd) && GetWindowRect(hWnd, &wrect))
+    {
+        // Get the client rectangle position
+        if (GetAbsoluteClientRect(hWnd, &crect))
+        {
+            // Send the four border rectangles
+            SendDeferredUpdateRect(hWnd, static_cast<SHORT>(wrect.left), static_cast<SHORT>(wrect.top), static_cast<SHORT>(wrect.right), static_cast<SHORT>(crect.top));
+            SendDeferredUpdateRect(hWnd, static_cast<SHORT>(wrect.left), static_cast<SHORT>(wrect.top), static_cast<SHORT>(crect.left), static_cast<SHORT>(wrect.bottom));
+            SendDeferredUpdateRect(hWnd, static_cast<SHORT>(wrect.left), static_cast<SHORT>(crect.bottom), static_cast<SHORT>(wrect.right), static_cast<SHORT>(wrect.bottom));
+            SendDeferredUpdateRect(hWnd, static_cast<SHORT>(crect.right), static_cast<SHORT>(wrect.top), static_cast<SHORT>(wrect.right), static_cast<SHORT>(wrect.bottom));
+        }
+    }
 }
 // ddihook, we only need the mouse info
-inline BOOL HookHandleddi(UINT MessageId, HWND hWnd, WPARAM wParam, LPARAM lParam)
+inline BOOL HookHandleddi(const UINT MessageId, [[maybe_unused]] const HWND hWnd, [[maybe_unused]] const WPARAM wParam, [[maybe_unused]] const LPARAM lParam)
 {
-	switch (MessageId)
-	{
-	case WM_NCMOUSEMOVE:
-	case WM_MOUSEMOVE:
-		// Inform WinVNC that the mouse has moved and pass it the current cursor handle
-		{
-			HICON new_cursor = GetCursor();
-			if (new_cursor != old_cursor) {
-				PostThreadMessage(
-					 g_shdata->vnc_thread_id,
-					 g_shdata->MouseMoveMessage,
-					(ULONG_PTR)new_cursor, 0);
-				old_cursor=new_cursor;
-			}
-		}
-		break;
-	}
-	return TRUE;
+    switch (MessageId)
+    {
+    case WM_NCMOUSEMOVE:
+    case WM_MOUSEMOVE:
+        // Inform WinVNC that the mouse has moved and pass it the current cursor handle
+        {
+            HICON new_cursor = GetCursor();
+            if (new_cursor != old_cursor)
+            {
+                ::PostThreadMessage(g_shdata->vnc_thread_id, g_shdata->MouseMoveMessage, reinterpret_cast<ULONG_PTR>(new_cursor), 0);
+                old_cursor = new_cursor;
+            }
+        }
+        break;
+    }
+    return TRUE;
 }
 // Generic hook-handler
 
-inline BOOL HookHandle(UINT MessageId, HWND hWnd, WPARAM wParam, LPARAM lParam)
+inline BOOL HookHandle(const UINT MessageId, const HWND hWnd, const WPARAM wParam, const LPARAM lParam)
 {
-	////////////////////////////////////////////////////////////////
-	// HANDLE DEFERRED UPDATES
+    ////////////////////////////////////////////////////////////////
+    // HANDLE DEFERRED UPDATES
 
-	// Is this a deferred-update message?
-	if (MessageId == VNC_DEFERRED_UPDATE)
-	{
+    // Is this a deferred-update message?
+    if (MessageId == VNC_DEFERRED_UPDATE)
+    {
 
-		// NOTE : NEVER use the SendDeferred- routines to send updates
-		//		from here, or you'll get an infinite loop....!
+        // NOTE : NEVER use the SendDeferred- routines to send updates
+        //		from here, or you'll get an infinite loop....!
 
-		// NB : The format of DEFERRED_UPDATE matches that of UpdateRectMessage,
-		//		so just send the exact same message data to WinVNC
+        // NB : The format of DEFERRED_UPDATE matches that of UpdateRectMessage,
+        //		so just send the exact same message data to WinVNC
 
-		PostThreadMessage(
-			 g_shdata->vnc_thread_id,
-			 g_shdata->UpdateRectMessage,
-			wParam,
-			lParam
-			);
+        ::PostThreadMessage(g_shdata->vnc_thread_id, g_shdata->UpdateRectMessage, wParam, lParam);
 
-		return FALSE;
-	}
+        return FALSE;
+    }
 
-	// *** Could use WM_COPYDATA to send data to WinVNC
+    // *** Could use WM_COPYDATA to send data to WinVNC
 
-/*
-	if (GetClassLong(hWnd, GCW_ATOM) == 32768)
-	{
-		_RPT4(_CRT_WARN, "DBG : popup menu message (hwnd=%d, msg=%d, l=%d, w=%d)\n",
-		hWnd, MessageId, lParam, wParam);
-	}
-*/
+    /*
+        if (GetClassLong(hWnd, GCW_ATOM) == 32768)
+        {
+            _RPT4(_CRT_WARN, "DBG : popup menu message (hwnd=%d, msg=%d, l=%d, w=%d)\n",
+            hWnd, MessageId, lParam, wParam);
+        }
+    */
 
-	////////////////////////////////////////////////////////////////
-	// UPDATE-TRIGGERING MESSAGES
+    ////////////////////////////////////////////////////////////////
+    // UPDATE-TRIGGERING MESSAGES
 
-	// Do something dependent upon message type
-	switch (MessageId)
-	{
-		
-		////////////////////////////////////////////////////////////////
-		// Messages indicating only a border repaint.
-	case WM_NCPAINT:
-	case WM_NCACTIVATE:
-		SendDeferredBorderRect(hWnd);
-		old_cursor = NULL;
-		break;
+    // Do something dependent upon message type
+    switch (MessageId)
+    {
 
-		////////////////////////////////////////////////////////////////
-		// Messages indicating a client area repaint
-	case WM_CHAR:
-	case WM_KEYUP:							// Handle key-presses
-		if (prf_use_KeyPress)
-			SendDeferredWindowRect(hWnd);
-		break;
+        ////////////////////////////////////////////////////////////////
+        // Messages indicating only a border repaint.
+    case WM_NCPAINT:
+    case WM_NCACTIVATE:
+        SendDeferredBorderRect(hWnd);
+        old_cursor = nullptr;
+        break;
 
-	case WM_LBUTTONUP:						// Handle LMB clicks
-		if (prf_use_LButtonUp)
-			SendDeferredWindowRect(hWnd);
-		break;
+        ////////////////////////////////////////////////////////////////
+        // Messages indicating a client area repaint
+    case WM_CHAR:
+    case WM_KEYUP: // Handle key-presses
+        if (prf_use_KeyPress)
+        {
+            SendDeferredWindowRect(hWnd);
+        }
+        break;
 
-	case WM_MBUTTONUP:						// Handle MMB clicks
-		if (prf_use_MButtonUp)
-			SendDeferredWindowRect(hWnd);
-		break;
+    case WM_LBUTTONUP: // Handle LMB clicks
+        if (prf_use_LButtonUp)
+        {
+            SendDeferredWindowRect(hWnd);
+        }
+        break;
 
-	case WM_RBUTTONUP:						// Handle RMB clicks
-		if (prf_use_RButtonUp)
-			SendDeferredWindowRect(hWnd);
-		break;
+    case WM_MBUTTONUP: // Handle MMB clicks
+        if (prf_use_MButtonUp)
+        {
+            SendDeferredWindowRect(hWnd);
+        }
+        break;
 
-	case WM_TIMER:
-		if (prf_use_Timer)
-			SendDeferredWindowRect(hWnd);
-		break;
+    case WM_RBUTTONUP: // Handle RMB clicks
+        if (prf_use_RButtonUp)
+        {
+            SendDeferredWindowRect(hWnd);
+        }
+        break;
 
-	case WM_HSCROLL:
-	case WM_VSCROLL:
-		if (((int) LOWORD(wParam) == SB_THUMBTRACK) || ((int) LOWORD(wParam) == SB_ENDSCROLL))
-			SendDeferredWindowRect(hWnd);
-		break;
+    case WM_TIMER:
+        if (prf_use_Timer)
+        {
+            SendDeferredWindowRect(hWnd);
+        }
+        break;
 
-	case 485:  // HACK to handle popup menus
-		{
-			// Get the old popup menu selection value
-			HANDLE prop = GetProp(hWnd, (LPCTSTR) MAKELONG(VNC_POPUPSELN_ATOM, 0));
-			if (prop != (HANDLE) wParam)
-			{
-				// It did, so update the menu & the selection value
-				SendDeferredWindowRect(hWnd);
-				SetProp(hWnd,
-					(LPCTSTR) MAKELONG(VNC_POPUPSELN_ATOM, 0),
-					(HANDLE) wParam);
-			}
-		}
-		break;
+    case WM_HSCROLL:
+    case WM_VSCROLL:
+        if ((static_cast<int>(LOWORD(wParam)) == SB_THUMBTRACK) || (static_cast<int>(LOWORD(wParam)) == SB_ENDSCROLL))
+        {
+            SendDeferredWindowRect(hWnd);
+        }
+        break;
 
-		////////////////////////////////////////////////////////////////
-		// Messages indicating a full window update
-	case WM_SYSCOLORCHANGE:
-	case WM_PALETTECHANGED:
-	case WM_SETTEXT:
-	case WM_ENABLE:
-	case BM_SETCHECK:
-	case BM_SETSTATE:
-	case EM_SETSEL:
-	//case WM_MENUSELECT:
-		SendDeferredWindowRect(hWnd);
-		break;
+    case 485: // HACK to handle popup menus
+    {
+        // Get the old popup menu selection value
+        HANDLE prop = ::GetProp(hWnd, reinterpret_cast<LPCTSTR>(MAKELONG(VNC_POPUPSELN_ATOM, 0)));
+        if (prop != reinterpret_cast<HANDLE>(wParam))
+        {
+            // It did, so update the menu & the selection value
+            SendDeferredWindowRect(hWnd);
+            ::SetProp(hWnd, reinterpret_cast<LPCTSTR>(MAKELONG(VNC_POPUPSELN_ATOM, 0)), reinterpret_cast<HANDLE>(wParam));
+        }
+    }
+    break;
 
-		////////////////////////////////////////////////////////////////
-		// Messages indicating that an area of the window needs updating
-		// Uses GetUpdateRect to find out which
-	case WM_PAINT:
-		if (prf_use_GetUpdateRect)
-		{
-			HRGN region;
-			region = CreateRectRgn(0, 0, 0, 0);
+        ////////////////////////////////////////////////////////////////
+        // Messages indicating a full window update
+    case WM_SYSCOLORCHANGE:
+    case WM_PALETTECHANGED:
+    case WM_SETTEXT:
+    case WM_ENABLE:
+    case BM_SETCHECK:
+    case BM_SETSTATE:
+    case EM_SETSEL:
+        //case WM_MENUSELECT:
+        SendDeferredWindowRect(hWnd);
+        break;
 
-			// Get the affected region
-			if (GetUpdateRgn(hWnd, region, FALSE) != ERROR)
-			{
-				int buffsize;
-				UINT x;
-				RGNDATA *buff;
-				POINT TopLeft;
+        ////////////////////////////////////////////////////////////////
+        // Messages indicating that an area of the window needs updating
+        // Uses GetUpdateRect to find out which
+    case WM_PAINT:
+        if (prf_use_GetUpdateRect)
+        {
+            HRGN region;
+            region = ::CreateRectRgn(0, 0, 0, 0);
 
-				// Get the top-left point of the client area
-				TopLeft.x = 0;
-				TopLeft.y = 0;
-				if (!ClientToScreen(hWnd, &TopLeft))
-					break;
+            // Get the affected region
+            if (::GetUpdateRgn(hWnd, region, FALSE) != ERROR)
+            {
+                int buffsize;
+                UINT x;
+                RGNDATA* buff;
+                POINT TopLeft;
 
-				// Get the size of buffer required
-				buffsize = GetRegionData(region, 0, 0);
-				if (buffsize != 0)
-				{
-					buff = (RGNDATA *) new BYTE [buffsize];
-					if (buff == NULL)
-						break;
+                // Get the top-left point of the client area
+                TopLeft.x = 0;
+                TopLeft.y = 0;
+                if (!::ClientToScreen(hWnd, &TopLeft))
+                {
+                    break;
+                }
 
-					// Now get the region data
-					if(GetRegionData(region, buffsize, buff))
-					{
-						for (x=0; x<(buff->rdh.nCount); x++)
-						{
-							// Obtain the rectangles from the list
-							RECT *urect = (RECT *) (((BYTE *) buff) + sizeof(RGNDATAHEADER) + (x * sizeof(RECT)));
-							SendDeferredUpdateRect(
-								hWnd,
-								(SHORT) (TopLeft.x + urect->left),
-								(SHORT) (TopLeft.y + urect->top),
-								(SHORT) (TopLeft.x + urect->right),
-								(SHORT) (TopLeft.y + urect->bottom)
-								);
+                // Get the size of buffer required
+                buffsize = static_cast<int>(::GetRegionData(region, 0, nullptr));
+                if (buffsize != 0)
+                {
+                    buff = reinterpret_cast<RGNDATA*>(new BYTE[static_cast<unsigned long long>(buffsize)]);
+                    if (buff == nullptr)
+                    {
+                        break;
+                    }
 
-							// Modified by mws for VNC ver. 3.3.6
-							// We yield this thread so our PostMessages and socket commands
-							// can complete, otherwise this hook can suck up too many
-							// timeslices before it returns
-							Sleep (0);
-						}
-					}
+                    // Now get the region data
+                    if (::GetRegionData(region, static_cast<DWORD>(buffsize), buff))
+                    {
+                        for (x = 0; x < (buff->rdh.nCount); ++x)
+                        {
+                            // Obtain the rectangles from the list
+                            RECT* urect = reinterpret_cast<RECT*>(reinterpret_cast<BYTE*>(buff) + sizeof(RGNDATAHEADER) + (x * sizeof(RECT)));
+                            SendDeferredUpdateRect(hWnd, static_cast<SHORT>((TopLeft.x + urect->left)), static_cast<SHORT>((TopLeft.y + urect->top)),
+                                                   static_cast<SHORT>((TopLeft.x + urect->right)), static_cast<SHORT>((TopLeft.y + urect->bottom)));
 
-					delete [] buff;
-				}
-			}
+                            // Modified by mws for VNC ver. 3.3.6
+                            // We yield this thread so our PostMessages and socket commands
+                            // can complete, otherwise this hook can suck up too many
+                            // timeslices before it returns
+                            ::Sleep(0);
+                        }
+                    }
 
-			// Now free the region
-			if (region != NULL)
-				DeleteObject(region);
-		}
-		else
-			SendDeferredWindowRect(hWnd);
-		break;
+                    delete[] buff;
+                }
+            }
 
-		////////////////////////////////////////////////////////////////
-		// Messages indicating full repaint of this and a different window
-		// Send the new position of the window
-	case WM_WINDOWPOSCHANGING:
-		if (IsWindowVisible(hWnd))
-			SendWindowRect(hWnd);
-		break;
+            // Now free the region
+            if (region != nullptr)
+            {
+                ::DeleteObject(region);
+            }
+        }
+        else
+        {
+            SendDeferredWindowRect(hWnd);
+        }
+        break;
 
-	case WM_WINDOWPOSCHANGED:
-		if (IsWindowVisible(hWnd))
-			SendDeferredWindowRect(hWnd);
-		break;
+        ////////////////////////////////////////////////////////////////
+        // Messages indicating full repaint of this and a different window
+        // Send the new position of the window
+    case WM_WINDOWPOSCHANGING:
+        if (::IsWindowVisible(hWnd))
+        {
+            SendWindowRect(hWnd);
+        }
+        break;
 
-	////////////////////////////////////////////////////////////////
-	// WinVNC also wants to know about mouse movement
-	case WM_NCMOUSEMOVE:
-	case WM_MOUSEMOVE:
-		// Inform WinVNC that the mouse has moved and pass it the current cursor handle
-		{
-			HICON new_cursor = GetCursor();
-			if (new_cursor != old_cursor) {
-				PostThreadMessage(
-					 g_shdata->vnc_thread_id,
-					 g_shdata->MouseMoveMessage,
-					(ULONG_PTR)new_cursor, 0);
-				old_cursor=new_cursor;
-			}
-		}
-		break;
+    case WM_WINDOWPOSCHANGED:
+        if (::IsWindowVisible(hWnd))
+        {
+            SendDeferredWindowRect(hWnd);
+        }
+        break;
+
+    ////////////////////////////////////////////////////////////////
+    // WinVNC also wants to know about mouse movement
+    case WM_NCMOUSEMOVE:
+    case WM_MOUSEMOVE:
+        // Inform WinVNC that the mouse has moved and pass it the current cursor handle
+        {
+            HICON new_cursor = GetCursor();
+            if (new_cursor != old_cursor)
+            {
+                ::PostThreadMessage(g_shdata->vnc_thread_id, g_shdata->MouseMoveMessage, reinterpret_cast<ULONG_PTR>(new_cursor), 0);
+                old_cursor = new_cursor;
+            }
+        }
+        break;
 
     // RealVNC 335
-    case WM_MOUSEWHEEL:           // Handle mousewheel events
-       SendDeferredWindowRect(hWnd);
-       break;
-		////////////////////////////////////////////////////////////////
-		// VNCHOOKS PROPERTIES HANDLING WINDOWS
-	case WM_DESTROY:
-		RemoveProp(hWnd, (LPCTSTR) MAKELONG(VNC_POPUPSELN_ATOM, 0));
-		break;
+    case WM_MOUSEWHEEL: // Handle mousewheel events
+        SendDeferredWindowRect(hWnd);
+        break;
+        ////////////////////////////////////////////////////////////////
+        // VNCHOOKS PROPERTIES HANDLING WINDOWS
+    case WM_DESTROY:
+        ::RemoveProp(hWnd, reinterpret_cast<LPCTSTR>(MAKELONG(VNC_POPUPSELN_ATOM, 0)));
+        break;
+    }
 
-	}
-
-	return TRUE;
+    return TRUE;
 }
 
 // Hook procedure for CallWindow hook
 
-LRESULT CALLBACK CallWndProc(int nCode, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK CallWndProc(const int nCode, const WPARAM wParam, const LPARAM lParam)
 {
-   if (isAttached)
-   {
-      // Do we have to handle this message?
-	   if (nCode == HC_ACTION)
-	   {
-		   // Process the hook if the WinVNC thread ID is valid
-		   if ( g_shdata->vnc_thread_id)
-		   {
-			   CWPSTRUCT *cwpStruct = (CWPSTRUCT *) lParam;
-			   HookHandle(cwpStruct->message, cwpStruct->hwnd, cwpStruct->wParam, cwpStruct->lParam);
-		   }
-	   }
-   }
+    if (isAttached)
+    {
+        // Do we have to handle this message?
+        if (nCode == HC_ACTION)
+        {
+            // Process the hook if the WinVNC thread ID is valid
+            if (g_shdata->vnc_thread_id)
+            {
+                CWPSTRUCT* cwpStruct = reinterpret_cast<CWPSTRUCT*>(lParam);
+                HookHandle(cwpStruct->message, cwpStruct->hwnd, cwpStruct->wParam, cwpStruct->lParam);
+            }
+        }
+    }
 
-	// Call the next handler in the chain
-    return CallNextHookEx (hCallWndHook, nCode, wParam, lParam);
+    // Call the next handler in the chain
+    return ::CallNextHookEx(hCallWndHook, nCode, wParam, lParam);
 }
 
 // Hook procedure for GetMessageProc hook
 
-LRESULT CALLBACK GetMessageProc(int nCode, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK GetMessageProc(const int nCode, const WPARAM wParam, const LPARAM lParam)
 {
-   if (isAttached)
-   {
-      // Do we have to handle this message?
-	   if (nCode == HC_ACTION)
-	   {
-		   // Process the hook only if the WinVNC thread id is valid
-		   if ( g_shdata->vnc_thread_id)
-		   {
-			   MSG *msg = (MSG *) lParam;
+    if (isAttached)
+    {
+        // Do we have to handle this message?
+        if (nCode == HC_ACTION)
+        {
+            // Process the hook only if the WinVNC thread id is valid
+            if (g_shdata->vnc_thread_id)
+            {
+                MSG* msg = reinterpret_cast<MSG*>(lParam);
 
-			   // Only handle application messages if they're being removed:
-			   if (wParam & PM_REMOVE)
-			   {
-				   // Handle the message
-				   if (m_ddihook)
-				   HookHandleddi(msg->message, msg->hwnd, msg->wParam, msg->lParam);
-				   else HookHandle(msg->message, msg->hwnd, msg->wParam, msg->lParam);
-			   }
-		   }
-	   }
-   }
+                // Only handle application messages if they're being removed:
+                if (wParam & PM_REMOVE)
+                {
+                    // Handle the message
+                    if (m_ddihook)
+                    {
+                        HookHandleddi(msg->message, msg->hwnd, msg->wParam, msg->lParam);
+                    }
+                    else
+                    {
+                        HookHandle(msg->message, msg->hwnd, msg->wParam, msg->lParam);
+                    }
+                }
+            }
+        }
+    }
 
-	// Call the next handler in the chain
-    return CallNextHookEx (hGetMsgHook, nCode, wParam, lParam);
+    // Call the next handler in the chain
+    return ::CallNextHookEx(hGetMsgHook, nCode, wParam, lParam);
 }
 
 
 // Hook procedure for DialogMessageProc hook
 
-LRESULT CALLBACK DialogMessageProc(int nCode, WPARAM wParam, LPARAM lParam)
-{	
-	if (isAttached)
-   {  
-      // Do we have to handle this message?
-	   if (nCode >= 0)
-	   {
-		   // Process the hook only if the WinVNC thread ID is valid
-		   if ( g_shdata->vnc_thread_id)
-		   {
-			   MSG *msg = (MSG *) lParam;
+LRESULT CALLBACK DialogMessageProc(const int nCode, const WPARAM wParam, const LPARAM lParam)
+{
+    if (isAttached)
+    {
+        // Do we have to handle this message?
+        if (nCode >= 0)
+        {
+            // Process the hook only if the WinVNC thread ID is valid
+            if (g_shdata->vnc_thread_id)
+            {
+                MSG* msg = reinterpret_cast<MSG*>(lParam);
 
-			   // Handle the message
-			   HookHandle(msg->message, msg->hwnd, msg->wParam, msg->lParam);
-		   }
-	   }
-   }
+                // Handle the message
+                HookHandle(msg->message, msg->hwnd, msg->wParam, msg->lParam);
+            }
+        }
+    }
 
-	// Call the next handler in the chain
-    return CallNextHookEx (hGetMsgHook, nCode, wParam, lParam);
+    // Call the next handler in the chain
+    return ::CallNextHookEx(hGetMsgHook, nCode, wParam, lParam);
 }
 
 // Hook procedure for LowLevel Keyboard filtering
 
 #ifdef WH_KEYBOARD_LL
-LRESULT CALLBACK LowLevelKeyboardFilterProc(int nCode, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK LowLevelKeyboardFilterProc(const int nCode, const WPARAM wParam, const LPARAM lParam)
 {
-   if (isAttached)
-   {
-      // Are we expected to handle this callback?
-	   if (nCode == HC_ACTION)
-	   {
-		   // Is this keyboard event "real" or "injected"
-		   // i.e. hardware or software-produced?
-		   KBDLLHOOKSTRUCT *hookStruct = (KBDLLHOOKSTRUCT*)lParam;
-		   if (!(hookStruct->flags & LLKHF_INJECTED)) {
-			   // Message was not injected - reject it!
-			   return TRUE;
-		   }
-	   }
-   }
+    if (isAttached)
+    {
+        // Are we expected to handle this callback?
+        if (nCode == HC_ACTION)
+        {
+            // Is this keyboard event "real" or "injected"
+            // i.e. hardware or software-produced?
+            KBDLLHOOKSTRUCT* hookStruct = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
+            if (!(hookStruct->flags & LLKHF_INJECTED))
+            {
+                // Message was not injected - reject it!
+                return TRUE;
+            }
+        }
+    }
 
 
-	// Otherwise, pass on the message
-	return CallNextHookEx(hLLKeyboardHook, nCode, wParam, lParam);
+    // Otherwise, pass on the message
+    return ::CallNextHookEx(hLLKeyboardHook, nCode, wParam, lParam);
 }
 #endif
 
@@ -906,54 +929,57 @@ LRESULT CALLBACK LowLevelKeyboardFilterProc(int nCode, WPARAM wParam, LPARAM lPa
 #define MOUSEEVENTF_FROMTOUCH 0xFF515700
 
 #ifdef WH_MOUSE_LL
-LRESULT CALLBACK LowLevelMouseFilterProc(int nCode, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK LowLevelMouseFilterProc(const int nCode, const WPARAM wParam, const LPARAM lParam)
 {
-   if (isAttached)
-   {	
-      // Are we expected to handle this callback?
-	   if (nCode == HC_ACTION)
-	   {
-		   // Is this mouse event "real" or "injected"
-		   // i.e. hardware or software-produced?
-		   MSLLHOOKSTRUCT *hookStruct = (MSLLHOOKSTRUCT*)lParam;
-		   if ((hookStruct->dwExtraInfo & MOUSEEVENTF_FROMTOUCH) == MOUSEEVENTF_FROMTOUCH)
-		   {
-			   return TRUE;
-		   }
+    if (isAttached)
+    {
+        // Are we expected to handle this callback?
+        if (nCode == HC_ACTION)
+        {
+            // Is this mouse event "real" or "injected"
+            // i.e. hardware or software-produced?
+            MSLLHOOKSTRUCT* hookStruct = reinterpret_cast<MSLLHOOKSTRUCT*>(lParam);
+            if ((hookStruct->dwExtraInfo & MOUSEEVENTF_FROMTOUCH) == MOUSEEVENTF_FROMTOUCH)
+            {
+                return TRUE;
+            }
 
-		   if (!(hookStruct->flags & LLMHF_INJECTED)) {			   
-			   // Message was not injected - reject it!
-			   return TRUE;
-		   }
-	   }
-   }
+            if (!(hookStruct->flags & LLMHF_INJECTED))
+            {
+                // Message was not injected - reject it!
+                return TRUE;
+            }
+        }
+    }
 
-	// Otherwise, pass on the message
-	return CallNextHookEx(hLLMouseHook, nCode, wParam, lParam);
+    // Otherwise, pass on the message
+    return ::CallNextHookEx(hLLMouseHook, nCode, wParam, lParam);
 }
 #endif
 
-char * NameFromPath(const char *path)
+char* NameFromPath(const char* const path)
 {
-	int x;
-	int l = (int)strlen(path);
-	char *temp = NULL;
-	
-	// Find the file part of a filename
-	for (x=l-1; x>0; x--)
-	{
-		if (path[x] == '\\')
-		{
-			temp = _strdup(&(path[x+1]));
-			break;
-		}
-	}
+    int x;
+    int l = static_cast<int>(std::strlen(path));
+    char* temp{ nullptr };
 
-	// If we didn't fine a \ then just return a copy of the original
-	if (temp == NULL)
-		temp = _strdup(path);
+    // Find the file part of a filename
+    for (x = l - 1; x > 0; --x)
+    {
+        if (path[x] == '\\')
+        {
+            temp = _strdup(&(path[x + 1]));
+            break;
+        }
+    }
 
-	return temp;
+    // If we didn't fine a \ then just return a copy of the original
+    if (temp == nullptr)
+    {
+        temp = _strdup(path);
+    }
+
+    return temp;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -964,287 +990,259 @@ static const TCHAR szSoftware[] = "Software";
 static const TCHAR szCompany[] = "ORL";
 static const TCHAR szProfile[] = "VNCHooks";
 
-HKEY hModuleKey = NULL;
+HKEY hModuleKey = nullptr;
 
-HKEY OpenKey(HKEY basekey, const char* path[], bool writable, bool create) {
-	HKEY key = basekey;
-	DWORD flags = KEY_READ;
-	if (writable) flags |= KEY_WRITE;
-	if (create) flags |= KEY_CREATE_SUB_KEY;
-	unsigned int i = 0;
-	while (path[i]) {
-		HKEY newkey;
-		DWORD result, dw;
-		if (create) {
-#ifdef _MSC_VER 
-			_RPT2(_CRT_WARN, "vncHooks : creating %s from %x\n", path[i], key);
-#endif
-			result = RegCreateKeyEx(key, path[i], 0, REG_NONE,
-				REG_OPTION_NON_VOLATILE, flags, NULL,
-				&newkey, &dw);
-		} else {
-#ifdef _MSC_VER 
-			_RPT2(_CRT_WARN, "vncHooks : opening %s from %x\n", path[i], key);
-#endif
-			result = RegOpenKeyEx(key, path[i], 0, flags, &newkey);
-		}
-		if (key && (key != basekey)) RegCloseKey(key);
-		key = newkey;
-		if (result != ERROR_SUCCESS) {
-#ifdef _MSC_VER 
-			_RPT2(_CRT_WARN, "vncHooks : failed to open %s(%lu)\n", path[i], result);
-#endif
-			return NULL;
-		} else {
-#ifdef _MSC_VER 
-			_RPT2(_CRT_WARN, "vncHooks : opened %s (%x)\n", path[i], key);
-#endif
-		}
-		i++;
-	}
-	return key;
-}
-
-HKEY GetModuleKey(HKEY basekey, const char* proc_name, bool writable, bool create) {
-	// Work out the registry key to save this under
-	if (!sModulePrefs) {
-		sModulePrefs = (char *) malloc(strlen(proc_name) + 1);
-		if (sModulePrefs == NULL)
-			return FALSE;
-		strcpy(sModulePrefs, proc_name);
-	}
-	
-	// Check whether the library's entry exists!
-	const char* appPath[] = {szSoftware, szCompany, szProfile, 0};
-	HKEY appKey = OpenKey(basekey, appPath, writable, create);
-	if (!appKey)
-		return NULL;
-	
-	// Attempt to open the registry section for the application
-	const char* modPath[] = {sPrefSegment, sModulePrefs, 0};
-	HKEY modKey = OpenKey(appKey, modPath, writable, false);
-	if (!modKey) {
-		// Cut off the app directory and just use the name
-		char *file_name = NameFromPath(proc_name);
-		
-		if (!file_name)
-		{
-			RegCloseKey(appKey);
-			return NULL;
-		}
-		
-		// Adjust the moduleprefs name
-		strcpy(sModulePrefs, file_name);
-		free(file_name);
-		
-		// Now get the module key again
-		const char* modPath2[] = {sPrefSegment, sModulePrefs, 0};
-		modKey = OpenKey(appKey, modPath2, writable, create);
-	}
-	
-	RegCloseKey(appKey);
-	
-	return modKey;
-}
-
-int GetProfileInt(LPTSTR key, int def)
+HKEY OpenKey(const HKEY basekey, const char* path[], const bool writable, const bool create)
 {
-	DWORD type;
-	DWORD value;
-	ULONG size = sizeof(value);
-
-	if (RegQueryValueEx(
-		hModuleKey,
-		key,
-		NULL,
-		&type,
-		(unsigned char *)&value,
-		&size) == ERROR_SUCCESS)
-	{
-		// Is the value of the right type?
-		if (type != REG_DWORD)
-		{
-			return def;
-		}
-		else
-		{
-			return value;
-		}
-	}
-	else
-	{
-		return def;
-	}
+    HKEY key = basekey;
+    DWORD flags = KEY_READ;
+    if (writable)
+    {
+        flags |= KEY_WRITE;
+    }
+    if (create)
+    {
+        flags |= KEY_CREATE_SUB_KEY;
+    }
+    unsigned int i{ 0U };
+    while (path[i])
+    {
+        HKEY newkey;
+        DWORD result, dw;
+        if (create)
+        {
+#ifdef _MSC_VER
+            _RPT2(_CRT_WARN, "vncHooks : creating %s from %x\n", path[i], key);
+#endif
+            result = static_cast<DWORD>(::RegCreateKeyEx(key, path[i], 0, REG_NONE, REG_OPTION_NON_VOLATILE, flags, nullptr, &newkey, &dw));
+        }
+        else
+        {
+#ifdef _MSC_VER
+            _RPT2(_CRT_WARN, "vncHooks : opening %s from %x\n", path[i], key);
+#endif
+            result = static_cast<DWORD>(::RegOpenKeyEx(key, path[i], 0, flags, &newkey));
+        }
+        if (key && (key != basekey))
+        {
+            ::RegCloseKey(key);
+        }
+        key = newkey;
+        if (result != ERROR_SUCCESS)
+        {
+#ifdef _MSC_VER
+            _RPT2(_CRT_WARN, "vncHooks : failed to open %s(%lu)\n", path[i], result);
+#endif
+            return nullptr;
+        }
+        else
+        {
+#ifdef _MSC_VER
+            _RPT2(_CRT_WARN, "vncHooks : opened %s (%x)\n", path[i], key);
+#endif
+        }
+        ++i;
+    }
+    return key;
 }
 
-void WriteProfileInt(LPTSTR key, int value)
+HKEY GetModuleKey(const HKEY basekey, const char* const proc_name, const bool writable, const bool create)
 {
-	RegSetValueEx(
-		hModuleKey,
-		key,
-		0,
-		REG_DWORD,
-		(unsigned char *)&value,
-		sizeof(value));
+    // Work out the registry key to save this under
+    if (!sModulePrefs)
+    {
+        sModulePrefs = reinterpret_cast<char*>(std::malloc(std::strlen(proc_name) + 1));
+        if (sModulePrefs == nullptr)
+        {
+            return FALSE;
+        }
+        std::strcpy(sModulePrefs, proc_name);
+    }
+
+    // Check whether the library's entry exists!
+    const char* appPath[] = { szSoftware, szCompany, szProfile, nullptr };
+    HKEY appKey = OpenKey(basekey, appPath, writable, create);
+    if (!appKey)
+    {
+        return nullptr;
+    }
+
+    // Attempt to open the registry section for the application
+    const char* modPath[] = { sPrefSegment, sModulePrefs, nullptr };
+    HKEY modKey = OpenKey(appKey, modPath, writable, false);
+    if (!modKey)
+    {
+        // Cut off the app directory and just use the name
+        char* file_name = NameFromPath(proc_name);
+
+        if (!file_name)
+        {
+            ::RegCloseKey(appKey);
+            return nullptr;
+        }
+
+        // Adjust the moduleprefs name
+        std::strcpy(sModulePrefs, file_name);
+        std::free(file_name);
+
+        // Now get the module key again
+        const char* modPath2[] = { sPrefSegment, sModulePrefs, nullptr };
+        modKey = OpenKey(appKey, modPath2, writable, create);
+    }
+
+    ::RegCloseKey(appKey);
+
+    return modKey;
 }
 
-void ReadSettings() {
-  // Read in the prefs
-	prf_use_GetUpdateRect = GetProfileInt(
-		"use_GetUpdateRect",
-		TRUE
-		);
-
-	prf_use_Timer = GetProfileInt(
-		"use_Timer",
-		FALSE
-		);
-	prf_use_KeyPress = GetProfileInt(
-		"use_KeyPress",
-		TRUE
-		);
-	prf_use_LButtonUp = GetProfileInt(
-		"use_LButtonUp",
-		TRUE
-		);
-	prf_use_MButtonUp = GetProfileInt(
-		"use_MButtonUp",
-		TRUE
-		);
-	prf_use_RButtonUp = GetProfileInt(
-		"use_RButtonUp",
-		TRUE
-		);
-	prf_use_Deferral = GetProfileInt(
-		"use_Deferral",
-		TRUE
-		);
-}
-
-BOOL InitInstance() 
+int GetProfileInt(const LPTSTR key, const int def)
 {
-	// Create the global atoms
-	if (VNC_POPUPSELN_ATOM == INVALID_ATOM)
-    	VNC_POPUPSELN_ATOM = GlobalAddAtom(VNC_POPUPSELN_ATOMNAME);
-	if (VNC_POPUPSELN_ATOM == INVALID_ATOM)
-		return FALSE;
+    DWORD type;
+    DWORD value;
+    ULONG size = sizeof(value);
 
-	// Get the module name
-	char proc_name[_MAX_PATH];
-	DWORD size;
-
-	// Attempt to get the program/module name
-	if ((size = GetModuleFileName(
-		GetModuleHandle(NULL),
-		(char *) &proc_name,
-		_MAX_PATH
-		)) == 0)
-		return FALSE;
-
-  // Get the default system key for the module
-	hModuleKey = GetModuleKey(HKEY_LOCAL_MACHINE, proc_name, false, false);
-  if (hModuleKey != NULL) {
-#ifdef _MSC_VER 
-		_RPT0(_CRT_WARN, "vncHooks : loading machine prefs\n");
-#endif
-    ReadSettings();
-		RegCloseKey(hModuleKey);
-    hModuleKey = NULL;
-  }
-
-	// Get the key for the module
-	hModuleKey = GetModuleKey(HKEY_CURRENT_USER, proc_name, false, false);
-  if (hModuleKey != NULL) {
-#ifdef _MSC_VER 
-		_RPT0(_CRT_WARN, "vncHooks : loading user prefs\n");
-#endif
-    ReadSettings();
-		RegCloseKey(hModuleKey);
-    hModuleKey = NULL;
-  }
-
-	return TRUE;
+    if (RegQueryValueEx(hModuleKey, key, nullptr, &type, reinterpret_cast<unsigned char*>(&value), &size) == ERROR_SUCCESS)
+    {
+        // Is the value of the right type?
+        if (type != REG_DWORD)
+        {
+            return def;
+        }
+        else
+        {
+            return static_cast<int>(value);
+        }
+    }
+    else
+    {
+        return def;
+    }
 }
 
-BOOL ExitInstance() 
+void WriteProfileInt(const LPTSTR key, int value)
+{ ::RegSetValueEx(hModuleKey, key, 0, REG_DWORD, reinterpret_cast<unsigned char*>(&value), sizeof(value)); }
+
+void ReadSettings()
 {
-	// Free the created atoms
-	if (VNC_POPUPSELN_ATOM != INVALID_ATOM)
-	{
-		GlobalDeleteAtom(VNC_POPUPSELN_ATOM);
-		VNC_POPUPSELN_ATOM = INVALID_ATOM;
-	}
+    // Read in the prefs
+    prf_use_GetUpdateRect = GetProfileInt("use_GetUpdateRect", TRUE);
 
-	// Write the module settings to disk
-	if (sModulePrefs != NULL)
-	{
-	  // Get the module name
-	  char proc_name[_MAX_PATH];
-	  DWORD size;
+    prf_use_Timer = GetProfileInt("use_Timer", FALSE);
+    prf_use_KeyPress = GetProfileInt("use_KeyPress", TRUE);
+    prf_use_LButtonUp = GetProfileInt("use_LButtonUp", TRUE);
+    prf_use_MButtonUp = GetProfileInt("use_MButtonUp", TRUE);
+    prf_use_RButtonUp = GetProfileInt("use_RButtonUp", TRUE);
+    prf_use_Deferral = GetProfileInt("use_Deferral", TRUE);
+}
 
-	  // Attempt to get the program/module name
-	  if ((size = GetModuleFileName(
-		  GetModuleHandle(NULL),
-		  (char *) &proc_name,
-		  _MAX_PATH
-		  )) == 0)
-		  return FALSE;
+BOOL InitInstance()
+{
+    // Create the global atoms
+    if (VNC_POPUPSELN_ATOM == INVALID_ATOM)
+    {
+        VNC_POPUPSELN_ATOM = ::GlobalAddAtom(VNC_POPUPSELN_ATOMNAME);
+    }
+    if (VNC_POPUPSELN_ATOM == INVALID_ATOM)
+    {
+        return FALSE;
+    }
 
-	  // Get the key for the module
-#ifdef _MSC_VER 
-		_RPT0(_CRT_WARN, "vncHooks : locating user prefs\n");
+    // Get the module name
+    std::array<char, _MAX_PATH> proc_name;
+    DWORD size;
+
+    // Attempt to get the program/module name
+    if ((size = ::GetModuleFileName(::GetModuleHandle(nullptr), reinterpret_cast<char*>(proc_name.data()), static_cast<DWORD>(proc_name.size()))) == 0)
+    {
+        return FALSE;
+    }
+
+    // Get the default system key for the module
+    hModuleKey = GetModuleKey(HKEY_LOCAL_MACHINE, proc_name.data(), false, false);
+    if (hModuleKey != nullptr)
+    {
+#ifdef _MSC_VER
+        _RPT0(_CRT_WARN, "vncHooks : loading machine prefs\n");
 #endif
-	  hModuleKey = GetModuleKey(HKEY_CURRENT_USER, proc_name, true, true);
-	  if (hModuleKey == NULL)
-		  return FALSE;
-#ifdef _MSC_VER 
-		_RPT0(_CRT_WARN, "vncHooks : writing user prefs\n");
+        ReadSettings();
+        ::RegCloseKey(hModuleKey);
+        hModuleKey = nullptr;
+    }
+
+    // Get the key for the module
+    hModuleKey = GetModuleKey(HKEY_CURRENT_USER, proc_name.data(), false, false);
+    if (hModuleKey != nullptr)
+    {
+#ifdef _MSC_VER
+        _RPT0(_CRT_WARN, "vncHooks : loading user prefs\n");
+#endif
+        ReadSettings();
+        ::RegCloseKey(hModuleKey);
+        hModuleKey = nullptr;
+    }
+
+    return TRUE;
+}
+
+BOOL ExitInstance()
+{
+    // Free the created atoms
+    if (VNC_POPUPSELN_ATOM != INVALID_ATOM)
+    {
+        ::GlobalDeleteAtom(VNC_POPUPSELN_ATOM);
+        VNC_POPUPSELN_ATOM = INVALID_ATOM;
+    }
+
+    // Write the module settings to disk
+    if (sModulePrefs != nullptr)
+    {
+        // Get the module name
+        std::array<char, _MAX_PATH> proc_name;
+        DWORD size;
+
+        // Attempt to get the program/module name
+        if ((size = ::GetModuleFileName(::GetModuleHandle(nullptr), reinterpret_cast<char*>(proc_name.data()), static_cast<DWORD>(proc_name.size()))) == 0)
+        {
+            return FALSE;
+        }
+
+        // Get the key for the module
+#ifdef _MSC_VER
+        _RPT0(_CRT_WARN, "vncHooks : locating user prefs\n");
+#endif
+        hModuleKey = GetModuleKey(HKEY_CURRENT_USER, proc_name.data(), true, true);
+        if (hModuleKey == nullptr)
+        {
+            return FALSE;
+        }
+#ifdef _MSC_VER
+        _RPT0(_CRT_WARN, "vncHooks : writing user prefs\n");
 #endif
 
-		WriteProfileInt(
-			"use_GetUpdateRect",
-			prf_use_GetUpdateRect
-			);
+        WriteProfileInt("use_GetUpdateRect", prf_use_GetUpdateRect);
 
-		WriteProfileInt(
-			"use_Timer",
-			prf_use_Timer
-			);
+        WriteProfileInt("use_Timer", prf_use_Timer);
 
-		WriteProfileInt(
-			"use_KeyPress",
-			prf_use_KeyPress
-			);
+        WriteProfileInt("use_KeyPress", prf_use_KeyPress);
 
-		WriteProfileInt(
-			"use_LButtonUp",
-			prf_use_LButtonUp
-			);
+        WriteProfileInt("use_LButtonUp", prf_use_LButtonUp);
 
-		WriteProfileInt(
-			"use_MButtonUp",
-			prf_use_MButtonUp
-			);
+        WriteProfileInt("use_MButtonUp", prf_use_MButtonUp);
 
-		WriteProfileInt(
-			"use_RButtonUp",
-			prf_use_RButtonUp
-			);
+        WriteProfileInt("use_RButtonUp", prf_use_RButtonUp);
 
-		WriteProfileInt(
-			"use_Deferral",
-			prf_use_Deferral
-			);
+        WriteProfileInt("use_Deferral", prf_use_Deferral);
 
-		free(sModulePrefs);
-		sModulePrefs = NULL;
-	}
+        std::free(sModulePrefs);
+        sModulePrefs = nullptr;
+    }
 
-	// Close the registry key for this module
-  if (hModuleKey != NULL) {
-		RegCloseKey(hModuleKey);
-    hModuleKey = NULL;
-  }
+    // Close the registry key for this module
+    if (hModuleKey != nullptr)
+    {
+        ::RegCloseKey(hModuleKey);
+        hModuleKey = nullptr;
+    }
 
-	return TRUE;
+    return TRUE;
 }

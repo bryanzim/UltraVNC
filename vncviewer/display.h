@@ -12,52 +12,55 @@
 #pragma once
 #ifndef tempdisplayH
 #define tempdisplayH
-#include <stdio.h>
-#include <winsock2.h>
-#include <windows.h>
-#include <list>
+#include <WinSock2.h>
 
-typedef BOOL (WINAPI *ENUMDISPLAYSETTINGSEXA)(LPCSTR,DWORD,LPDEVMODEA,DWORD);
-typedef LONG (WINAPI* pChangeDisplaySettingsExA)(LPCSTR,LPDEVMODEA,HWND,DWORD,LPVOID);
+#include <Windows.h>
+
+#include <array>
+#include <list>
+#include <stdio.h>
+
+typedef BOOL(WINAPI* ENUMDISPLAYSETTINGSEXA)(LPCSTR, DWORD, LPDEVMODEA, DWORD);
+typedef LONG(WINAPI* pChangeDisplaySettingsExA)(LPCSTR, LPDEVMODEA, HWND, DWORD, LPVOID);
 typedef struct _mymonitor
 {
-	int width;
-	int height;
-	int depth;
-	int offsetx;
-	int offsety;
-	int freq;
-	char devicename[100];
-	char buttontext[250];
-	int wl;
-	int wr;
-	int wt;
-	int wb;
-	HMONITOR hm;
-}mymonitor;
+    int width;
+    int height;
+    int depth;
+    int offsetx;
+    int offsety;
+    int freq;
+    std::array<char, 100U> devicename;
+    std::array<char, 250U> buttontext;
+    int wl;
+    int wr;
+    int wt;
+    int wb;
+    HMONITOR hm;
+} mymonitor;
 
 struct MyBitmapInfo
-  {
+{
     BITMAPINFOHEADER bi;
     union
     {
-      RGBQUAD colors[256];
-      DWORD fields[256];
+        std::array<RGBQUAD, 256U> colors;
+        std::array<DWORD, 256U> fields;
     };
-  };
+};
 
 class tempdisplayclass
 {
 public:
-	tempdisplayclass();
-	~tempdisplayclass();
-	void Init();
-	void checkmonitors();
-	int nr_monitors;
-	mymonitor monarray[15];
-	int getSelectedScreen(HWND hwnd , bool allowMonitorSpanning);
+    explicit tempdisplayclass();
+    ~tempdisplayclass();
+    void Init();
+    void checkmonitors();
+    int nr_monitors;
+    std::array<mymonitor, 15U> monarray;
+    int getSelectedScreen(HWND hwnd, bool allowMonitorSpanning);
 
 private:
-	HINSTANCE hUser32;
+    HINSTANCE hUser32;
 };
 #endif

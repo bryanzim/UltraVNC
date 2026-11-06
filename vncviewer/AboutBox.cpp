@@ -10,148 +10,154 @@
 
 
 #include "stdhdrs.h"
-#include "vncviewer.h"
+
 #include "../common/Hyperlinks.h"
 #include "UltraVNCHelperFunctions.h"
+#include "vncviewer.h"
+
+#include <array>
+#include <cstddef>
+#include <cstdio>
+#include <cstring>
 
 HBITMAP
-    DoGetBkGndBitmap(IN CONST UINT uBmpResId )
+DoGetBkGndBitmap(IN CONST UINT uBmpResId)
+{
+    static HBITMAP hbmBkGnd = nullptr;
+    if (nullptr == hbmBkGnd)
     {
-        static HBITMAP hbmBkGnd = NULL;
-        if (NULL == hbmBkGnd)
-        {
-			/*char szFileName[MAX_PATH];
-			if (GetModuleFileName(NULL, szFileName, MAX_PATH))
-				{
-				char* p = strrchr(szFileName, '\\');
-					if (p == NULL) return false;
-					*p = '\0';
-				strcat (szFileName,"\\background2.bmp");
-			}
-			hbmBkGnd = (HBITMAP)LoadImage( NULL, szFileName, IMAGE_BITMAP, 0, 0,
-               LR_CREATEDIBSECTION | LR_DEFAULTSIZE | LR_LOADFROMFILE );*/
-			hbmBkGnd = (HBITMAP)LoadImage(
-                GetModuleHandle(NULL), MAKEINTRESOURCE(uBmpResId),
-                    IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
-
-
-            if (NULL == hbmBkGnd)
-                hbmBkGnd = (HBITMAP)-1;
-        }
-        return (hbmBkGnd == (HBITMAP)-1)
-            ? NULL : hbmBkGnd;
-    }
-BOOL
-    DoSDKEraseBkGnd(
-        IN CONST HDC hDC,
-        IN CONST COLORREF crBkGndFill
-      )
-    {
-        HBITMAP hbmBkGnd = DoGetBkGndBitmap(IDB_BITMAP10);
-        if (hDC && hbmBkGnd)
-        {
-            RECT rc;
-            if ((ERROR != GetClipBox(hDC, &rc)) && !IsRectEmpty(&rc))
+        /*char szFileName[MAX_PATH];
+        if (GetModuleFileName(NULL, szFileName, MAX_PATH))
             {
-                HDC hdcMem = CreateCompatibleDC(hDC);
-                if (hdcMem)
-                {
-                    HBRUSH hbrBkGnd = CreateSolidBrush(crBkGndFill);
-                    if (hbrBkGnd)
-                    {
-                        HGDIOBJ hbrOld = SelectObject(hDC, hbrBkGnd);
-                        if (hbrOld)
-                        {
-                            SIZE size = {
-                                (rc.right-rc.left), (rc.bottom-rc.top)
-                            };
+            char* p = strrchr(szFileName, '\\');
+                if (p == NULL) return false;
+                *p = '\0';
+            strcat (szFileName,"\\background2.bmp");
+        }
+        hbmBkGnd = (HBITMAP)LoadImage( NULL, szFileName, IMAGE_BITMAP, 0, 0,
+           LR_CREATEDIBSECTION | LR_DEFAULTSIZE | LR_LOADFROMFILE );*/
+        hbmBkGnd =
+            reinterpret_cast<HBITMAP>(::LoadImage(::GetModuleHandle(nullptr), MAKEINTRESOURCE(uBmpResId), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
 
-                            if (PatBlt(hDC, rc.left, rc.top, size.cx, size.cy, PATCOPY))
+
+        if (nullptr == hbmBkGnd)
+        {
+            hbmBkGnd = reinterpret_cast<HBITMAP>(-1);
+        }
+    }
+    return (hbmBkGnd == reinterpret_cast<HBITMAP>(-1)) ? nullptr : hbmBkGnd;
+}
+BOOL DoSDKEraseBkGnd(IN CONST HDC hDC, IN CONST COLORREF crBkGndFill)
+{
+    HBITMAP hbmBkGnd = DoGetBkGndBitmap(IDB_BITMAP10);
+    if (hDC && hbmBkGnd)
+    {
+        RECT rc;
+        if ((ERROR != ::GetClipBox(hDC, &rc)) && !::IsRectEmpty(&rc))
+        {
+            HDC hdcMem = ::CreateCompatibleDC(hDC);
+            if (hdcMem)
+            {
+                HBRUSH hbrBkGnd = ::CreateSolidBrush(crBkGndFill);
+                if (hbrBkGnd)
+                {
+                    HGDIOBJ hbrOld = ::SelectObject(hDC, hbrBkGnd);
+                    if (hbrOld)
+                    {
+                        SIZE size{ (rc.right - rc.left), (rc.bottom - rc.top) };
+
+                        if (::PatBlt(hDC, rc.left, rc.top, size.cx, size.cy, PATCOPY))
+                        {
+                            HGDIOBJ hbmOld = ::SelectObject(hdcMem, hbmBkGnd);
+                            if (hbmOld)
                             {
-                                HGDIOBJ hbmOld = SelectObject(hdcMem, hbmBkGnd);
-                                if (hbmOld)
-                                {
-                                    BitBlt(hDC, rc.left, rc.top, size.cx, size.cy,
-                                        hdcMem, rc.left, rc.top, SRCCOPY);
-                                    SelectObject(hdcMem, hbmOld);
-                                }
+                                ::BitBlt(hDC, rc.left, rc.top, size.cx, size.cy, hdcMem, rc.left, rc.top, SRCCOPY);
+                                ::SelectObject(hdcMem, hbmOld);
                             }
-                            SelectObject(hDC, hbrOld);
                         }
-                        DeleteObject(hbrBkGnd);
+                        ::SelectObject(hDC, hbrOld);
                     }
-                    DeleteDC(hdcMem);
+                    ::DeleteObject(hbrBkGnd);
                 }
+                ::DeleteDC(hdcMem);
             }
         }
-        return TRUE;
     }
+    return TRUE;
+}
 
-void convertToISO8601(const char* input, char* output, size_t size) {
+void convertToISO8601(const char* const input, char* const output, const std::size_t size)
+{
     // Expected format: "Mar 14 2025 12:34:56"
 
     // Convert month abbreviation to a number
     const char* months = "JanFebMarAprMayJunJulAugSepOctNovDec";
 
-    char monthStr[4];  // Buffer for the month abbreviation (e.g., "Mar")
+    std::array<char, 4U> monthStr; // Buffer for the month abbreviation (e.g., "Mar")
     int day, year, month;
     int hour, minute, second;
 
     // Extract components from the input string
-    sscanf(input, "%3s %d %d %d:%d:%d", monthStr, &day, &year, &hour, &minute, &second);
+    std::sscanf(input, "%3s %d %d %d:%d:%d", monthStr.data(), &day, &year, &hour, &minute, &second);
 
     // Convert month abbreviation to number (1-12)
-    month = (std::strstr(months, monthStr) - months) / 3 + 1;
+    month = static_cast<int>((std::strstr(months, monthStr.data()) - months) / 3 + 1);
 
     // Format into ISO 8601 format "YYYY-MM-DDTHH:MM:SS"
-    snprintf(output, size, "%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
+    std::snprintf(output, size, "%04d-%02d-%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
 }
 
 // Process the About dialog.
-static LRESULT CALLBACK AboutDlgProc(HWND hwnd, UINT iMsg, 
-										   WPARAM wParam, LPARAM lParam) {
-	switch (iMsg) {
-	case WM_INITDIALOG:
-		{
-			//CentreWindow(hwnd);
-			SetForegroundWindow(hwnd);
-            extern char buildtime[];
-            char isoTime[20];  // Buffer for ISO output
-            convertToISO8601(buildtime, isoTime, sizeof(isoTime));
-            { wchar_t _wt[20]; MultiByteToWideChar(CP_UTF8,0,isoTime,-1,_wt,20); SetDlgItemTextW(hwnd, IDC_BUILDTIME, _wt); }
-
-            ConvertStaticToHyperlink(hwnd, IDC_UVNCCOM);
-            char version[50]{};
-            char title[256]{};
-            strcpy_s(title, "UltraVNC Viewer -");
-            strcat_s(title, GetVersionFromResource(version));
-            { wchar_t _wtitle[256]; MultiByteToWideChar(CP_UTF8,0,title,-1,_wtitle,256); SetDlgItemTextW(hwnd, IDC_UVVERSION, _wtitle); }
-
-            HICON hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDR_TRAY));
-            SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-            SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-
-			return TRUE;
-		}
-	case WM_CLOSE:
-		EndDialog(hwnd, TRUE);
-		return TRUE;
-	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK) {
-			EndDialog(hwnd, TRUE);
-		}
-        if (LOWORD(wParam) == IDC_UVNCCOM) {
-            ShellExecute(GetDesktopWindow(), _T("open"), _T("https://uvnc.com/"), _T(""), 0, SW_SHOWNORMAL);
+static LRESULT CALLBACK AboutDlgProc(const HWND hwnd, const UINT iMsg, const WPARAM wParam, [[maybe_unused]] const LPARAM lParam)
+{
+    switch (iMsg)
+    {
+    case WM_INITDIALOG: {
+        //CentreWindow(hwnd);
+        ::SetForegroundWindow(hwnd);
+        extern char buildtime[];
+        std::array<char, 20U> isoTime; // Buffer for ISO output
+        convertToISO8601(buildtime, isoTime.data(), sizeof(isoTime));
+        {
+            std::array<wchar_t, 20U> _wt;
+            ::MultiByteToWideChar(CP_UTF8, 0, isoTime.data(), -1, _wt.data(), 20);
+            ::SetDlgItemTextW(hwnd, IDC_BUILDTIME, _wt.data());
         }
 
-	}
-	return FALSE;
+        ConvertStaticToHyperlink(hwnd, IDC_UVNCCOM);
+        std::array<char, 50U> version{};
+        std::array<char, 256U> title{};
+        ::strcpy_s(title.data(), title.size(), "UltraVNC Viewer -");
+        ::strcat_s(title.data(), title.size(), GetVersionFromResource(version.data()));
+        {
+            std::array<wchar_t, 256U> _wtitle;
+            ::MultiByteToWideChar(CP_UTF8, 0, title.data(), -1, _wtitle.data(), 256);
+            ::SetDlgItemTextW(hwnd, IDC_UVVERSION, _wtitle.data());
+        }
+
+        HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
+
+        return TRUE;
+    }
+    case WM_CLOSE:
+        ::EndDialog(hwnd, TRUE);
+        return TRUE;
+    case WM_COMMAND:
+        if (LOWORD(wParam) == IDOK)
+        {
+            ::EndDialog(hwnd, TRUE);
+        }
+        if (LOWORD(wParam) == IDC_UVNCCOM)
+        {
+            ::ShellExecute(::GetDesktopWindow(), _T("open"), _T("https://uvnc.com/"), _T(""), nullptr, SW_SHOWNORMAL);
+        }
+    }
+    return FALSE;
 }
 
 void ShowAboutBox()
 {
-	int res = DialogBox(m_hInstResDLL, 
- 		DIALOG_MAKEINTRESOURCE(IDD_APP_ABOUT),
-		NULL, (DLGPROC) AboutDlgProc);
+    [[maybe_unused]] const int res = static_cast<int>(::DialogBox(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_APP_ABOUT), nullptr, reinterpret_cast<DLGPROC>(AboutDlgProc)));
 }
-	

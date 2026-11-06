@@ -18,37 +18,34 @@
 
 class vncEncodeRRE;
 
-#if !defined(_WINVNC_ENCODERRRE)
-#define _WINVNC_ENCODERRE
+#if !defined(WINVNC_ENCODERRRE)
+#define WINVNC_ENCODERRE
 #pragma once
 
 #include "vncencoder.h"
-
 // Class definition
 
 class vncEncodeRRE : public vncEncoder
 {
-// Fields
+    // Fields
 public:
-
-// Methods
+    // Methods
 public:
-	// Create/Destroy methods
-	vncEncodeRRE();
-	~vncEncodeRRE();
+    // Create/Destroy methods
+    explicit vncEncodeRRE();
+    ~vncEncodeRRE();
 
-	virtual void Init();
+    virtual void Init();
 
-	virtual UINT RequiredBuffSize(UINT width, UINT height);
-	virtual UINT NumCodedRects(const rfb::Rect &rect);
+    virtual UINT RequiredBuffSize(UINT width, UINT height);
+    virtual UINT NumCodedRects(const rfb::Rect& rect);
 
-	virtual UINT EncodeRect(BYTE *source, BYTE *dest, const rfb::Rect &rect);
+    virtual UINT EncodeRect(BYTE* source, BYTE* dest, const rfb::Rect& rect);
 
-// Implementation
+    // Implementation
 protected:
-	BYTE		*m_buffer;
-	int			m_bufflen;
+    BYTE* m_buffer;
+    int m_bufflen;
 };
 
-#endif // _WINVNC_ENCODERRE
-
+#endif // WINVNC_ENCODERRE

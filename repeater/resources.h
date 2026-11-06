@@ -58,4 +58,3 @@
 #define IDM_SETUP 42
 
 #define IDE_PASSWORDEDIT 50
-

@@ -9,4 +9,4 @@
 //
 
 
-void debug( const char *fmt, ... );
+void debug(const char* fmt, ...);

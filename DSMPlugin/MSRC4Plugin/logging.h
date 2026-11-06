@@ -10,14 +10,16 @@
 //
 
 
-#ifndef _LOGGING_H
-#define _LOGGING_H
+#ifndef LOGGING_H
+#define LOGGING_H
 
 #pragma once
-#include <stdio.h>
-#include <windows.h>
-#include <time.h>
 #include "utils.h"
+
+#include <Windows.h>
+
+#include <stdio.h>
+#include <time.h>
 
 #define BUFFER_SIZE 256
 #define APPEND 1
@@ -25,33 +27,33 @@
 
 
 extern HANDLE hLogFile;
-extern long LOGIT;	//flag to turn on/off logging
-extern long DEBUGIT;	//flag to turn on/off additional logging for crypto.exe
+extern long LOGIT;   //flag to turn on/off logging
+extern long DEBUGIT; //flag to turn on/off additional logging for crypto.exe
 
-void PrintIt(const char *);
-void DebugIt(const char *);
-int SetLogging(const char * logname);
-int SetLogging(const char * logname, char * sLogit);
-int SetLogStatus(const char * sLogit);
-void SetLogFile(const char * logname);
+void PrintIt(const char*);
+void DebugIt(const char*);
+int SetLogging(const char* logname);
+int SetLogging(const char* logname, char* sLogit);
+int SetLogStatus(const char* sLogit);
+void SetLogFile(const char* logname);
 
 #define DEST buff
 
 //Macros for logging
 
-#define PrintLog(x)						\
-	{									\
-		char buff[4096];				\
-		sprintf x;						\
-		PrintIt(buff);					\
-	}
+#define PrintLog(x)                                                                                                                \
+    {                                                                                                                              \
+        char buff[4096U];                                                                                                          \
+        sprintf x;                                                                                                                 \
+        PrintIt(buff);                                                                                                             \
+    }
 
-#define DebugLog(x)						\
-	{									\
-		char buff[4096];				\
-		sprintf x;						\
-		DebugIt(buff);					\
-	}
+#define DebugLog(x)                                                                                                                \
+    {                                                                                                                              \
+        char buff[4096U];                                                                                                          \
+        sprintf x;                                                                                                                 \
+        DebugIt(buff);                                                                                                             \
+    }
 
 
 #endif

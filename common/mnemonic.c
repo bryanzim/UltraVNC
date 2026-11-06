@@ -106,7 +106,7 @@ mn_index mn_encode_word_index (void *vsrc, int srcsize, int n)
     case 1:			/* Second word of group */
       x /= MN_BASE;
     }
-  return x % MN_BASE + extra + 1;
+  return x % MN_BASE + (mn_word32)(extra) + 1;
 }
 
 
@@ -424,7 +424,7 @@ mn_encode (void *src, int srcsize, char *dest, int destsize, char *format)
 	}
       word = mn_encode_word (src, srcsize, n);
       for (size_t i = 0; i < strlen(word); i++)
-        capitalword[i] = (i == 0 && (n == 0 || n == 3)) ? toupper(word[i]) : word[i];
+        capitalword[i] = (char)((i == 0 && (n == 0 || n == 3)) ? toupper(word[i]) : word[i]);
       if (word == 0)
 	return MN_EOVERRUN;	/* shouldn't happen, actually */
       capitalwordPtr = capitalword;

@@ -12,38 +12,39 @@
 
 class vncAcceptDialog;
 
-#if (!defined(_WINVNC_VNCACCEPTDIALOG))
-#define _WINVNC_VNCACCEPTDIALOG
+#if (!defined(WINVNC_VNCACCEPTDIALOG))
+#define WINVNC_VNCACCEPTDIALOG
 
 #pragma once
 
 // Incoming connection-rejection dialog. vncClient creates an AcceptDialog
 // if it needs to query whether or not to accept a connection.
 
-class vncAcceptDialog  
+class vncAcceptDialog
 {
 public:
+    vncAcceptDialog(UINT timeoutSecs, BOOL acceptOnTimeout, const char* ipAddress, char* infoMsg, bool notification,
+                    bool infoMsgIsUtf8 = false);
+    virtual ~vncAcceptDialog();
+    BOOL DoDialog();
+    BOOL m_acceptOnTimeout;
+    static BOOL CALLBACK vncAcceptDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-	vncAcceptDialog(UINT timeoutSecs,BOOL acceptOnTimeout, const char *ipAddress, char* infoMsg, bool notification, bool infoMsgIsUtf8 = false);
-	virtual ~vncAcceptDialog();
-	BOOL DoDialog();
-	BOOL m_acceptOnTimeout;
-	static BOOL CALLBACK vncAcceptDlgProc(HWND hwndDlg,UINT uMsg, WPARAM wParam,LPARAM lParam);
 private:
-	// Storage for the timeout value
-	UINT m_timeoutSecs;
-	UINT m_timeoutCount;
+    // Storage for the timeout value
+    UINT m_timeoutSecs;
+    UINT m_timeoutCount;
 
-	// Flashing hack
-	BOOL m_foreground_hack;
-	BOOL m_flash_state;
+    // Flashing hack
+    BOOL m_foreground_hack;
+    BOOL m_flash_state;
 
-	// Address of the offending machine
-	char *m_ipAddress;	
-	HANDLE ThreadHandle;
-	char *infoMsg;
-	bool notification;
-	bool m_infoMsgIsUtf8;
+    // Address of the offending machine
+    char* m_ipAddress;
+    HANDLE ThreadHandle;
+    char* infoMsg;
+    bool notification;
+    bool m_infoMsgIsUtf8;
 };
 
 #endif

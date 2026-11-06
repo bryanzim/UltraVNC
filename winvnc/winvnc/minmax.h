@@ -17,20 +17,28 @@
 #pragma once
 
 // Some routines used internally to minimise and maximise integers
-static inline int Max(int x, int y)
+static inline int Max(const int x, const int y)
 {
-	if (x>y)
-		return x;
-	else
-		return y;
+    if (x > y)
+    {
+        return x;
+    }
+    else
+    {
+        return y;
+    }
 }
 
-static inline int Min(int x, int y)
+static inline int Min(const int x, const int y)
 {
-	if (x>y)
-		return y;
-	else
-		return x;
+    if (x > y)
+    {
+        return y;
+    }
+    else
+    {
+        return x;
+    }
 }
 
 #endif

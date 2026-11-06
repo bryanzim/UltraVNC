@@ -21,43 +21,44 @@
 //         u8 complete                    (0=continue -> another C->S data block,
 //                                       1=done -> u32BE SecurityResult follows)
 #pragma once
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
-
 // Minimal blocking byte channel used by the SASL framing helpers.
+
 class ISaslTransport
 {
 public:
     virtual ~ISaslTransport() {}
-    virtual bool SendAll(const void* data, size_t len) = 0;
-    virtual bool RecvAll(void* data, size_t len) = 0;
+    virtual bool SendAll(const void* data, std::size_t len) = 0;
+    virtual bool RecvAll(void* data, std::size_t len) = 0;
 };
 
 namespace SaslWire
 {
-    const uint32_t kMaxSaslData = 1024 * 1024;  // QEMU SASL_DATA_MAX_LEN
-    const uint32_t kMaxMechName = 100;          // QEMU mechname limit
+    const std::uint32_t kMaxSaslData = 1024U * 1024; // QEMU SASL_DATA_MAX_LEN
+    const std::uint32_t kMaxMechName{ 100U };        // QEMU mechname limit
 
-    bool WriteU8(ISaslTransport* ch, uint8_t v);
-    bool WriteU32(ISaslTransport* ch, uint32_t v);
-    bool ReadU8(ISaslTransport* ch, uint8_t& v);
-    bool ReadU32(ISaslTransport* ch, uint32_t& v);
+    bool WriteU8(ISaslTransport* ch, std::uint8_t v);
+    bool WriteU32(ISaslTransport* ch, std::uint32_t v);
+    bool ReadU8(ISaslTransport* ch, std::uint8_t& v);
+    bool ReadU32(ISaslTransport* ch, std::uint32_t& v);
 
     // u32 len + string, no NUL terminator. Used for mechlist and mechname.
-    bool WriteString(ISaslTransport* ch, const char* s, size_t len);
+    bool WriteString(ISaslTransport* ch, const char* s, std::size_t len);
     bool WriteString(ISaslTransport* ch, const std::string& s);
-    bool ReadString(ISaslTransport* ch, uint32_t maxLen, std::string& out);
+    bool ReadString(ISaslTransport* ch, std::uint32_t maxLen, std::string& out);
 
     // SASL data block: u32(len+1) + data + u8 '\0'; len==0 encodes NULL.
-    bool WriteData(ISaslTransport* ch, const void* data, size_t len);
+    bool WriteData(ISaslTransport* ch, const void* data, std::size_t len);
     bool WriteData(ISaslTransport* ch, const std::string& s);
     // Reads a data block. isNull=true when peer sent u32 0 (NULL data).
     // Strips and validates the trailing NUL (fails if absent, like QEMU).
-    bool ReadData(ISaslTransport* ch, std::vector<uint8_t>& out, bool& isNull);
+    bool ReadData(ISaslTransport* ch, std::vector<std::uint8_t>& out, bool& isNull);
     bool ReadDataString(ISaslTransport* ch, std::string& out, bool& isNull);
 
     // Server step reply: data block + u8 complete flag.
-    bool WriteStep(ISaslTransport* ch, const void* data, size_t len, bool complete);
-    bool ReadStep(ISaslTransport* ch, std::vector<uint8_t>& out, bool& isNull, bool& complete);
+    bool WriteStep(ISaslTransport* ch, const void* data, std::size_t len, bool complete);
+    bool ReadStep(ISaslTransport* ch, std::vector<std::uint8_t>& out, bool& isNull, bool& complete);
 }

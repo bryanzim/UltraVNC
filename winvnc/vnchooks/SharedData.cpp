@@ -18,14 +18,14 @@
 #pragma option -zRSHSEG
 #pragma option -zTSHCLASS
 
-#include "windows.h"
+#include <Windows.h>
 
-DWORD vnc_thread_id = 0;
-UINT UpdateRectMessage = 0;
-UINT CopyRectMessage = 0;
-UINT MouseMoveMessage = 0;
-HHOOK hCallWndHook = NULL;							// Handle to the CallWnd hook
-HHOOK hGetMsgHook = NULL;							// Handle to the GetMsg hook
-HHOOK hDialogMsgHook = NULL;						// Handle to the DialogMsg hook
-HHOOK hLLKeyboardHook = NULL;						// Handle to LowLevel kbd hook
-HHOOK hLLMouseHook = NULL;							// Handle to LowLevel mouse hook
+DWORD vnc_thread_id{ 0U };
+UINT UpdateRectMessage{ 0U };
+UINT CopyRectMessage{ 0U };
+UINT MouseMoveMessage{ 0U };
+HHOOK hCallWndHook = nullptr;    // Handle to the CallWnd hook
+HHOOK hGetMsgHook = nullptr;     // Handle to the GetMsg hook
+HHOOK hDialogMsgHook = nullptr;  // Handle to the DialogMsg hook
+HHOOK hLLKeyboardHook = nullptr; // Handle to LowLevel kbd hook
+HHOOK hLLMouseHook = nullptr;    // Handle to LowLevel mouse hook

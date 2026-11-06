@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <setjmp.h>
 #include <limits.h>
-#include <windows.h>
+#include <Windows.h>
 #include <windowsx.h>
 #include <shellapi.h>
 #include <string.h>
@@ -38,7 +38,7 @@ static void GenerateRandomPassword(char* password, int length)
                 password[i] = charset[randomByte % (sizeof(charset) - 1)];
             } else {
                 /* Fallback to rand() if CryptoGenRandom fails */
-                password[i] = charset[rand() % (sizeof(charset) - 1)];
+                password[i] = charset[(unsigned long long)(rand()) % (sizeof(charset) - 1)];
             }
         }
         CryptReleaseContext(hProv, 0);
@@ -46,7 +46,7 @@ static void GenerateRandomPassword(char* password, int length)
         /* Fallback to rand() seeded with time */
         srand((unsigned int)time(NULL));
         for (i = 0; i < length; i++) {
-            password[i] = charset[rand() % (sizeof(charset) - 1)];
+            password[i] = charset[(unsigned long long)(rand()) % (sizeof(charset) - 1)];
         }
     }
     password[length] = '\0';
@@ -103,7 +103,7 @@ void Read_comment()
 	{
 		
 		char temp[10];
-		char temp2[256];
+		char temp2Local[256];
 		char seps[]   = ":";
 		char *token;
 		char *next_token = NULL;
@@ -111,14 +111,15 @@ void Read_comment()
 		comment[i].code=0;
 		memset(comment[i].comment,0,256);
 
-		memset(temp2,0,256);
+		memset(temp2Local,0,256);
 		sprintf_s(temp, 10, "%i",i);
-		ReadString("comment", temp,temp2,256);
-		token = strtok_s( temp2, seps , &next_token);
+		ReadString("comment", temp,temp2Local,256);
+		token = strtok_s( temp2Local, seps , &next_token);
 		if ( token != NULL )
 		{
 			int a=0;
-			comment[i].code=atol(token);
+			(void)a;
+			comment[i].code=(ULONG)(atol(token));
 		}
 		token = strtok_s( NULL, seps,  &next_token);
 		if ( token != NULL )
@@ -140,14 +141,14 @@ void Save_comment()
 	for (i=0;i<MAX_LIST*2;i++)
 	{
 		char temp[10];
-		char temp3[10];
-		char temp2[256];
+		char temp3Local[10];
+		char temp2Local[256];
 		sprintf_s(temp,10, "%i",i);
-		sprintf_s(temp3, 10, "%u",comment[i].code);
-		strcpy_s(temp2,256,temp3);
-		strcat_s(temp2,256,":");
-		strcat_s(temp2,256,comment[i].comment);
-		WriteString("comment", temp,temp2);
+		sprintf_s(temp3Local, 10, "%u",comment[i].code);
+		strcpy_s(temp2Local,256,temp3Local);
+		strcat_s(temp2Local,256,":");
+		strcat_s(temp2Local,256,comment[i].comment);
+		WriteString("comment", temp,temp2Local);
 	}
 }
 
@@ -268,9 +269,9 @@ Read_settings()
 		rule1=0;
 		while (test)
 		{
-		int len=test-pos;
+		int len=(int)(test-pos);
 		if (len >= 25) len = 24;
-		strncpy_s(temp1[rule1], 25, pos,len);
+		strncpy_s(temp1[rule1], 25, pos,(rsize_t)(len));
 		temp1[rule1][len]=0;
 		rule1++;
 		if (rule1 > 48)
@@ -285,9 +286,9 @@ Read_settings()
 		pos=saved_sample2;
 		while (test)
 		{
-		int len=test-pos;
+		int len=(int)(test-pos);
 		if (len >= 16) len = 15;
-		strncpy_s(temp2[rule2], 16, pos,len);
+		strncpy_s(temp2[rule2], 16, pos,(rsize_t)(len));
 		temp2[rule2][len]=0;
 		rule2++;
 		if (rule2 > 48)
@@ -302,9 +303,9 @@ Read_settings()
 		pos=saved_sample3;
 		while (test)
 		{
-		int len=test-pos;
+		int len=(int)(test-pos);
 		if (len >= 16) len = 15;
-		strncpy_s(temp3[rule3], 16,pos,len);
+		strncpy_s(temp3[rule3], 16,pos,(rsize_t)(len));
 		temp3[rule3][len]=0;
 		rule3++;
 		if (rule3 > 48)
@@ -383,9 +384,9 @@ void win_log(char *line) {
         LeaveCriticalSection(&cs);
         return;
     }
-    curr=(struct LIST *)malloc(sizeof(struct LIST)+len+1);  /* +1 for null terminator */
+    curr=(struct LIST *)malloc(sizeof(struct LIST)+(unsigned long long)(len)+1);  /* +1 for null terminator */
     curr->len=len;
-    strcpy_s(curr->txt, len+1, line);
+    strcpy_s(curr->txt, (rsize_t)(len+1), line);
     curr->next=NULL;
 
     if(tail)
@@ -412,9 +413,9 @@ char *log_txt(void) {
 
     for(curr=head; curr; curr=curr->next)
         len+=curr->len+4; 
-    buff=(char *)malloc(len+1); 
+    buff=(char *)malloc((unsigned long long)(len+1)); 
     for(curr=head; curr; curr=curr->next) {
-        memcpy(buff+ptr, curr->txt, curr->len);
+        memcpy(buff+ptr, curr->txt, (unsigned long long)(curr->len));
         ptr+=curr->len;
         if(curr->next) {
             buff[ptr++]='<';
@@ -458,7 +459,7 @@ list_servers(wi_sess * sess,char *txt)
 			strcat_s(txt,4000,Servers[i].time);	
 			strcat_s(txt,4000,"</td>");
 
-			_itoa_s(Servers[i].code,temp,10, 10);
+			_itoa_s((int)(Servers[i].code),temp,10, 10);
 			strcat_s(txt,4000,"<td style=\"width: 90px; height: 23px\"class=\"style3\">");
 			strcat_s(txt,4000,temp);	
 			strcat_s(txt,4000,"</td>");
@@ -508,7 +509,7 @@ list_viewers(wi_sess * sess,char *txt)
 			strcat_s(txt,4000,Viewers[i].time);	
 			strcat_s(txt,4000,"</td>");
 
-			_itoa_s(Viewers[i].code,temp,10, 10);
+			_itoa_s((int)(Viewers[i].code),temp,10, 10);
 			strcat_s(txt,4000,"<td style=\"width: 90px; height: 23px\" class=\"style3\" >");
 			strcat_s(txt,4000,temp);	
 			strcat_s(txt,4000,"</td>");
@@ -562,7 +563,7 @@ list_connections(wi_sess * sess,char *txt)
 			strcat_s(txt,4000,Viewers[i].time);	
 			strcat_s(txt,4000,"</td>");
 
-			_itoa_s(Viewers[i].code,temp,10, 10);
+			_itoa_s((int)(Viewers[i].code),temp,10, 10);
 			strcat_s(txt,4000,"<td style=\"width: 90px; height: 23px\"class=\"style3\">");
 			strcat_s(txt,4000,temp);	
 			strcat_s(txt,4000,"</td>");

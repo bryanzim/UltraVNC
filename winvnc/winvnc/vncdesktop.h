@@ -21,38 +21,45 @@
 
 class vncDesktop;
 
-#if !defined(_WINVNC_VNCDESKTOP)
-#define _WINVNC_VNCDESKTOP
+#if !defined(WINVNC_VNCDESKTOP)
+#define WINVNC_VNCDESKTOP
 #pragma once
 
 // Include files
 #include "stdhdrs.h"
 
 class vncServer;
+#include "DeskdupEngine.h"
 #include "rfbRegion.h"
 #include "rfbUpdateTracker.h"
-#include "vncbuffer.h"
+#include "TextChat.h"
 #include "translate.h"
-#include <omnithread.h>
 #include "videodriver.h"
-#include "DeskdupEngine.h"
+#include "vncbuffer.h"
+
+#include <omnithread.h>
+
 #include <list>
 #include <set>
-#include "TextChat.h"
+
 #ifdef AVILOG
 #include "avilog/avilog/AVIGenerator.h"
+
 #endif
 #include "common/Clipboard.h"
 #include "IPC.h"
+
+#include <array>
 #include <map>
 #include <string>
+#include <vector>
 
-#define MULTI_MON_PRIMARY		0
-#define MULTI_MON_ALL			99
+#define MULTI_MON_PRIMARY 0
+#define MULTI_MON_ALL 99
 
-typedef std::vector<COLORREF> RGBPixelList;   // List of RGB values (pixels)
-typedef std::vector<RGBPixelList*> GridsList; // List of Grids of pixels
-typedef std::set<HWND> WindowsList;       // List of windows handles
+using RGBPixelList = std::vector<COLORREF>;   // List of RGB values (pixels)
+using GridsList = std::vector<RGBPixelList*>; // List of Grids of pixels
+using WindowsList = std::set<HWND>;           // List of windows handles
 
 
 // Constants
@@ -66,30 +73,30 @@ extern const char szDesktopSink[];
 #define PSEUDO 2
 
 // initialization errors
-#define ERROR_DESKTOP_NO_PALETTE 					    1
-#define ERROR_DESKTOP_INIT_FAILED 					    2
-#define ERROR_DESKTOP_UNSUPPORTED_PIXEL_ORGANIZATION    3
-#define ERROR_DESKTOP_UNSUPPORTED_PIXEL_FORMAT 		    4
-#define ERROR_DESKTOP_NO_HOOKWINDOW 				    5
-#define ERROR_DESKTOP_NO_ROOTDC                         6
-#define ERROR_DESKTOP_NO_BITBLT                         7
-#define ERROR_DESKTOP_NO_GETDIBITS                      8
-#define ERROR_DESKTOP_NO_COMPATBITMAP                   9
-#define ERROR_DESKTOP_NO_DISPLAYFORMAT                  10
-#define ERROR_DESKTOP_OUT_OF_MEMORY                     11
-#define ERROR_DESKTOP_NO_DIBSECTION_OR_COMPATBITMAP     12
-#define ERROR_DESKTOP_NO_DESKTOPTHREAD                  13
+#define ERROR_DESKTOP_NO_PALETTE 1
+#define ERROR_DESKTOP_INIT_FAILED 2
+#define ERROR_DESKTOP_UNSUPPORTED_PIXEL_ORGANIZATION 3
+#define ERROR_DESKTOP_UNSUPPORTED_PIXEL_FORMAT 4
+#define ERROR_DESKTOP_NO_HOOKWINDOW 5
+#define ERROR_DESKTOP_NO_ROOTDC 6
+#define ERROR_DESKTOP_NO_BITBLT 7
+#define ERROR_DESKTOP_NO_GETDIBITS 8
+#define ERROR_DESKTOP_NO_COMPATBITMAP 9
+#define ERROR_DESKTOP_NO_DISPLAYFORMAT 10
+#define ERROR_DESKTOP_OUT_OF_MEMORY 11
+#define ERROR_DESKTOP_NO_DIBSECTION_OR_COMPATBITMAP 12
+#define ERROR_DESKTOP_NO_DESKTOPTHREAD 13
 
-typedef BOOL (*SetHooksFn)(DWORD thread_id,UINT UpdateMsg,UINT CopyMsg,UINT MouseMsg,BOOL ddihook);
+typedef BOOL (*SetHooksFn)(DWORD thread_id, UINT UpdateMsg, UINT CopyMsg, UINT MouseMsg, BOOL ddihook);
 typedef BOOL (*UnSetHooksFn)(DWORD thread_id);
-typedef BOOL (*SetKeyboardFilterHookFn)(BOOL activate);	
+typedef BOOL (*SetKeyboardFilterHookFn)(BOOL activate);
 typedef BOOL (*SetMouseFilterHookFn)(BOOL activate);
 typedef BOOL (*SetHookFn)(HWND hwnd);
 typedef BOOL (*UnSetHookFn)(HWND hwnd);
 
-typedef BOOL (WINAPI*  pBlockInput) (BOOL);
-typedef BOOL (WINAPI* LPGETMONITORINFO)(HMONITOR, LPMONITORINFO);
-typedef HMONITOR (WINAPI* LPMONITOTFROMPOINT) (POINT,DWORD);
+typedef BOOL(WINAPI* pBlockInput)(BOOL);
+typedef BOOL(WINAPI* LPGETMONITORINFO)(HMONITOR, LPMONITORINFO);
+typedef HMONITOR(WINAPI* LPMONITOTFROMPOINT)(POINT, DWORD);
 
 class LayeredWindows;
 
@@ -97,352 +104,354 @@ class LayeredWindows;
 // multi monitor
 struct monitor
 {
-	int Width;
-	int Height;
-	int Depth;
-	int offsetx;
-	int offsety;
+    int Width;
+    int Height;
+    int Depth;
+    int offsetx;
+    int offsety;
 };
 
 typedef struct _sessionmessage
 {
-	DWORD ID;
-	char type[32];
-	char name[32];
-	char username[32];
-}sessionmsg;
+    DWORD ID;
+    char type[32U];
+    char name[32U];
+    char username[32U];
+} sessionmsg;
 
 
 class PixelCaptureEngine
 {
 public:
-	PixelCaptureEngine();
-	~PixelCaptureEngine();
-	void PixelCaptureEngineInit(HDC rootdc, HDC memdc, HBITMAP membitmap, bool bCaptureAlpha, void *dibbits, int bpp, int bpr,int offsetx,int offsety);
-	bool CaptureRect(const rfb::Rect& rect);
-	COLORREF CapturePixel(int x, int y);
-	void ReleaseCapture();
-	bool		m_bIsVista;
+    explicit PixelCaptureEngine();
+    ~PixelCaptureEngine();
+    void PixelCaptureEngineInit(HDC rootdc, HDC memdc, HBITMAP membitmap, bool bCaptureAlpha, void* dibbits, int bpp, int bpr,
+                                int offsetx, int offsety);
+    bool CaptureRect(const rfb::Rect& rect);
+    COLORREF CapturePixel(int x, int y);
+    void ReleaseCapture();
+    bool m_bIsVista;
 
 private:
-	HDC			m_hrootdc_PixelEngine;
-	HDC			m_hmemdc;
-	HBITMAP		m_membitmap;
-	HBITMAP		m_oldbitmap;
-	void		*m_DIBbits;
-	rfb::Rect	m_rect;
-	bool		m_bCaptureAlpha;
-	int			m_bytesPerPixel;
-	int			m_bytesPerRow;
-	int m_ScreenOffsetx;
-	int m_ScreenOffsety;
+    HDC m_hrootdc_PixelEngine;
+    HDC m_hmemdc;
+    HBITMAP m_membitmap;
+    HBITMAP m_oldbitmap;
+    void* m_DIBbits;
+    rfb::Rect m_rect;
+    bool m_bCaptureAlpha;
+    int m_bytesPerPixel;
+    int m_bytesPerRow;
+    int m_ScreenOffsetx;
+    int m_ScreenOffsety;
 };
 
 class vncDesktop
 {
-// JnZn558
+    // JnZn558
 protected:
-	int m_old_monitor;
-//
+    int m_old_monitor;
+    //
 
-// Fields
+    // Fields
 public:
-	int m_current_monitor;
+    int m_current_monitor;
 
-// Methods
+    // Methods
 public:
-	// Make the desktop thread & window proc friends
-	friend class vncDesktopThread;
-	friend class vncServer;
-	friend class vncClientThread;
-	friend LRESULT CALLBACK DesktopWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
+    // Make the desktop thread & window proc friends
+    friend class vncDesktopThread;
+    friend class vncServer;
+    friend class vncClientThread;
+    friend LRESULT CALLBACK DesktopWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 
-	// Create/Destroy methods
-	vncDesktop();
-	~vncDesktop();
+    // Create/Destroy methods
+    explicit vncDesktop();
+    ~vncDesktop();
 
-	monitor mymonitor[100];
-	std::map<std::string, monitor> devicenaamToPosMap;
+    std::array<monitor, 100U> mymonitor;
+    std::map<std::string, monitor> devicenaamToPosMap;
 
-	DWORD Init(vncServer *pSrv);
+    DWORD Init(vncServer* pSrv);
 
-	// Tell the desktop hooks to grab & update a particular rectangle
-	void UpdateFullScreen();
-	
-	// Kick the desktop hooks to perform an update
-	void TriggerUpdate();
+    // Tell the desktop hooks to grab & update a particular rectangle
+    void UpdateFullScreen();
 
-	// Get a reference to the desktop update lock
-	// The lock is held while data is being grabbed and copied
-	// to the back buffer, and while changes are being passed to
-	// clients
-	omni_mutex &GetUpdateLock() {return m_update_lock;};
+    // Kick the desktop hooks to perform an update
+    void TriggerUpdate();
 
-	// Screen translation, capture, info
-	void FillDisplayInfo(rfbServerInitMsg *scrInfo);
-	void CaptureScreen(const rfb::Rect &UpdateArea, BYTE *scrBuff, UINT scrBuffSize,BOOL capture);
-	int ScreenBuffSize();
-	HWND Window() {return m_hwnd;};
+    // Get a reference to the desktop update lock
+    // The lock is held while data is being grabbed and copied
+    // to the back buffer, and while changes are being passed to
+    // clients
+    omni_mutex& GetUpdateLock() { return m_update_lock; }
 
-	// Mouse related
-	void CaptureMouse(BYTE *scrBuff, UINT scrBuffSize);
-	rfb::Rect MouseRect();
-	void SetCursor(HCURSOR cursor);
-	// CURSOR HANDLING
-	BOOL GetRichCursorData(BYTE *databuf, HCURSOR hcursor, int width, int height, BOOL isColorCursor);
-	HCURSOR GetCursor() { return m_hcursor; }
+    // Screen translation, capture, info
+    void FillDisplayInfo(rfbServerInitMsg* scrInfo);
+    void CaptureScreen(const rfb::Rect& UpdateArea, BYTE* scrBuff, UINT scrBuffSize, BOOL capture);
+    int ScreenBuffSize();
+    HWND Window() { return m_hwnd; }
 
-	// Clipboard manipulation
-	void SetClipText(LPSTR text);
-	// adzm - 2010-07 - Extended clipboard
-	bool SetClipTextEx(ExtendedClipboardDataMessage& extendedClipboardDataMessage, ClipboardData& data);
+    // Mouse related
+    void CaptureMouse(BYTE* scrBuff, UINT scrBuffSize);
+    rfb::Rect MouseRect();
+    void SetCursor(HCURSOR cursor);
+    // CURSOR HANDLING
+    BOOL GetRichCursorData(BYTE* databuf, HCURSOR hcursor, int width, int height, BOOL isColorCursor);
+    HCURSOR GetCursor() { return m_hcursor; }
 
-	// Method to obtain the DIBsection buffer if fast blits are enabled
-	// If they're disabled, it'll return NULL
-	inline VOID *OptimisedBlitBuffer() {return m_DIBbits;};
+    // Clipboard manipulation
+    void SetClipText(LPSTR text);
+    // adzm - 2010-07 - Extended clipboard
+    bool SetClipTextEx(ExtendedClipboardDataMessage& extendedClipboardDataMessage, ClipboardData& data);
 
-	// adzm - 2010-07 - Extended clipboard
-	//BOOL	m_initialClipBoardSeen;
+    // Method to obtain the DIBsection buffer if fast blits are enabled
+    // If they're disabled, it'll return NULL
+    inline VOID* OptimisedBlitBuffer() { return m_DIBbits; }
 
-	// Handler for pixel data grabbing and region change checking
-	vncBuffer		m_buffer;
-		//SINGLE WINDOW
-	vncServer		*GetServerPointer() {return m_server;};
-	rfb::Rect		GetSize();
-	void		SetBitmapRectOffsetAndClipRect(int offesetx, int offsety, int width = 0 , int height = 0);
+    // adzm - 2010-07 - Extended clipboard
+    //BOOL	m_initialClipBoardSeen;
 
-	// Modif rdv@2002 - v1.1.x - VideoDriver
-	//BOOL IsVideoDriverEnabled();
-	BOOL VideoBuffer();
-	int m_ScreenOffsetx;
-	int m_ScreenOffsety;
-	//
-	int DriverType;
-	DWORD color[10];
-	// added jeff
-	LayeredWindows *layeredWindows;
-	// Modif rdv@2002 Dis/enable input
-	void SetDisableInput();
-	void SetSW(int x,int y);
-	void SetMonitor(int nbr);
-	//hook selection
-	BOOL m_hookdriver;
-	void SethookMechanism(BOOL hookall,BOOL hookdriver);
-	bool m_UltraEncoder_used;
-	bool m_Ultra2Encoder_used;
-	rfb::Rect		m_Cliprect;//the region to check
+    // Handler for pixel data grabbing and region change checking
+    vncBuffer m_buffer;
+    //SINGLE WINDOW
+    vncServer* GetServerPointer() { return m_server; }
+    rfb::Rect GetSize();
+    void SetBitmapRectOffsetAndClipRect(int offesetx, int offsety, int width = 0, int height = 0);
 
-	PCHANGES_BUF pchanges_buf;
-	CHANGES_BUF changes_buf;
+    // Modif rdv@2002 - v1.1.x - VideoDriver
+    //BOOL IsVideoDriverEnabled();
+    BOOL VideoBuffer();
+    int m_ScreenOffsetx;
+    int m_ScreenOffsety;
+    //
+    int DriverType;
+    DWORD color[10U];
+    // added jeff
+    LayeredWindows* layeredWindows;
+    // Modif rdv@2002 Dis/enable input
+    void SetDisableInput();
+    void SetSW(int x, int y);
+    void SetMonitor(int nbr);
+    //hook selection
+    BOOL m_hookdriver;
+    void SethookMechanism(BOOL hookall, BOOL hookdriver);
+    bool m_UltraEncoder_used;
+    bool m_Ultra2Encoder_used;
+    rfb::Rect m_Cliprect; //the region to check
 
-	void Checkmonitors();
+    PCHANGES_BUF pchanges_buf;
+    CHANGES_BUF changes_buf;
+
+    void Checkmonitors();
     // 28 Mar 2008 jdp
     void SetBlockInputState(bool newstate);
-	void PreventScreensaver(bool state);
+    void PreventScreensaver(bool state);
     bool GetBlockInputState() { return m_bIsInputDisabledByClient; }
     bool block_input(bool state);
-	BOOL InitWindow();
-	HANDLE trigger_events[8];
-	HANDLE eventPlaceholder1;
-	HANDLE eventPlaceholder2;
-	HANDLE restart_event;
-	DWORD pumpID;
-	rfb::Region2D rgnpump;
-	bool lock_region_add;
+    BOOL InitWindow();
+    std::array<HANDLE, 8U> trigger_events;
+    HANDLE eventPlaceholder1;
+    HANDLE eventPlaceholder2;
+    HANDLE restart_event;
+    DWORD pumpID;
+    rfb::Region2D rgnpump;
+    bool lock_region_add;
 
-	// The current mouse position
-	rfb::Rect		m_cursorpos;
-	void WriteMessageOnScreen(char*,BYTE *scrBuff, UINT scrBuffSize);
-	void WriteMessageOnScreenPreConnect( BYTE *scrBuff, UINT scrBuffSize);
+    // The current mouse position
+    rfb::Rect m_cursorpos;
+    void WriteMessageOnScreen(char*, BYTE* scrBuff, UINT scrBuffSize);
+    void WriteMessageOnScreenPreConnect(BYTE* scrBuff, UINT scrBuffSize);
 
-	sessionmsg *sesmsg ;
-	int aantal_session;
-	vncServer 		*m_server;
-	ScreenCapture *m_screenCapture;
-	// Screen info
-	rfbServerInitMsg	m_scrinfo;
-	void requestMouseShapeUpdate();
-	int nr_monitors;
+    sessionmsg* sesmsg;
+    int aantal_session;
+    vncServer* m_server;
+    ScreenCapture* m_screenCapture;
+    // Screen info
+    rfbServerInitMsg m_scrinfo;
+    void requestMouseShapeUpdate();
+    int nr_monitors;
+
 protected:
+    // Routines to hook and unhook us
+    DWORD Startup();
+    DWORD PreConnectStartup();
+    BOOL Shutdown();
 
-	// Routines to hook and unhook us
-	DWORD Startup();
-	DWORD PreConnectStartup();
-	BOOL Shutdown();
-	
-	// Init routines called by the child thread
-	BOOL InitDesktop();
-	void KillScreenSaver();
-//	void KillWallpaper();
-//	void RestoreWallpaper();
-	DWORD InitBitmap();
-	DWORD PreConnectInitBitmap();
-	BOOL ThunkBitmapInfo();
-	DWORD SetPixFormat();
-	BOOL SetPixShifts();
-	BOOL SetPalette();
-	int m_timer;
+    // Init routines called by the child thread
+    BOOL InitDesktop();
+    void KillScreenSaver();
+    //	void KillWallpaper();
+    //	void RestoreWallpaper();
+    DWORD InitBitmap();
+    DWORD PreConnectInitBitmap();
+    BOOL ThunkBitmapInfo();
+    DWORD SetPixFormat();
+    BOOL SetPixShifts();
+    BOOL SetPalette();
+    int m_timer;
 
-	// Fetching pixel data to a buffer, and handling copyrects
-	void CopyToBuffer(const rfb::Rect &rect, BYTE *scrBuff, UINT scrBuffSize);
-	bool CalcCopyRects(rfb::UpdateTracker &tracker);
+    // Fetching pixel data to a buffer, and handling copyrects
+    void CopyToBuffer(const rfb::Rect& rect, BYTE* scrBuff, UINT scrBuffSize);
+    bool CalcCopyRects(rfb::UpdateTracker& tracker);
 
-	// Routine to attempt enabling optimised DIBsection blits
-	DWORD EnableOptimisedBlits();
+    // Routine to attempt enabling optimised DIBsection blits
+    DWORD EnableOptimisedBlits();
 
-	// Convert a bit mask eg. 00111000 to max=7, shift=3
-	static void MaskToMaxAndShift(DWORD mask, CARD16 &max, CARD8 &shift);
-	
-	// Enabling & disabling clipboard handling
-	void SetClipboardActive(BOOL active) {m_clipboard_active = active;};
+    // Convert a bit mask eg. 00111000 to max=7, shift=3
+    static void MaskToMaxAndShift(DWORD mask, CARD16& max, CARD8& shift);
 
-	// Modif sf@2002 - v1.1.0 - FastDetectChanges stuff
-	bool FastDetectChanges(rfb::Region2D &rgn, rfb::Rect &rect, int nZone, bool fTurbo);
-	GridsList    m_lGridsList;   // List of changes detection grids
-	WindowsList  m_lWList;		 // List of Windows handles  
-	// HDC	         m_hDC;			 // Local Screen Device context to capture our Grid of pixels 
-	int          m_nGridCycle;   // Cycle index for grid shifting
+    // Enabling & disabling clipboard handling
+    void SetClipboardActive(BOOL active) { m_clipboard_active = active; }
 
-	// sf@2002 - Text Chat - No more used for now
-	// bool m_fTextChatRunning;
-	// TextChat* m_pCurrentTextChat;
+    // Modif sf@2002 - v1.1.0 - FastDetectChanges stuff
+    bool FastDetectChanges(rfb::Region2D& rgn, rfb::Rect& rect, int nZone, bool fTurbo);
+    GridsList m_lGridsList; // List of changes detection grids
+    WindowsList m_lWList;   // List of Windows handles
+    // HDC	         m_hDC;			 // Local Screen Device context to capture our Grid of pixels
+    int m_nGridCycle; // Cycle index for grid shifting
 
-	// DATA
+    // sf@2002 - Text Chat - No more used for now
+    // bool m_fTextChatRunning;
+    // TextChat* m_pCurrentTextChat;
 
-	// Generally useful stuff	
-	omni_thread 	*m_thread;
-	HWND			m_hwnd;
-	//UINT			m_timerid;
-	HWND			m_hnextviewer;
-	// adzm - 2010-07 - Fix clipboard hangs
-	bool			m_settingClipboardViewer;
-	BOOL			m_clipboard_active;
+    // DATA
 
-	// device contexts for memory and the screen
-	HDC				m_hmemdc;
-	HDC				m_hrootdc_Desktop;
+    // Generally useful stuff
+    omni_thread* m_thread;
+    HWND m_hwnd;
+    //UINT			m_timerid;
+    HWND m_hnextviewer;
+    // adzm - 2010-07 - Fix clipboard hangs
+    bool m_settingClipboardViewer;
+    BOOL m_clipboard_active;
 
-	// New and old bitmaps
-	HBITMAP			m_membitmap;
-	omni_mutex		m_update_lock;
+    // device contexts for memory and the screen
+    HDC m_hmemdc;
+    HDC m_hrootdc_Desktop;
 
-	rfb::Rect		m_bmrect;
-	struct _BMInfo {
-		BOOL			truecolour;
-		BITMAPINFO		bmi;
-		// Colormap info - comes straight after BITMAPINFO - **HACK**
-		RGBQUAD			cmap[256];
-	} m_bminfo;	
+    // New and old bitmaps
+    HBITMAP m_membitmap;
+    omni_mutex m_update_lock;
 
-	// These are the red, green & blue masks for a pixel
-	DWORD			m_rMask, m_gMask, m_bMask;
+    rfb::Rect m_bmrect;
+    struct _BMInfo
+    {
+        BOOL truecolour;
+        BITMAPINFO bmi;
+        // Colormap info - comes straight after BITMAPINFO - **HACK**
+        std::array<RGBQUAD, 256U> cmap;
+    } m_bminfo;
 
-	// This is always handy to have
-	int				m_bytesPerRow;
+    // These are the red, green & blue masks for a pixel
+    DWORD m_rMask, m_gMask, m_bMask;
 
-	// Handle of the default cursor
-	HCURSOR			m_hcursor;
-	HCURSOR			m_hOldcursor; // sf@2002
+    // This is always handy to have
+    int m_bytesPerRow;
 
-	// Handle of the basic arrow cursor
-	HCURSOR			m_hdefcursor;
+    // Handle of the default cursor
+    HCURSOR m_hcursor;
+    HCURSOR m_hOldcursor; // sf@2002
 
-	// Boolean flag to indicate when the display resolution has changed
-	BOOL			m_displaychanged;
-	BOOL			m_screensize_changed;
+    // Handle of the basic arrow cursor
+    HCURSOR m_hdefcursor;
 
-	// Extra vars used for the DIBsection optimisation
-	VOID			*m_DIBbits;
-	BOOL			m_formatmunged;
+    // Boolean flag to indicate when the display resolution has changed
+    BOOL m_displaychanged;
+    BOOL m_screensize_changed;
 
-	// Info used for polling modes
-	UINT			m_pollingcycle;
-	// rfb::Rect		m_fullscreen; // sf@2002 - v1.1.0
+    // Extra vars used for the DIBsection optimisation
+    VOID* m_DIBbits;
+    BOOL m_formatmunged;
 
-	// Handling of the foreground window, to produce CopyRects
-	HWND			m_foreground_window;
-	rfb::Rect		m_foreground_window_rect;
+    // Info used for polling modes
+    UINT m_pollingcycle;
+    // rfb::Rect		m_fullscreen; // sf@2002 - v1.1.0
 
-	//SINGLE WINDOW
-	int m_SWOffsetx;
-	int m_SWOffsety;
+    // Handling of the foreground window, to produce CopyRects
+    HWND m_foreground_window;
+    rfb::Rect m_foreground_window_rect;
 
-	//DDIHOOK
+    //SINGLE WINDOW
+    int m_SWOffsetx;
+    int m_SWOffsety;
 
-	// Modif rdv@2002 - v1.1.x - VideoDriver	
-	BOOL InitVideoDriver();
- 	void ShutdownVideoDriver();
-	omni_mutex		m_screenCapture_lock;
+    //DDIHOOK
 
-	// Modif input dis/enabke
-	DWORD m_thread_hooks;
-	BOOL ddihook;
-	bool m_screen_in_powersave;
-	bool m_Black_window_active;
-	DWORD m_captureROP;			// Cached BitBlt ROP: SRCCOPY or (CAPTUREBLT|SRCCOPY)
-	void UpdateCaptureROP();	// Recompute m_captureROP; call after settings/aero/blank change
+    // Modif rdv@2002 - v1.1.x - VideoDriver
+    BOOL InitVideoDriver();
+    void ShutdownVideoDriver();
+    omni_mutex m_screenCapture_lock;
 
-	//	[v1.0.2-jp1 fix] Monitor Blanking
-	//BOOL m_grayed;
-	//WORD bk_gamma[3][256];
-	
-	//hook selection
-	BOOL m_hookdll;
-	BOOL On_Off_hookdll;
-	BOOL m_hookswitch;
-	BOOL Hookdll_Changed;
-	BOOL m_hookinited;
-	BOOL m_bitmappointer;
-	HANDLE m_hddihook;
-	void StartStopddihook(BOOL enabled);
-	void StartStophookdll(BOOL enabled);
-	void InitHookSettings();
-	HMODULE hModuleVNCHook;
-	HMODULE hSCModule;
-	SetHooksFn SetHooks;
-	UnSetHooksFn  UnSetHooks;
-	SetHookFn SetHook;
-	UnSetHookFn  UnSetHook;
-	SetKeyboardFilterHookFn SetKeyboardFilterHook;
-	SetMouseFilterHookFn SetMouseFilterHook;
-	//hooks in schook Hook(s)
-	SetKeyboardFilterHookFn SetKeyboardFilterHooks;
-	SetMouseFilterHookFn SetMouseFilterHooks;
+    // Modif input dis/enabke
+    DWORD m_thread_hooks;
+    BOOL ddihook;
+    bool m_screen_in_powersave;
+    bool m_Black_window_active;
+    DWORD m_captureROP;      // Cached BitBlt ROP: SRCCOPY or (CAPTUREBLT|SRCCOPY)
+    void UpdateCaptureROP(); // Recompute m_captureROP; call after settings/aero/blank change
+
+    //	[v1.0.2-jp1 fix] Monitor Blanking
+    //BOOL m_grayed;
+    //WORD bk_gamma[3][256];
+
+    //hook selection
+    BOOL m_hookdll;
+    BOOL On_Off_hookdll;
+    BOOL m_hookswitch;
+    BOOL Hookdll_Changed;
+    BOOL m_hookinited;
+    BOOL m_bitmappointer;
+    HANDLE m_hddihook;
+    void StartStopddihook(BOOL enabled);
+    void StartStophookdll(BOOL enabled);
+    void InitHookSettings();
+    HMODULE hModuleVNCHook;
+    HMODULE hSCModule;
+    SetHooksFn SetHooks;
+    UnSetHooksFn UnSetHooks;
+    SetHookFn SetHook;
+    UnSetHookFn UnSetHook;
+    SetKeyboardFilterHookFn SetKeyboardFilterHook;
+    SetMouseFilterHookFn SetMouseFilterHook;
+    //hooks in schook Hook(s)
+    SetKeyboardFilterHookFn SetKeyboardFilterHooks;
+    SetMouseFilterHookFn SetMouseFilterHooks;
 
 
-	pBlockInput pbi;
-	HMODULE hUser32;
-	BOOL no_default_desktop;
-	HANDLE InitWindowThreadh;
-	void StopInitWindowthread();
-	void StartInitWindowthread();
-	void ShutdownInitWindowthread();
-	bool can_be_hooked;
-	int old_Blockinput;
-	int old_Blockinput1;
-	int old_Blockinput2;
-	int nr_rects;
-	HWND hDeskWnd;
-	HWND hFolderView;
-	rfb::Region2D iconregion;
-	bool blankmonitorstate;
+    pBlockInput pbi;
+    HMODULE hUser32;
+    BOOL no_default_desktop;
+    HANDLE InitWindowThreadh;
+    void StopInitWindowthread();
+    void StartInitWindowthread();
+    void ShutdownInitWindowthread();
+    bool can_be_hooked;
+    int old_Blockinput;
+    int old_Blockinput1;
+    int old_Blockinput2;
+    int nr_rects;
+    HWND hDeskWnd;
+    HWND hFolderView;
+    rfb::Region2D iconregion;
+    bool blankmonitorstate;
 
-	//Multi monitor	
-	bool show_all_monitors;
-	bool requested_all_monitor;
+    //Multi monitor
+    bool show_all_monitors;
+    bool requested_all_monitor;
 
-	bool m_bIsInputDisabledByClient; // 28 March 2008 jdp
-	#ifdef AVILOG
-	CAVIGenerator *AviGen;
-	#endif
+    bool m_bIsInputDisabledByClient; // 28 March 2008 jdp
+#ifdef AVILOG
+    CAVIGenerator* AviGen;
+#endif
 
 private:
-	HDESK m_input_desktop;
-	HDESK m_home_desktop;
-	PixelCaptureEngine PixelEngine;
-	int idle_counter;
-	bool change_found;
-	//POINT	old_caret_pt;
+    HDESK m_input_desktop;
+    HDESK m_home_desktop;
+    PixelCaptureEngine PixelEngine;
+    int idle_counter;
+    bool change_found;
+    //POINT	old_caret_pt;
 };
 
-#endif // _WINVNC_VNCDESKTOP
+#endif // WINVNC_VNCDESKTOP

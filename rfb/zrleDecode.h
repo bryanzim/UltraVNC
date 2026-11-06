@@ -18,9 +18,11 @@
 // BPP should be 8, 16 or 32 depending on the bits per pixel.
 // IMAGE_RECT
 
+#include <rdr/InStream.h>
 #include <rdr/ZlibInStream.h>
 #include <rdr/ZstdInStream.h>
-#include <rdr/InStream.h>
+
+#include <array>
 #include <assert.h>
 
 using namespace rdr;
@@ -29,199 +31,247 @@ using namespace rdr;
    but also expands its arguments if they are macros */
 
 #ifndef __RFB_CONCAT2E
-#define __RFB_CONCAT2(a,b) a##b
-#define __RFB_CONCAT2E(a,b) __RFB_CONCAT2(a,b)
+#define __RFB_CONCAT2(a, b) a##b
+#define __RFB_CONCAT2E(a, b) __RFB_CONCAT2(a, b)
 #endif
 
 #ifndef __RFB_CONCAT3E
-#define __RFB_CONCAT3(a,b,c) a##b##c
-#define __RFB_CONCAT3E(a,b,c) __RFB_CONCAT3(a,b,c)
+#define __RFB_CONCAT3(a, b, c) a##b##c
+#define __RFB_CONCAT3E(a, b, c) __RFB_CONCAT3(a, b, c)
 #endif
 
 #undef END_FIX
 #if ZYWRLE_ENDIAN == ENDIAN_LITTLE
-#  define END_FIX LE
+#define END_FIX LE
 #elif ZYWRLE_ENDIAN == ENDIAN_BIG
-#  define END_FIX BE
+#define END_FIX BE
 #else
-#  define END_FIX NE
+#define END_FIX NE
 #endif
 
 #ifdef CPIXEL
-#define PIXEL_T __RFB_CONCAT2E(rdr::U,BPP)
-#define READ_PIXEL __RFB_CONCAT2E(readOpaque,CPIXEL)
-#define ZRLE_DECODE_BPP __RFB_CONCAT3E(zrleDecode,CPIXEL,END_FIX)
+#define PIXEL_T __RFB_CONCAT2E(rdr::U, BPP)
+#define READ_PIXEL __RFB_CONCAT2E(readOpaque, CPIXEL)
+#define ZRLE_DECODE_BPP __RFB_CONCAT3E(zrleDecode, CPIXEL, END_FIX)
 #define BPPOUT BPP
-#elif BPP==15
-#define PIXEL_T __RFB_CONCAT2E(rdr::U,16)
-#define READ_PIXEL __RFB_CONCAT2E(readOpaque,16)
-#define ZRLE_DECODE_BPP __RFB_CONCAT3E(zrleDecode,BPP,END_FIX)
+#elif BPP == 15
+#define PIXEL_T __RFB_CONCAT2E(rdr::U, 16)
+#define READ_PIXEL __RFB_CONCAT2E(readOpaque, 16)
+#define ZRLE_DECODE_BPP __RFB_CONCAT3E(zrleDecode, BPP, END_FIX)
 #define BPPOUT 16
 #else
-#define PIXEL_T __RFB_CONCAT2E(rdr::U,BPP)
-#define READ_PIXEL __RFB_CONCAT2E(readOpaque,BPP)
-#define ZRLE_DECODE_BPP __RFB_CONCAT3E(zrleDecode,BPP,END_FIX)
+#define PIXEL_T __RFB_CONCAT2E(rdr::U, BPP)
+#define READ_PIXEL __RFB_CONCAT2E(readOpaque, BPP)
+#define ZRLE_DECODE_BPP __RFB_CONCAT3E(zrleDecode, BPP, END_FIX)
 #define BPPOUT BPP
 #endif
 
-#if BPP!=8
+#if BPP != 8
 #define ZYWRLE_DECODE
 #include <rfb/zywrletemplate.c>
+
 #endif
 
 template <class myInStream>
-void ZRLE_DECODE_BPP (int x, int y, int w, int h, rdr::InStream* is,
-	myInStream* zis, PIXEL_T* buf)
+void ZRLE_DECODE_BPP(int x, int y, int w, int h, rdr::InStream* const is, myInStream* const zis, PIXEL_T* const buf)
 {
-  int length = is->readU32();
-  zis->setUnderlying(is, length);
+    int length = static_cast<int>(is->readU32());
+    zis->setUnderlying(is, length);
 
-  for (int ty = y; ty < y+h; ty += rfbZRLETileHeight) {
-    int th = rfbZRLETileHeight;
-    if (th > y+h-ty) th = y+h-ty;
-    for (int tx = x; tx < x+w; tx += rfbZRLETileWidth) {
-      int tw = rfbZRLETileWidth;
-      if (tw > x+w-tx) tw = x+w-tx;
+    for (int ty = y; ty < y + h; ty += rfbZRLETileHeight)
+    {
+        int th = rfbZRLETileHeight;
+        if (th > y + h - ty)
+        {
+            th = y + h - ty;
+        }
+        for (int tx = x; tx < x + w; tx += rfbZRLETileWidth)
+        {
+            int tw = rfbZRLETileWidth;
+            if (tw > x + w - tx)
+            {
+                tw = x + w - tx;
+            }
 
-#if BPP!=8
-top:
+#if BPP != 8
+        top:
 #endif
-      int mode = zis->readU8();
-      BOOL rle = mode & 128;
-      int palSize = mode & 127;
-      PIXEL_T palette[128];
+            const int mode = zis->readU8();
+            BOOL rle = mode & 128;
+            int palSize = mode & 127;
+            std::array<PIXEL_T, 128U> palette;
 
-      //        fprintf(stderr,"rle %d palSize %d\n",rle,palSize);
+            //        fprintf(stderr,"rle %d palSize %d\n",rle,palSize);
 
-      for (int i = 0; i < palSize; i++) {
-        palette[i] = zis->READ_PIXEL();
-      }
+            for (int i{ 0 }; i < palSize; ++i)
+            {
+                palette[static_cast<unsigned long long>(i)] = zis->READ_PIXEL();
+            }
 
-      if (palSize == 1) {
-        PIXEL_T* ptr = buf;
-        for (int i = 0; i < tw*th; i++) {
-			*ptr++ = palette[0];
-		}
-		goto draw;
-      }
+            if (palSize == 1)
+            {
+                PIXEL_T* ptr = buf;
+                for (int i{ 0 }; i < tw * th; ++i)
+                {
+                    *ptr++ = palette[0U];
+                }
+                goto draw;
+            }
 
-      if (!rle) {
-        if (palSize == 0) {
+            if (!rle)
+            {
+                if (palSize == 0)
+                {
 
-          // raw
+                    // raw
 
-#if BPP!=8
-          if( (zywrle_level>0)&& !(zywrle_level & 0x80) ){
-			zywrle_level |= 0x80;
-			goto top;
-		  }else
+#if BPP != 8
+                    if ((zywrle_level > 0) && !(zywrle_level & 0x80))
+                    {
+                        zywrle_level |= 0x80;
+                        goto top;
+                    }
+                    else
 #endif
 #ifdef CPIXEL
-          for (PIXEL_T* ptr = buf; ptr < buf+tw*th; ptr++) {
-            *ptr = zis->READ_PIXEL();
-          }
+                        for (PIXEL_T* ptr = buf; ptr < buf + tw * th; ++ptr)
+                        {
+                            *ptr = zis->READ_PIXEL();
+                        }
 #else
-          zis->readBytes(buf, tw * th * (BPPOUT / 8));
+                    zis->readBytes(buf, tw * th * (BPPOUT / 8));
 #endif
+                }
+                else
+                {
 
-        } else {
+                    // packed pixels
+                    const int bppp = ((palSize > 16) ? 8 : ((palSize > 4) ? 4 : ((palSize > 2) ? 2 : 1)));
 
-          // packed pixels
-          int bppp = ((palSize > 16) ? 8 :
-                      ((palSize > 4) ? 4 : ((palSize > 2) ? 2 : 1)));
+                    PIXEL_T* ptr = buf;
 
-          PIXEL_T* ptr = buf;
+                    for (int i{ 0 }; i < th; ++i)
+                    {
+                        PIXEL_T* eol = ptr + tw;
+                        U8 byte = 0;
+                        U8 nbits = 0;
 
-          for (int i = 0; i < th; i++) {
-            PIXEL_T* eol = ptr + tw;
-            U8 byte = 0;
-            U8 nbits = 0;
-
-            while (ptr < eol) {
-              if (nbits == 0) {
-                byte = zis->readU8();
-                nbits = 8;
-              }
-              nbits -= bppp;
-              U8 index = (byte >> nbits) & ((1 << bppp) - 1) & 127;
-              if (index >= palSize)
-                throw Exception("Invalid RLE palette index");
-              *ptr++ = palette[index];
+                        while (ptr < eol)
+                        {
+                            if (nbits == 0)
+                            {
+                                byte = zis->readU8();
+                                nbits = 8;
+                            }
+                            nbits -= bppp;
+                            U8 index = (byte >> nbits) & ((1 << bppp) - 1) & 127;
+                            if (index >= palSize)
+                            {
+                                throw Exception("Invalid RLE palette index");
+                            }
+                            *ptr++ = palette[index];
+                        }
+                    }
+                }
             }
-          }
-        }
+            else
+            {
 
-      } else {
+                if (palSize == 0)
+                {
 
-        if (palSize == 0) {
+                    // plain RLE
 
-          // plain RLE
+                    PIXEL_T* ptr = buf;
+                    PIXEL_T* end = ptr + th * tw;
+                    while (ptr < end)
+                    {
+                        PIXEL_T pix = zis->READ_PIXEL();
+                        int len{ 1 };
+                        int b;
+                        do
+                        {
+                            b = zis->readU8();
+                            if (b > end - ptr - len)
+                            {
+                                throw Exception("RLE run exceeds tile bounds");
+                            }
+                            len += b;
+                        } while (b == 255);
 
-          PIXEL_T* ptr = buf;
-          PIXEL_T* end = ptr + th * tw;	    
-          while (ptr < end) {
-            PIXEL_T pix = zis->READ_PIXEL();
-            int len = 1;
-            int b;
-            do {
-              b = zis->readU8();
-              if (b > end - ptr - len)
-                throw Exception("RLE run exceeds tile bounds");
-              len += b;
-            } while (b == 255);
+                        assert(len <= end - ptr);
 
-            assert(len <= end - ptr);
+                        while (len-- > 0)
+                        {
+                            *ptr++ = pix;
+                        }
+                    }
+                }
+                else
+                {
 
-            while (len-- > 0) *ptr++ = pix;
+                    // palette RLE
 
-          }
-        } else {
+                    PIXEL_T* ptr = buf;
+                    PIXEL_T* end = ptr + th * tw;
+                    while (ptr < end)
+                    {
+                        int index = zis->readU8();
+                        int len{ 1 };
+                        if (index & 128)
+                        {
+                            int b;
+                            do
+                            {
+                                b = zis->readU8();
+                                if (b > end - ptr - len)
+                                {
+                                    throw Exception("RLE run exceeds tile bounds");
+                                }
+                                len += b;
+                            } while (b == 255);
 
-          // palette RLE
+                            assert(len <= end - ptr);
+                        }
 
-          PIXEL_T* ptr = buf;
-          PIXEL_T* end = ptr + th * tw;
-          while (ptr < end) {
-            int index = zis->readU8();
-            int len = 1;
-            if (index & 128) {
-              int b;
-              do {
-                b = zis->readU8();
-                if (b > end - ptr - len)
-                  throw Exception("RLE run exceeds tile bounds");
-                len += b;
-              } while (b == 255);
+                        index &= 127;
 
-              assert(len <= end - ptr);
+                        if (index >= palSize)
+                        {
+                            throw Exception("Invalid RLE palette index");
+                        }
+                        PIXEL_T pix = palette[static_cast<unsigned long long>(index)];
+
+                        while (len-- > 0)
+                        {
+                            *ptr++ = pix;
+                        }
+                    }
+                }
             }
 
-            index &= 127;
-
-            if (index >= palSize)
-              throw Exception("Invalid RLE palette index");
-            PIXEL_T pix = palette[index];
-
-            while (len-- > 0) *ptr++ = pix;
-          }
-        }
-      }
-
-      //fprintf(stderr,"copying data to screen %dx%d at %d,%d\n",tw,th,tx,ty);
-draw:
-	  omni_mutex_lock l(m_bitmapdcMutex);
-#if BPP!=8
-      if( zywrle_level & 0x80 ){
-	    zywrle_level &= 0x7F;
-		ZYWRLE_SYNTHESIZE( buf, buf, tw, th, tw, zywrle_level, zywrleBuf );
-	  }
+            //fprintf(stderr,"copying data to screen %dx%d at %d,%d\n",tw,th,tx,ty);
+        draw:
+            omni_mutex_lock l(m_bitmapdcMutex);
+#if BPP != 8
+            if (zywrle_level & 0x80)
+            {
+                zywrle_level &= 0x7F;
+                ZYWRLE_SYNTHESIZE(buf, buf, tw, th, tw, zywrle_level, zywrleBuf);
+            }
 #endif
-      IMAGE_RECT(tx,ty,tw,th,buf);
-	   if (initialupdate_counter < 4) if (!directx_used)InvalidateRect(m_hwndcn, NULL, FALSE);
+            IMAGE_RECT(tx, ty, tw, th, buf)
+            if (initialupdate_counter < 4)
+            {
+                if (!directx_used)
+                {
+                    ::InvalidateRect(m_hwndcn, nullptr, FALSE);
+                }
+            }
+        }
     }
-  }
 
-  zis->reset();
+    zis->reset();
 }
 
 #undef ZRLE_DECODE_BPP

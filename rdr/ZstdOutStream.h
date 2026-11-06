@@ -15,49 +15,50 @@
 // with zlib or zstd on the fly.
 //
 
-#ifndef __RDR_ZSTDOUTSTREAM_H__
-#define __RDR_ZSTDOUTSTREAM_H__
+#ifndef RDR_ZSTDOUTSTREAM_H
+#define RDR_ZSTDOUTSTREAM_H
 
 #include "OutStream.h"
 
 #ifdef _VCPKG
 #include <zstd.h>
+
 #else
 #include "../zstd/lib/zstd.h"
+
 #endif
 
 
 struct z_stream_s;
 
-namespace rdr {
+namespace rdr
+{
 
-  class ZstdOutStream : public OutStream {
+    class ZstdOutStream : public OutStream
+    {
 
-  public:
+    public:
+        // adzm - 2010-07 - Custom compression level
+        explicit ZstdOutStream(OutStream* os = nullptr, int bufSize = 0, int compressionLevel = -1); // Z_DEFAULT_COMPRESSION
+        virtual ~ZstdOutStream();
 
-    // adzm - 2010-07 - Custom compression level
-	  ZstdOutStream(OutStream* os=0, int bufSize=0, int compressionLevel=-1); // Z_DEFAULT_COMPRESSION
-    virtual ~ZstdOutStream();
+        void setUnderlying(OutStream* os);
+        void flush();
+        [[nodiscard]] int length();
 
-    void setUnderlying(OutStream* os);
-    void flush();
-    int length();
+    private:
+        int overrun(int itemSize, int nItems);
 
-  private:
+        OutStream* underlying;
+        int bufSize;
+        int offset;
+        //z_stream_s* zs;
+        U8* start;
 
-    int overrun(int itemSize, int nItems);
-
-    OutStream* underlying;
-    int bufSize;
-    int offset;
-    //z_stream_s* zs;
-    U8* start;
-
-	ZSTD_outBuffer* outBuffer;
-	ZSTD_inBuffer* inBuffer;
-	ZSTD_CStream* zstds;
-
-  };
+        ZSTD_outBuffer* outBuffer;
+        ZSTD_inBuffer* inBuffer;
+        ZSTD_CStream* zstds;
+    };
 
 } // end of namespace rdr
 

@@ -11,12 +11,18 @@
 
 
 #include "stdhdrs.h"
-#include "vncviewer.h"
+
 #include "ClientConnection.h"
 #include "Exception.h"
-extern char sz_C1[64];
-extern char sz_C2[64];
-extern char sz_C3[64];
+#include "vncviewer.h"
+
+#include <array>
+#include <cstring>
+#include <string>
+
+extern char sz_C1[64U];
+extern char sz_C2[64U];
+extern char sz_C3[64U];
 
 // This file contains the code for getting text from, and putting text into
 // the Windows clipboard.
@@ -30,306 +36,373 @@ extern char sz_C3[64];
 
 void ClientConnection::ProcessLocalClipboardChange()
 {
-	vnclog.Print(2, _T("Clipboard changed\n"));
-	
-	HWND hOwner = GetClipboardOwner();
+    vnclog.Print(2, _T("Clipboard changed\n"));
 
-	//adzm 2010-05-11 - Ignore clipboard while initializing (copying a password, for example, will end up sending a packet and causing a failure)
-	if (!m_running)
-	{
-		vnclog.Print(2, _T("Ignore Clipboard while initializing!\n"));
-		//m_initialClipboardSeen = true;
-	}
-	else if (m_settingClipboardViewer)
-	{
-		vnclog.Print(2, _T("Ignore Clipboard while setting viewer!\n"));
-		//m_initialClipboardSeen = true;
-	}
-	else if (m_pFileTransfer && (m_pFileTransfer->m_fFileTransferRunning ||m_pFileTransfer->m_fFileUploadRunning || m_pFileTransfer->m_fFileDownloadRunning))
-	{
-		vnclog.Print(2, _T("Ignore Clipboard while File Transfer is buzy!\n"));
-		//m_initialClipboardSeen = true;
-	}
-	else if (hOwner == m_hwndcn) {
-		vnclog.Print(2, _T("We changed it - ignore!\n"));
-	/*} else if (!m_initialClipboardSeen) {
-		vnclog.Print(2, _T("Don't send initial clipboard!\n"));
-		m_initialClipboardSeen = true;*/
-	} else if (!m_opts->m_DisableClipboard && !m_opts->m_ViewOnly) {
-		UpdateRemoteClipboard();
-	}
-	// Pass the message to the next window in clipboard viewer chain
-	if (m_hwndNextViewer != NULL && m_hwndNextViewer != (HWND)INVALID_HANDLE_VALUE) {
-		vnclog.Print(6, _T("Passing WM_DRAWCLIPBOARD to 0x%08x\n"), m_hwndNextViewer);
-		// use SendNotifyMessage instead of SendMessage so misbehaving or hung applications
-		// (like ourself before this) won't cause our thread to hang.
-		::SendNotifyMessage(m_hwndNextViewer, WM_DRAWCLIPBOARD , 0,0); 
-	} else {
-		vnclog.Print(6, _T("No next window in chain; WM_DRAWCLIPBOARD will not be passed\n"), m_hwndNextViewer);
-	}
+    HWND hOwner = ::GetClipboardOwner();
+
+    //adzm 2010-05-11 - Ignore clipboard while initializing (copying a password, for example, will end up sending a packet and
+    //causing a failure)
+    if (!m_running)
+    {
+        vnclog.Print(2, _T("Ignore Clipboard while initializing!\n"));
+        //m_initialClipboardSeen = true;
+    }
+    else if (m_settingClipboardViewer)
+    {
+        vnclog.Print(2, _T("Ignore Clipboard while setting viewer!\n"));
+        //m_initialClipboardSeen = true;
+    }
+    else if (m_pFileTransfer && (m_pFileTransfer->m_fFileTransferRunning || m_pFileTransfer->m_fFileUploadRunning ||
+                                 m_pFileTransfer->m_fFileDownloadRunning))
+    {
+        vnclog.Print(2, _T("Ignore Clipboard while File Transfer is buzy!\n"));
+        //m_initialClipboardSeen = true;
+    }
+    else if (hOwner == m_hwndcn)
+    {
+        vnclog.Print(2, _T("We changed it - ignore!\n"));
+        /*} else if (!m_initialClipboardSeen) {
+            vnclog.Print(2, _T("Don't send initial clipboard!\n"));
+            m_initialClipboardSeen = true;*/
+    }
+    else if (!m_opts->m_DisableClipboard && !m_opts->m_ViewOnly)
+    {
+        UpdateRemoteClipboard();
+    }
+    // Pass the message to the next window in clipboard viewer chain
+    if ((m_hwndNextViewer != nullptr) && (m_hwndNextViewer != reinterpret_cast<HWND>(INVALID_HANDLE_VALUE)))
+    {
+        vnclog.Print(6, _T("Passing WM_DRAWCLIPBOARD to 0x%08x\n"), m_hwndNextViewer);
+        // use SendNotifyMessage instead of SendMessage so misbehaving or hung applications
+        // (like ourself before this) won't cause our thread to hang.
+        ::SendNotifyMessage(m_hwndNextViewer, WM_DRAWCLIPBOARD, 0, 0);
+    }
+    else
+    {
+        vnclog.Print(6, _T("No next window in chain; WM_DRAWCLIPBOARD will not be passed\n"), m_hwndNextViewer);
+    }
 }
 
 
 // adzm - 2010-07 - Extended clipboard
 void ClientConnection::UpdateRemoteClipboard(CARD32 overrideFlags)
-{			
-	// The clipboard should not be modified by more than one thread at once
-	omni_mutex_lock l(m_clipMutex);
-	
-	if (m_clipboard.settings.m_bSupportsEx) {
-		if (m_opts->m_DisableClipboard || m_opts->m_ViewOnly || !m_running ||
-			(m_pFileTransfer && (m_pFileTransfer->m_fFileTransferRunning || m_pFileTransfer->m_fFileUploadRunning || m_pFileTransfer->m_fFileDownloadRunning)))
-			return;
-		ClipboardData newClipboard;
+{
+    // The clipboard should not be modified by more than one thread at once
+    omni_mutex_lock l(m_clipMutex);
 
-		if (newClipboard.Load(NULL, true)) {
-			if (m_clipboard.m_hasExtendedCRC && newClipboard.ExtendedCRC() == m_clipboard.m_extendedCRC && overrideFlags == 0) {
-				vnclog.Print(6, _T("Ignoring extended SendClientCutText due to identical data\n"));
-				return;
-			}
+    if (m_clipboard.settings.m_bSupportsEx)
+    {
+        if (m_opts->m_DisableClipboard || m_opts->m_ViewOnly || !m_running ||
+            (m_pFileTransfer && (m_pFileTransfer->m_fFileTransferRunning || m_pFileTransfer->m_fFileUploadRunning ||
+                                 m_pFileTransfer->m_fFileDownloadRunning)))
+        {
+            return;
+        }
+        ClipboardData newClipboard;
 
-			m_clipboard.UpdateClipTextEx(newClipboard, overrideFlags);
-			
-			if (m_clipboard.m_bNeedToProvide) {
-				m_clipboard.m_bNeedToProvide = false;
-				int actualLen = m_clipboard.extendedClipboardDataMessage.GetDataLength();
+        if (newClipboard.Load(nullptr, true))
+        {
+            if (m_clipboard.m_hasExtendedCRC && (newClipboard.ExtendedCRC() == m_clipboard.m_extendedCRC) && (overrideFlags == 0))
+            {
+                vnclog.Print(6, _T("Ignoring extended SendClientCutText due to identical data\n"));
+                return;
+            }
 
-				rfbClientCutTextMsg message;
-				memset(&message, 0, sizeof(rfbClientCutTextMsg));
-				message.type = rfbClientCutText;
+            m_clipboard.UpdateClipTextEx(newClipboard, overrideFlags);
 
-				message.length = Swap32IfLE(-actualLen);
-				
-				//adzm 2010-09
-				WriteExactQueue((char*)&message, sz_rfbClientCutTextMsg, rfbClientCutText);
-				WriteExact((char*)(m_clipboard.extendedClipboardDataMessage.GetData()), m_clipboard.extendedClipboardDataMessage.GetDataLength());
-			
-				vnclog.Print(6, _T("Sent extended clipboard\n"));
-			}
+            if (m_clipboard.m_bNeedToProvide)
+            {
+                m_clipboard.m_bNeedToProvide = false;
+                int actualLen = m_clipboard.extendedClipboardDataMessage.GetDataLength();
 
-			m_clipboard.extendedClipboardDataMessage.Reset();
+                rfbClientCutTextMsg message;
+                std::memset(&message, 0, sizeof(rfbClientCutTextMsg));
+                message.type = rfbClientCutText;
 
-			if (m_clipboard.m_bNeedToNotify) {
-				m_clipboard.m_bNeedToNotify = false;
-				if (m_clipboard.settings.m_bSupportsEx) {
+                message.length = static_cast<unsigned int>(Swap32IfLE(-actualLen));
 
-					int actualLen =m_clipboard.extendedClipboardDataNotifyMessage.GetDataLength();
+                //adzm 2010-09
+                WriteExactQueue(reinterpret_cast<char*>(&message), sz_rfbClientCutTextMsg, rfbClientCutText);
+                WriteExact(const_cast<char*>(reinterpret_cast<const char *>((m_clipboard.extendedClipboardDataMessage.GetData()))),
+                           m_clipboard.extendedClipboardDataMessage.GetDataLength());
 
-					rfbClientCutTextMsg message;
-					memset(&message, 0, sizeof(rfbClientCutTextMsg));
-					message.type = rfbClientCutText;
+                vnclog.Print(6, _T("Sent extended clipboard\n"));
+            }
 
-					message.length = Swap32IfLE(-actualLen);
+            m_clipboard.extendedClipboardDataMessage.Reset();
 
-					WriteExactQueue((char*)&message, sz_rfbClientCutTextMsg, rfbClientCutText);
-					WriteExact((char*)(m_clipboard.extendedClipboardDataNotifyMessage.GetData()), m_clipboard.extendedClipboardDataNotifyMessage.GetDataLength());
+            if (m_clipboard.m_bNeedToNotify)
+            {
+                m_clipboard.m_bNeedToNotify = false;
+                if (m_clipboard.settings.m_bSupportsEx)
+                {
 
-				}
-				m_clipboard.extendedClipboardDataNotifyMessage.Reset();
-			}
+                    int actualLen = m_clipboard.extendedClipboardDataNotifyMessage.GetDataLength();
 
-		} else {
-			vnclog.Print(6, _T("Failed to load local clipboard!\n"));
-		}
-	} else {		
-		vnclog.Print(6, _T("Checking clipboard...\n"));
-		ClipboardHolder holder(m_hwndcn);
-		if (holder.m_bIsOpen) {
-			vnclog.Print(6, _T("Opened...\n"));
-			HGLOBAL hglb = GetClipboardData(CF_TEXT); 
-			if (hglb == NULL) {				
-				vnclog.Print(6, _T("No CF_TEXT!\n"));
-			} else {
-				vnclog.Print(6, _T("Got CF_TEXT!\n"));
-				LPSTR lpstr = (LPSTR) GlobalLock(hglb);  
-				
-				char *contents = new char[strlen(lpstr) + 1];
-				char *unixcontents = new char[strlen(lpstr) + 1];
-				strcpy_s(contents, strlen(lpstr) + 1, lpstr);
-				GlobalUnlock(hglb);  		
-				
-				// Translate to Unix-format lines before sending
-				int j = 0;
-				for (int i = 0; contents[i] != '\0'; i++) {
-					if (contents[i] != '\x0d') {
-						unixcontents[j++] = contents[i];
-					}
-				}
-				unixcontents[j] = '\0';
-				try {
-					SendClientCutText(unixcontents, strlen(unixcontents));
-				} catch (WarningException &e) {
-					vnclog.Print(0, _T("Exception while sending clipboard text : %s\n"), e.GetInfo());
-					DestroyWindow(m_hwndcn);
-				}
-				delete [] contents; 
-				delete [] unixcontents;
-			}
-		} 
-	}
+                    rfbClientCutTextMsg message;
+                    std::memset(&message, 0, sizeof(rfbClientCutTextMsg));
+                    message.type = rfbClientCutText;
+
+                    message.length = static_cast<unsigned int>(Swap32IfLE(-actualLen));
+
+                    WriteExactQueue(reinterpret_cast<char*>(&message), sz_rfbClientCutTextMsg, rfbClientCutText);
+                    WriteExact(const_cast<char*>(reinterpret_cast<const char *>((m_clipboard.extendedClipboardDataNotifyMessage.GetData()))),
+                               m_clipboard.extendedClipboardDataNotifyMessage.GetDataLength());
+                }
+                m_clipboard.extendedClipboardDataNotifyMessage.Reset();
+            }
+        }
+        else
+        {
+            vnclog.Print(6, _T("Failed to load local clipboard!\n"));
+        }
+    }
+    else
+    {
+        vnclog.Print(6, _T("Checking clipboard...\n"));
+        ClipboardHolder holder(m_hwndcn);
+        if (holder.m_bIsOpen)
+        {
+            vnclog.Print(6, _T("Opened...\n"));
+            HGLOBAL hglb = ::GetClipboardData(CF_TEXT);
+            if (hglb == nullptr)
+            {
+                vnclog.Print(6, _T("No CF_TEXT!\n"));
+            }
+            else
+            {
+                vnclog.Print(6, _T("Got CF_TEXT!\n"));
+                LPSTR lpstr = reinterpret_cast<LPSTR>(::GlobalLock(hglb));
+
+                char* contents = new char[std::strlen(lpstr) + 1];
+                char* unixcontents = new char[std::strlen(lpstr) + 1];
+                ::strcpy_s(contents, std::strlen(lpstr) + 1, lpstr);
+                ::GlobalUnlock(hglb);
+
+                // Translate to Unix-format lines before sending
+                int j{ 0 };
+                for (int i{ 0 }; contents[i] != '\0'; ++i)
+                {
+                    if (contents[i] != '\x0d')
+                    {
+                        unixcontents[j++] = contents[i];
+                    }
+                }
+                unixcontents[j] = '\0';
+                try
+                {
+                    SendClientCutText(unixcontents, static_cast<int>(std::strlen(unixcontents)));
+                }
+                catch (WarningException& e)
+                {
+                    vnclog.Print(0, _T("Exception while sending clipboard text : %s\n"), e.GetInfo());
+                    ::DestroyWindow(m_hwndcn);
+                }
+                delete[] contents;
+                delete[] unixcontents;
+            }
+        }
+    }
 }
 
 // adzm - 2010-07 - Extended clipboard
-void ClientConnection::UpdateRemoteClipboardCaps(bool bSavePreferences)
+void ClientConnection::UpdateRemoteClipboardCaps(const bool bSavePreferences)
 {
-	omni_mutex_lock l(m_clipMutex);
-	if (!m_clipboard.settings.m_bSupportsEx) return;
+    omni_mutex_lock l(m_clipMutex);
+    if (!m_clipboard.settings.m_bSupportsEx)
+    {
+        return;
+    }
 
-	ExtendedClipboardDataMessage extendedClipboardDataMessage;
-	
-	if (m_opts->m_DisableClipboard || m_opts->m_ViewOnly) {
-		// messages and formats that we can handle
-		extendedClipboardDataMessage.m_pExtendedData->flags = Swap32IfLE(clipCaps | clipText | clipRTF | clipHTML | clipDIB);
+    ExtendedClipboardDataMessage extendedClipboardDataMessage;
 
-		// now include our limits in order of enum value
-		extendedClipboardDataMessage.AppendInt(0);
-		extendedClipboardDataMessage.AppendInt(0);
-		extendedClipboardDataMessage.AppendInt(0);
-		extendedClipboardDataMessage.AppendInt(0);
-	} else {
-		if (bSavePreferences) {
-			SaveClipboardPreferences();
-		}
-		m_clipboard.settings.PrepareCapsPacket(extendedClipboardDataMessage);
-	}
+    if (m_opts->m_DisableClipboard || m_opts->m_ViewOnly)
+    {
+        // messages and formats that we can handle
+        extendedClipboardDataMessage.m_pExtendedData->flags = Swap32IfLE(clipCaps | clipText | clipRTF | clipHTML | clipDIB);
 
-	int actualLen = extendedClipboardDataMessage.GetDataLength();
+        // now include our limits in order of enum value
+        extendedClipboardDataMessage.AppendInt(0);
+        extendedClipboardDataMessage.AppendInt(0);
+        extendedClipboardDataMessage.AppendInt(0);
+        extendedClipboardDataMessage.AppendInt(0);
+    }
+    else
+    {
+        if (bSavePreferences)
+        {
+            SaveClipboardPreferences();
+        }
+        m_clipboard.settings.PrepareCapsPacket(extendedClipboardDataMessage);
+    }
 
-	rfbClientCutTextMsg message;
-	memset(&message, 0, sizeof(rfbClientCutTextMsg));
-	message.type = rfbClientCutText;
+    int actualLen = extendedClipboardDataMessage.GetDataLength();
 
-	message.length = Swap32IfLE(-actualLen);
-	
-	//adzm 2010-09
-	WriteExactQueue((char*)&message, sz_rfbClientCutTextMsg, rfbClientCutText);
-	WriteExact((char*)(extendedClipboardDataMessage.GetData()), extendedClipboardDataMessage.GetDataLength());
+    rfbClientCutTextMsg message;
+    std::memset(&message, 0, sizeof(rfbClientCutTextMsg));
+    message.type = rfbClientCutText;
+
+    message.length = static_cast<unsigned int>(Swap32IfLE(-actualLen));
+
+    //adzm 2010-09
+    WriteExactQueue(reinterpret_cast<char*>(&message), sz_rfbClientCutTextMsg, rfbClientCutText);
+    WriteExact(const_cast<char*>(reinterpret_cast<const char *>((extendedClipboardDataMessage.GetData()))), extendedClipboardDataMessage.GetDataLength());
 }
 
-void ClientConnection::RequestRemoteClipboard(CARD32 formats, bool automatic)
+void ClientConnection::RequestRemoteClipboard(CARD32 formats, const bool automatic)
 {
-	omni_mutex_lock l(m_clipMutex);
-	if (!m_clipboard.settings.m_bSupportsEx || m_opts->m_DisableClipboard || m_opts->m_ViewOnly || !m_running ||
-		(m_pFileTransfer && (m_pFileTransfer->m_fFileTransferRunning || m_pFileTransfer->m_fFileUploadRunning || m_pFileTransfer->m_fFileDownloadRunning)))
-		return;
-	formats = m_clipboard.RequestFormats(formats, automatic);
-	if (!formats)
-		return;
-	ExtendedClipboardDataMessage extendedClipboardDataMessage;
+    omni_mutex_lock l(m_clipMutex);
+    if (!m_clipboard.settings.m_bSupportsEx || m_opts->m_DisableClipboard || m_opts->m_ViewOnly || !m_running ||
+        (m_pFileTransfer && (m_pFileTransfer->m_fFileTransferRunning || m_pFileTransfer->m_fFileUploadRunning ||
+                             m_pFileTransfer->m_fFileDownloadRunning)))
+    {
+        return;
+    }
+    formats = m_clipboard.RequestFormats(formats, automatic);
+    if (!formats)
+    {
+        return;
+    }
+    ExtendedClipboardDataMessage extendedClipboardDataMessage;
 
-	int actualLen = extendedClipboardDataMessage.GetDataLength();
-	extendedClipboardDataMessage.AddFlag(clipRequest | formats);
+    int actualLen = extendedClipboardDataMessage.GetDataLength();
+    extendedClipboardDataMessage.AddFlag(clipRequest | formats);
 
-	rfbClientCutTextMsg message;
-	memset(&message, 0, sizeof(rfbClientCutTextMsg));
-	message.type = rfbClientCutText;
+    rfbClientCutTextMsg message;
+    std::memset(&message, 0, sizeof(rfbClientCutTextMsg));
+    message.type = rfbClientCutText;
 
-	message.length = Swap32IfLE(-actualLen);
-	
-	//adzm 2010-09
-	WriteExactQueue((char*)&message, sz_rfbClientCutTextMsg, rfbClientCutText);
-	WriteExact((char*)(extendedClipboardDataMessage.GetData()), extendedClipboardDataMessage.GetDataLength());
+    message.length = static_cast<unsigned int>(Swap32IfLE(-actualLen));
+
+    //adzm 2010-09
+    WriteExactQueue(reinterpret_cast<char*>(&message), sz_rfbClientCutTextMsg, rfbClientCutText);
+    WriteExact(const_cast<char*>(reinterpret_cast<const char *>((extendedClipboardDataMessage.GetData()))), extendedClipboardDataMessage.GetDataLength());
 }
 
 // We've read some text from the remote server, and
 // we need to copy it into the local clipboard.
 // Called by ClientConnection::ReadServerCutText()
 // adzm - 2010-07 - Extended clipboard
-void ClientConnection::UpdateLocalClipboard(char *buf, int len)
-{	
-	if (m_opts->m_DisableClipboard || m_opts->m_ViewOnly)
-		return;
+void ClientConnection::UpdateLocalClipboard(char* const buf, int len)
+{
+    if (m_opts->m_DisableClipboard || m_opts->m_ViewOnly)
+    {
+        return;
+    }
 
-	// Copy to wincontents replacing LF with CR-LF
-	char *wincontents = new char[len * 2 + 1];
+    // Copy to wincontents replacing LF with CR-LF
+    char* wincontents = new char[static_cast<unsigned long long>(len * 2 + 1)];
 
-	int j = 0;;
-	for (int i = 0; buf[i] != 0; i++, j++) {
-		if (buf[i] == '\x0a') {
-			wincontents[j++] = '\x0d';
-			len++;
-		}
-		wincontents[j] = buf[i];
-	}
-	wincontents[j] = '\0';
+    int j{ 0 };
+    
+    for (int i{ 0 }; buf[i] != 0; ++i, ++j)
+    {
+        if (buf[i] == '\x0a')
+        {
+            wincontents[j++] = '\x0d';
+            ++len;
+        }
+        wincontents[j] = buf[i];
+    }
+    wincontents[j] = '\0';
 
     // The clipboard should not be modified by more than one thread at once
     {
         omni_mutex_lock l(m_clipMutex);
-		ClipboardHolder holder(m_hwndcn);
+        ClipboardHolder holder(m_hwndcn);
 
-		if (!holder.m_bIsOpen) {
-			vnclog.Print(2, _T("UpdateLocalClipboard: Failed to open clipboard! Last error 0x%08x"), GetLastError());
-			delete [] wincontents;
-			return;
+        if (!holder.m_bIsOpen)
+        {
+            vnclog.Print(2, _T("UpdateLocalClipboard: Failed to open clipboard! Last error 0x%08x"), ::GetLastError());
+            delete[] wincontents;
+            return;
         }
-        if (! ::EmptyClipboard()) {
-			vnclog.Print(2, _T("UpdateLocalClipboard: Failed to empty clipboard! Last error 0x%08x"), GetLastError());
-			delete [] wincontents;
-			return;
+        if (!::EmptyClipboard())
+        {
+            vnclog.Print(2, _T("UpdateLocalClipboard: Failed to empty clipboard! Last error 0x%08x"), ::GetLastError());
+            delete[] wincontents;
+            return;
         }
-			
-		int finalLen = strlen(wincontents) + 1;
 
-        // Allocate a global memory object for the text. 
-        HGLOBAL hglbCopy = GlobalAlloc(GMEM_DDESHARE, finalLen); // in bytes
-        if (hglbCopy != NULL) { 
-	        // Lock the handle and copy the text to the buffer.  
-	        LPSTR lpstrCopy = (LPSTR) GlobalLock(hglbCopy);
-			memcpy(lpstrCopy, wincontents, finalLen); // in bytes
-	        lpstrCopy[finalLen - 1] = 0;    // null character
-	        GlobalUnlock(hglbCopy);          // Place the handle on the clipboard.  
-			
-			// Convert ANSI to Unicode for m_strLastCutText (now std::wstring)
-			int nWideLen = MultiByteToWideChar(CP_ACP, 0, wincontents, -1, NULL, 0);
-			if (nWideLen > 0) {
-				wchar_t* wideStr = new wchar_t[nWideLen];
-				MultiByteToWideChar(CP_ACP, 0, wincontents, -1, wideStr, nWideLen);
-				m_clipboard.m_strLastCutText = wideStr;
-				delete[] wideStr;
-			}
+        int finalLen = static_cast<int>(std::strlen(wincontents) + 1);
 
-	        SetClipboardData(CF_TEXT, hglbCopy); 
+        // Allocate a global memory object for the text.
+        HGLOBAL hglbCopy = ::GlobalAlloc(GMEM_DDESHARE, static_cast<SIZE_T>(finalLen)); // in bytes
+        if (hglbCopy != nullptr)
+        {
+            // Lock the handle and copy the text to the buffer.
+            LPSTR lpstrCopy = reinterpret_cast<LPSTR>(::GlobalLock(hglbCopy));
+            std::memcpy(lpstrCopy, wincontents, static_cast<size_t>(finalLen)); // in bytes
+            lpstrCopy[finalLen - 1] = 0;                   // null character
+            ::GlobalUnlock(hglbCopy);                        // Place the handle on the clipboard.
+
+            // Convert ANSI to Unicode for m_strLastCutText (now std::wstring)
+            int nWideLen = ::MultiByteToWideChar(CP_ACP, 0, wincontents, -1, nullptr, 0);
+            if (nWideLen > 0)
+            {
+                wchar_t* wideStr = new wchar_t[static_cast<unsigned long long>(nWideLen)];
+                ::MultiByteToWideChar(CP_ACP, 0, wincontents, -1, wideStr, nWideLen);
+                m_clipboard.m_strLastCutText = wideStr;
+                delete[] wideStr;
+            }
+
+            ::SetClipboardData(CF_TEXT, hglbCopy);
         }
-		
-        delete [] wincontents;
+
+        delete[] wincontents;
     }
 }
 
 void ClientConnection::SaveClipboardPreferences()
 {
-	omni_mutex_lock l(m_clipMutex);
+    omni_mutex_lock l(m_clipMutex);
 
-	{
-		DWORD dwClipboardPrefs = 0;
-		if (m_clipboard.settings.m_nLimitText > 0) {
-			dwClipboardPrefs |= clipText;
-		}
-		if (m_clipboard.settings.m_nLimitRTF > 0) {
-			dwClipboardPrefs |= clipRTF;
-		}
-		if (m_clipboard.settings.m_nLimitHTML > 0) {
-			dwClipboardPrefs |= clipHTML;
-		}
-		//ofnInit();
-		char buf[32];
-		sprintf_s(buf, "%d", dwClipboardPrefs);
-		{ char _fn[MAX_PATH]; WideCharToMultiByte(CP_UTF8,0,m_opts->getDefaultOptionsFileName(),-1,_fn,MAX_PATH,NULL,NULL); vnclog.Print(1, _T("Saving to %S\n"), m_opts->getDefaultOptionsFileName()); WritePrivateProfileStringA("connection", "ClipboardPrefs", buf, _fn); }
-	}
+    {
+        DWORD dwClipboardPrefs{ 0U };
+        if (m_clipboard.settings.m_nLimitText > 0)
+        {
+            dwClipboardPrefs |= clipText;
+        }
+        if (m_clipboard.settings.m_nLimitRTF > 0)
+        {
+            dwClipboardPrefs |= clipRTF;
+        }
+        if (m_clipboard.settings.m_nLimitHTML > 0)
+        {
+            dwClipboardPrefs |= clipHTML;
+        }
+        //ofnInit();
+        std::array<char, 32U> buf;
+        ::sprintf_s(buf.data(), buf.size(), "%d", dwClipboardPrefs);
+        {
+            std::array<char, MAX_PATH> _fn;
+            ::WideCharToMultiByte(CP_UTF8, 0, m_opts->getDefaultOptionsFileName(), -1, _fn.data(), static_cast<int>(_fn.size()), nullptr, nullptr);
+            vnclog.Print(1, _T("Saving to %S\n"), m_opts->getDefaultOptionsFileName());
+            ::WritePrivateProfileStringA("connection", "ClipboardPrefs", buf.data(), _fn.data());
+        }
+    }
 }
 
 bool ClientConnection::LoadClipboardPreferences()
 {
-	omni_mutex_lock l(m_clipMutex);
-	DWORD dwClipboardPrefs = 0;
-//	ofnInit();
-	{ char _fn[MAX_PATH]; WideCharToMultiByte(CP_UTF8,0,m_opts->getDefaultOptionsFileName(),-1,_fn,MAX_PATH,NULL,NULL); vnclog.Print(1, _T("Loading from %S\n"), m_opts->getDefaultOptionsFileName()); dwClipboardPrefs = clipText | clipRTF | clipHTML; dwClipboardPrefs = GetPrivateProfileIntA("connection", "ClipboardPrefs", dwClipboardPrefs, _fn); }
-	dwClipboardPrefs |= clipText;
-	if (!(dwClipboardPrefs & clipRTF)) {
-		m_clipboard.settings.m_nLimitRTF = 0;
-	}
-	if (!(dwClipboardPrefs & clipHTML)) {
-		m_clipboard.settings.m_nLimitHTML = 0;
-	}
-	return true;
+    omni_mutex_lock l(m_clipMutex);
+    DWORD dwClipboardPrefs{ 0U };
+    //	ofnInit();
+    {
+        std::array<char, MAX_PATH> _fn;
+        ::WideCharToMultiByte(CP_UTF8, 0, m_opts->getDefaultOptionsFileName(), -1, _fn.data(), static_cast<int>(_fn.size()), nullptr, nullptr);
+        vnclog.Print(1, _T("Loading from %S\n"), m_opts->getDefaultOptionsFileName());
+        dwClipboardPrefs = clipText | clipRTF | clipHTML;
+        dwClipboardPrefs = ::GetPrivateProfileIntA("connection", "ClipboardPrefs", static_cast<INT>(dwClipboardPrefs), _fn.data());
+    }
+    dwClipboardPrefs |= clipText;
+    if (!(dwClipboardPrefs & clipRTF))
+    {
+        m_clipboard.settings.m_nLimitRTF = 0;
+    }
+    if (!(dwClipboardPrefs & clipHTML))
+    {
+        m_clipboard.settings.m_nLimitHTML = 0;
+    }
+    return true;
 }

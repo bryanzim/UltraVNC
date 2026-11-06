@@ -12,119 +12,129 @@
 
 //
 // REGISTRY class allows editing of strings in the registry
-// 
+//
 #include "registry.h"
 
+#include <cstring>
 
+static const int REGISTRY_MAX_ITEM_LENGTH{ 256 };
 
-static const int REGISTRY_MAX_ITEM_LENGTH = 256;
-
-REGISTRY::REGISTRY(HKEY hivename, LPTSTR keyname, bool blnWritable)
+REGISTRY::REGISTRY(const HKEY hivename, const LPTSTR keyname, const bool blnWritable)
 {
-int rc = 0;
-DWORD dispos;
+    int rc{ 0 };
+    DWORD dispos;
 
-	//PrintLog((DEST,"REGISTRY Opening hive"));
+    //PrintLog((DEST,"REGISTRY Opening hive"));
 
-	if (blnWritable == true)
-	{
-		// Create the registry key. If unsuccessful all other methods will be no-ops.
-		rc = RegCreateKeyEx(hivename, keyname, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &m_hRegKey, &dispos);
-		if (rc != ERROR_SUCCESS ) {
-#ifdef _WITH_LOG  
-			DebugLog((DEST,"ReadItem failed"));
-#endif  
-			m_hRegKey = NULL;
-		}
+    if (blnWritable == true)
+    {
+        // Create the registry key. If unsuccessful all other methods will be no-ops.
+        rc = ::RegCreateKeyEx(hivename, keyname, 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, nullptr, &m_hRegKey, &dispos);
+        if (rc != ERROR_SUCCESS)
+        {
+#ifdef _WITH_LOG
+            DebugLog((DEST, "ReadItem failed"));
+#endif
+            m_hRegKey = nullptr;
+        }
     }
-	else
-	{
-		// Create the registry key. If unsuccessful all other methods will be no-ops.
-		rc = RegCreateKeyEx(hivename, keyname, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ, NULL, &m_hRegKey, &dispos);
-		if (rc != ERROR_SUCCESS ) {
-#ifdef _WITH_LOG  
-			DebugLog((DEST,"ReadItem failed"));
-#endif  
-			m_hRegKey = NULL;
-			blnOpen = false;
-		}
-		blnOpen = true;
-	}
-	writable = blnWritable;
+    else
+    {
+        // Create the registry key. If unsuccessful all other methods will be no-ops.
+        rc = ::RegCreateKeyEx(hivename, keyname, 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_READ, nullptr, &m_hRegKey, &dispos);
+        if (rc != ERROR_SUCCESS)
+        {
+#ifdef _WITH_LOG
+            DebugLog((DEST, "ReadItem failed"));
+#endif
+            m_hRegKey = nullptr;
+            blnOpen = false;
+        }
+        blnOpen = true;
+    }
+    writable = blnWritable;
 }
 
 
 // Load the index string from the registry
-BOOL REGISTRY::ReadItem(LPSTR keyValue, DWORD dwindexlen, const TCHAR * indexVal, const TCHAR * defaultVal)
+BOOL REGISTRY::ReadItem(const LPSTR keyValue, DWORD dwindexlen, const TCHAR* const indexVal, const TCHAR* const defaultVal)
 {
-int rc = 0;
-BOOL bRC = false;
+    int rc{ 0 };
+    BOOL bRC{ false };
 
-    if (m_hRegKey == NULL) return false;
+    if (m_hRegKey == nullptr)
+    {
+        return false;
+    }
 
     // Read the index
     DWORD valtype;
-	valtype = REG_SZ;
+    valtype = REG_SZ;
     //DWORD dwindexlen = sizeof(keyValue);
-	rc = RegQueryValueEx( m_hRegKey, indexVal, NULL, &valtype, (LPBYTE) keyValue, &dwindexlen); 
-    if (rc == ERROR_SUCCESS) 
-	{
-		return true;
-    } 
-	else 
-	{
-		if (rc ==  ERROR_MORE_DATA)
-		{
-#ifdef _WITH_LOG  
-			DebugLog((DEST,"ReadItem failed - indexVal too small"));
-#endif  
-		}
-		else
-		{
-#ifdef _WITH_LOG  
-			DebugLog((DEST,"ReadItem - missing key %s", indexVal));
-#endif  
+    rc = RegQueryValueEx(m_hRegKey, indexVal, nullptr, &valtype, (LPBYTE)keyValue, &dwindexlen);
+    if (rc == ERROR_SUCCESS)
+    {
+        return true;
+    }
+    else
+    {
+        if (rc == ERROR_MORE_DATA)
+        {
+#ifdef _WITH_LOG
+            DebugLog((DEST, "ReadItem failed - indexVal too small"));
+#endif
+        }
+        else
+        {
+#ifdef _WITH_LOG
+            DebugLog((DEST, "ReadItem - missing key %s", indexVal));
+#endif
 
-			// If index entry doesn't exist, create it
-			if (writable)
-			{
-			   bRC = WriteItem((char *)defaultVal, indexVal);
-				strcpy(keyValue, defaultVal);
-			}
-		}
+            // If index entry doesn't exist, create it
+            if (writable)
+            {
+                bRC = WriteItem((char*)defaultVal, indexVal);
+                std::strcpy(keyValue, defaultVal);
+            }
+        }
     }
 
-	return bRC;
+    return bRC;
 }
 
 // Save the index string to the registry
-BOOL REGISTRY::WriteItem(LPSTR keyValue, const TCHAR* indexVal)
+BOOL REGISTRY::WriteItem(const LPSTR keyValue, const TCHAR* const indexVal)
 {
-int rc = 0;
+    int rc{ 0 };
 
-   if (m_hRegKey == NULL) return false;
+    if (m_hRegKey == nullptr)
+    {
+        return false;
+    }
 
-   rc = RegSetValueEx(m_hRegKey, indexVal, NULL, REG_SZ, (CONST BYTE *)keyValue, strlen(keyValue));
-  
-    if (rc == ERROR_SUCCESS) 
-		return true;
-	else
-	{
-#ifdef _WITH_LOG  
-		DebugLog((DEST,"WriteItem %s failed", indexVal));
-#endif  
-		return false;
-	}
+    rc = ::RegSetValueEx(m_hRegKey, indexVal, nullptr, REG_SZ, (CONST BYTE*)keyValue, std::strlen(keyValue));
+
+    if (rc == ERROR_SUCCESS)
+    {
+        return true;
+    }
+    else
+    {
+#ifdef _WITH_LOG
+        DebugLog((DEST, "WriteItem %s failed", indexVal));
+#endif
+        return false;
+    }
 }
 
 
 REGISTRY::~REGISTRY()
 {
-    if (m_hRegKey != NULL) {
-		
-		//PrintLog((DEST,"~REGISTRY Closing hive"));
-        RegCloseKey(m_hRegKey);
-        m_hRegKey = NULL;
+    if (m_hRegKey != nullptr)
+    {
+
+        //PrintLog((DEST,"~REGISTRY Closing hive"));
+        ::RegCloseKey(m_hRegKey);
+        m_hRegKey = nullptr;
     }
 }
-

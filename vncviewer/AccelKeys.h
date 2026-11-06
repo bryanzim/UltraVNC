@@ -9,19 +9,19 @@
 //
 
 
-#ifndef ACCELKEYS_H__
-#define ACCELKEYS_H__
+#ifndef ACCELKEYS_H
+#define ACCELKEYS_H
 
 #pragma once
 class AccelKeys
 {
 public:
-	HWND   m_hWnd;
-	HACCEL m_hAccelTable;
-	AccelKeys();
-	bool TranslateAccelKeys(MSG *pmsg);
-	void SetWindowHandle(HWND hWnd) { m_hWnd = hWnd; }
-	virtual ~AccelKeys();	
+    HWND m_hWnd;
+    HACCEL m_hAccelTable;
+    explicit AccelKeys();
+    bool TranslateAccelKeys(MSG* pmsg);
+    void SetWindowHandle(HWND hWnd) { m_hWnd = hWnd; }
+    virtual ~AccelKeys();
 };
 
-#endif 
+#endif

@@ -11,42 +11,41 @@
 
 
 // REGISTRY class is to allow read/write of strings in the registry
-// 
+//
 
-#ifndef _REGISTRY_H
-#define _REGISTRY_H
+#ifndef REGISTRY_H
+#define REGISTRY_H
 
-#ifdef _WITH_LOG  
-	#pragma once
-	#include "logging.h"
-#else 
-	#include <windows.h>  
-#endif  
+#ifdef _WITH_LOG
+#pragma once
+#include "logging.h"
+
+#else
+#include <Windows.h>
+
+#endif
 
 
-class REGISTRY  
+class REGISTRY
 {
 public:
-
     // Create an REGISTRY object and initialise it from the key.
     // Key created if not existant.
 
-	bool blnOpen;
+    bool blnOpen;
 
     REGISTRY(HKEY hivename, LPTSTR keyname, bool blnWriteble);
 
-	BOOL ReadItem(LPSTR keyValue, DWORD keyLength, const TCHAR * indexVal, const TCHAR * defaultVal);
-	BOOL WriteItem(LPSTR keyValue, const TCHAR * indexVal);
-	
-	virtual ~REGISTRY();
+    BOOL ReadItem(LPSTR keyValue, DWORD keyLength, const TCHAR* indexVal, const TCHAR* defaultVal);
+    BOOL WriteItem(LPSTR keyValue, const TCHAR* indexVal);
+
+    virtual ~REGISTRY();
 
 private:
-
     HKEY m_hRegKey;
-	bool writable;
+    bool writable;
 
 protected:
-	
 };
 
 

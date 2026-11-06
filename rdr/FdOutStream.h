@@ -14,33 +14,34 @@
 // FdOutStream streams to a file descriptor.
 //
 
-#ifndef __RDR_FDOUTSTREAM_H__
-#define __RDR_FDOUTSTREAM_H__
+#ifndef RDR_FDOUTSTREAM_H
+#define RDR_FDOUTSTREAM_H
 
 #include "OutStream.h"
 
-namespace rdr {
+namespace rdr
+{
 
-  class FdOutStream : public OutStream {
+    class FdOutStream : public OutStream
+    {
 
-  public:
+    public:
+        explicit FdOutStream(int fd, int bufSize = 0);
+        virtual ~FdOutStream();
 
-    FdOutStream(int fd, int bufSize=0);
-    virtual ~FdOutStream();
+        int getFd() { return fd; }
 
-    int getFd() { return fd; }
+        void flush();
+        [[nodiscard]] int length();
+        void writeBytes(const void* const data, const int length);
 
-    void flush();
-    int length();
-    void writeBytes(const void* data, int length);
-
-  private:
-    int overrun(int itemSize, int nItems);
-    int fd;
-    int bufSize;
-    int offset;
-    U8* start;
-  };
+    private:
+        int overrun(int itemSize, int nItems);
+        int fd;
+        int bufSize;
+        int offset;
+        U8* start;
+    };
 
 }
 

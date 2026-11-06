@@ -22,12 +22,14 @@
 
 class vncHTTPConnect;
 
-#if (!defined(_WINVNC_VNCHTTPCONNECT))
-#define _WINVNC_VNCHTTPCONNECT
+#if (!defined(WINVNC_VNCHTTPCONNECT))
+#define WINVNC_VNCHTTPCONNECT
 
 // Includes
 #include "stdhdrs.h"
+
 #include "vsocket.h"
+
 #include <omnithread.h>
 
 class vncServer;
@@ -36,24 +38,24 @@ class vncServer;
 class vncHTTPConnect
 {
 public:
-	// Constructor/destructor
-	vncHTTPConnect();
-	virtual ~vncHTTPConnect();
+    // Constructor/destructor
+    explicit vncHTTPConnect();
+    virtual ~vncHTTPConnect();
 
-	// Init
-	virtual VBool Init(vncServer *server, UINT port);
-	virtual VBool InitTLS(vncServer *server, UINT port, const char* certThumbprint);
+    // Init
+    virtual VBool Init(vncServer* server, UINT port);
+    virtual VBool InitTLS(vncServer* server, UINT port, const char* certThumbprint);
 
-	// Implementation
+    // Implementation
 protected:
-	// The listening socket
-	VSocket m_socket;
+    // The listening socket
+    VSocket m_socket;
 
-	// The port to listen on
-	UINT m_port;
+    // The port to listen on
+    UINT m_port;
 
-	// The in-coming accept thread
-	omni_thread *m_thread;
+    // The in-coming accept thread
+    omni_thread* m_thread;
 };
 
-#endif // _WINVNC_VNCHTTPCONNECT
+#endif // WINVNC_VNCHTTPCONNECT

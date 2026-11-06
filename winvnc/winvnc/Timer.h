@@ -12,98 +12,104 @@
 //
 
 
-#ifndef _TIMER_H
+#ifndef TIMER_H
 
-#include <stdio.h>
 #include <winsock.h>
+
+#include <ctime>
+#include <stdio.h>
 #include <time.h>
 
-inline void gettimeofday( struct timeval *t, void* )
+inline void gettimeofday(struct timeval* const t, void*)
 {
-  t->tv_sec = 0;
-  t->tv_usec = clock();
+    t->tv_sec = 0;
+    t->tv_usec = std::clock();
 }
 
 
 class Timer
 {
 
- public:
+public:
+    explicit Timer();
+    virtual ~Timer() {};
 
-  Timer();
-  virtual ~Timer(){};
-
-  inline double frame()
+    inline double frame()
     {
-      if( !stopped )
-        gettimeofday( &endT, 0 );
-      else
-	{
-	  frameT.tv_sec = endT.tv_sec;
-	  frameT.tv_usec = endT.tv_usec;
-	}
+        if (!stopped)
+        {
+            gettimeofday(&endT, 0);
+        }
+        else
+        {
+            frameT.tv_sec = endT.tv_sec;
+            frameT.tv_usec = endT.tv_usec;
+        }
 
-      secs  = endT.tv_sec - frameT.tv_sec;
-      usecs = endT.tv_usec - frameT.tv_usec;
+        secs = endT.tv_sec - frameT.tv_sec;
+        usecs = endT.tv_usec - frameT.tv_usec;
 
-      frameT.tv_sec = endT.tv_sec;
-      frameT.tv_usec = endT.tv_usec;
+        frameT.tv_sec = endT.tv_sec;
+        frameT.tv_usec = endT.tv_usec;
 
-      return( secs + ( usecs * tScale ) );
+        return (secs + (usecs * tScale));
     }
 
-  //! Reset the timer to \b newVal.
-  inline void reset( float newVal = 0.0f )
+    //! Reset the timer to \b newVal.
+    inline void reset(const float newVal = 0.0f)
     {
-      total = newVal;
-      if( !stopped )
-	gettimeofday( &startT, 0 );
+        total = newVal;
+        if (!stopped)
+        {
+            gettimeofday(&startT, 0);
+        }
     }
 
-  //! Read the current elapsed time (in seconds).
-  inline double read()
+    //! Read the current elapsed time (in seconds).
+    inline double read()
     {
-      if( !stopped )
-	gettimeofday( &endT, 0 );
-      else
-	{
-	  endT.tv_sec = startT.tv_sec;
-	  endT.tv_usec = startT.tv_usec;
-	}
+        if (!stopped)
+        {
+            gettimeofday(&endT, 0);
+        }
+        else
+        {
+            endT.tv_sec = startT.tv_sec;
+            endT.tv_usec = startT.tv_usec;
+        }
 
-      secs  = endT.tv_sec - startT.tv_sec;
-      usecs = endT.tv_usec - startT.tv_usec;
-      return( secs + ( usecs * tScale ) + total );
+        secs = endT.tv_sec - startT.tv_sec;
+        usecs = endT.tv_usec - startT.tv_usec;
+        return (secs + (usecs * tScale) + total);
     }
 
-  //! Start the timer.
-  inline void start()
+    //! Start the timer.
+    inline void start()
     {
-      stopped = false;
-      gettimeofday( &startT, 0 );
-      frameT.tv_sec = startT.tv_sec;
-      frameT.tv_usec = startT.tv_usec;
+        stopped = false;
+        gettimeofday(&startT, 0);
+        frameT.tv_sec = startT.tv_sec;
+        frameT.tv_usec = startT.tv_usec;
     }
 
-  //! Stop the timer.
-  inline void stop()
+    //! Stop the timer.
+    inline void stop()
     {
-      gettimeofday( &endT, 0 );
-      secs  = endT.tv_sec - startT.tv_sec;
-      usecs = endT.tv_usec - startT.tv_usec;
-      total += ( secs + ( usecs * tScale) );
-      frameT.tv_sec = endT.tv_sec;
-      frameT.tv_usec = endT.tv_usec;
-      stopped = true;
+        gettimeofday(&endT, 0);
+        secs = endT.tv_sec - startT.tv_sec;
+        usecs = endT.tv_usec - startT.tv_usec;
+        total += (secs + (usecs * tScale));
+        frameT.tv_sec = endT.tv_sec;
+        frameT.tv_usec = endT.tv_usec;
+        stopped = true;
     }
 
- private:
-
-  timeval endT, frameT, startT;
-  double secs, usecs, tScale, total;
-  bool stopped;
+private:
+    timeval endT, frameT, startT;
+    double secs, usecs, tScale, total;
+    bool stopped;
 
 }; /* end class Timer */
 
-#define _TIMER_H
+#define TIMER_H
 #endif

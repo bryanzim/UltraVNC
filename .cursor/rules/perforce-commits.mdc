@@ -1,0 +1,14 @@
+---
+description: Perforce changelist descriptions do not credit Cursor
+alwaysApply: true
+---
+
+# Perforce commits
+
+Do not add a Cursor co-author line to a Perforce changelist description. The description is only the change itself.
+
+```
+Prefer nullptr to NULL.
+```
+
+Do not append `Co-authored-by: Cursor`. Do not add `Made with [Cursor](https://cursor.com)` to a changelist description.

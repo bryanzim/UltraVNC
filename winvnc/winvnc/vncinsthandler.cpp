@@ -16,38 +16,38 @@
 // one instance is running
 
 #include "stdhdrs.h"
-#include "vncinsthandler.h"
 
+#include "vncinsthandler.h"
 // Name of the mutex
 
-const char mutexname [] = "WinVNC_Win32_Instance_Mutex";
+const char mutexname[] = "WinVNC_Win32_Instance_Mutex";
 
 // The class methods
-vncInstHandler::vncInstHandler()
-{
-	mutex=NULL;
-}
+vncInstHandler::vncInstHandler() { mutex = nullptr; }
 
 vncInstHandler::~vncInstHandler()
 {
-	if (mutex)
-	{
-		ReleaseMutex(mutex);
-		CloseHandle (mutex);
-	}
+    if (mutex)
+    {
+        ::ReleaseMutex(mutex);
+        ::CloseHandle(mutex);
+    }
 }
 
-BOOL
-vncInstHandler::Init()
+BOOL vncInstHandler::Init()
 {
-	// Create the named mutex
-	mutex = CreateMutex(NULL, FALSE, mutexname);
-	if (mutex == NULL)
-		return FALSE;
+    // Create the named mutex
+    mutex = ::CreateMutex(nullptr, FALSE, mutexname);
+    if (mutex == nullptr)
+    {
+        return FALSE;
+    }
 
-	// Check that the mutex didn't already exist
-	if (GetLastError() == ERROR_ALREADY_EXISTS)
-		return FALSE;
+    // Check that the mutex didn't already exist
+    if (::GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        return FALSE;
+    }
 
-	return TRUE;
+    return TRUE;
 }

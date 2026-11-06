@@ -1,3 +1,4 @@
+#include <cstdlib>
 // This file is part of UltraVNC
 // https://github.com/ultravnc/UltraVNC
 // https://uvnc.com/
@@ -29,16 +30,13 @@
 #error "It is included as part of translate.c"
 #endif
 
-#define OUT_T CONCAT2E(CARD,OUTVNC)
-#define SwapOUTVNC(x) CONCAT2E(Swap,OUTVNC) (x)
-#define rfbInitTrueColourSingleTableOUTVNC \
-				CONCAT2E(rfbInitTrueColourSingleTable,OUTVNC)
-#define rfbInitTrueColourRGBTablesOUTVNC CONCAT2E(rfbInitTrueColourRGBTables,OUTVNC)
-#define rfbInitOneRGBTableOUTVNC CONCAT2E(rfbInitOneRGBTable,OUTVNC)
+#define OUT_T CONCAT2E(CARD, OUTVNC)
+#define SwapOUTVNC(x) CONCAT2E(Swap, OUTVNC)(x)
+#define rfbInitTrueColourSingleTableOUTVNC CONCAT2E(rfbInitTrueColourSingleTable, OUTVNC)
+#define rfbInitTrueColourRGBTablesOUTVNC CONCAT2E(rfbInitTrueColourRGBTables, OUTVNC)
+#define rfbInitOneRGBTableOUTVNC CONCAT2E(rfbInitOneRGBTable, OUTVNC)
 
-static void
-rfbInitOneRGBTableOUTVNC (OUT_T *table, int inMax, int outMax, int outShift,
-		       int swap);
+static void rfbInitOneRGBTableOUTVNC(OUT_T* table, int inMax, int outMax, int outShift, int swap);
 
 
 /*
@@ -46,37 +44,48 @@ rfbInitOneRGBTableOUTVNC (OUT_T *table, int inMax, int outMax, int outShift,
  * translation.
  */
 
-static void
-rfbInitTrueColourSingleTableOUTVNC (char **table, rfbPixelFormat *in,
-				 rfbPixelFormat *out)
+static void rfbInitTrueColourSingleTableOUTVNC(char** table, rfbPixelFormat* in, rfbPixelFormat* const out)
 {
-	if (table==NULL) return;
+    if (table == nullptr)
+    {
+        return;
+    }
     int i;
     int inRed, inGreen, inBlue, outRed, outGreen, outBlue;
-    OUT_T *t=NULL;
+    OUT_T* t = nullptr;
     int nEntries = 1 << in->bitsPerPixel;
 
-    if (*table) free(*table);
-    *table = (char *)malloc(nEntries * sizeof(OUT_T));
-	if (table == NULL) return;
-    t = (OUT_T *)*table;
+    if (*table)
+    {
+        std::free(*table);
+    }
+    *table = reinterpret_cast<char*>(std::malloc(static_cast<unsigned long long>(nEntries) * sizeof(OUT_T)));
+    if (table == nullptr)
+    {
+        return;
+    }
+    t = reinterpret_cast<OUT_T*>(*table);
 
-    for (i = 0; i < nEntries; i++) {
-	inRed   = (i >> in->redShift)   & in->redMax;
-	inGreen = (i >> in->greenShift) & in->greenMax;
-	inBlue  = (i >> in->blueShift)  & in->blueMax;
+    for (i = 0; i < nEntries; ++i)
+    {
+        inRed = (i >> in->redShift) & in->redMax;
+        inGreen = (i >> in->greenShift) & in->greenMax;
+        inBlue = (i >> in->blueShift) & in->blueMax;
 
-	outRed   = (inRed   * out->redMax   + in->redMax / 2)   / in->redMax;
-	outGreen = (inGreen * out->greenMax + in->greenMax / 2) / in->greenMax;
-	outBlue  = (inBlue  * out->blueMax  + in->blueMax / 2)  / in->blueMax;
+        outRed = (inRed * out->redMax + in->redMax / 2) / in->redMax;
+        outGreen = (inGreen * out->greenMax + in->greenMax / 2) / in->greenMax;
+        outBlue = (inBlue * out->blueMax + in->blueMax / 2) / in->blueMax;
 
-	if (t) t[i] = ((outRed   << out->redShift)   |
-		(outGreen << out->greenShift) |
-		(outBlue  << out->blueShift));
+        if (t)
+        {
+            t[i] = ((outRed << out->redShift) | static_cast<CARD32>((outGreen << out->greenShift) | (outBlue << out->blueShift)));
+        }
 #if (OUTVNC != 8)
-	if (t) if (out->bigEndian != in->bigEndian) {
-	    t[i] = SwapOUTVNC(t[i]);
-	}
+        if (t)
+            if (out->bigEndian != in->bigEndian)
+            {
+                t[i] = SwapOUTVNC(t[i]);
+            }
 #endif
     }
 }
@@ -87,42 +96,39 @@ rfbInitTrueColourSingleTableOUTVNC (char **table, rfbPixelFormat *in,
  * red, green and blue values.
  */
 
-static void
-rfbInitTrueColourRGBTablesOUTVNC (char **table, rfbPixelFormat *in,
-			       rfbPixelFormat *out)
+static void rfbInitTrueColourRGBTablesOUTVNC(char** table, rfbPixelFormat* const in, rfbPixelFormat* const out)
 {
-    OUT_T *redTable;
-    OUT_T *greenTable;
-    OUT_T *blueTable;
+    OUT_T* redTable;
+    OUT_T* greenTable;
+    OUT_T* blueTable;
 
-    if (*table) free(*table);
-    *table = (char *)malloc((in->redMax + in->greenMax + in->blueMax + 3)
-			    * sizeof(OUT_T));
-    redTable = (OUT_T *)*table;
+    if (*table)
+    {
+        std::free(*table);
+    }
+    *table = reinterpret_cast<char*>(std::malloc((in->redMax + in->greenMax + in->blueMax + 3) * sizeof(OUT_T)));
+    redTable = reinterpret_cast<OUT_T*>(*table);
     greenTable = redTable + in->redMax + 1;
     blueTable = greenTable + in->greenMax + 1;
 
-    rfbInitOneRGBTableOUTVNC (redTable, in->redMax, out->redMax,
-			   out->redShift, (out->bigEndian != in->bigEndian));
-    rfbInitOneRGBTableOUTVNC (greenTable, in->greenMax, out->greenMax,
-			   out->greenShift, (out->bigEndian != in->bigEndian));
-    rfbInitOneRGBTableOUTVNC (blueTable, in->blueMax, out->blueMax,
-			   out->blueShift, (out->bigEndian != in->bigEndian));
+    rfbInitOneRGBTableOUTVNC(redTable, in->redMax, out->redMax, out->redShift, (out->bigEndian != in->bigEndian));
+    rfbInitOneRGBTableOUTVNC(greenTable, in->greenMax, out->greenMax, out->greenShift, (out->bigEndian != in->bigEndian));
+    rfbInitOneRGBTableOUTVNC(blueTable, in->blueMax, out->blueMax, out->blueShift, (out->bigEndian != in->bigEndian));
 }
 
-static void
-rfbInitOneRGBTableOUTVNC (OUT_T *table, int inMax, int outMax, int outShift,
-		       int swap)
+static void rfbInitOneRGBTableOUTVNC(OUT_T* const table, const int inMax, const int outMax, const int outShift, [[maybe_unused]] const int swap)
 {
     int i;
-    int nEntries = inMax + 1;
+    const int nEntries = inMax + 1;
 
-    for (i = 0; i < nEntries; i++) {
-	table[i] = ((i * outMax + inMax / 2) / inMax) << outShift;
+    for (i = 0; i < nEntries; ++i)
+    {
+        table[i] = static_cast<CARD8>(((i * outMax + inMax / 2) / inMax) << outShift);
 #if (OUTVNC != 8)
-	if (swap) {
-	    table[i] = SwapOUTVNC(table[i]);
-	}
+        if (swap)
+        {
+            table[i] = SwapOUTVNC(table[i]);
+        }
 #endif
     }
 }

@@ -13,161 +13,168 @@
 
 // adzm - July 2010
 //
-// Common classes for dealing with the clipboard, including serializing and deserializing compressed data, hashing and comparing, etc.
-// Used by server and viewer.
+// Common classes for dealing with the clipboard, including serializing and deserializing compressed data, hashing and comparing,
+// etc. Used by server and viewer.
 
 #pragma once
 
 #define VC_EXTRALEAN
 //#include <stdhdrs.h>
-#include <winsock2.h>
-#include <windows.h>
-#include <string>
-#include <rdr/MemOutStream.h>
 #include "rfb.h"
 
-struct ExtendedClipboardDataMessage {
-	ExtendedClipboardDataMessage();
-	~ExtendedClipboardDataMessage();
+#include <rdr/MemOutStream.h>
 
-	void Reset();
-	void AddFlag(CARD32 flag);
-	bool HasFlag(CARD32 flag);
+#include <WinSock2.h>
 
-	int GetMessageLength();	// does not include rfbExtendedClipboardData
-	int GetDataLength();	// does include rfbExtendedClipboardData
-	const BYTE* GetData();
+#include <Windows.h>
 
-	BYTE* GetBuffer();		// writable buffer
-	int GetBufferLength();	// does include rfbExtendedClipboardData
+#include <string>
 
-	const BYTE* GetCurrentPos();
+struct ExtendedClipboardDataMessage
+{
+    explicit ExtendedClipboardDataMessage();
+    ~ExtendedClipboardDataMessage();
 
-	rfbExtendedClipboardData* m_pExtendedData;
+    void Reset();
+    void AddFlag(CARD32 flag);
+    bool HasFlag(CARD32 flag);
 
-	void AppendInt(CARD32 val); // swaps if LE
-	void AppendBytes(BYTE* pData, int length);
-	void Advance(int len);
-	CARD32 ReadInt();
+    int GetMessageLength(); // does not include rfbExtendedClipboardData
+    int GetDataLength();    // does include rfbExtendedClipboardData
+    const BYTE* GetData();
 
-	void EnsureBufferLength(int len, bool bGrowBeyond = true);
-	bool SetReceivedLength(int len);
-	int GetRemainingLength();
-	bool IsValid();
-	static const int maxPayload = 100 * 1024 * 1024;
+    BYTE* GetBuffer();     // writable buffer
+    int GetBufferLength(); // does include rfbExtendedClipboardData
 
-	int CountFormats();
-	CARD32 GetFlags();
+    const BYTE* GetCurrentPos();
+
+    rfbExtendedClipboardData* m_pExtendedData;
+
+    void AppendInt(CARD32 val); // swaps if LE
+    void AppendBytes(BYTE* pData, int length);
+    void Advance(int len);
+    CARD32 ReadInt();
+
+    void EnsureBufferLength(int len, bool bGrowBeyond = true);
+    bool SetReceivedLength(int len);
+    int GetRemainingLength();
+    bool IsValid();
+    static const int maxPayload = 100 * 1024 * 1024;
+
+    int CountFormats();
+    CARD32 GetFlags();
 
 protected:
-
-	int m_nInternalLength;
-	int m_nReceivedLength;
-	BYTE* m_pCurrentPos;
-	BYTE* m_pData;
+    int m_nInternalLength;
+    int m_nReceivedLength;
+    BYTE* m_pCurrentPos;
+    BYTE* m_pData;
 };
 
-struct ClipboardSettings {
-	ClipboardSettings(CARD32 caps);
+struct ClipboardSettings
+{
+    explicit ClipboardSettings(CARD32 caps);
 
-	static CARD32 defaultCaps;
-	static CARD32 defaultViewerCaps;
-	static CARD32 defaultServerCaps;
+    static CARD32 defaultCaps;
+    static CARD32 defaultViewerCaps;
+    static CARD32 defaultServerCaps;
 
-	static const UINT formatDIB;
-	static const UINT formatHTML;
-	static const UINT formatRTF;
-	static const UINT formatUnicodeText;
+    static const UINT formatDIB;
+    static const UINT formatHTML;
+    static const UINT formatRTF;
+    static const UINT formatUnicodeText;
 
-	static const int defaultLimitText;
-	static const int defaultLimitRTF;
-	static const int defaultLimitHTML;
-	static const int defaultLimitDIB;
+    static const int defaultLimitText;
+    static const int defaultLimitRTF;
+    static const int defaultLimitHTML;
+    static const int defaultLimitDIB;
 
-	static const int defaultLimit;
+    static const int defaultLimit;
 
-	///////
+    ///////
 
-	bool m_bSupportsEx;
+    bool m_bSupportsEx;
 
-	int m_nLimitText;
-	int m_nLimitRTF;
-	int m_nLimitHTML;
-	int m_nLimitDIB;
+    int m_nLimitText;
+    int m_nLimitRTF;
+    int m_nLimitHTML;
+    int m_nLimitDIB;
 
-	CARD32 m_nRequestedLimitText;
-	CARD32 m_nRequestedLimitRTF;
-	CARD32 m_nRequestedLimitHTML;
-	CARD32 m_nRequestedLimitDIB;
+    CARD32 m_nRequestedLimitText;
+    CARD32 m_nRequestedLimitRTF;
+    CARD32 m_nRequestedLimitHTML;
+    CARD32 m_nRequestedLimitDIB;
 
-	CARD32 m_myCaps;
+    CARD32 m_myCaps;
 
-	CARD32 m_remoteCaps; // messages and formats that will be handled by the remote application
+    CARD32 m_remoteCaps; // messages and formats that will be handled by the remote application
 
-	void PrepareCapsPacket(ExtendedClipboardDataMessage& extendedDataMessage);
+    void PrepareCapsPacket(ExtendedClipboardDataMessage& extendedDataMessage);
 
-	bool HandleCapsPacket(ExtendedClipboardDataMessage& extendedDataMessage);
-	CARD32 AutomaticFormats() const;
+    bool HandleCapsPacket(ExtendedClipboardDataMessage& extendedDataMessage);
+    CARD32 AutomaticFormats() const;
 };
 
-struct ClipboardHolder {
-	ClipboardHolder(HWND hwndOwner);
+struct ClipboardHolder
+{
+    explicit ClipboardHolder(HWND hwndOwner);
 
-	~ClipboardHolder();
+    ~ClipboardHolder();
 
-	bool m_bIsOpen;
+    bool m_bIsOpen;
 };
 
-struct ClipboardData {
-	ClipboardData();
+struct ClipboardData
+{
+    explicit ClipboardData();
 
-	~ClipboardData();
+    ~ClipboardData();
 
-	DWORD m_crc;
+    DWORD m_crc;
 
-	int m_lengthText;
-	int m_lengthRTF;
-	int m_lengthHTML;
-	int m_lengthDIB;
+    int m_lengthText;
+    int m_lengthRTF;
+    int m_lengthHTML;
+    int m_lengthDIB;
 
-	BYTE* m_pDataText;
-	BYTE* m_pDataRTF;
-	BYTE* m_pDataHTML;
-	BYTE* m_pDataDIB;
+    BYTE* m_pDataText;
+    BYTE* m_pDataRTF;
+    BYTE* m_pDataHTML;
+    BYTE* m_pDataDIB;
 
-	void FreeData();
+    void FreeData();
 
-	bool Load(HWND hwndOwner, bool allowEmpty = false); // will return false on failure
-	CARD32 Formats() const;
-	DWORD ExtendedCRC() const;
-	bool Decode(ExtendedClipboardDataMessage& message);
+    bool Load(HWND hwndOwner, bool allowEmpty = false); // will return false on failure
+    CARD32 Formats() const;
+    DWORD ExtendedCRC() const;
+    bool Decode(ExtendedClipboardDataMessage& message);
 
-	bool Restore(HWND hwndOwner, ExtendedClipboardDataMessage& extendedClipboardDataMessage);
+    bool Restore(HWND hwndOwner, ExtendedClipboardDataMessage& extendedClipboardDataMessage);
 };
 
-struct Clipboard {
-	Clipboard(CARD32 caps);
+struct Clipboard
+{
+    explicit Clipboard(CARD32 caps);
 
-	bool UpdateClipTextEx(ClipboardData& clipboardData, CARD32 overrideFlags = 0); // returns true if something changed
+    bool UpdateClipTextEx(ClipboardData& clipboardData, CARD32 overrideFlags = 0); // returns true if something changed
 
-	bool UpdateExtended(ClipboardData& data, CARD32 overrideFlags);
-	void AcceptRemoteData(const ClipboardData& data);
-	void ResetTransferState();
-	CARD32 RequestFormats(CARD32 formats, bool automatic);
-	CARD32 m_requestedRemoteFormats;
-	DWORD m_extendedCRC;
-	bool m_hasExtendedCRC;
+    bool UpdateExtended(ClipboardData& data, CARD32 overrideFlags);
+    void AcceptRemoteData(const ClipboardData& data);
+    void ResetTransferState();
+    CARD32 RequestFormats(CARD32 formats, bool automatic);
+    CARD32 m_requestedRemoteFormats;
+    DWORD m_extendedCRC;
+    bool m_hasExtendedCRC;
 
-	ClipboardSettings settings;
-	DWORD m_crc;
-	std::wstring m_strLastCutText; // for non-extended clipboards (Unicode)
+    ClipboardSettings settings;
+    DWORD m_crc;
+    std::wstring m_strLastCutText; // for non-extended clipboards (Unicode)
 
-	bool m_bNeedToProvide;
-	bool m_bNeedToNotify;
+    bool m_bNeedToProvide;
+    bool m_bNeedToNotify;
 
-	CARD32 m_notifiedRemoteFormats;
+    CARD32 m_notifiedRemoteFormats;
 
-	ExtendedClipboardDataMessage extendedClipboardDataMessage;
-	ExtendedClipboardDataMessage extendedClipboardDataNotifyMessage;
+    ExtendedClipboardDataMessage extendedClipboardDataMessage;
+    ExtendedClipboardDataMessage extendedClipboardDataNotifyMessage;
 };
-

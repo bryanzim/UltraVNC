@@ -10,25 +10,26 @@
 //
 
 
-#include <windows.h>
+#include <Windows.h>
+
+#include <tchar.h>
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <tchar.h>
 
 #define ViewOnly 0x0001
 #define Interact 0x0002
 
-// 
+//
 class vncAccessControl
 {
 public:
-	PSECURITY_DESCRIPTOR GetSD();
-	BOOL SetSD(PSECURITY_DESCRIPTOR pSD);
+    PSECURITY_DESCRIPTOR GetSD();
+    BOOL SetSD(PSECURITY_DESCRIPTOR pSD);
 
 protected:
-	void FreeSD(PSECURITY_DESCRIPTOR pSD);
-	PACL GetACL(void);
-	BOOL StoreACL(PACL pACL);
-	PSID GetOwnerSID(void);
+    void FreeSD(PSECURITY_DESCRIPTOR pSD);
+    PACL GetACL(void);
+    BOOL StoreACL(PACL pACL);
+    PSID GetOwnerSID(void);
 };
-

@@ -31,10 +31,10 @@ NullOutStream::~NullOutStream()
 
 int NullOutStream::length()
 {
-  return (int)(offset + ptr - start);
+  return static_cast<int>((offset + ptr - start));
 }
 
-void NullOutStream::writeBytes(const void* data, int length)
+void NullOutStream::writeBytes([[maybe_unused]] const void* const data, const int length)
 {
   offset += length;
 }
@@ -44,11 +44,11 @@ int NullOutStream::overrun(int itemSize, int nItems)
   if (itemSize > bufferSize)
     throw Exception("NullOutStream overrun: max itemSize exceeded");
 
-  offset += (int)(ptr - start);
+  offset += static_cast<int>((ptr - start));
   ptr = start;
 
   if (itemSize * nItems > end - ptr)
-    nItems = (int)((end - ptr) / itemSize);
+    nItems = static_cast<int>(((end - ptr) / itemSize));
 
   return nItems;
 }

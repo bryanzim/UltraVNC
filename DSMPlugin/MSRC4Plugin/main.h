@@ -10,17 +10,20 @@
 //
 
 
-#ifndef _MAIN_H
-#define _MAIN_H
+#ifndef MAIN_H
+#define MAIN_H
 
 
 #pragma once
-#include <windows.h>
 #include "EnvReg.h"
 
-int Encrypt(char * inFile, char * outFile, char * keyFile);
-int Decrypt(char * inFile, char * outFile, char * keyFile);
-int CreateKey(char * keyFile, DWORD keyLen);
+#include <Windows.h>
+
+#include <array>
+
+int Encrypt(char* inFile, char* outFile, char* keyFile);
+int Decrypt(char* inFile, char* outFile, char* keyFile);
+int CreateKey(char* keyFile, DWORD keyLen);
 int ListProviders();
 int WriteDebugInfo();
 void Usage();
@@ -28,13 +31,13 @@ void Version();
 int WinVer();
 
 
-extern char CSP_NAME[70];
+extern char CSP_NAME[70U];
 extern DWORD VERIFY_CONTEXT_FLAG;
 extern DWORD NULL_CONTEXT_FLAG;
 extern DWORD CONTEXT_FLAG;
 extern DWORD KEYLEN;
 extern DWORD MAXKEYLEN;
-extern CHAR szUserName[100];         // Buffer to hold the name of the key container.
+extern std::array<CHAR, 100U> szUserName; // Buffer to hold the name of the key container.
 
 
 #endif

@@ -10,233 +10,291 @@
 
 
 #include "PropertiesDialog.h"
-#include <shlobj.h>
-#include "resource.h"
-#include "SettingsManager.h"
-#include "vncServer.h"
-#include "vncOSVersion.h"
-#include "Localization.h"
+
 #include "common/win32_helpers.h"
-#include "RulesListView.h"
-#include <commctrl.h>
-#include "vncconndialog.h"
 #include "credentials.h"
-#include <shlwapi.h>
 #include "DlgChangePassword.h"
-#include "vncmenu.h"
-
-#include <sstream>
-#include <vector>
-#include <string>
-#include <windowsx.h>
-#include "winvnc.h"
-#include "UltraVNCService.h"
 #include "HelperFunctions.h"
+#include "Localization.h"
+#include "resource.h"
+#include "RulesListView.h"
 #include "SchannelTLS.h"
-#include <cryptuiapi.h>
+#include "SettingsManager.h"
+#include "UltraVNCService.h"
+#include "vncconndialog.h"
+#include "vncmenu.h"
+#include "vncOSVersion.h"
+#include "vncserver.h"
+#include "winvnc.h"
+
+#include <CommCtrl.h>
 #include <commdlg.h>
+#include <cryptuiapi.h>
+#include <ShlObj.h>
+#include <Shlwapi.h>
+#include <windowsx.h>
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cwchar>
+#include <sstream>
+#include <string>
+#include <vector>
 
-extern HINSTANCE	hInstResDLL;
-HWND PropertiesDialog::hEditLog = NULL;
-char PropertiesDialog::buffer[65536] = "";
+extern HINSTANCE hInstResDLL;
+HWND PropertiesDialog::hEditLog = nullptr;
+char PropertiesDialog::buffer[65536U] = "";
 
 // SSL/TLS tab helpers: pick a certificate from the MY stores and put its
 // SHA1 thumbprint into an edit control, or create a self-signed certificate.
-static bool CertThumbprintHex(PCCERT_CONTEXT ctx, char* hex, size_t hexsize)
+static bool CertThumbprintHex(const PCCERT_CONTEXT ctx, char* const hex, const std::size_t hexsize)
 {
-	BYTE sha1[20]{};
-	DWORD size = sizeof(sha1);
-	if (!ctx || hexsize < 41 ||
-		!CertGetCertificateContextProperty(ctx, CERT_HASH_PROP_ID, sha1, &size))
-		return false;
-	for (DWORD i = 0; i < 20; i++)
-		sprintf_s(hex + i * 2, 3, "%02x", sha1[i]);
-	hex[40] = 0;
-	return true;
+    std::array<BYTE, 20U> sha1{};
+    DWORD size = sizeof(sha1);
+    if (!ctx || (hexsize < 41) || !::CertGetCertificateContextProperty(ctx, CERT_HASH_PROP_ID, sha1.data(), &size))
+    {
+        return false;
+    }
+    for (DWORD i{ 0U }; i < 20; ++i)
+    {
+        ::sprintf_s(hex + i * 2, 3, "%02x", sha1[i]);
+    }
+    hex[40U] = 0;
+    return true;
 }
 
-struct CertSelectEntry {
-	PCCERT_CONTEXT ctx;
-	std::string display;
-	bool machine;
-};
-
-struct CertSelectData {
-	std::vector<CertSelectEntry> entries;
-	char outThumbprint[41]{};
-	bool ok = false;
-};
-
-static INT_PTR CALLBACK SelectCertDlgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+struct CertSelectEntry
 {
-	CertSelectData* data = reinterpret_cast<CertSelectData*>(GetWindowLongPtr(hwnd, DWLP_USER));
+    PCCERT_CONTEXT ctx;
+    std::string display;
+    bool machine;
+};
 
-	switch (msg) {
-	case WM_INITDIALOG:
-	{
-		data = reinterpret_cast<CertSelectData*>(lParam);
-		SetWindowLongPtr(hwnd, DWLP_USER, reinterpret_cast<LONG_PTR>(data));
-		HWND hList = GetDlgItem(hwnd, IDC_SELECT_CERT_LIST);
-		for (size_t i = 0; i < data->entries.size(); ++i) {
-			int idx = (int)SendMessageA(hList, LB_ADDSTRING, 0, (LPARAM)data->entries[i].display.c_str());
-			if (idx != LB_ERR)
-				SendMessage(hList, LB_SETITEMDATA, idx, (LPARAM)i);
-		}
-		if (!data->entries.empty())
-			SendMessage(hList, LB_SETCURSEL, 0, 0);
-		return TRUE;
-	}
-	case WM_COMMAND:
-	{
-		int id = LOWORD(wParam);
-		if (id == IDOK || (id == IDC_SELECT_CERT_LIST && HIWORD(wParam) == LBN_DBLCLK)) {
-			HWND hList = GetDlgItem(hwnd, IDC_SELECT_CERT_LIST);
-			int sel = (int)SendMessage(hList, LB_GETCURSEL, 0, 0);
-			if (sel != LB_ERR && data) {
-				LPARAM itemData = SendMessage(hList, LB_GETITEMDATA, sel, 0);
-				size_t idx = static_cast<size_t>(itemData);
-				if (idx < data->entries.size() &&
-				    CertThumbprintHex(data->entries[idx].ctx, data->outThumbprint, sizeof(data->outThumbprint))) {
-					data->ok = true;
-				}
-			}
-			EndDialog(hwnd, data && data->ok ? IDOK : IDCANCEL);
-			return TRUE;
-		}
-		if (id == IDCANCEL) {
-			EndDialog(hwnd, IDCANCEL);
-			return TRUE;
-		}
-	}
-	break;
-	}
-	return FALSE;
+struct CertSelectData
+{
+    std::vector<CertSelectEntry> entries;
+    char outThumbprint[41U]{};
+    bool ok{ false };
+};
+
+static INT_PTR CALLBACK SelectCertDlgProc(const HWND hwnd, const UINT msg, const WPARAM wParam, const LPARAM lParam)
+{
+    CertSelectData* data = reinterpret_cast<CertSelectData*>(::GetWindowLongPtr(hwnd, DWLP_USER));
+
+    switch (msg)
+    {
+    case WM_INITDIALOG: {
+        data = reinterpret_cast<CertSelectData*>(lParam);
+        ::SetWindowLongPtr(hwnd, DWLP_USER, reinterpret_cast<LONG_PTR>(data));
+        HWND hList = ::GetDlgItem(hwnd, IDC_SELECT_CERT_LIST);
+        for (std::size_t i{ 0U }; i < data->entries.size(); ++i)
+        {
+            int idx = static_cast<int>(::SendMessageA(hList, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(data->entries[i].display.c_str())));
+            if (idx != LB_ERR)
+            {
+                ::SendMessage(hList, LB_SETITEMDATA, static_cast<WPARAM>(idx), static_cast<LPARAM>(i));
+            }
+        }
+        if (!data->entries.empty())
+        {
+            ::SendMessage(hList, LB_SETCURSEL, 0, 0);
+        }
+        return TRUE;
+    }
+    case WM_COMMAND: {
+        int id = LOWORD(wParam);
+        if ((id == IDOK) || ((id == IDC_SELECT_CERT_LIST) && (HIWORD(wParam) == LBN_DBLCLK)))
+        {
+            HWND hList = ::GetDlgItem(hwnd, IDC_SELECT_CERT_LIST);
+            int sel = static_cast<int>(::SendMessage(hList, LB_GETCURSEL, 0, 0));
+            if ((sel != LB_ERR) && data)
+            {
+                LPARAM itemData = ::SendMessage(hList, LB_GETITEMDATA, static_cast<WPARAM>(sel), 0);
+                std::size_t idx = static_cast<std::size_t>(itemData);
+                if ((idx < data->entries.size()) &&
+                    CertThumbprintHex(data->entries[idx].ctx, data->outThumbprint, sizeof(data->outThumbprint)))
+                {
+                    data->ok = true;
+                }
+            }
+            ::EndDialog(hwnd, (data && data->ok ? IDOK : IDCANCEL));
+            return TRUE;
+        }
+        if (id == IDCANCEL)
+        {
+            ::EndDialog(hwnd, IDCANCEL);
+            return TRUE;
+        }
+    }
+    break;
+    }
+    return FALSE;
 }
 
-static void SelectCertificateToEdit(HWND hwnd, int editId)
+static void SelectCertificateToEdit(const HWND hwnd, const int editId)
 {
-	HCERTSTORE hLM = CertOpenStore(CERT_STORE_PROV_SYSTEM, 0, 0,
-		CERT_SYSTEM_STORE_LOCAL_MACHINE | CERT_STORE_READONLY_FLAG, L"MY");
-	HCERTSTORE hCU = CertOpenStore(CERT_STORE_PROV_SYSTEM, 0, 0,
-		CERT_SYSTEM_STORE_CURRENT_USER | CERT_STORE_READONLY_FLAG, L"MY");
+    HCERTSTORE hLM = ::CertOpenStore(CERT_STORE_PROV_SYSTEM, 0, 0, CERT_SYSTEM_STORE_LOCAL_MACHINE | CERT_STORE_READONLY_FLAG, L"MY");
+    HCERTSTORE hCU = ::CertOpenStore(CERT_STORE_PROV_SYSTEM, 0, 0, CERT_SYSTEM_STORE_CURRENT_USER | CERT_STORE_READONLY_FLAG, L"MY");
 
-	CertSelectData data;
-	FILETIME ftNow;
-	GetSystemTimeAsFileTime(&ftNow);
+    CertSelectData data;
+    FILETIME ftNow;
+    ::GetSystemTimeAsFileTime(&ftNow);
 
-	auto addFromStore = [&](HCERTSTORE hStore, bool machine) {
-		if (!hStore)
-			return;
-		PCCERT_CONTEXT cur = nullptr;
-		while ((cur = CertEnumCertificatesInStore(hStore, cur)) != nullptr) {
-			if (CompareFileTime(&cur->pCertInfo->NotAfter, &ftNow) <= 0)
-				continue;
-			DWORD keyProvLen = 0;
-			if (!CertGetCertificateContextProperty(cur, CERT_KEY_PROV_INFO_PROP_ID, nullptr, &keyProvLen))
-				continue;
-			char subject[256] = {};
-			CertGetNameStringA(cur, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, nullptr, subject, sizeof(subject));
-			char expiry[64] = {};
-			SYSTEMTIME st;
-			FileTimeToSystemTime(&cur->pCertInfo->NotAfter, &st);
-			GetDateFormatA(LOCALE_USER_DEFAULT, DATE_SHORTDATE, &st, nullptr, expiry, sizeof(expiry));
-			const char* loc = machine ? "LocalMachine" : "CurrentUser";
-			char buf[512];
-			snprintf(buf, sizeof(buf), "[%s] %s (expires %s)", loc, subject, expiry);
-			PCCERT_CONTEXT dup = CertDuplicateCertificateContext(cur);
-			if (dup)
-				data.entries.push_back({ dup, buf, machine });
-		}
-	};
-	addFromStore(hLM, true);
-	addFromStore(hCU, false);
+    auto addFromStore = [&](const HCERTSTORE hStore, const bool machine) {
+        if (!hStore)
+        {
+            return;
+        }
+        PCCERT_CONTEXT cur = nullptr;
+        while ((cur = ::CertEnumCertificatesInStore(hStore, cur)) != nullptr)
+        {
+            if (::CompareFileTime(&cur->pCertInfo->NotAfter, &ftNow) <= 0)
+            {
+                continue;
+            }
+            DWORD keyProvLen{ 0U };
+            if (!::CertGetCertificateContextProperty(cur, CERT_KEY_PROV_INFO_PROP_ID, nullptr, &keyProvLen))
+            {
+                continue;
+            }
+            std::array<char, 256U> subject{};
+            ::CertGetNameStringA(cur, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, nullptr, subject.data(), sizeof(subject));
+            std::array<char, 64U> expiry{};
+            SYSTEMTIME st;
+            ::FileTimeToSystemTime(&cur->pCertInfo->NotAfter, &st);
+            ::GetDateFormatA(LOCALE_USER_DEFAULT, DATE_SHORTDATE, &st, nullptr, expiry.data(), sizeof(expiry));
+            const char* loc = machine ? "LocalMachine" : "CurrentUser";
+            std::array<char, 512U> buf;
+            std::snprintf(buf.data(), sizeof(buf), "[%s] %s (expires %s)", loc, subject.data(), expiry.data());
+            PCCERT_CONTEXT dup = ::CertDuplicateCertificateContext(cur);
+            if (dup)
+            {
+                data.entries.push_back({ dup, buf.data(), machine });
+            }
+        }
+    };
+    addFromStore(hLM, true);
+    addFromStore(hCU, false);
 
-	if (hLM)
-		CertCloseStore(hLM, 0);
-	if (hCU)
-		CertCloseStore(hCU, 0);
+    if (hLM)
+    {
+        ::CertCloseStore(hLM, 0);
+    }
+    if (hCU)
+    {
+        ::CertCloseStore(hCU, 0);
+    }
 
-	if (data.entries.empty()) {
-		MessageBoxA(hwnd, "No usable certificates with private keys were found in the Local Machine or Current User Personal stores.",
-			"Select certificate", MB_OK | MB_ICONINFORMATION);
-		return;
-	}
+    if (data.entries.empty())
+    {
+        ::MessageBoxA(hwnd,
+                    "No usable certificates with private keys were found in the Local Machine or Current User Personal stores.",
+                    "Select certificate", MB_OK | MB_ICONINFORMATION);
+        return;
+    }
 
-	if (DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_SELECT_CERT), hwnd,
-		(DLGPROC)SelectCertDlgProc, (LONG_PTR)&data) == IDOK && data.ok) {
-		SetDlgItemText(hwnd, editId, data.outThumbprint);
-		EnableWindow(GetDlgItem(GetParent(hwnd), IDC_APPLY), true);
-	}
+    if ((::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_SELECT_CERT), hwnd, reinterpret_cast<DLGPROC>(SelectCertDlgProc), reinterpret_cast<LONG_PTR>(&data)) ==
+         IDOK) &&
+        data.ok)
+    {
+        ::SetDlgItemText(hwnd, editId, data.outThumbprint);
+        ::EnableWindow(::GetDlgItem(::GetParent(hwnd), IDC_APPLY), true);
+    }
 
-	for (auto& e : data.entries)
-		CertFreeCertificateContext(e.ctx);
+    for (auto& e : data.entries)
+    {
+        ::CertFreeCertificateContext(e.ctx);
+    }
 }
 
 // Key sizes offered for newly generated self-signed certificates.
 static const DWORD kSelfSignedKeyBits[] = { 2048, 3072, 4096 };
 
-static DWORD SelectedSelfSignedKeyBits(HWND hwnd)
+static DWORD SelectedSelfSignedKeyBits(const HWND hwnd)
 {
-	DWORD keyBits = settings ? settings->getTLSCertKeyBits() : 3072;
-	if (HWND hBits = GetDlgItem(hwnd, IDC_VENCRYPT_KEYBITS)) {
-		const LRESULT sel = SendMessage(hBits, CB_GETCURSEL, 0, 0);
-		if (sel >= 0 && sel < (LRESULT)(sizeof(kSelfSignedKeyBits) / sizeof(kSelfSignedKeyBits[0])))
-			keyBits = kSelfSignedKeyBits[sel];
-	}
-	return keyBits;
+    DWORD keyBits = settings ? settings->getTLSCertKeyBits() : 3072;
+    if (HWND hBits = ::GetDlgItem(hwnd, IDC_VENCRYPT_KEYBITS))
+    {
+        const LRESULT sel = ::SendMessage(hBits, CB_GETCURSEL, 0, 0);
+        if ((sel >= 0) && (sel < static_cast<LRESULT>((sizeof(kSelfSignedKeyBits) / sizeof(kSelfSignedKeyBits[0U])))))
+        {
+            keyBits = kSelfSignedKeyBits[sel];
+        }
+    }
+    return keyBits;
 }
 
-static void GenerateSelfSignedToEdit(HWND hwnd, int editId)
+static void GenerateSelfSignedToEdit(const HWND hwnd, const int editId)
 {
-	const char* subject = "CN=UltraVNC-WebViewer";
-	const char* container = "UltraVNC-WebViewer";
-	if (editId == IDC_VENCRYPT_THUMBPRINT) {
-		subject = "CN=UltraVNC-VeNCrypt";
-		container = "UltraVNC-VeNCrypt";
-	}
+    const char* subject = "CN=UltraVNC-WebViewer";
+    const char* container = "UltraVNC-WebViewer";
+    if (editId == IDC_VENCRYPT_THUMBPRINT)
+    {
+        subject = "CN=UltraVNC-VeNCrypt";
+        container = "UltraVNC-VeNCrypt";
+    }
 
-	const char* simpleName = subject;
-	if (_strnicmp(subject, "CN=", 3) == 0)
-		simpleName = subject + 3;
+    const char* simpleName = subject;
+    if (::_strnicmp(subject, "CN=", 3) == 0)
+    {
+        simpleName = subject + 3;
+    }
 
-	// Delete any existing matching self-signed certificates so the button
-	// actually produces a fresh certificate each time.
-	HCERTSTORE hLM = CertOpenStore(CERT_STORE_PROV_SYSTEM, 0, 0,
-		CERT_SYSTEM_STORE_LOCAL_MACHINE, L"MY");
-	HCERTSTORE hCU = CertOpenStore(CERT_STORE_PROV_SYSTEM, 0, 0,
-		CERT_SYSTEM_STORE_CURRENT_USER, L"MY");
-	for (HCERTSTORE hStore : { hLM, hCU }) {
-		if (!hStore)
-			continue;
-		std::vector<PCCERT_CONTEXT> toDelete;
-		PCCERT_CONTEXT cur = nullptr;
-		while ((cur = CertEnumCertificatesInStore(hStore, cur)) != nullptr) {
-			char name[256] = {};
-			CertGetNameStringA(cur, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, nullptr, name, sizeof(name));
-			if (_stricmp(name, simpleName) == 0) {
-				PCCERT_CONTEXT dup = CertDuplicateCertificateContext(cur);
-				if (dup)
-					toDelete.push_back(dup);
-			}
-		}
-		for (PCCERT_CONTEXT ctx : toDelete)
-			CertDeleteCertificateFromStore(ctx);
-	}
-	if (hLM)
-		CertCloseStore(hLM, 0);
-	if (hCU)
-		CertCloseStore(hCU, 0);
+    // Delete any existing matching self-signed certificates so the button
+    // actually produces a fresh certificate each time.
+    HCERTSTORE hLM = ::CertOpenStore(CERT_STORE_PROV_SYSTEM, 0, 0, CERT_SYSTEM_STORE_LOCAL_MACHINE, L"MY");
+    HCERTSTORE hCU = ::CertOpenStore(CERT_STORE_PROV_SYSTEM, 0, 0, CERT_SYSTEM_STORE_CURRENT_USER, L"MY");
+    for (HCERTSTORE hStore : { hLM, hCU })
+    {
+        if (!hStore)
+        {
+            continue;
+        }
+        std::vector<PCCERT_CONTEXT> toDelete;
+        PCCERT_CONTEXT cur = nullptr;
+        while ((cur = ::CertEnumCertificatesInStore(hStore, cur)) != nullptr)
+        {
+            std::array<char, 256U> name{};
+            ::CertGetNameStringA(cur, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0, nullptr, name.data(), sizeof(name));
+            if (::_stricmp(name.data(), simpleName) == 0)
+            {
+                PCCERT_CONTEXT dup = ::CertDuplicateCertificateContext(cur);
+                if (dup)
+                {
+                    toDelete.push_back(dup);
+                }
+            }
+        }
+        for (PCCERT_CONTEXT ctx : toDelete)
+        {
+            ::CertDeleteCertificateFromStore(ctx);
+        }
+    }
+    if (hLM)
+    {
+        ::CertCloseStore(hLM, 0);
+    }
+    if (hCU)
+    {
+        ::CertCloseStore(hCU, 0);
+    }
 
-	SchannelTLS tls;
-	char thumb[41]{};
-	if (tls.EnsureSelfSignedCert(subject, container, thumb, SelectedSelfSignedKeyBits(hwnd))) {
-		SetDlgItemText(hwnd, editId, thumb);
-		EnableWindow(GetDlgItem(GetParent(hwnd), IDC_APPLY), true);
-	}
-	else
-		MessageBoxA(hwnd, "Failed to create self-signed certificate (admin rights may be required).",
-			"UltraVNC Server", MB_OK | MB_ICONERROR);
+    SchannelTLS tls;
+    std::array<char, 41U> thumb{};
+    if (tls.EnsureSelfSignedCert(subject, container, thumb.data(), SelectedSelfSignedKeyBits(hwnd)))
+    {
+        ::SetDlgItemText(hwnd, editId, thumb.data());
+        ::EnableWindow(::GetDlgItem(::GetParent(hwnd), IDC_APPLY), true);
+    }
+    else
+    {
+        ::MessageBoxA(hwnd, "Failed to create self-signed certificate (admin rights may be required).", "UltraVNC Server",
+                    MB_OK | MB_ICONERROR);
+    }
 }
 
 // Helpers for loading the validator DLL safely from the admin UI.
@@ -244,1406 +302,1597 @@ static void GenerateSelfSignedToEdit(HWND hwnd, int editId)
 // validator DLL's directory rather than the WinVNC search path.
 static bool IsAbsolutePathA(const char* path)
 {
-	return path && ((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) &&
-		   path[1] == ':' && (path[2] == '\\' || path[2] == '/');
+    return path && (((path[0U] >= 'A') && (path[0U] <= 'Z')) || ((path[0U] >= 'a') && (path[0U] <= 'z'))) && (path[1U] == ':') &&
+           ((path[2U] == '\\') || (path[2U] == '/'));
 }
 
-static HMODULE SafeLoadValidatorDllA(HWND hwnd, const char* dllPath, bool showErrors)
+static HMODULE SafeLoadValidatorDllA(const HWND hwnd, const char* const dllPath, bool showErrors)
 {
-	if (!dllPath || !dllPath[0])
-	{
-		if (showErrors)
-			MessageBoxA(hwnd, "No TokenValidator DLL path is configured.", "Token Manager", MB_OK | MB_ICONWARNING);
-		return NULL;
-	}
-	if (!IsAbsolutePathA(dllPath))
-	{
-		if (showErrors)
-			MessageBoxA(hwnd, "TokenValidator DLL path must be absolute.", "Token Manager", MB_OK | MB_ICONWARNING);
-		return NULL;
-	}
-	HMODULE hMod = LoadLibraryExA(dllPath, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-	if (!hMod && showErrors)
-		MessageBoxA(hwnd, "Failed to load the configured TokenValidator DLL.", "Token Manager", MB_OK | MB_ICONERROR);
-	return hMod;
+    if (!dllPath || !dllPath[0U])
+    {
+        if (showErrors)
+        {
+            ::MessageBoxA(hwnd, "No TokenValidator DLL path is configured.", "Token Manager", MB_OK | MB_ICONWARNING);
+        }
+        return nullptr;
+    }
+    if (!IsAbsolutePathA(dllPath))
+    {
+        if (showErrors)
+        {
+            ::MessageBoxA(hwnd, "TokenValidator DLL path must be absolute.", "Token Manager", MB_OK | MB_ICONWARNING);
+        }
+        return nullptr;
+    }
+    HMODULE hMod = ::LoadLibraryExA(dllPath, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+    if (!hMod && showErrors)
+    {
+        ::MessageBoxA(hwnd, "Failed to load the configured TokenValidator DLL.", "Token Manager", MB_OK | MB_ICONERROR);
+    }
+    return hMod;
 }
 
 // Ask the configured validator DLL whether it provides a management UI.
 // Prefers the tv_get_capabilities export; falls back to probing
 // tv_has_management_ui / tv_show_management_ui for DLLs that predate it.
-static bool ValidatorHasManagementUi(HWND hwnd)
+static bool ValidatorHasManagementUi(const HWND hwnd)
 {
-	typedef int(__cdecl *TV_GET_CAPABILITIES)(void);
-	typedef int(__cdecl *TV_HAS_MANAGEMENT_UI)(void);
-	constexpr int TV_CAP_MANAGEMENT_UI = 0x02;
+    typedef int(__cdecl * TV_GET_CAPABILITIES)(void);
+    typedef int(__cdecl * TV_HAS_MANAGEMENT_UI)(void);
+    constexpr int TV_CAP_MANAGEMENT_UI{ 0x02 };
 
-	char dllPath[MAX_PATH]{};
-	GetDlgItemTextA(hwnd, IDC_VENCRYPT_DLLPATH, dllPath, MAX_PATH);
-	HMODULE hMod = SafeLoadValidatorDllA(hwnd, dllPath, false);
-	if (!hMod)
-		return false;
+    std::array<char, MAX_PATH> dllPath{};
+    ::GetDlgItemTextA(hwnd, IDC_VENCRYPT_DLLPATH, dllPath.data(), static_cast<int>(dllPath.size()));
+    HMODULE hMod = SafeLoadValidatorDllA(hwnd, dllPath.data(), false);
+    if (!hMod)
+    {
+        return false;
+    }
 
-	bool has = false;
-	TV_GET_CAPABILITIES caps = (TV_GET_CAPABILITIES)GetProcAddress(hMod, "tv_get_capabilities");
-	if (caps)
-		has = (caps() & TV_CAP_MANAGEMENT_UI) != 0;
-	else {
-		TV_HAS_MANAGEMENT_UI hasUi = (TV_HAS_MANAGEMENT_UI)GetProcAddress(hMod, "tv_has_management_ui");
-		has = (hasUi && hasUi()) || GetProcAddress(hMod, "tv_show_management_ui") != NULL;
-	}
-	FreeLibrary(hMod);
-	return has;
+    bool has{ false };
+    TV_GET_CAPABILITIES caps = reinterpret_cast<TV_GET_CAPABILITIES>(::GetProcAddress(hMod, "tv_get_capabilities"));
+    if (caps)
+    {
+        has = (caps() & TV_CAP_MANAGEMENT_UI) != 0;
+    }
+    else
+    {
+        TV_HAS_MANAGEMENT_UI hasUi = reinterpret_cast<TV_HAS_MANAGEMENT_UI>(::GetProcAddress(hMod, "tv_has_management_ui"));
+        has = (hasUi && hasUi()) || (::GetProcAddress(hMod, "tv_show_management_ui") != nullptr);
+    }
+    ::FreeLibrary(hMod);
+    return has;
 }
 
 // The Manage-users button is only useful when the validator DLL exposes a UI.
 namespace
 {
-	struct VeNCryptSubtypeItem {
-		uint32_t type;
-		int idc;
-	};
-	const VeNCryptSubtypeItem kVeNCryptSubtypes[] = {
-		{ 301, IDC_VENCRYPT_SUBTYPE_301 },
-		{ 300, IDC_VENCRYPT_SUBTYPE_300 },
-		{ 263, IDC_VENCRYPT_SUBTYPE_263 },
-		{ 262, IDC_VENCRYPT_SUBTYPE_262 },
-		{ 261, IDC_VENCRYPT_SUBTYPE_261 },
-	};
+    struct VeNCryptSubtypeItem
+    {
+        std::uint32_t type;
+        int idc;
+    };
+    const VeNCryptSubtypeItem kVeNCryptSubtypes[] = {
+        { 301, IDC_VENCRYPT_SUBTYPE_301 }, { 300, IDC_VENCRYPT_SUBTYPE_300 }, { 263, IDC_VENCRYPT_SUBTYPE_263 },
+        { 262, IDC_VENCRYPT_SUBTYPE_262 }, { 261, IDC_VENCRYPT_SUBTYPE_261 },
+    };
 
-	void EnableVeNCryptSubtypes(HWND hwnd, BOOL enable)
-	{
-		for (const auto& it : kVeNCryptSubtypes)
-		{
-			HWND h = GetDlgItem(hwnd, it.idc);
-			if (h)
-				EnableWindow(h, enable);
-		}
-		const int labels[] = {
-			IDC_STATIC_THUMB, IDC_STATIC_TOKEN, IDC_STATIC_INFO4,
-			IDC_STATIC_INFO5, IDC_STATIC_SUBTYPES
-		};
-		for (int idc : labels)
-		{
-			HWND h = GetDlgItem(hwnd, idc);
-			if (h)
-				EnableWindow(h, enable);
-		}
-	}
+    void EnableVeNCryptSubtypes(const HWND hwnd, const BOOL enable)
+    {
+        for (const auto& it : kVeNCryptSubtypes)
+        {
+            HWND h = ::GetDlgItem(hwnd, it.idc);
+            if (h)
+            {
+                ::EnableWindow(h, enable);
+            }
+        }
+        const int labels[] = { IDC_STATIC_THUMB, IDC_STATIC_TOKEN, IDC_STATIC_INFO4, IDC_STATIC_INFO5, IDC_STATIC_SUBTYPES };
+        for (int idc : labels)
+        {
+            HWND h = ::GetDlgItem(hwnd, idc);
+            if (h)
+            {
+                ::EnableWindow(h, enable);
+            }
+        }
+    }
 
-	void LoadVeNCryptSubtypes(HWND hwnd, const char* config)
-	{
-		bool allowed[1024] = {};
-		bool any = false;
-		if (config)
-		{
-			const char* p = config;
-			while (*p)
-			{
-				while (*p == ' ' || *p == ',' || *p == ';' || *p == '\t')
-					++p;
-				char* end = nullptr;
-				long v = strtol(p, &end, 10);
-				if (end == p)
-					break;
-				if (v >= 0 && v < 1024)
-				{
-					allowed[v] = true;
-					any = true;
-				}
-				p = end;
-			}
-		}
-		for (const auto& it : kVeNCryptSubtypes)
-		{
-			HWND h = GetDlgItem(hwnd, it.idc);
-			if (h)
-				SendMessage(h, BM_SETCHECK, any ? (allowed[it.type] ? BST_CHECKED : BST_UNCHECKED) : BST_CHECKED, 0);
-		}
-	}
+    void LoadVeNCryptSubtypes(const HWND hwnd, const char* const config)
+    {
+        std::array<bool, 1024U> allowed{};
+        bool any{ false };
+        if (config)
+        {
+            const char* p = config;
+            while (*p)
+            {
+                while ((*p == ' ') || (*p == ',') || (*p == ';') || (*p == '\t'))
+                {
+                    ++p;
+                }
+                char* end{ nullptr };
+                long v = std::strtol(p, &end, 10);
+                if (end == p)
+                {
+                    break;
+                }
+                if ((v >= 0) && (v < 1024))
+                {
+                    allowed[static_cast<unsigned long long>(v)] = true;
+                    any = true;
+                }
+                p = end;
+            }
+        }
+        for (const auto& it : kVeNCryptSubtypes)
+        {
+            HWND h = ::GetDlgItem(hwnd, it.idc);
+            if (h)
+            {
+                ::SendMessage(h, BM_SETCHECK, any ? (allowed[it.type] ? BST_CHECKED : BST_UNCHECKED) : BST_CHECKED, 0);
+            }
+        }
+    }
 
-	void SaveVeNCryptSubtypes(HWND hwnd, char* outBuf, size_t outBufSize)
-	{
-		std::string s;
-		for (const auto& it : kVeNCryptSubtypes)
-		{
-			HWND h = GetDlgItem(hwnd, it.idc);
-			if (h && SendMessage(h, BM_GETCHECK, 0, 0) == BST_CHECKED)
-			{
-				if (!s.empty())
-					s += ' ';
-				char tmp[16];
-				sprintf_s(tmp, "%lu", static_cast<unsigned long>(it.type));
-				s += tmp;
-			}
-		}
-		// If nothing is selected, fall back to the full default list; this keeps
-		// the UI from accidentally advertising zero subtypes.
-		if (s.empty())
-			s = "301 300 263";
-		strncpy_s(outBuf, outBufSize, s.c_str(), _TRUNCATE);
-	}
+    void SaveVeNCryptSubtypes(const HWND hwnd, char* const outBuf, const std::size_t outBufSize)
+    {
+        std::string s;
+        for (const auto& it : kVeNCryptSubtypes)
+        {
+            HWND h = ::GetDlgItem(hwnd, it.idc);
+            if (h && (::SendMessage(h, BM_GETCHECK, 0, 0) == BST_CHECKED))
+            {
+                if (!s.empty())
+                {
+                    s += ' ';
+                }
+                std::array<char, 16U> tmp;
+                ::sprintf_s(tmp.data(), tmp.size(), "%lu", static_cast<unsigned long>(it.type));
+                s += tmp.data();
+            }
+        }
+        // If nothing is selected, fall back to the full default list; this keeps
+        // the UI from accidentally advertising zero subtypes.
+        if (s.empty())
+        {
+            s = "301 300 263";
+        }
+        ::strncpy_s(outBuf, outBufSize, s.c_str(), _TRUNCATE);
+    }
 
-	// Subtype availability depends on the plain/no-auth and -PLUS policy
-	// options: grey out subtypes that those options reject at runtime.
-	void UpdateVeNCryptSubtypeAvailability(HWND hwnd, BOOL msLogon)
-	{
-		const BOOL veNCryptEnabled = (SendDlgItemMessage(hwnd, IDC_VENCRYPT_ENABLE, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		const BOOL allowPlain = (SendDlgItemMessage(hwnd, IDC_VENCRYPT_ALLOW_PLAIN, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		const BOOL requirePlus = (SendDlgItemMessage(hwnd, IDC_VENCRYPT_REQUIRE_PLUS, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		if (requirePlus)
-			SendDlgItemMessage(hwnd, IDC_VENCRYPT_ALLOW_PLAIN, BM_SETCHECK, BST_UNCHECKED, 0);
-		for (const auto& it : kVeNCryptSubtypes)
-		{
-			HWND h = GetDlgItem(hwnd, it.idc);
-			if (!h)
-				continue;
-			BOOL enable = veNCryptEnabled;
-			if (msLogon)
-			{
-				const BOOL msLogonSubtype = it.type == 301;
-				SendMessage(h, BM_SETCHECK,
-					veNCryptEnabled && msLogonSubtype ? BST_CHECKED : BST_UNCHECKED, 0);
-				enable = enable && msLogonSubtype;
-			}
-			else
-			{
-				if (requirePlus)
-				{
-					const BOOL saslSubtype = it.type == 263;
-					SendMessage(h, BM_SETCHECK, saslSubtype ? BST_CHECKED : BST_UNCHECKED, 0);
-					enable = enable && saslSubtype;
-				}
-				else if (it.type == 301)
-				{
-					SendMessage(h, BM_SETCHECK, BST_UNCHECKED, 0);
-					enable = FALSE;
-				}
-				else if (!allowPlain && it.type == 262)
-				{
-					SendMessage(h, BM_SETCHECK, BST_UNCHECKED, 0);
-					enable = FALSE;
-				}
-			}
-			EnableWindow(h, enable);
-		}
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_PLAIN), veNCryptEnabled && !msLogon && !requirePlus);
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_REQUIRE_PLUS), veNCryptEnabled && !msLogon);
-	}
+    // Subtype availability depends on the plain/no-auth and -PLUS policy
+    // options: grey out subtypes that those options reject at runtime.
+    void UpdateVeNCryptSubtypeAvailability(const HWND hwnd, const BOOL msLogon)
+    {
+        const BOOL veNCryptEnabled = (::SendDlgItemMessage(hwnd, IDC_VENCRYPT_ENABLE, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        const BOOL allowPlain = (::SendDlgItemMessage(hwnd, IDC_VENCRYPT_ALLOW_PLAIN, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        const BOOL requirePlus = (::SendDlgItemMessage(hwnd, IDC_VENCRYPT_REQUIRE_PLUS, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        if (requirePlus)
+        {
+            ::SendDlgItemMessage(hwnd, IDC_VENCRYPT_ALLOW_PLAIN, BM_SETCHECK, BST_UNCHECKED, 0);
+        }
+        for (const auto& it : kVeNCryptSubtypes)
+        {
+            HWND h = ::GetDlgItem(hwnd, it.idc);
+            if (!h)
+            {
+                continue;
+            }
+            BOOL enable = veNCryptEnabled;
+            if (msLogon)
+            {
+                const BOOL msLogonSubtype = it.type == 301;
+                ::SendMessage(h, BM_SETCHECK, (veNCryptEnabled && msLogonSubtype ? BST_CHECKED : BST_UNCHECKED), 0);
+                enable = enable && msLogonSubtype;
+            }
+            else
+            {
+                if (requirePlus)
+                {
+                    const BOOL saslSubtype = it.type == 263;
+                    ::SendMessage(h, BM_SETCHECK, saslSubtype ? BST_CHECKED : BST_UNCHECKED, 0);
+                    enable = enable && saslSubtype;
+                }
+                else if (it.type == 301)
+                {
+                    ::SendMessage(h, BM_SETCHECK, BST_UNCHECKED, 0);
+                    enable = FALSE;
+                }
+                else if (!allowPlain && (it.type == 262))
+                {
+                    ::SendMessage(h, BM_SETCHECK, BST_UNCHECKED, 0);
+                    enable = FALSE;
+                }
+            }
+            ::EnableWindow(h, enable);
+        }
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_PLAIN), (veNCryptEnabled && !msLogon && !requirePlus));
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_REQUIRE_PLUS), (veNCryptEnabled && !msLogon));
+    }
 
-	// The certificate thumbprint/select/generate controls feed both VeNCrypt
-	// TLS and the RA2 security types (same RSA key), so they stay enabled
-	// when either is checked.
-	void UpdateCertControlAvailability(HWND hwnd, BOOL veNCryptEnabled)
-	{
-		const BOOL ra2 = (SendDlgItemMessage(hwnd, IDC_ENABLE_RA2, BM_GETCHECK, 0, 0) == BST_CHECKED)
-			|| (SendDlgItemMessage(hwnd, IDC_ENABLE_RA2NE, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		const BOOL enable = veNCryptEnabled || ra2;
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_THUMBPRINT), enable);
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_CERT_SELECT), enable);
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_CERT_GEN), enable);
-	}
+    // The certificate thumbprint/select/generate controls feed both VeNCrypt
+    // TLS and the RA2 security types (same RSA key), so they stay enabled
+    // when either is checked.
+    void UpdateCertControlAvailability(const HWND hwnd, const BOOL veNCryptEnabled)
+    {
+        const BOOL ra2 = (::SendDlgItemMessage(hwnd, IDC_ENABLE_RA2, BM_GETCHECK, 0, 0) == BST_CHECKED) ||
+                         (::SendDlgItemMessage(hwnd, IDC_ENABLE_RA2NE, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        const BOOL enable = veNCryptEnabled || ra2;
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_THUMBPRINT), enable);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_CERT_SELECT), enable);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_CERT_GEN), enable);
+    }
 
-	void UpdateVncPasswordAvailability(HWND hSecurityTab, HWND hTlsTab)
-	{
-		if (!hSecurityTab || !hTlsTab)
-			return;
-		const BOOL veNCrypt = (SendDlgItemMessage(hTlsTab, IDC_VENCRYPT_ENABLE, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		const BOOL allowLegacy = (SendDlgItemMessage(hTlsTab, IDC_VENCRYPT_ALLOW_LEGACY, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		const BOOL x509Vnc = (SendDlgItemMessage(hTlsTab, IDC_VENCRYPT_SUBTYPE_261, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		const BOOL enable = !veNCrypt || allowLegacy || x509Vnc;
-		const int controls[] = {
-			IDC_PASSWORD_LABEL, IDC_PASSWORD_LABEL2, IDC_SAVEPASSWORDSECURE,
-			IDC_CHANGEPASSWORD, IDC_CHANGEPASSWORDVO, IDC_AUTHREQUIRED
-		};
-		for (int idc : controls)
-		{
-			HWND h = GetDlgItem(hSecurityTab, idc);
-			if (h)
-				EnableWindow(h, enable);
-		}
-		const BOOL canClear = enable &&
-			(SendDlgItemMessage(hSecurityTab, IDC_AUTHREQUIRED, BM_GETCHECK, 0, 0) != BST_CHECKED);
-		EnableWindow(GetDlgItem(hSecurityTab, IDC_CLEARPASSWORD), canClear);
-		EnableWindow(GetDlgItem(hSecurityTab, IDC_CLEARPASSWORDVO), canClear);
-	}
+    void UpdateVncPasswordAvailability(const HWND hSecurityTab, const HWND hTlsTab)
+    {
+        if (!hSecurityTab || !hTlsTab)
+        {
+            return;
+        }
+        const BOOL veNCrypt = (::SendDlgItemMessage(hTlsTab, IDC_VENCRYPT_ENABLE, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        const BOOL allowLegacy = (::SendDlgItemMessage(hTlsTab, IDC_VENCRYPT_ALLOW_LEGACY, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        const BOOL x509Vnc = (::SendDlgItemMessage(hTlsTab, IDC_VENCRYPT_SUBTYPE_261, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        const BOOL enable = !veNCrypt || allowLegacy || x509Vnc;
+        const int controls[] = { IDC_PASSWORD_LABEL, IDC_PASSWORD_LABEL2,  IDC_SAVEPASSWORDSECURE,
+                                 IDC_CHANGEPASSWORD, IDC_CHANGEPASSWORDVO, IDC_AUTHREQUIRED };
+        for (int idc : controls)
+        {
+            HWND h = ::GetDlgItem(hSecurityTab, idc);
+            if (h)
+            {
+                ::EnableWindow(h, enable);
+            }
+        }
+        const BOOL canClear = enable && (::SendDlgItemMessage(hSecurityTab, IDC_AUTHREQUIRED, BM_GETCHECK, 0, 0) != BST_CHECKED);
+        ::EnableWindow(::GetDlgItem(hSecurityTab, IDC_CLEARPASSWORD), canClear);
+        ::EnableWindow(::GetDlgItem(hSecurityTab, IDC_CLEARPASSWORDVO), canClear);
+    }
 
-	// The webclient HTTPS/TLS controls apply only when both the web client and
-	// TLS are enabled on the Connection tab.
-	void UpdateWebClientTlsAvailability(HWND hConnectionTab, HWND hTlsTab)
-	{
-		if (!hConnectionTab || !hTlsTab)
-			return;
-		const BOOL httpEnabled = (SendDlgItemMessage(hConnectionTab, IDC_CONNECT_HTTP, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		const BOOL tlsEnabled = (SendDlgItemMessage(hConnectionTab, IDC_TLS, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		const BOOL enable = httpEnabled && tlsEnabled;
-		const int controls[] = {
-			IDC_NOVNC, IDC_HTTPSPORT, IDC_TLS_NOVNC_PORT, IDC_TLSINFO,
-			IDC_TLSINFO1, IDC_TLSINFO2, IDC_CERTTHUMBPRINT,
-			IDC_TLS_THUMBPRINT, IDC_TLS_CERT_SELECT, IDC_TLS_CERT_GEN
-		};
-		for (int idc : controls)
-		{
-			HWND h = GetDlgItem(hTlsTab, idc);
-			if (h)
-				EnableWindow(h, enable);
-		}
-	}
+    // The webclient HTTPS/TLS controls apply only when both the web client and
+    // TLS are enabled on the Connection tab.
+    void UpdateWebClientTlsAvailability(const HWND hConnectionTab, const HWND hTlsTab)
+    {
+        if (!hConnectionTab || !hTlsTab)
+        {
+            return;
+        }
+        const BOOL httpEnabled = (::SendDlgItemMessage(hConnectionTab, IDC_CONNECT_HTTP, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        const BOOL tlsEnabled = (::SendDlgItemMessage(hConnectionTab, IDC_TLS, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        const BOOL enable = httpEnabled && tlsEnabled;
+        const int controls[] = { IDC_NOVNC,    IDC_HTTPSPORT,      IDC_TLS_NOVNC_PORT, IDC_TLSINFO,         IDC_TLSINFO1,
+                                 IDC_TLSINFO2, IDC_CERTTHUMBPRINT, IDC_TLS_THUMBPRINT, IDC_TLS_CERT_SELECT, IDC_TLS_CERT_GEN };
+        for (int idc : controls)
+        {
+            HWND h = ::GetDlgItem(hTlsTab, idc);
+            if (h)
+            {
+                ::EnableWindow(h, enable);
+            }
+        }
+    }
 }
 
-static void UpdateManageUsersButton(HWND hwnd)
+static void UpdateManageUsersButton(const HWND hwnd)
 {
-	BOOL enabled = (SendDlgItemMessage(hwnd, IDC_VENCRYPT_ENABLE, BM_GETCHECK, 0, 0) == BST_CHECKED)
-		&& ValidatorHasManagementUi(hwnd);
-	EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_MANAGE), enabled);
+    BOOL enabled =
+        (::SendDlgItemMessage(hwnd, IDC_VENCRYPT_ENABLE, BM_GETCHECK, 0, 0) == BST_CHECKED) && ValidatorHasManagementUi(hwnd);
+    ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_MANAGE), enabled);
 }
 
 
 BOOL CALLBACK DlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-BOOL CALLBACK PropertiesDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+BOOL CALLBACK PropertiesDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
-	PropertiesDialog* _this;
-	if (uMsg == WM_INITDIALOG) {
-		_this = (PropertiesDialog*)lParam;
-		helper::SafeSetWindowUserData(hwnd, lParam);		
-	}
-	else
-		_this = (PropertiesDialog*)helper::SafeGetWindowUserData<PropertiesDialog>(hwnd);
+    PropertiesDialog* _this;
+    if (uMsg == WM_INITDIALOG)
+    {
+        _this = reinterpret_cast<PropertiesDialog*>(lParam);
+        helper::SafeSetWindowUserData(hwnd, lParam);
+    }
+    else
+    {
+        _this = reinterpret_cast<PropertiesDialog*>(helper::SafeGetWindowUserData<PropertiesDialog>(hwnd));
+    }
 
-	switch (uMsg) {
-		case WM_INITDIALOG:
-			return _this->InitDialog(hwnd);
+    switch (uMsg)
+    {
+    case WM_INITDIALOG:
+        return _this->InitDialog(hwnd);
 
-		case WM_NOTIFY:
-			return _this->HandleNotify(hwnd, wParam, lParam);
+    case WM_NOTIFY:
+        return _this->HandleNotify(hwnd, wParam, lParam);
 
-		case WM_COMMAND:
-			switch (LOWORD(wParam)) {
-			case IDCANCEL:				
-				_this->onCancel(hwnd);
-				return TRUE;
-			case IDC_APPLY:
-				_this->onApply(hwnd);
-				EnableWindow(GetDlgItem(hwnd, IDC_APPLY), false);
-				return TRUE;
-			case IDOK:
-				_this->onOK(hwnd);				
-				return TRUE;
-			default:
-				break;
-			}
-		case WM_CLOSE:
-			return FALSE;
-		case WM_DESTROY:
-			EndDialog(hwnd, FALSE);
-			return TRUE;
-	}
-	return 0;
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case IDCANCEL:
+            _this->onCancel(hwnd);
+            return TRUE;
+        case IDC_APPLY:
+            _this->onApply(hwnd);
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_APPLY), false);
+            return TRUE;
+        case IDOK:
+            _this->onOK(hwnd);
+            return TRUE;
+        default:
+            break;
+        }
+    case WM_CLOSE:
+        return FALSE;
+    case WM_DESTROY:
+        ::EndDialog(hwnd, FALSE);
+        return TRUE;
+    }
+    return 0;
 }
 
-extern char configFile[256];
-bool PropertiesDialog::InitDialog(HWND hwnd)
+extern char configFile[256U];
+bool PropertiesDialog::InitDialog(const HWND hwnd)
 {
-	PropertiesDialogHwnd = hwnd;
-	EnableWindow(GetDlgItem(hwnd, IDC_APPLY), false);
-	SetForegroundWindow(hwnd);
-	HICON hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_WINVNC));
-	SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-	SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+    PropertiesDialogHwnd = hwnd;
+    ::EnableWindow(::GetDlgItem(hwnd, IDC_APPLY), false);
+    ::SetForegroundWindow(hwnd);
+    HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_WINVNC));
+    ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+    ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
 
-	const long lTitleBufSize = 256;
-	char szTitle[lTitleBufSize];
+    const long lTitleBufSize{ 256 };
+    std::array<char, lTitleBufSize> szTitle;
 
-	_snprintf_s(szTitle, lTitleBufSize - 1, "UltraVNC Server - Settings - Config file: %s", configFile);
-	SetWindowText(hwnd, szTitle);
+    ::_snprintf_s(szTitle.data(), szTitle.size(), lTitleBufSize - 1, "UltraVNC Server - Settings - Config file: %s", configFile);
+    ::SetWindowText(hwnd, szTitle.data());
 
-	showAdminPanel = false;
-	vnclog.Print(LL_INTWARN, VNCLOG("showAdminPanel = false\n"));
-	if (settings->RunningFromExternalService()) {
-		vnclog.Print(LL_INTWARN, VNCLOG("RunningFromExternalService true \n"));
-		if (settings->IsDesktopUserAdmin()) {
-			vnclog.Print(LL_INTWARN, VNCLOG("IsDesktopUserAdmin true\n"));
-			showAdminPanel = true;
-			vnclog.Print(LL_INTWARN, VNCLOG("showAdminPanel = true\n"));
-		}
-		else {
-			vnclog.Print(LL_INTWARN, VNCLOG("IsDesktopUserAdmin false\n"));
-			if (!settings->getAllowUserSettingsWithPassword() ||
-				(settings->getAllowUserSettingsWithPassword() && !settings->checkAdminPassword()) ) {
-				EndDialog(hwnd, IDCANCEL);
-				return true;
-			}
-		}
-	}
-	else
-		vnclog.Print(LL_INTWARN, VNCLOG("RunningFromExternalServic  false\n"));
-
-	
-
-	hTabControl = GetDlgItem(hwnd, IDC_PROPERTIESTAB);
-	TCITEM item;
-	item.mask = TCIF_TEXT;
-	item.pszText = "Security";
-	TabCtrl_InsertItem(hTabControl, 0, &item);
-	item.pszText = "SSL/TLS";
-	TabCtrl_InsertItem(hTabControl, 1, &item);
-	item.pszText = "Connection";
-	TabCtrl_InsertItem(hTabControl, 2, &item);
-	item.pszText = "Input/FT";
-	TabCtrl_InsertItem(hTabControl, 3, &item);
-	item.pszText = "Misc";
-	TabCtrl_InsertItem(hTabControl, 4, &item);
-	item.pszText = "Notifications";
-	TabCtrl_InsertItem(hTabControl, 5, &item);
-	item.pszText = "Network";
-	TabCtrl_InsertItem(hTabControl, 6, &item);
-	item.pszText = "Rules";
-	TabCtrl_InsertItem(hTabControl, 7, &item);
-	item.pszText = "Capture";
-	TabCtrl_InsertItem(hTabControl, 8, &item);	
-	item.pszText = "Log";
-	TabCtrl_InsertItem(hTabControl, 9, &item);
+    showAdminPanel = false;
+    vnclog.Print(LL_INTWARN, VNCLOG("showAdminPanel = false\n"));
+    if (settings->RunningFromExternalService())
+    {
+        vnclog.Print(LL_INTWARN, VNCLOG("RunningFromExternalService true \n"));
+        if (settings->IsDesktopUserAdmin())
+        {
+            vnclog.Print(LL_INTWARN, VNCLOG("IsDesktopUserAdmin true\n"));
+            showAdminPanel = true;
+            vnclog.Print(LL_INTWARN, VNCLOG("showAdminPanel = true\n"));
+        }
+        else
+        {
+            vnclog.Print(LL_INTWARN, VNCLOG("IsDesktopUserAdmin false\n"));
+            if (!settings->getAllowUserSettingsWithPassword() ||
+                (settings->getAllowUserSettingsWithPassword() && !settings->checkAdminPassword()))
+            {
+                ::EndDialog(hwnd, IDCANCEL);
+                return true;
+            }
+        }
+    }
+    else
+    {
+        vnclog.Print(LL_INTWARN, VNCLOG("RunningFromExternalServic  false\n"));
+    }
 
 
-	if (showAdminPanel)
-	{
-		vnclog.Print(LL_INTWARN, VNCLOG("showAdminPanel\n"));
-		item.pszText = "Administration";
-		TabCtrl_InsertItem(hTabControl, 10, &item);
-	}
-	else if (standalone) 
-	{
-		item.pszText = "Service";
-		TabCtrl_InsertItem(hTabControl, 10, &item);
-	}
 
-	hTabAuthentication = CreateDialogParam(hInstResDLL,
-		MAKEINTRESOURCE(IDD_FORM_AUTHENTICATION),
-		hwnd,
-		(DLGPROC)DlgProc,
-		(LONG_PTR)this);
-	hTabIncoming = CreateDialogParam(hInstResDLL,
-		MAKEINTRESOURCE(IDD_FORM_Incoming),
-		hwnd,
-		(DLGPROC)DlgProc,
-		(LONG_PTR)this);
-	hTabInput = CreateDialogParam(hInstResDLL,
-		MAKEINTRESOURCE(IDD_FORM_input_FT),
-		hwnd,
-		(DLGPROC)DlgProc,
-		(LONG_PTR)this);
-	hTabMisc = CreateDialogParam(hInstResDLL,
-		MAKEINTRESOURCE(IDD_FORM_Misc),
-		hwnd,
-		(DLGPROC)DlgProc,
-		(LONG_PTR)this);
-	hTabNotifications = CreateDialogParam(hInstResDLL,
-		MAKEINTRESOURCE(IDD_FORM_Notifications),
-		hwnd,
-		(DLGPROC)DlgProc,
-		(LONG_PTR)this);
-	hTabNetwork = CreateDialogParam(hInstResDLL,
-		MAKEINTRESOURCE(IDD_FORM_Network),
-		hwnd,
-		(DLGPROC)DlgProc,
-		(LONG_PTR)this);
-	hTabRules = CreateDialogParam(hInstResDLL,
-		MAKEINTRESOURCE(IDD_FORM_Rules),
-		hwnd,
-		(DLGPROC)DlgProc,
-		(LONG_PTR)this);
-	hTabCapture = CreateDialogParam(hInstResDLL,
-		MAKEINTRESOURCE(IDD_FORM_capture),
-		hwnd,
-		(DLGPROC)DlgProc,
-		(LONG_PTR)this);
-	hTabLog = CreateDialogParam(hInstResDLL,
-		MAKEINTRESOURCE(IDD_FORM_Log),
-		hwnd,
-		(DLGPROC)DlgProc,
-		(LONG_PTR)this);
-	hTabTLS = CreateDialogParam(hInstResDLL,
-		MAKEINTRESOURCE(IDD_FORM_TLS),
-		hwnd,
-		(DLGPROC)DlgProc,
-		(LONG_PTR)this);
-	hTabAdministration = CreateDialogParam(hInstResDLL,
-		MAKEINTRESOURCE(IDD_FORM_administration),
-		hwnd,
-		(DLGPROC)DlgProc,
-		(LONG_PTR)this);
-	hTabService = CreateDialogParam(hInstResDLL,
-		MAKEINTRESOURCE(IDD_FORM_Service),
-		hwnd,
-		(DLGPROC)DlgProc,
-		(LONG_PTR)this);
-	RECT rc;
-	GetWindowRect(hTabControl, &rc);
-	MapWindowPoints(NULL, hwnd, (POINT*)&rc, 2);
-	TabCtrl_AdjustRect(hTabControl, FALSE, &rc);
-	SetWindowPos(hTabAuthentication, HWND_TOP, rc.left, rc.top,
-		rc.right - rc.left, rc.bottom - rc.top,
-		SWP_SHOWWINDOW);
-	SetWindowPos(hTabIncoming, HWND_TOP, rc.left, rc.top,
-		rc.right - rc.left, rc.bottom - rc.top,
-		SWP_HIDEWINDOW);
-	SetWindowPos(hTabInput, HWND_TOP, rc.left, rc.top,
-		rc.right - rc.left, rc.bottom - rc.top,
-		SWP_HIDEWINDOW);
-	SetWindowPos(hTabMisc, HWND_TOP, rc.left, rc.top,
-		rc.right - rc.left, rc.bottom - rc.top,
-		SWP_HIDEWINDOW);
-	SetWindowPos(hTabNotifications, HWND_TOP, rc.left, rc.top,
-		rc.right - rc.left, rc.bottom - rc.top,
-		SWP_HIDEWINDOW);
-	SetWindowPos(hTabNetwork, HWND_TOP, rc.left, rc.top,
-		rc.right - rc.left, rc.bottom - rc.top,
-		SWP_HIDEWINDOW);
-	SetWindowPos(hTabRules, HWND_TOP, rc.left, rc.top,
-		rc.right - rc.left, rc.bottom - rc.top,
-		SWP_HIDEWINDOW);
-	SetWindowPos(hTabCapture, HWND_TOP, rc.left, rc.top,
-		rc.right - rc.left, rc.bottom - rc.top,
-		SWP_HIDEWINDOW);
-	SetWindowPos(hTabLog, HWND_TOP, rc.left, rc.top,
-		rc.right - rc.left, rc.bottom - rc.top,
-		SWP_HIDEWINDOW);
-	SetWindowPos(hTabTLS, HWND_TOP, rc.left, rc.top,
-		rc.right - rc.left, rc.bottom - rc.top,
-		SWP_HIDEWINDOW);
-	SetWindowPos(hTabAdministration, HWND_TOP, rc.left, rc.top,
-		rc.right - rc.left, rc.bottom - rc.top,
-		SWP_HIDEWINDOW);
-	SetWindowPos(hTabService, HWND_TOP, rc.left, rc.top,
-		rc.right - rc.left, rc.bottom - rc.top,
-		SWP_HIDEWINDOW);	
-	return TRUE;
+    hTabControl = ::GetDlgItem(hwnd, IDC_PROPERTIESTAB);
+    TCITEM item;
+    item.mask = TCIF_TEXT;
+    item.pszText = "Security";
+    TabCtrl_InsertItem(hTabControl, 0, &item);
+    item.pszText = "SSL/TLS";
+    TabCtrl_InsertItem(hTabControl, 1, &item);
+    item.pszText = "Connection";
+    TabCtrl_InsertItem(hTabControl, 2, &item);
+    item.pszText = "Input/FT";
+    TabCtrl_InsertItem(hTabControl, 3, &item);
+    item.pszText = "Misc";
+    TabCtrl_InsertItem(hTabControl, 4, &item);
+    item.pszText = "Notifications";
+    TabCtrl_InsertItem(hTabControl, 5, &item);
+    item.pszText = "Network";
+    TabCtrl_InsertItem(hTabControl, 6, &item);
+    item.pszText = "Rules";
+    TabCtrl_InsertItem(hTabControl, 7, &item);
+    item.pszText = "Capture";
+    TabCtrl_InsertItem(hTabControl, 8, &item);
+    item.pszText = "Log";
+    TabCtrl_InsertItem(hTabControl, 9, &item);
+
+
+    if (showAdminPanel)
+    {
+        vnclog.Print(LL_INTWARN, VNCLOG("showAdminPanel\n"));
+        item.pszText = "Administration";
+        TabCtrl_InsertItem(hTabControl, 10, &item);
+    }
+    else if (standalone)
+    {
+        item.pszText = "Service";
+        TabCtrl_InsertItem(hTabControl, 10, &item);
+    }
+
+    hTabAuthentication =
+        ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_AUTHENTICATION), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabIncoming = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Incoming), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabInput = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_input_FT), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabMisc = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Misc), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabNotifications =
+        ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Notifications), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabNetwork = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Network), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabRules = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Rules), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabCapture = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_capture), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabLog = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Log), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabTLS = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_TLS), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabAdministration =
+        ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_administration), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabService = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Service), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    RECT rc;
+    ::GetWindowRect(hTabControl, &rc);
+    ::MapWindowPoints(nullptr, hwnd, reinterpret_cast<POINT*>(&rc), 2);
+    TabCtrl_AdjustRect(hTabControl, FALSE, &rc);
+    ::SetWindowPos(hTabAuthentication, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_SHOWWINDOW);
+    ::SetWindowPos(hTabIncoming, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
+    ::SetWindowPos(hTabInput, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
+    ::SetWindowPos(hTabMisc, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
+    ::SetWindowPos(hTabNotifications, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
+    ::SetWindowPos(hTabNetwork, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
+    ::SetWindowPos(hTabRules, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
+    ::SetWindowPos(hTabCapture, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
+    ::SetWindowPos(hTabLog, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
+    ::SetWindowPos(hTabTLS, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
+    ::SetWindowPos(hTabAdministration, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
+    ::SetWindowPos(hTabService, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
+    return TRUE;
 };
-int PropertiesDialog::HandleNotify(HWND hwndDlg, WPARAM wParam, LPARAM lParam)
+int PropertiesDialog::HandleNotify([[maybe_unused]] const HWND hwndDlg, [[maybe_unused]] const WPARAM wParam, const LPARAM lParam)
 {
-	LPNMHDR pn = (LPNMHDR)lParam;
-	switch (pn->code) {
-	case TCN_SELCHANGE:
-		switch (pn->idFrom) {
-		case IDC_PROPERTIESTAB:
-			int i = TabCtrl_GetCurFocus(hTabControl);
-			switch (i) {
-			case 0:
-				UpdateVncPasswordAvailability(hTabAuthentication, hTabTLS);
-				ShowWindow(hTabAuthentication, SW_SHOW);
-				SetFocus(hTabAuthentication);
-				return 0;
-			case 1:
-				UpdateVeNCryptSubtypeAvailability(hTabTLS,
-					SendDlgItemMessage(hTabAuthentication, IDC_MSLOGON_CHECKD, BM_GETCHECK, 0, 0) == BST_CHECKED);
-				ShowWindow(hTabTLS, SW_SHOW);
-				SetFocus(hTabTLS);
-				return 0;
+    LPNMHDR pn = reinterpret_cast<LPNMHDR>(lParam);
+    switch (pn->code)
+    {
+    case TCN_SELCHANGE:
+        switch (pn->idFrom)
+        {
+        case IDC_PROPERTIESTAB:
+            int i = TabCtrl_GetCurFocus(hTabControl);
+            switch (i)
+            {
+            case 0:
+                UpdateVncPasswordAvailability(hTabAuthentication, hTabTLS);
+                ::ShowWindow(hTabAuthentication, SW_SHOW);
+                ::SetFocus(hTabAuthentication);
+                return 0;
+            case 1:
+                UpdateVeNCryptSubtypeAvailability(
+                    hTabTLS, ::SendDlgItemMessage(hTabAuthentication, IDC_MSLOGON_CHECKD, BM_GETCHECK, 0, 0) == BST_CHECKED);
+                ::ShowWindow(hTabTLS, SW_SHOW);
+                ::SetFocus(hTabTLS);
+                return 0;
 
-			case 2:
-				ShowWindow(hTabIncoming, SW_SHOW);
-				SetFocus(hTabIncoming);
-				return 0;
+            case 2:
+                ::ShowWindow(hTabIncoming, SW_SHOW);
+                ::SetFocus(hTabIncoming);
+                return 0;
 
-			case 3:
-				ShowWindow(hTabInput, SW_SHOW);
-				SetFocus(hTabInput);
-				return 0;
+            case 3:
+                ::ShowWindow(hTabInput, SW_SHOW);
+                ::SetFocus(hTabInput);
+                return 0;
 
-			case 4:
-				ShowWindow(hTabMisc, SW_SHOW);
-				SetFocus(hTabMisc);
-				return 0;
+            case 4:
+                ::ShowWindow(hTabMisc, SW_SHOW);
+                ::SetFocus(hTabMisc);
+                return 0;
 
-			case 5:
-				ShowWindow(hTabNotifications, SW_SHOW);
-				SetFocus(hTabNotifications);
-				return 0;
+            case 5:
+                ::ShowWindow(hTabNotifications, SW_SHOW);
+                ::SetFocus(hTabNotifications);
+                return 0;
 
-			case 6:
-				ShowWindow(hTabNetwork, SW_SHOW);
-				SetFocus(hTabNetwork);
-				return 0;
-			case 7:
-				ShowWindow(hTabRules, SW_SHOW);
-				SetFocus(hTabRules);
-				return 0;
-			case 8:
-				ShowWindow(hTabCapture, SW_SHOW);
-				SetFocus(hTabCapture);
-				return 0;
-			case 9:
-				ShowWindow(hTabLog, SW_SHOW);
-				SetFocus(hTabLog);
-				return 0;
-			case 10:
-				if (showAdminPanel) {
-					ShowWindow(hTabAdministration, SW_SHOW);
-					SetFocus(hTabAdministration);
-				}
-				else if (standalone) {
-					ShowWindow(hTabService, SW_SHOW);
-					SetFocus(hTabService);
-				}
-				return 0;				
-			}
-			return 0;
-		}
-		return 0;
-	case TCN_SELCHANGING:
-		switch (pn->idFrom) {
-		case IDC_PROPERTIESTAB:
-			int i = TabCtrl_GetCurFocus(hTabControl);
-			switch (i) {
-			case 0:
-				ShowWindow(hTabAuthentication, SW_HIDE);
-				break;
-			case 1:
-				ShowWindow(hTabTLS, SW_HIDE);
-				break;
+            case 6:
+                ::ShowWindow(hTabNetwork, SW_SHOW);
+                ::SetFocus(hTabNetwork);
+                return 0;
+            case 7:
+                ::ShowWindow(hTabRules, SW_SHOW);
+                ::SetFocus(hTabRules);
+                return 0;
+            case 8:
+                ::ShowWindow(hTabCapture, SW_SHOW);
+                ::SetFocus(hTabCapture);
+                return 0;
+            case 9:
+                ::ShowWindow(hTabLog, SW_SHOW);
+                ::SetFocus(hTabLog);
+                return 0;
+            case 10:
+                if (showAdminPanel)
+                {
+                    ::ShowWindow(hTabAdministration, SW_SHOW);
+                    ::SetFocus(hTabAdministration);
+                }
+                else if (standalone)
+                {
+                    ::ShowWindow(hTabService, SW_SHOW);
+                    ::SetFocus(hTabService);
+                }
+                return 0;
+            }
+            return 0;
+        }
+        return 0;
+    case TCN_SELCHANGING:
+        switch (pn->idFrom)
+        {
+        case IDC_PROPERTIESTAB:
+            int i = TabCtrl_GetCurFocus(hTabControl);
+            switch (i)
+            {
+            case 0:
+                ::ShowWindow(hTabAuthentication, SW_HIDE);
+                break;
+            case 1:
+                ::ShowWindow(hTabTLS, SW_HIDE);
+                break;
 
-			case 2:
-				ShowWindow(hTabIncoming, SW_HIDE);
-				break;
+            case 2:
+                ::ShowWindow(hTabIncoming, SW_HIDE);
+                break;
 
-			case 3:
-				ShowWindow(hTabInput, SW_HIDE);
-				break;
+            case 3:
+                ::ShowWindow(hTabInput, SW_HIDE);
+                break;
 
-			case 4:
-				ShowWindow(hTabMisc, SW_HIDE);
-				break;
+            case 4:
+                ::ShowWindow(hTabMisc, SW_HIDE);
+                break;
 
-			case 5:
-				ShowWindow(hTabNotifications, SW_HIDE);
-				break;
+            case 5:
+                ::ShowWindow(hTabNotifications, SW_HIDE);
+                break;
 
-			case 6:
-				ShowWindow(hTabNetwork, SW_HIDE);
-				break;
-			case 7:
-				ShowWindow(hTabRules, SW_HIDE);
-				break;
-			case 8:
-				ShowWindow(hTabCapture, SW_HIDE);
-				break;
-			case 9:
-				ShowWindow(hTabLog, SW_HIDE);
-				break;
-			case 10:
-				if (showAdminPanel) {
-					ShowWindow(hTabAdministration, SW_HIDE);
-				}
-				else if (standalone) {
-					ShowWindow(hTabService, SW_HIDE);
-				}
-				break;
-			}
-			return 0;
-		}
-		return 0;
-	}
-	return 0;
+            case 6:
+                ::ShowWindow(hTabNetwork, SW_HIDE);
+                break;
+            case 7:
+                ::ShowWindow(hTabRules, SW_HIDE);
+                break;
+            case 8:
+                ::ShowWindow(hTabCapture, SW_HIDE);
+                break;
+            case 9:
+                ::ShowWindow(hTabLog, SW_HIDE);
+                break;
+            case 10:
+                if (showAdminPanel)
+                {
+                    ::ShowWindow(hTabAdministration, SW_HIDE);
+                }
+                else if (standalone)
+                {
+                    ::ShowWindow(hTabService, SW_HIDE);
+                }
+                break;
+            }
+            return 0;
+        }
+        return 0;
+    }
+    return 0;
 }
 bool CheckVideoDriver(bool Box);
 
 
-BOOL CALLBACK DlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+BOOL CALLBACK DlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
-	PropertiesDialog* _this;
-	if (uMsg == WM_INITDIALOG) {
-		_this = (PropertiesDialog*)lParam;
-		helper::SafeSetWindowUserData(hwnd, lParam);
-	}
-	else
-		_this = (PropertiesDialog*)helper::SafeGetWindowUserData<PropertiesDialog>(hwnd);
+    PropertiesDialog* _this;
+    if (uMsg == WM_INITDIALOG)
+    {
+        _this = reinterpret_cast<PropertiesDialog*>(lParam);
+        helper::SafeSetWindowUserData(hwnd, lParam);
+    }
+    else
+    {
+        _this = reinterpret_cast<PropertiesDialog*>(helper::SafeGetWindowUserData<PropertiesDialog>(hwnd));
+    }
 
-	switch (uMsg)
-	{
-	case WM_INITDIALOG: {
-		_this = (PropertiesDialog*)lParam;
-		return _this->DlgInitDialog(hwnd);
-	}
-	case WM_CTLCOLORDLG:
-		return (INT_PTR)GetStockObject(WHITE_BRUSH);
-	case WM_CTLCOLORSTATIC: {
-		HDC hdcStatic = (HDC)wParam;
-		SetTextColor(hdcStatic, RGB(0, 0, 0));
-		SetBkMode(hdcStatic, TRANSPARENT);
-		return (LONG)(INT_PTR)GetStockObject(WHITE_BRUSH);
-	}
-	case WM_NOTIFY:
-		{
-		int a = 0;
-		LPNMHDR nmhdr = (LPNMHDR)lParam;
-		if (nmhdr->idFrom == IDC_SLIDERFPS) {
-			int fps = SendMessage(GetDlgItem(hwnd, IDC_SLIDERFPS), TBM_GETPOS, 0, 0L);
-			if (fps != settings->getMaxFPS())
-				EnableWindow(GetDlgItem(_this->PropertiesDialogHwnd, IDC_APPLY), true);
-				CHAR temp[250];
-				sprintf_s(temp, "%d", fps);
-				SetDlgItemText(hwnd, IDC_STATICFPS, temp);
-			}
-		}
-		return true;
-	case WM_COMMAND:
-		_this->onCommand(LOWORD(wParam), hwnd, HIWORD(wParam));
-		break;
-	case WM_DESTROY:
-		// Free language combobox item data (combo lives in the Misc tab)
-		if (GetDlgItem(hwnd, IDC_LANGUAGE_COMBO)) {
-			HWND hCombo = GetDlgItem(hwnd, IDC_LANGUAGE_COMBO);
-			int count = (int)SendMessage(hCombo, CB_GETCOUNT, 0, 0);
-			for (int i = 0; i < count; i++) {
-				wchar_t* langCode = (wchar_t*)SendMessage(hCombo, CB_GETITEMDATA, i, 0);
-				if (langCode) free(langCode);
-			}
-		}
-		break;
-	}
-	return (INT_PTR)FALSE;
+    switch (uMsg)
+    {
+    case WM_INITDIALOG: {
+        _this = reinterpret_cast<PropertiesDialog*>(lParam);
+        return _this->DlgInitDialog(hwnd);
+    }
+    case WM_CTLCOLORDLG:
+        return static_cast<BOOL>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
+    case WM_CTLCOLORSTATIC: {
+        HDC hdcStatic = reinterpret_cast<HDC>(wParam);
+        ::SetTextColor(hdcStatic, RGB(0, 0, 0));
+        ::SetBkMode(hdcStatic, TRANSPARENT);
+        return static_cast<LONG>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
+    }
+    case WM_NOTIFY: {
+        [[maybe_unused]] const int a{ 0 };
+        LPNMHDR nmhdr = reinterpret_cast<LPNMHDR>(lParam);
+        if (nmhdr->idFrom == IDC_SLIDERFPS)
+        {
+            int fps = static_cast<int>(::SendMessage(::GetDlgItem(hwnd, IDC_SLIDERFPS), TBM_GETPOS, 0, 0L));
+            if (fps != settings->getMaxFPS())
+            {
+                ::EnableWindow(::GetDlgItem(_this->PropertiesDialogHwnd, IDC_APPLY), true);
+            }
+            std::array<CHAR, 250U> temp;
+            ::sprintf_s(temp.data(), temp.size(), "%d", fps);
+            ::SetDlgItemText(hwnd, IDC_STATICFPS, temp.data());
+        }
+    }
+        return true;
+    case WM_COMMAND:
+        _this->onCommand(LOWORD(wParam), hwnd, HIWORD(wParam));
+        break;
+    case WM_DESTROY:
+        // Free language combobox item data (combo lives in the Misc tab)
+        if (::GetDlgItem(hwnd, IDC_LANGUAGE_COMBO))
+        {
+            HWND hCombo = ::GetDlgItem(hwnd, IDC_LANGUAGE_COMBO);
+            const int count = static_cast<int>(::SendMessage(hCombo, CB_GETCOUNT, 0, 0));
+            for (int i{ 0 }; i < count; ++i)
+            {
+                wchar_t* langCode = reinterpret_cast<wchar_t*>(::SendMessage(hCombo, CB_GETITEMDATA, i, 0));
+                if (langCode)
+                {
+                    std::free(langCode);
+                }
+            }
+        }
+        break;
+    }
+    return static_cast<INT_PTR>(FALSE);
 }
-bool PropertiesDialog::DlgInitDialog(HWND hwnd)
+bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
 {
-	vnclog.SetPath(settings->getDebugPath());
-	vnclog.SetLevel(settings->getDebugLevel());
-	vnclog.SetVideo(settings->getAvilog());
-	vnclog.SetMode(settings->getDebugMode());
-	vnclog.SetFile();
-	if (GetDlgItem(hwnd, IDC_CHANGEPASSWORD)) {
-		SetWindowText(GetDlgItem(hwnd, IDC_CHANGEPASSWORD), (!settings->isPasswdSet()) ? "SET" : "CHANGE");
-	}
-	if (GetDlgItem(hwnd, IDC_CHANGEPASSWORDVO)) {
-		SetWindowText(GetDlgItem(hwnd, IDC_CHANGEPASSWORDVO), (!settings->isPasswdViewOnlySet()) ? "SET" : "CHANGE");
-	}
+    vnclog.SetPath(settings->getDebugPath());
+    vnclog.SetLevel(settings->getDebugLevel());
+    vnclog.SetVideo(settings->getAvilog());
+    vnclog.SetMode(settings->getDebugMode());
+    vnclog.SetFile();
+    if (::GetDlgItem(hwnd, IDC_CHANGEPASSWORD))
+    {
+        ::SetWindowText(::GetDlgItem(hwnd, IDC_CHANGEPASSWORD), (!settings->isPasswdSet()) ? "SET" : "CHANGE");
+    }
+    if (::GetDlgItem(hwnd, IDC_CHANGEPASSWORDVO))
+    {
+        ::SetWindowText(::GetDlgItem(hwnd, IDC_CHANGEPASSWORDVO), (!settings->isPasswdViewOnlySet()) ? "SET" : "CHANGE");
+    }
 
-	else
+    else
+    {
 
-		m_dlgvisible = TRUE;
-	bConnectSock = settings->getEnableConnections();
+        m_dlgvisible = TRUE;
+    }
+    bConnectSock = settings->getEnableConnections();
 
-	if (GetDlgItem(hwnd, IDC_CONNECT_SOCK)) {
-		SetFocus(GetDlgItem(hwnd, IDC_CONNECT_SOCK));
-		SendMessage(GetDlgItem(hwnd, IDC_CONNECT_SOCK), BM_SETCHECK, bConnectSock, 0);
-	}
+    if (::GetDlgItem(hwnd, IDC_CONNECT_SOCK))
+    {
+        ::SetFocus(::GetDlgItem(hwnd, IDC_CONNECT_SOCK));
+        ::SendMessage(::GetDlgItem(hwnd, IDC_CONNECT_SOCK), BM_SETCHECK, static_cast<WPARAM>(bConnectSock), 0);
+    }
 
-	// Set display/ports settings
-	BOOL bConnectHttp = settings->getHTTPConnect();
-	BOOL bAutoPort = settings->getAutoPortSelect();
-	UINT port_rfb = settings->getPortNumber();
-	UINT port_http = settings->getHttpPortNumber();
-	int d1 = PORT_TO_DISPLAY(port_rfb);
-	int d2 = HPORT_TO_DISPLAY(port_http);
-	BOOL bValidDisplay = (d1 == d2 && d1 >= 0 && d1 <= 99);
+    // Set display/ports settings
+    BOOL bConnectHttp = settings->getHTTPConnect();
+    BOOL bAutoPort = settings->getAutoPortSelect();
+    UINT port_rfb = static_cast<UINT>(settings->getPortNumber());
+    UINT port_http = static_cast<UINT>(settings->getHttpPortNumber());
+    int d1 = static_cast<int>(PORT_TO_DISPLAY(port_rfb));
+    const int d2 = static_cast<int>(HPORT_TO_DISPLAY(port_http));
+    BOOL bValidDisplay = ((d1 == d2) && (d1 >= 0) && (d1 <= 99));
 
-	if (GetDlgItem(hwnd, IDC_CHANGEPASSWORDADMIN)) {
-		SetWindowText(GetDlgItem(hwnd, IDC_CHANGEPASSWORDADMIN), settings->isAdminPasswordSet() ? "CHANGE" : "SET");
-	}
+    if (::GetDlgItem(hwnd, IDC_CHANGEPASSWORDADMIN))
+    {
+        ::SetWindowText(::GetDlgItem(hwnd, IDC_CHANGEPASSWORDADMIN), settings->isAdminPasswordSet() ? "CHANGE" : "SET");
+    }
 
-	if (GetDlgItem(hwnd, IDC_SPECPORT)) {
-		CheckDlgButton(hwnd, IDC_SPECPORT,
-			(!bAutoPort && !bValidDisplay) ? BST_CHECKED : BST_UNCHECKED);
-		EnableWindow(GetDlgItem(hwnd, IDC_SPECPORT), bConnectSock);
-	}
+    if (::GetDlgItem(hwnd, IDC_SPECPORT))
+    {
+        ::CheckDlgButton(hwnd, IDC_SPECPORT, (!bAutoPort && !bValidDisplay) ? BST_CHECKED : BST_UNCHECKED);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_SPECPORT), bConnectSock);
+    }
 
-	if (GetDlgItem(hwnd, IDC_PORTRFB)) {
-		SetDlgItemInt(hwnd, IDC_PORTRFB, port_rfb, FALSE);
-		EnableWindow(GetDlgItem(hwnd, IDC_PORTRFB),
-			bConnectSock && !bAutoPort && !bValidDisplay);
-	}
+    if (::GetDlgItem(hwnd, IDC_PORTRFB))
+    {
+        ::SetDlgItemInt(hwnd, IDC_PORTRFB, port_rfb, FALSE);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTRFB), (bConnectSock && !bAutoPort && !bValidDisplay));
+    }
 
-	if (GetDlgItem(hwnd, IDC_PORTHTTP)) {
-		SetDlgItemInt(hwnd, IDC_PORTHTTP, port_http, FALSE);
-		EnableWindow(GetDlgItem(hwnd, IDC_PORTHTTP),
-			bConnectSock && !bAutoPort && !bValidDisplay && bConnectHttp);
-	}
+    if (::GetDlgItem(hwnd, IDC_PORTHTTP))
+    {
+        ::SetDlgItemInt(hwnd, IDC_PORTHTTP, port_http, FALSE);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTHTTP), (bConnectSock && !bAutoPort && !bValidDisplay && bConnectHttp));
+    }
 
-	if (GetDlgItem(hwnd, IDC_CONNECT_HTTP)) {
-		SendMessage(GetDlgItem(hwnd, IDC_CONNECT_HTTP), BM_SETCHECK, settings->getHTTPConnect(), 0);
-		EnableWindow(GetDlgItem(hwnd, IDC_TLS), bConnectHttp);
-		EnableWindow(GetDlgItem(hwnd, IDC_STATIC_HTTPPORT), bConnectHttp);
-		EnableWindow(GetDlgItem(hwnd, IDC_PORTHTTP), bConnectHttp);
-	}
+    if (::GetDlgItem(hwnd, IDC_CONNECT_HTTP))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_CONNECT_HTTP), BM_SETCHECK, static_cast<WPARAM>(settings->getHTTPConnect()), 0);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_TLS), bConnectHttp);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_STATIC_HTTPPORT), bConnectHttp);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTHTTP), bConnectHttp);
+    }
 
-	if (GetDlgItem(hwnd, IDC_TLS)) {
-		BOOL bTLS = settings->getEnableTLS();
-		SendMessage(GetDlgItem(hwnd, IDC_TLS), BM_SETCHECK, bTLS, 0);
-		if (GetDlgItem(hwnd, IDC_PORTHTTP))
-			ShowWindow(GetDlgItem(hwnd, IDC_PORTHTTP), bTLS ? SW_HIDE : SW_SHOW);
-		if (GetDlgItem(hwnd, IDC_PORTHTTPS)) {
-			ShowWindow(GetDlgItem(hwnd, IDC_PORTHTTPS), bTLS ? SW_SHOW : SW_HIDE);
-			if (bTLS)
-				SetDlgItemInt(hwnd, IDC_PORTHTTPS, settings->getTLSPort(), FALSE);
-		}
-	}
+    if (::GetDlgItem(hwnd, IDC_TLS))
+    {
+        BOOL bTLS = settings->getEnableTLS();
+        ::SendMessage(::GetDlgItem(hwnd, IDC_TLS), BM_SETCHECK, static_cast<WPARAM>(bTLS), 0);
+        if (::GetDlgItem(hwnd, IDC_PORTHTTP))
+        {
+            ::ShowWindow(::GetDlgItem(hwnd, IDC_PORTHTTP), bTLS ? SW_HIDE : SW_SHOW);
+        }
+        if (::GetDlgItem(hwnd, IDC_PORTHTTPS))
+        {
+            ::ShowWindow(::GetDlgItem(hwnd, IDC_PORTHTTPS), bTLS ? SW_SHOW : SW_HIDE);
+            if (bTLS)
+            {
+                ::SetDlgItemInt(hwnd, IDC_PORTHTTPS, static_cast<UINT>(settings->getTLSPort()), FALSE);
+            }
+        }
+    }
 
-	if (GetDlgItem(hwnd, IDC_FILETRANSFER))
-		SendMessage(GetDlgItem(hwnd, IDC_FILETRANSFER), BM_SETCHECK, settings->getEnableFileTransfer(), 0);
+    if (::GetDlgItem(hwnd, IDC_FILETRANSFER))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_FILETRANSFER), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableFileTransfer()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_FTUSERIMPERSONATION_CHECK))
-		SendMessage(GetDlgItem(hwnd, IDC_FTUSERIMPERSONATION_CHECK), BM_SETCHECK, settings->getFTUserImpersonation(), 0);
+    if (::GetDlgItem(hwnd, IDC_FTUSERIMPERSONATION_CHECK))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_FTUSERIMPERSONATION_CHECK), BM_SETCHECK, static_cast<WPARAM>(settings->getFTUserImpersonation()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_BLANK)) {
-		SendMessage(GetDlgItem(hwnd, IDC_BLANK), BM_SETCHECK, settings->getEnableBlankMonitor(), 0);
-		if (!VNC_OSVersion::getInstance()->OS_WIN10_TRANS && VNC_OSVersion::getInstance()->OS_WIN10)
-			SetDlgItemText(hwnd, IDC_BLANK, "Enable Blank Monitor on Viewer Request require Min Win10 build 19041 ");
-		if (VNC_OSVersion::getInstance()->OS_WIN8)
-			SetDlgItemText(hwnd, IDC_BLANK, "Enable Blank Monitor on Viewer Not supported on windows 8 ");
-	}
+    if (::GetDlgItem(hwnd, IDC_BLANK))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_BLANK), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableBlankMonitor()), 0);
+        if (!VNC_OSVersion::getInstance()->OS_WIN10_TRANS && VNC_OSVersion::getInstance()->OS_WIN10)
+        {
+            ::SetDlgItemText(hwnd, IDC_BLANK, "Enable Blank Monitor on Viewer Request require Min Win10 build 19041 ");
+        }
+        if (VNC_OSVersion::getInstance()->OS_WIN8)
+        {
+            ::SetDlgItemText(hwnd, IDC_BLANK, "Enable Blank Monitor on Viewer Not supported on windows 8 ");
+        }
+    }
 
-	if (GetDlgItem(hwnd, IDC_BLANK2)) //PGM
-		SendMessage(GetDlgItem(hwnd, IDC_BLANK2), BM_SETCHECK, settings->getBlankInputsOnly(), 0); //PGM
+    if (::GetDlgItem(hwnd, IDC_BLANK2))
+    { //PGM
+        ::SendMessage(::GetDlgItem(hwnd, IDC_BLANK2), BM_SETCHECK, static_cast<WPARAM>(settings->getBlankInputsOnly()), 0);
+    } //PGM
 
-	if (GetDlgItem(hwnd, IDC_ALLOWLOOPBACK)) {
-		BOOL fLoopback = settings->getAllowLoopback();
-		SendMessage(GetDlgItem(hwnd, IDC_ALLOWLOOPBACK), BM_SETCHECK, fLoopback, 0);
-	}
+    if (::GetDlgItem(hwnd, IDC_ALLOWLOOPBACK))
+    {
+        BOOL fLoopback = settings->getAllowLoopback();
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWLOOPBACK), BM_SETCHECK, static_cast<WPARAM>(fLoopback), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_IPV6)) {
-		BOOL fIPV6 = settings->getIPV6();
-		SendMessage(GetDlgItem(hwnd, IDC_IPV6), BM_SETCHECK, fIPV6, 0);
-	}
+    if (::GetDlgItem(hwnd, IDC_IPV6))
+    {
+        BOOL fIPV6 = settings->getIPV6();
+        ::SendMessage(::GetDlgItem(hwnd, IDC_IPV6), BM_SETCHECK, static_cast<WPARAM>(fIPV6), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_LOOPBACKONLY)) {
-		BOOL fLoopbackonly = settings->getLoopbackOnly();
-		SendMessage(GetDlgItem(hwnd, IDC_LOOPBACKONLY), BM_SETCHECK, fLoopbackonly, 0);
-	}
+    if (::GetDlgItem(hwnd, IDC_LOOPBACKONLY))
+    {
+        BOOL fLoopbackonly = settings->getLoopbackOnly();
+        ::SendMessage(::GetDlgItem(hwnd, IDC_LOOPBACKONLY), BM_SETCHECK, static_cast<WPARAM>(fLoopbackonly), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_DISABLETRAY)) {
-		BOOL fTrayicon = settings->getDisableTrayIcon();
-		SendMessage(GetDlgItem(hwnd, IDC_DISABLETRAY), BM_SETCHECK, fTrayicon, 0);
-	}
+    if (::GetDlgItem(hwnd, IDC_DISABLETRAY))
+    {
+        BOOL fTrayicon = settings->getDisableTrayIcon();
+        ::SendMessage(::GetDlgItem(hwnd, IDC_DISABLETRAY), BM_SETCHECK, static_cast<WPARAM>(fTrayicon), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_RDPMODE)) {
-		BOOL frdpmode = settings->getRdpmode();
-		SendMessage(GetDlgItem(hwnd, IDC_RDPMODE), BM_SETCHECK, frdpmode, 0);
-	}
+    if (::GetDlgItem(hwnd, IDC_RDPMODE))
+    {
+        BOOL frdpmode = settings->getRdpmode();
+        ::SendMessage(::GetDlgItem(hwnd, IDC_RDPMODE), BM_SETCHECK, static_cast<WPARAM>(frdpmode), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_NOSCREENSAVER)) {
-		BOOL fNoScrensaver = settings->getnoscreensaver();
-		SendMessage(GetDlgItem(hwnd, IDC_NOSCREENSAVER), BM_SETCHECK, fNoScrensaver, 0);
-	}
+    if (::GetDlgItem(hwnd, IDC_NOSCREENSAVER))
+    {
+        BOOL fNoScrensaver = settings->getnoscreensaver();
+        ::SendMessage(::GetDlgItem(hwnd, IDC_NOSCREENSAVER), BM_SETCHECK, static_cast<WPARAM>(fNoScrensaver), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_ALLOWSHUTDOWN))
-		SendMessage(GetDlgItem(hwnd, IDC_ALLOWSHUTDOWN), BM_SETCHECK, !settings->getAllowShutdown(), 0);
+    if (::GetDlgItem(hwnd, IDC_ALLOWSHUTDOWN))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWSHUTDOWN), BM_SETCHECK, !settings->getAllowShutdown(), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_ALLOWEDITCLIENTS))
-		SendMessage(GetDlgItem(hwnd, IDC_ALLOWEDITCLIENTS), BM_SETCHECK, !settings->getAllowEditClients(), 0);
+    if (::GetDlgItem(hwnd, IDC_ALLOWEDITCLIENTS))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWEDITCLIENTS), BM_SETCHECK, !settings->getAllowEditClients(), 0);
+    }
 
-	if (vnclog.GetMode() >= 2)
-		CheckDlgButton(hwnd, IDC_LOG, BST_CHECKED);
-	else
-		CheckDlgButton(hwnd, IDC_LOG, BST_UNCHECKED);
+    if (vnclog.GetMode() >= 2)
+    {
+        ::CheckDlgButton(hwnd, IDC_LOG, BST_CHECKED);
+    }
+    else
+    {
+        ::CheckDlgButton(hwnd, IDC_LOG, BST_UNCHECKED);
+    }
 
-	if (GetDlgItem(hwnd, IDC_VIDEO)) {
+    if (::GetDlgItem(hwnd, IDC_VIDEO))
+    {
 #ifndef AVILOG
-		ShowWindow(GetDlgItem(hwnd, IDC_CLEAR), SW_HIDE);
-		ShowWindow(GetDlgItem(hwnd, IDC_VIDEO), SW_HIDE);
+        ::ShowWindow(::GetDlgItem(hwnd, IDC_CLEAR), SW_HIDE);
+        ::ShowWindow(::GetDlgItem(hwnd, IDC_VIDEO), SW_HIDE);
 #endif
 
-		if (vnclog.GetVideo()) {
-			SetDlgItemText(hwnd, IDC_EDIT_PATH, vnclog.GetPath());
-			CheckDlgButton(hwnd, IDC_VIDEO, BST_CHECKED);
-		}
-		else {
-			SetDlgItemText(hwnd, IDC_EDIT_PATH, vnclog.GetPath());
-			CheckDlgButton(hwnd, IDC_VIDEO, BST_UNCHECKED);
-		}
-	}
+        if (vnclog.GetVideo())
+        {
+            ::SetDlgItemText(hwnd, IDC_EDIT_PATH, vnclog.GetPath());
+            ::CheckDlgButton(hwnd, IDC_VIDEO, BST_CHECKED);
+        }
+        else
+        {
+            ::SetDlgItemText(hwnd, IDC_EDIT_PATH, vnclog.GetPath());
+            ::CheckDlgButton(hwnd, IDC_VIDEO, BST_UNCHECKED);
+        }
+    }
 
-	if (GetDlgItem(hwnd, IDC_SAVEPASSWORDSECURE))
-		SendMessage(GetDlgItem(hwnd, IDC_SAVEPASSWORDSECURE), BM_SETCHECK, settings->getSecure(), 0);
+    if (::GetDlgItem(hwnd, IDC_SAVEPASSWORDSECURE))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_SAVEPASSWORDSECURE), BM_SETCHECK, static_cast<WPARAM>(settings->getSecure()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_MSLOGON)) {
-		HWND hMSLogon = GetDlgItem(hwnd, IDC_MSLOGON_CHECKD);
-		SendMessage(hMSLogon, BM_SETCHECK, settings->getRequireMSLogon(), 0);
+    if (::GetDlgItem(hwnd, IDC_MSLOGON))
+    {
+        HWND hMSLogon = ::GetDlgItem(hwnd, IDC_MSLOGON_CHECKD);
+        ::SendMessage(hMSLogon, BM_SETCHECK, static_cast<WPARAM>(settings->getRequireMSLogon()), 0);
 
-		HWND hNewMSLogon = GetDlgItem(hwnd, IDC_NEW_MSLOGON);
-		SendMessage(hNewMSLogon, BM_SETCHECK, settings->getNewMSLogon(), 0);
+        HWND hNewMSLogon = ::GetDlgItem(hwnd, IDC_NEW_MSLOGON);
+        ::SendMessage(hNewMSLogon, BM_SETCHECK, static_cast<WPARAM>(settings->getNewMSLogon()), 0);
 
-		EnableWindow(GetDlgItem(hwnd, IDC_NEW_MSLOGON), settings->getRequireMSLogon());
-		EnableWindow(GetDlgItem(hwnd, IDC_MSLOGON), settings->getRequireMSLogon());
-	}
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_NEW_MSLOGON), settings->getRequireMSLogon());
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_MSLOGON), settings->getRequireMSLogon());
+    }
 
 
-	if (GetDlgItem(hwnd, IDC_REVERSEAUTH))
-		SendMessage(GetDlgItem(hwnd, IDC_REVERSEAUTH), BM_SETCHECK, settings->getReverseAuthRequired(), 0);
+    if (::GetDlgItem(hwnd, IDC_REVERSEAUTH))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_REVERSEAUTH), BM_SETCHECK, static_cast<WPARAM>(settings->getReverseAuthRequired()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_CHECKBRIDGE))
-		SendMessage(GetDlgItem(hwnd, IDC_CHECKBRIDGE), BM_SETCHECK, settings->getUseBridge(), 0);
-	
+    if (::GetDlgItem(hwnd, IDC_CHECKBRIDGE))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_CHECKBRIDGE), BM_SETCHECK, static_cast<WPARAM>(settings->getUseBridge()), 0);
+    }
 
-	SetDlgItemInt(hwnd, IDC_SCALE, settings->getDefaultScale(), false);
 
-	// Remote input settings
-	if (GetDlgItem(hwnd, IDC_DISABLE_INPUTS))
-		SendMessage(GetDlgItem(hwnd, IDC_DISABLE_INPUTS), BM_SETCHECK, !(settings->getEnableRemoteInputs()), 0);
+    ::SetDlgItemInt(hwnd, IDC_SCALE, static_cast<UINT>(settings->getDefaultScale()), false);
 
-	// Local input settings
-	if (GetDlgItem(hwnd, IDC_DISABLE_LOCAL_INPUTS))
-		SendMessage(GetDlgItem(hwnd, IDC_DISABLE_LOCAL_INPUTS), BM_SETCHECK, settings->getDisableLocalInputs(), 0);
+    // Remote input settings
+    if (::GetDlgItem(hwnd, IDC_DISABLE_INPUTS))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_DISABLE_INPUTS), BM_SETCHECK, !(settings->getEnableRemoteInputs()), 0);
+    }
 
-	// japanese keybaord
-	if (GetDlgItem(hwnd, IDC_JAP_INPUTS))
-		SendMessage(GetDlgItem(hwnd, IDC_JAP_INPUTS), BM_SETCHECK, settings->getEnableJapInput(), 0);
+    // Local input settings
+    if (::GetDlgItem(hwnd, IDC_DISABLE_LOCAL_INPUTS))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_DISABLE_LOCAL_INPUTS), BM_SETCHECK, static_cast<WPARAM>(settings->getDisableLocalInputs()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_FORCE_SHAPE))
-		SendMessage(GetDlgItem(hwnd, IDC_FORCE_SHAPE), BM_SETCHECK, settings->getForceCursorShape(), 0);
+    // japanese keybaord
+    if (::GetDlgItem(hwnd, IDC_JAP_INPUTS))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_JAP_INPUTS), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableJapInput()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_UNICODE_INPUTS))
-		SendMessage(GetDlgItem(hwnd, IDC_UNICODE_INPUTS), BM_SETCHECK, settings->getEnableUnicodeInput(), 0);
+    if (::GetDlgItem(hwnd, IDC_FORCE_SHAPE))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_FORCE_SHAPE), BM_SETCHECK, static_cast<WPARAM>(settings->getForceCursorShape()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_WIN8_HELPER))
-		SendMessage(GetDlgItem(hwnd, IDC_WIN8_HELPER), BM_SETCHECK, settings->getEnableWin8Helper(), 0);
+    if (::GetDlgItem(hwnd, IDC_UNICODE_INPUTS))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_UNICODE_INPUTS), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableUnicodeInput()), 0);
+    }
 
-	// Remove the wallpaper
-	if (GetDlgItem(hwnd, IDC_REMOVE_WALLPAPER))
-		SendMessage(GetDlgItem(hwnd, IDC_REMOVE_WALLPAPER), BM_SETCHECK, settings->getRemoveWallpaper(), 0);
+    if (::GetDlgItem(hwnd, IDC_WIN8_HELPER))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_WIN8_HELPER), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableWin8Helper()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_LOCKSETTING_LOCK)) {
-		HWND hLockSetting{};
-		switch (settings->getLockSettings()) {
-		case 1:
-			hLockSetting = GetDlgItem(hwnd, IDC_LOCKSETTING_LOCK);
-			break;
-		case 2:
-			hLockSetting = GetDlgItem(hwnd, IDC_LOCKSETTING_LOGOFF);
-			break;
-		default:
-			hLockSetting = GetDlgItem(hwnd, IDC_LOCKSETTING_NOTHING);
-		};
-		SendMessage(hLockSetting,
-			BM_SETCHECK,
-			TRUE,
-			0);
-	}
+    // Remove the wallpaper
+    if (::GetDlgItem(hwnd, IDC_REMOVE_WALLPAPER))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_REMOVE_WALLPAPER), BM_SETCHECK, static_cast<WPARAM>(settings->getRemoveWallpaper()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_RADIONOTIFICATIONIFPROVIDED)) {
-		HWND hNotificationSelection{};
-		switch (settings->getNotificationSelection()) {
-		case 1:
-			hNotificationSelection = GetDlgItem(hwnd, IDC_RADIONOTIFICATIONIFPROVIDED);
-			break;
-		default:
-			hNotificationSelection = GetDlgItem(hwnd,
-				IDC_RADIONOTIFICATIONON);
-			break;
-		};
-		SendMessage(hNotificationSelection, BM_SETCHECK, TRUE, 0);
-	}
+    if (::GetDlgItem(hwnd, IDC_LOCKSETTING_LOCK))
+    {
+        HWND hLockSetting{};
+        switch (settings->getLockSettings())
+        {
+        case 1:
+            hLockSetting = ::GetDlgItem(hwnd, IDC_LOCKSETTING_LOCK);
+            break;
+        case 2:
+            hLockSetting = ::GetDlgItem(hwnd, IDC_LOCKSETTING_LOGOFF);
+            break;
+        default:
+            hLockSetting = ::GetDlgItem(hwnd, IDC_LOCKSETTING_NOTHING);
+        }
+        ::SendMessage(hLockSetting, BM_SETCHECK, TRUE, 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_MV1)) {
-		HWND hmvSetting = 0;
-		switch (settings->getConnectPriority()) {
-		case 0:
-			hmvSetting = GetDlgItem(hwnd, IDC_MV1);
-			break;
-		case 1:
-			hmvSetting = GetDlgItem(hwnd, IDC_MV2);
-			break;
-		case 2:
-			hmvSetting = GetDlgItem(hwnd, IDC_MV3);
-			break;
-		case 3:
-			hmvSetting = GetDlgItem(hwnd, IDC_MV4);
-			break;
-		};
-		SendMessage(hmvSetting,
-			BM_SETCHECK,
-			TRUE,
-			0);
-	}
+    if (::GetDlgItem(hwnd, IDC_RADIONOTIFICATIONIFPROVIDED))
+    {
+        HWND hNotificationSelection{};
+        switch (settings->getNotificationSelection())
+        {
+        case 1:
+            hNotificationSelection = ::GetDlgItem(hwnd, IDC_RADIONOTIFICATIONIFPROVIDED);
+            break;
+        default:
+            hNotificationSelection = ::GetDlgItem(hwnd, IDC_RADIONOTIFICATIONON);
+            break;
+        }
+        ::SendMessage(hNotificationSelection, BM_SETCHECK, TRUE, 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_MAXREFUSE)) {
-		HWND hMaxViewerSetting = NULL;
-		switch (settings->getMaxViewerSetting()) {
-		case 0:
-			hMaxViewerSetting = GetDlgItem(hwnd, IDC_MAXREFUSE);
-			break;
-		case 1:
-			hMaxViewerSetting = GetDlgItem(hwnd, IDC_MAXDISCONNECT);
-			break;
-		default:
-			hMaxViewerSetting = GetDlgItem(hwnd, IDC_MAXREFUSE);
-		};
-		SendMessage(hMaxViewerSetting,
-			BM_SETCHECK,
-			TRUE,
-			0);
-	}
+    if (::GetDlgItem(hwnd, IDC_MV1))
+    {
+        HWND hmvSetting = nullptr;
+        switch (settings->getConnectPriority())
+        {
+        case 0:
+            hmvSetting = ::GetDlgItem(hwnd, IDC_MV1);
+            break;
+        case 1:
+            hmvSetting = ::GetDlgItem(hwnd, IDC_MV2);
+            break;
+        case 2:
+            hmvSetting = ::GetDlgItem(hwnd, IDC_MV3);
+            break;
+        case 3:
+            hmvSetting = ::GetDlgItem(hwnd, IDC_MV4);
+            break;
+        }
+        ::SendMessage(hmvSetting, BM_SETCHECK, TRUE, 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_COLLABO))
-		SendMessage(GetDlgItem(hwnd, IDC_COLLABO), BM_SETCHECK, settings->getCollabo(), 0);
+    if (::GetDlgItem(hwnd, IDC_MAXREFUSE))
+    {
+        HWND hMaxViewerSetting = nullptr;
+        switch (settings->getMaxViewerSetting())
+        {
+        case 0:
+            hMaxViewerSetting = ::GetDlgItem(hwnd, IDC_MAXREFUSE);
+            break;
+        case 1:
+            hMaxViewerSetting = ::GetDlgItem(hwnd, IDC_MAXDISCONNECT);
+            break;
+        default:
+            hMaxViewerSetting = ::GetDlgItem(hwnd, IDC_MAXREFUSE);
+        }
+        ::SendMessage(hMaxViewerSetting, BM_SETCHECK, TRUE, 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_FRAME))
-		SendMessage(GetDlgItem(hwnd, IDC_FRAME), BM_SETCHECK, settings->getFrame(), 0);
+    if (::GetDlgItem(hwnd, IDC_COLLABO))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_COLLABO), BM_SETCHECK, static_cast<WPARAM>(settings->getCollabo()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_NOTIFOCATION))
-		SendMessage(GetDlgItem(hwnd, IDC_NOTIFOCATION), BM_SETCHECK, settings->getNotification(), 0);
+    if (::GetDlgItem(hwnd, IDC_FRAME))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_FRAME), BM_SETCHECK, static_cast<WPARAM>(settings->getFrame()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_OSD))
-		SendMessage(GetDlgItem(hwnd, IDC_OSD), BM_SETCHECK, settings->getOSD(), 0);
+    if (::GetDlgItem(hwnd, IDC_NOTIFOCATION))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_NOTIFOCATION), BM_SETCHECK, static_cast<WPARAM>(settings->getNotification()), 0);
+    }
 
-	char maxviewersChar[128]{};
-	UINT maxviewers = settings->getMaxViewers();
-	sprintf_s(maxviewersChar, "%d", (int)maxviewers);
-	SetDlgItemText(hwnd, IDC_MAXVIEWERS, (const char*)maxviewersChar);
+    if (::GetDlgItem(hwnd, IDC_OSD))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_OSD), BM_SETCHECK, static_cast<WPARAM>(settings->getOSD()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_PLUGINS_COMBO)) {
-		HWND hPlugins = GetDlgItem(hwnd, IDC_PLUGINS_COMBO);
-		int nPlugins = ListPlugins(hPlugins);
+    std::array<char, 128U> maxviewersChar{};
+    UINT maxviewers = settings->getMaxViewers();
+    ::sprintf_s(maxviewersChar.data(), maxviewersChar.size(), "%d", static_cast<int>(maxviewers));
+    ::SetDlgItemText(hwnd, IDC_MAXVIEWERS, reinterpret_cast<const char*>(maxviewersChar.data()));
+
+    if (::GetDlgItem(hwnd, IDC_PLUGINS_COMBO))
+    {
+        HWND hPlugins = ::GetDlgItem(hwnd, IDC_PLUGINS_COMBO);
+        int nPlugins = ListPlugins(hPlugins);
 #ifndef SC_20
-		if (!nPlugins) {
-			SendMessage(hPlugins, CB_ADDSTRING, 0, (LPARAM)sz_ID_NO_PLUGIN_DETECT);
-			SendMessage(hPlugins, CB_SETCURSEL, 0, 0);
-		}
-		else
-			SendMessage(hPlugins, CB_SELECTSTRING, 0, (LPARAM)settings->getSzDSMPlugin());
+        if (!nPlugins)
+        {
+            ::SendMessage(hPlugins, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(sz_ID_NO_PLUGIN_DETECT.data()));
+            ::SendMessage(hPlugins, CB_SETCURSEL, 0, 0);
+        }
+        else
+        {
+            ::SendMessage(hPlugins, CB_SELECTSTRING, 0, reinterpret_cast<LPARAM>(settings->getSzDSMPlugin()));
+        }
 #else
-		SendMessage(hPlugins, CB_ADDSTRING, 0, (LPARAM)settings->getSzDSMPlugin());
-		SendMessage(hPlugins, CB_SETCURSEL, 0, 0);
-		SendMessage(hPlugins, CB_SELECTSTRING, 0, (LPARAM)settings->getSzDSMPlugin());
+        ::SendMessage(hPlugins, CB_ADDSTRING, 0, (LPARAM)settings->getSzDSMPlugin());
+        ::SendMessage(hPlugins, CB_SETCURSEL, 0, 0);
+        ::SendMessage(hPlugins, CB_SELECTSTRING, 0, (LPARAM)settings->getSzDSMPlugin());
 #endif // SC_20
-	}
+    }
 
-	if (GetDlgItem(hwnd, IDC_PLUGIN_CHECK)) {
+    if (::GetDlgItem(hwnd, IDC_PLUGIN_CHECK))
+    {
 
-		TCHAR szPlugin[MAX_PATH];
-		TCHAR szPluginDefault[MAX_PATH] = "No Plugin detected...";
-		GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin, MAX_PATH);
-		bool pluginset = (strcmp(szPlugin, szPluginDefault) != 0) && strlen(szPlugin) > 0;
-		SendMessage(GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_SETCHECK, settings->getUseDSMPlugin(), 0);
-		EnableWindow(GetDlgItem(hwnd, IDC_PLUGIN_BUTTON), (m_server == NULL || m_server->AuthClientCount() == 0)
-			? (SendMessage(GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED) && pluginset
-			: BST_UNCHECKED);
-		EnableWindow(GetDlgItem(hwnd, IDC_PLUGINS_COMBO), SendMessage(GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}	
+        std::array<TCHAR, MAX_PATH> szPlugin;
+        std::array<TCHAR, MAX_PATH> szPluginDefault{"No Plugin detected..."};
+        ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), static_cast<int>(szPlugin.size()));
+        bool pluginset = (std::strcmp(szPlugin.data(), szPluginDefault.data()) != 0) && (std::strlen(szPlugin.data()) > 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_SETCHECK, static_cast<WPARAM>(settings->getUseDSMPlugin()), 0);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PLUGIN_BUTTON),
+                     (((m_server == nullptr) || (m_server->AuthClientCount() == 0))
+                          ? (::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED) && pluginset
+                          : BST_UNCHECKED));
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PLUGINS_COMBO),
+                     ::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
 
-	// Query window option - Taken from TightVNC advanced properties
-	if (GetDlgItem(hwnd, IDC_DREFUSE)) {
-		HWND hQuerySetting{};
-		int QueryAccept = 0;
-		if (settings->getQuerySetting() == 2)
-			QueryAccept = 0;
-		else
-			QueryAccept = settings->getQueryAccept();
+    // Query window option - Taken from TightVNC advanced properties
+    if (::GetDlgItem(hwnd, IDC_DREFUSE))
+    {
+        HWND hQuerySetting{};
+        int QueryAccept{ 0 };
+        if (settings->getQuerySetting() == 2)
+        {
+            QueryAccept = 0;
+        }
+        else
+        {
+            QueryAccept = static_cast<int>(settings->getQueryAccept());
+        }
 
-		switch (QueryAccept) {
-		case 0:
-			hQuerySetting = GetDlgItem(hwnd, IDC_DREFUSE);
-			break;
-		case 1:
-			hQuerySetting = GetDlgItem(hwnd, IDC_DACCEPT);
-			break;
-		case 2:
-			hQuerySetting = GetDlgItem(hwnd, IDC_DRefuseOnly);
-			break;
-		default:
-			hQuerySetting = GetDlgItem(hwnd, IDC_DREFUSE);
-		};
-		SendMessage(hQuerySetting,
-			BM_SETCHECK,
-			TRUE,
-			0);
-	}
+        switch (QueryAccept)
+        {
+        case 0:
+            hQuerySetting = ::GetDlgItem(hwnd, IDC_DREFUSE);
+            break;
+        case 1:
+            hQuerySetting = ::GetDlgItem(hwnd, IDC_DACCEPT);
+            break;
+        case 2:
+            hQuerySetting = ::GetDlgItem(hwnd, IDC_DRefuseOnly);
+            break;
+        default:
+            hQuerySetting = ::GetDlgItem(hwnd, IDC_DREFUSE);
+        }
+        ::SendMessage(hQuerySetting, BM_SETCHECK, TRUE, 0);
+    }
 
-	BOOL queryEnabled = (settings->getQuerySetting() == 4);
+    BOOL queryEnabled = (settings->getQuerySetting() == 4);
 
-	if (GetDlgItem(hwnd, IDQUERY))
-		SendMessage(GetDlgItem(hwnd, IDQUERY), BM_SETCHECK, queryEnabled, 0);
-	if (GetDlgItem(hwnd, IDQUERYTIMEOUT)) {
-		EnableWindow(GetDlgItem(hwnd, IDQUERYTIMEOUT), queryEnabled);
-		char timeout[128]{};
-		UINT t = settings->getQueryTimeout();
-		sprintf_s(timeout, "%d", (int)t);
-		SetDlgItemText(hwnd, IDQUERYTIMEOUT, (const char*)timeout);
-	}
-	if (GetDlgItem(hwnd, IDC_QUERYDISABLETIME)) {
-		EnableWindow(GetDlgItem(hwnd, IDC_QUERYDISABLETIME), queryEnabled);
-		char disableTime[128]{};
-		UINT tt = settings->getQueryDisableTime();
-		sprintf_s(disableTime, "%d", (int)tt);
-		SetDlgItemText(hwnd, IDC_QUERYDISABLETIME, (const char*)disableTime);
-	}
-	if (GetDlgItem(hwnd, IDC_DREFUSE))
-		EnableWindow(GetDlgItem(hwnd, IDC_DREFUSE), queryEnabled);
-	if (GetDlgItem(hwnd, IDC_DRefuseOnly))
-		EnableWindow(GetDlgItem(hwnd, IDC_DRefuseOnly), queryEnabled);
-	if (GetDlgItem(hwnd, IDC_DACCEPT))
-		EnableWindow(GetDlgItem(hwnd, IDC_DACCEPT), queryEnabled);
-	if (GetDlgItem(hwnd, IDC_QNOLOGON))
-		EnableWindow(GetDlgItem(hwnd, IDC_QNOLOGON), queryEnabled);
-	if (GetDlgItem(hwnd, IDC_EDITQUERYTEXT))
-		EnableWindow(GetDlgItem(hwnd, IDC_EDITQUERYTEXT), queryEnabled);
+    if (::GetDlgItem(hwnd, IDQUERY))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDQUERY), BM_SETCHECK, static_cast<WPARAM>(queryEnabled), 0);
+    }
+    if (::GetDlgItem(hwnd, IDQUERYTIMEOUT))
+    {
+        ::EnableWindow(::GetDlgItem(hwnd, IDQUERYTIMEOUT), queryEnabled);
+        std::array<char, 128U> timeout{};
+        UINT t = settings->getQueryTimeout();
+        ::sprintf_s(timeout.data(), timeout.size(), "%d", static_cast<int>(t));
+        ::SetDlgItemText(hwnd, IDQUERYTIMEOUT, reinterpret_cast<const char*>(timeout.data()));
+    }
+    if (::GetDlgItem(hwnd, IDC_QUERYDISABLETIME))
+    {
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_QUERYDISABLETIME), queryEnabled);
+        std::array<char, 128U> disableTime{};
+        UINT tt = settings->getQueryDisableTime();
+        ::sprintf_s(disableTime.data(), disableTime.size(), "%d", static_cast<int>(tt));
+        ::SetDlgItemText(hwnd, IDC_QUERYDISABLETIME, reinterpret_cast<const char*>(disableTime.data()));
+    }
+    if (::GetDlgItem(hwnd, IDC_DREFUSE))
+    {
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_DREFUSE), queryEnabled);
+    }
+    if (::GetDlgItem(hwnd, IDC_DRefuseOnly))
+    {
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_DRefuseOnly), queryEnabled);
+    }
+    if (::GetDlgItem(hwnd, IDC_DACCEPT))
+    {
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_DACCEPT), queryEnabled);
+    }
+    if (::GetDlgItem(hwnd, IDC_QNOLOGON))
+    {
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_QNOLOGON), queryEnabled);
+    }
+    if (::GetDlgItem(hwnd, IDC_EDITQUERYTEXT))
+    {
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_EDITQUERYTEXT), queryEnabled);
+    }
 
 
 
-	//////////////////
+    //////////////////
 
-	if (GetDlgItem(hwnd, IDC_SERVICE_COMMANDLINE))
-		SetDlgItemText(hwnd, IDC_SERVICE_COMMANDLINE, settings->getService_commandline());
-	if (GetDlgItem(hwnd, IDC_EDITQUERYTEXT))
-		SetDlgItemText(hwnd, IDC_EDITQUERYTEXT, settings->getAccept_reject_mesg());
+    if (::GetDlgItem(hwnd, IDC_SERVICE_COMMANDLINE))
+    {
+        ::SetDlgItemText(hwnd, IDC_SERVICE_COMMANDLINE, settings->getService_commandline());
+    }
+    if (::GetDlgItem(hwnd, IDC_EDITQUERYTEXT))
+    {
+        ::SetDlgItemText(hwnd, IDC_EDITQUERYTEXT, settings->getAccept_reject_mesg());
+    }
 
-	if (GetDlgItem(hwnd, IDC_SLIDERFPS)) {
-		HWND slider = GetDlgItem(hwnd, IDC_SLIDERFPS);
-			SendMessage(slider, TBM_SETRANGE, (WPARAM)1, (LPARAM)MAKELONG(5, 60));
-			SendMessage(slider, TBM_SETTICFREQ, 1, 10);
-			SendMessage(slider, TBM_SETPOS, true, settings->getMaxFPS());
-			if (settings->getddEngine())
-				EnableWindow(slider, settings->getDriver());
-			else
-				EnableWindow(slider, false);
-	}
+    if (::GetDlgItem(hwnd, IDC_SLIDERFPS))
+    {
+        HWND slider = ::GetDlgItem(hwnd, IDC_SLIDERFPS);
+        ::SendMessage(slider, TBM_SETRANGE, static_cast<WPARAM>(1), static_cast<LPARAM>(MAKELONG(5, 60)));
+        ::SendMessage(slider, TBM_SETTICFREQ, 1, 10);
+        ::SendMessage(slider, TBM_SETPOS, true, settings->getMaxFPS());
+        if (settings->getddEngine())
+        {
+            ::EnableWindow(slider, settings->getDriver());
+        }
+        else
+        {
+            ::EnableWindow(slider, false);
+        }
+    }
 
-	if (GetDlgItem(hwnd, IDC_STATICFPS)) {
-		CHAR temp[250];
-		sprintf_s(temp, "%d", settings->getMaxFPS());
-		SetDlgItemText(hwnd, IDC_STATICFPS, temp);
-	}
+    if (::GetDlgItem(hwnd, IDC_STATICFPS))
+    {
+        std::array<CHAR, 250U> temp;
+        ::sprintf_s(temp.data(), temp.size(), "%d", settings->getMaxFPS());
+        ::SetDlgItemText(hwnd, IDC_STATICFPS, temp.data());
+    }
 
-	if (settings->getddEngine()) {
-		if (GetDlgItem(hwnd, IDC_CHECKDRIVER))
-			ShowWindow(GetDlgItem(hwnd, IDC_CHECKDRIVER), false);
-		if (GetDlgItem(hwnd, IDC_STATICELEVATED))
-			ShowWindow(GetDlgItem(hwnd, IDC_STATICELEVATED), false);
-		if (GetDlgItem(hwnd, IDC_STATICFPS60))
-			EnableWindow(GetDlgItem(hwnd, IDC_STATICFPS60), settings->getDriver());
-		if (GetDlgItem(hwnd, IDC_STATICFPS5))
-			EnableWindow(GetDlgItem(hwnd, IDC_STATICFPS5), settings->getDriver());
-		if (GetDlgItem(hwnd, IDC_DRIVER))
-			SetWindowText(GetDlgItem(hwnd, IDC_DRIVER), "DDEngine (restart on change required)");
-	}
-	else {
-		if (GetDlgItem(hwnd, IDC_STATICFPS60))
-			EnableWindow(GetDlgItem(hwnd, IDC_STATICFPS60), false);
-		if (GetDlgItem(hwnd, IDC_STATICFPS5))
-			EnableWindow(GetDlgItem(hwnd, IDC_STATICFPS5), false);
-	}
-	if (GetDlgItem(hwnd, IDC_MAXCPU))
-		SetDlgItemInt(hwnd, IDC_MAXCPU, settings->getMaxCpu(), false);
+    if (settings->getddEngine())
+    {
+        if (::GetDlgItem(hwnd, IDC_CHECKDRIVER))
+        {
+            ::ShowWindow(::GetDlgItem(hwnd, IDC_CHECKDRIVER), false);
+        }
+        if (::GetDlgItem(hwnd, IDC_STATICELEVATED))
+        {
+            ::ShowWindow(::GetDlgItem(hwnd, IDC_STATICELEVATED), false);
+        }
+        if (::GetDlgItem(hwnd, IDC_STATICFPS60))
+        {
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_STATICFPS60), settings->getDriver());
+        }
+        if (::GetDlgItem(hwnd, IDC_STATICFPS5))
+        {
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_STATICFPS5), settings->getDriver());
+        }
+        if (::GetDlgItem(hwnd, IDC_DRIVER))
+        {
+            ::SetWindowText(::GetDlgItem(hwnd, IDC_DRIVER), "DDEngine (restart on change required)");
+        }
+    }
+    else
+    {
+        if (::GetDlgItem(hwnd, IDC_STATICFPS60))
+        {
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_STATICFPS60), false);
+        }
+        if (::GetDlgItem(hwnd, IDC_STATICFPS5))
+        {
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_STATICFPS5), false);
+        }
+    }
+    if (::GetDlgItem(hwnd, IDC_MAXCPU))
+    {
+        ::SetDlgItemInt(hwnd, IDC_MAXCPU, static_cast<UINT>(settings->getMaxCpu()), false);
+    }
 
-	if (GetDlgItem(hwnd, IDC_TURBOMODE))
-		SendMessage(GetDlgItem(hwnd, IDC_TURBOMODE), BM_SETCHECK, settings->getTurboMode(), 0);
+    if (::GetDlgItem(hwnd, IDC_TURBOMODE))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_TURBOMODE), BM_SETCHECK, static_cast<WPARAM>(settings->getTurboMode()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_DRIVER))
-		SendMessage(GetDlgItem(hwnd, IDC_DRIVER), BM_SETCHECK, settings->getDriver(), 0);
+    if (::GetDlgItem(hwnd, IDC_DRIVER))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_DRIVER), BM_SETCHECK, static_cast<WPARAM>(settings->getDriver()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_HOOK))
-		SendMessage(GetDlgItem(hwnd, IDC_HOOK), BM_SETCHECK, settings->getHook(), 0);
+    if (::GetDlgItem(hwnd, IDC_HOOK))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_HOOK), BM_SETCHECK, static_cast<WPARAM>(settings->getHook()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_POLL_FULLSCREEN))
-		SendMessage(GetDlgItem(hwnd, IDC_POLL_FULLSCREEN), BM_SETCHECK, settings->getPollFullScreen(), 0);
+    if (::GetDlgItem(hwnd, IDC_POLL_FULLSCREEN))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_FULLSCREEN), BM_SETCHECK, static_cast<WPARAM>(settings->getPollFullScreen()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_POLL_FOREGROUND))
-		SendMessage(GetDlgItem(hwnd, IDC_POLL_FOREGROUND), BM_SETCHECK, settings->getPollForeground(), 0);
+    if (::GetDlgItem(hwnd, IDC_POLL_FOREGROUND))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_FOREGROUND), BM_SETCHECK, static_cast<WPARAM>(settings->getPollForeground()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR))
-		SendMessage(GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR), BM_SETCHECK, settings->getPollUnderCursor(), 0);
+    if (::GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR), BM_SETCHECK, static_cast<WPARAM>(settings->getPollUnderCursor()), 0);
+    }
 
-	if (GetDlgItem(hwnd, IDC_CONSOLE_ONLY)) {
-		SendMessage(GetDlgItem(hwnd, IDC_CONSOLE_ONLY), BM_SETCHECK, settings->getPollConsoleOnly(), 0);
-		EnableWindow(GetDlgItem(hwnd, IDC_CONSOLE_ONLY), settings->getPollUnderCursor() || settings->getPollForeground());
-	}
+    if (::GetDlgItem(hwnd, IDC_CONSOLE_ONLY))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_CONSOLE_ONLY), BM_SETCHECK, static_cast<WPARAM>(settings->getPollConsoleOnly()), 0);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_CONSOLE_ONLY), (settings->getPollUnderCursor() || settings->getPollForeground()));
+    }
 
-	if (GetDlgItem(hwnd, IDC_ONEVENT_ONLY)) {
-		SendMessage(GetDlgItem(hwnd, IDC_ONEVENT_ONLY), BM_SETCHECK, settings->getPollOnEventOnly(), 0);
-		EnableWindow(GetDlgItem(hwnd, IDC_ONEVENT_ONLY), settings->getPollUnderCursor() || settings->getPollForeground());
-	}
+    if (::GetDlgItem(hwnd, IDC_ONEVENT_ONLY))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ONEVENT_ONLY), BM_SETCHECK, static_cast<WPARAM>(settings->getPollOnEventOnly()), 0);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_ONEVENT_ONLY), (settings->getPollUnderCursor() || settings->getPollForeground()));
+    }
 
-	if (GetDlgItem(hwnd, IDC_AUTOCAPT1))
-		CheckDlgButton(hwnd, IDC_AUTOCAPT1, (settings->getAutocapt() == 1) ? BST_CHECKED : BST_UNCHECKED);
-	if (GetDlgItem(hwnd, IDC_AUTOCAPT2))
-		CheckDlgButton(hwnd, IDC_AUTOCAPT2, (settings->getAutocapt() == 2) ? BST_CHECKED : BST_UNCHECKED);
-	if (GetDlgItem(hwnd, IDC_AUTOCAPT3))
-		CheckDlgButton(hwnd, IDC_AUTOCAPT3, (settings->getAutocapt() == 3) ? BST_CHECKED : BST_UNCHECKED);
+    if (::GetDlgItem(hwnd, IDC_AUTOCAPT1))
+    {
+        ::CheckDlgButton(hwnd, IDC_AUTOCAPT1, (settings->getAutocapt() == 1) ? BST_CHECKED : BST_UNCHECKED);
+    }
+    if (::GetDlgItem(hwnd, IDC_AUTOCAPT2))
+    {
+        ::CheckDlgButton(hwnd, IDC_AUTOCAPT2, (settings->getAutocapt() == 2) ? BST_CHECKED : BST_UNCHECKED);
+    }
+    if (::GetDlgItem(hwnd, IDC_AUTOCAPT3))
+    {
+        ::CheckDlgButton(hwnd, IDC_AUTOCAPT3, (settings->getAutocapt() == 3) ? BST_CHECKED : BST_UNCHECKED);
+    }
 
-	if (GetDlgItem(hwnd, IDC_IDLETIME))
-		SetDlgItemInt(hwnd, IDC_IDLETIME, settings->getIdleTimeout(), FALSE);
-	if (GetDlgItem(hwnd, IDC_IDLETIMEINPUT))
-		SetDlgItemInt(hwnd, IDC_IDLETIMEINPUT, settings->getIdleInputTimeout(), FALSE);
-	if (GetDlgItem(hwnd, IDC_KINTERVAL))
-		SetDlgItemInt(hwnd, IDC_KINTERVAL, settings->getkeepAliveInterval(), FALSE);
+    if (::GetDlgItem(hwnd, IDC_IDLETIME))
+    {
+        ::SetDlgItemInt(hwnd, IDC_IDLETIME, settings->getIdleTimeout(), FALSE);
+    }
+    if (::GetDlgItem(hwnd, IDC_IDLETIMEINPUT))
+    {
+        ::SetDlgItemInt(hwnd, IDC_IDLETIMEINPUT, static_cast<UINT>(settings->getIdleInputTimeout()), FALSE);
+    }
+    if (::GetDlgItem(hwnd, IDC_KINTERVAL))
+    {
+        ::SetDlgItemInt(hwnd, IDC_KINTERVAL, static_cast<UINT>(settings->getkeepAliveInterval()), FALSE);
+    }
 
-	if (GetDlgItem(hwnd, IDC_AUTHREQUIRED))
-		CheckDlgButton(hwnd, IDC_AUTHREQUIRED, (settings->getAuthRequired() == 1) ? BST_CHECKED : BST_UNCHECKED);
-	EnableWindow(GetDlgItem(hwnd, IDC_CLEARPASSWORD), settings->getAuthRequired() == 0);
-	EnableWindow(GetDlgItem(hwnd, IDC_CLEARPASSWORDVO), settings->getAuthRequired() == 0);
+    if (::GetDlgItem(hwnd, IDC_AUTHREQUIRED))
+    {
+        ::CheckDlgButton(hwnd, IDC_AUTHREQUIRED, (settings->getAuthRequired() == 1) ? BST_CHECKED : BST_UNCHECKED);
+    }
+    ::EnableWindow(::GetDlgItem(hwnd, IDC_CLEARPASSWORD), settings->getAuthRequired() == 0);
+    ::EnableWindow(::GetDlgItem(hwnd, IDC_CLEARPASSWORDVO), settings->getAuthRequired() == 0);
 
-	if (GetDlgItem(hwnd, IDC_ALLOWUSERSSETTINGS)) {
-		CheckDlgButton(hwnd, IDC_ALLOWUSERSSETTINGS, (settings->getAllowUserSettingsWithPassword() == 1) ? BST_CHECKED : BST_UNCHECKED);
-	}
+    if (::GetDlgItem(hwnd, IDC_ALLOWUSERSSETTINGS))
+    {
+        ::CheckDlgButton(hwnd, IDC_ALLOWUSERSSETTINGS,
+                       (settings->getAllowUserSettingsWithPassword() == 1) ? BST_CHECKED : BST_UNCHECKED);
+    }
 
-	if (GetDlgItem(hwnd, IDC_QNOLOGON))
-		SendMessage(GetDlgItem(hwnd, IDC_QNOLOGON), BM_SETCHECK, !settings->getQueryIfNoLogon(), 0);
+    if (::GetDlgItem(hwnd, IDC_QNOLOGON))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_QNOLOGON), BM_SETCHECK, !settings->getQueryIfNoLogon(), 0);
+    }
 
-	if (!settings->getLoopbackOnly() && GetDlgItem(hwnd, IDC_IP_ACCESS_CONTROL_LIST))
-		rulesListView->init(GetDlgItem(hwnd, IDC_IP_ACCESS_CONTROL_LIST));
+    if (!settings->getLoopbackOnly() && GetDlgItem(hwnd, IDC_IP_ACCESS_CONTROL_LIST))
+    {
+        rulesListView->init(::GetDlgItem(hwnd, IDC_IP_ACCESS_CONTROL_LIST));
+    }
 
-	if (GetDlgItem(hwnd, IDC_PRIM))
-		SendMessage(GetDlgItem(hwnd, IDC_PRIM), BM_SETCHECK, settings->getPrimary(), 0);
-	if (GetDlgItem(hwnd, IDC_SEC))
-		SendMessage(GetDlgItem(hwnd, IDC_SEC), BM_SETCHECK, settings->getSecondary(), 0);
+    if (::GetDlgItem(hwnd, IDC_PRIM))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_PRIM), BM_SETCHECK, static_cast<WPARAM>(settings->getPrimary()), 0);
+    }
+    if (::GetDlgItem(hwnd, IDC_SEC))
+    {
+        ::SendMessage(::GetDlgItem(hwnd, IDC_SEC), BM_SETCHECK, static_cast<WPARAM>(settings->getSecondary()), 0);
+    }
 
-	// Initialize language combobox by scanning languages folder for DLLs
-	if (GetDlgItem(hwnd, IDC_LANGUAGE_COMBO)) {
-		HWND hCombo = GetDlgItem(hwnd, IDC_LANGUAGE_COMBO);
-		SendMessage(hCombo, CB_RESETCONTENT, 0, 0);
-		
-		// Add English as default (always available, no DLL needed)
-		int idx = (int)SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)L"English");
-		SendMessage(hCombo, CB_SETITEMDATA, idx, (LPARAM)_wcsdup(L"en"));
-		
-		// Get exe path to find languages folder (use Unicode for proper international support)
-		wchar_t exePathW[MAX_PATH];
-		wchar_t languagesPathW[MAX_PATH];
-		wchar_t dllPathW[MAX_PATH];
-		GetModuleFileNameW(NULL, exePathW, MAX_PATH);
-		wchar_t* lastSlashW = wcsrchr(exePathW, L'\\');
-		if (lastSlashW) *lastSlashW = L'\0';
-		
-		// Search for winvnclang_*.dll in languages subfolder
-		swprintf_s(languagesPathW, L"%s\\languages\\winvnclang_*.dll", exePathW);
-		
-		WIN32_FIND_DATAW findDataW;
-		HANDLE hFind = FindFirstFileW(languagesPathW, &findDataW);
-		
-		if (hFind != INVALID_HANDLE_VALUE) {
-			do {
-				// Extract language code from filename (winvnclang_XX.dll)
-				wchar_t* underscoreW = wcsstr(findDataW.cFileName, L"_");
-				wchar_t* dotW = wcsstr(findDataW.cFileName, L".");
-				
-				if (underscoreW && dotW && dotW > underscoreW) {
-					wchar_t langCodeW[32] = {0};
-					size_t len = (size_t)(dotW - underscoreW - 1);
-					if (len > 31) len = 31;
-					wcsncpy_s(langCodeW, underscoreW + 1, len);
-					
-					// Build full path to DLL
-					swprintf_s(dllPathW, L"%s\\languages\\%s", exePathW, findDataW.cFileName);
-					
-					// Load DLL temporarily to read language name
-					HMODULE hLangDll = LoadLibraryExW(dllPathW, NULL, LOAD_LIBRARY_AS_DATAFILE);
-					wchar_t displayNameW[64] = {0};
-					
-					if (hLangDll) {
-						// Try to load IDS_LANGUAGE_NAME string resource from DLL using Unicode
-						if (LoadStringW(hLangDll, IDS_LANGUAGE_NAME, displayNameW, _countof(displayNameW)) > 0) {
-							// Successfully loaded language name from DLL
-							idx = (int)SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)displayNameW);
-							SendMessage(hCombo, CB_SETITEMDATA, idx, (LPARAM)_wcsdup(langCodeW));
-						}
-						else {
-							// Fallback: use language code if string not found
-							swprintf_s(displayNameW, _countof(displayNameW), L"Language (%s)", langCodeW);
-							idx = (int)SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)displayNameW);
-							SendMessage(hCombo, CB_SETITEMDATA, idx, (LPARAM)_wcsdup(langCodeW));
-						}
-						FreeLibrary(hLangDll);
-					}
-					else {
-						// DLL couldn't be loaded, use code as fallback
-						swprintf_s(displayNameW, _countof(displayNameW), L"Language (%s)", langCodeW);
-						idx = (int)SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)displayNameW);
-						SendMessage(hCombo, CB_SETITEMDATA, idx, (LPARAM)_wcsdup(langCodeW));
-					}
-				}
-			} while (FindNextFileW(hFind, &findDataW));
-			FindClose(hFind);
-		}
-		
-		// Select current language
-		const char* currentLang = settings->getLanguage();
-		wchar_t currentLangW[32] = {0};
-		MultiByteToWideChar(CP_UTF8, 0, currentLang, -1, currentLangW, 32);
-		
-		int count = (int)SendMessage(hCombo, CB_GETCOUNT, 0, 0);
-		for (int i = 0; i < count; i++) {
-			wchar_t* langCodeW = (wchar_t*)SendMessage(hCombo, CB_GETITEMDATA, i, 0);
-			if (langCodeW && _wcsicmp(langCodeW, currentLangW) == 0) {
-				SendMessage(hCombo, CB_SETCURSEL, i, 0);
-				break;
-			}
-		}
-		// If no match found, select English (index 0)
-		if (SendMessage(hCombo, CB_GETCURSEL, 0, 0) == CB_ERR) {
-			SendMessage(hCombo, CB_SETCURSEL, 0, 0);
-		}
-	}
+    // Initialize language combobox by scanning languages folder for DLLs
+    if (::GetDlgItem(hwnd, IDC_LANGUAGE_COMBO))
+    {
+        HWND hCombo = ::GetDlgItem(hwnd, IDC_LANGUAGE_COMBO);
+        ::SendMessage(hCombo, CB_RESETCONTENT, 0, 0);
 
-	// SSL/TLS tab
-	if (GetDlgItem(hwnd, IDC_TLS_NOVNC_PORT)) {
-		SetDlgItemInt(hwnd, IDC_TLS_NOVNC_PORT, settings->getTLSPort(), FALSE);
-		SetDlgItemText(hwnd, IDC_TLS_THUMBPRINT, settings->getTLSCertThumbprint());
-	}
-	if (GetDlgItem(hwnd, IDC_VENCRYPT_ENABLE)) {
-		BOOL bVeNCrypt = settings->getEnableVeNCryptTLS();
-		SendMessage(GetDlgItem(hwnd, IDC_VENCRYPT_ENABLE), BM_SETCHECK, bVeNCrypt, 0);
-		SendMessage(GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_PLAIN), BM_SETCHECK, settings->getVeNCryptAllowPlainAuth(), 0);
-		SendMessage(GetDlgItem(hwnd, IDC_VENCRYPT_REQUIRE_PLUS), BM_SETCHECK, settings->getVeNCryptRequireChannelBinding(), 0);
-		SendMessage(GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_LEGACY), BM_SETCHECK, settings->getVeNCryptAllowLegacyAuth(), 0);
-		SendMessage(GetDlgItem(hwnd, IDC_ENABLE_RA2), BM_SETCHECK, settings->getEnableRA2(), 0);
-		SendMessage(GetDlgItem(hwnd, IDC_ENABLE_RA2NE), BM_SETCHECK, settings->getEnableRA2ne(), 0);
-		SetDlgItemText(hwnd, IDC_VENCRYPT_THUMBPRINT, settings->getVeNCryptTLSCertThumbprint());
-		SetDlgItemText(hwnd, IDC_VENCRYPT_DLLPATH, settings->getVeNCryptTokenDLLPath());
-		if (HWND hBits = GetDlgItem(hwnd, IDC_VENCRYPT_KEYBITS)) {
-			SendMessage(hBits, CB_RESETCONTENT, 0, 0);
-			int sel = 1;
-			for (int i = 0; i < (int)(sizeof(kSelfSignedKeyBits) / sizeof(kSelfSignedKeyBits[0])); i++) {
-				char buf[8];
-				sprintf_s(buf, "%u", kSelfSignedKeyBits[i]);
-				SendMessageA(hBits, CB_ADDSTRING, 0, (LPARAM)buf);
-				if (kSelfSignedKeyBits[i] == settings->getTLSCertKeyBits())
-					sel = i;
-			}
-			SendMessage(hBits, CB_SETCURSEL, sel, 0);
-		}
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_PLAIN), bVeNCrypt);
-		UpdateCertControlAvailability(hwnd, bVeNCrypt);
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_DLLPATH), bVeNCrypt);
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_DLL_BROWSE), bVeNCrypt);
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_REQUIRE_PLUS), bVeNCrypt);
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_LEGACY), bVeNCrypt);
-		LoadVeNCryptSubtypes(hwnd, settings->getVeNCryptSubtypes());
-		EnableVeNCryptSubtypes(hwnd, bVeNCrypt);
-		UpdateVeNCryptSubtypeAvailability(hwnd,
-			SendDlgItemMessage(hTabAuthentication, IDC_MSLOGON_CHECKD, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		UpdateVncPasswordAvailability(hTabAuthentication, hwnd);
-		UpdateWebClientTlsAvailability(hTabIncoming, hwnd);
-		UpdateManageUsersButton(hwnd);
-	}
+        // Add English as default (always available, no DLL needed)
+        int idx = static_cast<int>(::SendMessageW(hCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"English")));
+        ::SendMessage(hCombo, CB_SETITEMDATA, static_cast<WPARAM>(idx), reinterpret_cast<LPARAM>(_wcsdup(L"en")));
 
-	SetForegroundWindow(hwnd);
-	EnableWindow(GetDlgItem(PropertiesDialogHwnd, IDC_APPLY), false);
+        // Get exe path to find languages folder (use Unicode for proper international support)
+        std::array<wchar_t, MAX_PATH> exePathW;
+        std::array<wchar_t, MAX_PATH> languagesPathW;
+        std::array<wchar_t, MAX_PATH> dllPathW;
+        ::GetModuleFileNameW(nullptr, exePathW.data(), static_cast<DWORD>(exePathW.size()));
+        wchar_t* lastSlashW = std::wcsrchr(exePathW.data(), L'\\');
+        if (lastSlashW)
+        {
+            *lastSlashW = L'\0';
+        }
 
-	if (GetDlgItem(hwnd, IDC_EDIT_LOG)) {
-		hEditLog = GetDlgItem(hwnd, IDC_EDIT_LOG);
-		LogToEdit("");
-	}
-	setServiceStatusText(hwnd);
-	return FALSE; // Because we've set the focus
+        // Search for winvnclang_*.dll in languages subfolder
+        ::swprintf_s(languagesPathW.data(), languagesPathW.size(), L"%s\\languages\\winvnclang_*.dll", exePathW.data());
+
+        WIN32_FIND_DATAW findDataW;
+        HANDLE hFind = ::FindFirstFileW(languagesPathW.data(), &findDataW);
+
+        if (hFind != INVALID_HANDLE_VALUE)
+        {
+            do
+            {
+                // Extract language code from filename (winvnclang_XX.dll)
+                wchar_t* underscoreW = std::wcsstr(findDataW.cFileName, L"_");
+                wchar_t* dotW = std::wcsstr(findDataW.cFileName, L".");
+
+                if (underscoreW && dotW && (dotW > underscoreW))
+                {
+                    std::array<wchar_t, 32U> langCodeW{ 0 };
+                    std::size_t len = static_cast<std::size_t>((dotW - underscoreW - 1));
+                    if (len > 31)
+                    {
+                        len = 31;
+                    }
+                    ::wcsncpy_s(langCodeW.data(), langCodeW.size(), underscoreW + 1, len);
+
+                    // Build full path to DLL
+                    ::swprintf_s(dllPathW.data(), dllPathW.size(), L"%s\\languages\\%s", exePathW.data(), findDataW.cFileName);
+
+                    // Load DLL temporarily to read language name
+                    HMODULE hLangDll = ::LoadLibraryExW(dllPathW.data(), nullptr, LOAD_LIBRARY_AS_DATAFILE);
+                    std::array<wchar_t, 64U> displayNameW{ 0 };
+
+                    if (hLangDll)
+                    {
+                        // Try to load IDS_LANGUAGE_NAME string resource from DLL using Unicode
+                        if (::LoadStringW(hLangDll, IDS_LANGUAGE_NAME, displayNameW.data(), static_cast<int>(displayNameW.size())) > 0)
+                        {
+                            // Successfully loaded language name from DLL
+                            idx = static_cast<int>(::SendMessageW(hCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(displayNameW.data())));
+                            ::SendMessage(hCombo, CB_SETITEMDATA, static_cast<WPARAM>(idx), reinterpret_cast<LPARAM>(_wcsdup(langCodeW.data())));
+                        }
+                        else
+                        {
+                            // Fallback: use language code if string not found
+                            ::swprintf_s(displayNameW.data(), displayNameW.size(), L"Language (%s)", langCodeW.data());
+                            idx = static_cast<int>(::SendMessageW(hCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(displayNameW.data())));
+                            ::SendMessage(hCombo, CB_SETITEMDATA, static_cast<WPARAM>(idx), reinterpret_cast<LPARAM>(_wcsdup(langCodeW.data())));
+                        }
+                        ::FreeLibrary(hLangDll);
+                    }
+                    else
+                    {
+                        // DLL couldn't be loaded, use code as fallback
+                        ::swprintf_s(displayNameW.data(), displayNameW.size(), L"Language (%s)", langCodeW.data());
+                        idx = static_cast<int>(::SendMessageW(hCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(displayNameW.data())));
+                        ::SendMessage(hCombo, CB_SETITEMDATA, static_cast<WPARAM>(idx), reinterpret_cast<LPARAM>(_wcsdup(langCodeW.data())));
+                    }
+                }
+            } while (::FindNextFileW(hFind, &findDataW));
+            ::FindClose(hFind);
+        }
+
+        // Select current language
+        const char* currentLang = settings->getLanguage();
+        std::array<wchar_t, 32U> currentLangW{ 0 };
+        ::MultiByteToWideChar(CP_UTF8, 0, currentLang, -1, currentLangW.data(), 32);
+
+        const int count = static_cast<int>(::SendMessage(hCombo, CB_GETCOUNT, 0, 0));
+        for (int i{ 0 }; i < count; ++i)
+        {
+            wchar_t* langCodeW = reinterpret_cast<wchar_t*>(::SendMessage(hCombo, CB_GETITEMDATA, i, 0));
+            if (langCodeW && (::_wcsicmp(langCodeW, currentLangW.data()) == 0))
+            {
+                ::SendMessage(hCombo, CB_SETCURSEL, static_cast<WPARAM>(i), 0);
+                break;
+            }
+        }
+        // If no match found, select English (index 0)
+        if (::SendMessage(hCombo, CB_GETCURSEL, 0, 0) == CB_ERR)
+        {
+            ::SendMessage(hCombo, CB_SETCURSEL, 0, 0);
+        }
+    }
+
+    // SSL/TLS tab
+    if (::GetDlgItem(hwnd, IDC_TLS_NOVNC_PORT))
+    {
+        ::SetDlgItemInt(hwnd, IDC_TLS_NOVNC_PORT, static_cast<UINT>(settings->getTLSPort()), FALSE);
+        ::SetDlgItemText(hwnd, IDC_TLS_THUMBPRINT, settings->getTLSCertThumbprint());
+    }
+    if (::GetDlgItem(hwnd, IDC_VENCRYPT_ENABLE))
+    {
+        BOOL bVeNCrypt = settings->getEnableVeNCryptTLS();
+        ::SendMessage(::GetDlgItem(hwnd, IDC_VENCRYPT_ENABLE), BM_SETCHECK, static_cast<WPARAM>(bVeNCrypt), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_PLAIN), BM_SETCHECK, static_cast<WPARAM>(settings->getVeNCryptAllowPlainAuth()), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_VENCRYPT_REQUIRE_PLUS), BM_SETCHECK, static_cast<WPARAM>(settings->getVeNCryptRequireChannelBinding()), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_LEGACY), BM_SETCHECK, static_cast<WPARAM>(settings->getVeNCryptAllowLegacyAuth()), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ENABLE_RA2), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableRA2()), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ENABLE_RA2NE), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableRA2ne()), 0);
+        ::SetDlgItemText(hwnd, IDC_VENCRYPT_THUMBPRINT, settings->getVeNCryptTLSCertThumbprint());
+        ::SetDlgItemText(hwnd, IDC_VENCRYPT_DLLPATH, settings->getVeNCryptTokenDLLPath());
+        if (HWND hBits = ::GetDlgItem(hwnd, IDC_VENCRYPT_KEYBITS))
+        {
+            ::SendMessage(hBits, CB_RESETCONTENT, 0, 0);
+            int sel{ 1 };
+            for (int i{ 0 }; i < static_cast<int>((sizeof(kSelfSignedKeyBits) / sizeof(kSelfSignedKeyBits[0U]))); ++i)
+            {
+                std::array<char, 8U> buf;
+                ::sprintf_s(buf.data(), buf.size(), "%u", kSelfSignedKeyBits[i]);
+                ::SendMessageA(hBits, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(buf.data()));
+                if (kSelfSignedKeyBits[i] == settings->getTLSCertKeyBits())
+                {
+                    sel = i;
+                }
+            }
+            ::SendMessage(hBits, CB_SETCURSEL, static_cast<WPARAM>(sel), 0);
+        }
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_PLAIN), bVeNCrypt);
+        UpdateCertControlAvailability(hwnd, bVeNCrypt);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_DLLPATH), bVeNCrypt);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_DLL_BROWSE), bVeNCrypt);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_REQUIRE_PLUS), bVeNCrypt);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_LEGACY), bVeNCrypt);
+        LoadVeNCryptSubtypes(hwnd, settings->getVeNCryptSubtypes());
+        EnableVeNCryptSubtypes(hwnd, bVeNCrypt);
+        UpdateVeNCryptSubtypeAvailability(hwnd, ::SendDlgItemMessage(hTabAuthentication, IDC_MSLOGON_CHECKD, BM_GETCHECK, 0, 0) ==
+                                                    BST_CHECKED);
+        UpdateVncPasswordAvailability(hTabAuthentication, hwnd);
+        UpdateWebClientTlsAvailability(hTabIncoming, hwnd);
+        UpdateManageUsersButton(hwnd);
+    }
+
+    ::SetForegroundWindow(hwnd);
+    ::EnableWindow(::GetDlgItem(PropertiesDialogHwnd, IDC_APPLY), false);
+
+    if (::GetDlgItem(hwnd, IDC_EDIT_LOG))
+    {
+        hEditLog = ::GetDlgItem(hwnd, IDC_EDIT_LOG);
+        LogToEdit("");
+    }
+    setServiceStatusText(hwnd);
+    return FALSE; // Because we've set the focus
 }
 
 PropertiesDialog::PropertiesDialog()
 {
-	hTabControl = NULL;
-	rulesListView = new RulesListView();
-	m_dlgvisible = FALSE;
-	m_server = NULL;
+    hTabControl = nullptr;
+    rulesListView = new RulesListView();
+    m_dlgvisible = FALSE;
+    m_server = nullptr;
 };
 
 PropertiesDialog::~PropertiesDialog()
 {
-	delete rulesListView;
-	hEditLog = NULL;
+    delete rulesListView;
+    hEditLog = nullptr;
 };
 
 BOOL PropertiesDialog::Init(vncServer* server)
 {
-	// Save the server pointer
-	m_server = server;
-	UpdateServer();
-	vncPasswd::ToText plain(settings->getPasswd(), settings->getSecure());
-	if (strlen(plain) == 0)
-		if (!settings->getAllowProperties() || !settings->IsRunninAsAdministrator()) {
-			if (settings->getAuthRequired()) {
-				MessageBoxSecure(NULL, sz_ID_NO_PASSWD_NO_OVERRIDE_ERR,
-					sz_ID_WINVNC_ERROR,
-					MB_OK | MB_ICONSTOP);
-				PostQuitMessage(0);
-			}
-		}
-		else {
-			// If null passwords are not allowed, ensure that one is entered!
-			if (settings->getAuthRequired()) {
-				char username[UNLEN + 1];
-				if (!processHelper::CurrentUser(username, sizeof(username)))
-					return FALSE;
-				if (strcmp(username, "") == 0) {
-					MessageBoxSecure(NULL, sz_ID_NO_PASSWD_NO_LOGON_WARN,
-						sz_ID_WINVNC_ERROR,
-						MB_OK | MB_ICONEXCLAMATION);
-					ShowDialog();
-				}
-				else {
-					ShowDialog();
-				}
-			}
-		}
+    // Save the server pointer
+    m_server = server;
+    UpdateServer();
+    vncPasswd::ToText plain(settings->getPasswd(), settings->getSecure());
+    if (std::strlen(plain) == 0)
+        if (!settings->getAllowProperties() || !settings->IsRunninAsAdministrator())
+        {
+            if (settings->getAuthRequired())
+            {
+                MessageBoxSecure(nullptr, sz_ID_NO_PASSWD_NO_OVERRIDE_ERR.data(), sz_ID_WINVNC_ERROR.data(), MB_OK | MB_ICONSTOP);
+                ::PostQuitMessage(0);
+            }
+        }
+        else
+        {
+            // If null passwords are not allowed, ensure that one is entered!
+            if (settings->getAuthRequired())
+            {
+                std::array<char, UNLEN + 1> username;
+                if (!processHelper::CurrentUser(username.data(), sizeof(username)))
+                {
+                    return FALSE;
+                }
+                if (std::strcmp(username.data(), "") == 0)
+                {
+                    MessageBoxSecure(nullptr, sz_ID_NO_PASSWD_NO_LOGON_WARN.data(), sz_ID_WINVNC_ERROR.data(), MB_OK | MB_ICONEXCLAMATION);
+                    ShowDialog();
+                }
+                else
+                {
+                    ShowDialog();
+                }
+            }
+        }
 
-	return TRUE;
+    return TRUE;
 }
 
 // Dialog box handling functions
 void PropertiesDialog::ShowImpersonateDialog()
 {
-	HANDLE hPToken = DesktopUsersToken::getInstance()->getDesktopUsersToken();
-	int iImpersonateResult = 0;
-	if (hPToken) {
-		if (!ImpersonateLoggedOnUser(hPToken))
-			iImpersonateResult = GetLastError();
-	}
+    HANDLE hPToken = DesktopUsersToken::getInstance()->getDesktopUsersToken();
+    int iImpersonateResult{ 0 };
+    if (hPToken)
+    {
+        if (!::ImpersonateLoggedOnUser(hPToken))
+        {
+            iImpersonateResult = static_cast<int>(::GetLastError());
+        }
+    }
 
-	if (!settings->getAllowProperties()) {
-		if (iImpersonateResult == ERROR_SUCCESS)
-			RevertToSelf();
-		return;
-	}
+    if (!settings->getAllowProperties())
+    {
+        if (iImpersonateResult == ERROR_SUCCESS)
+        {
+            ::RevertToSelf();
+        }
+        return;
+    }
 
-	if (!m_dlgvisible) {
+    if (!m_dlgvisible)
+    {
 
-		int result = (int)DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_PROPERTIESDIALOG), NULL, (DLGPROC)PropertiesDlgProc, (LONG_PTR)this);
-		vnclog.Print(LL_INTINFO, VNCLOG("dialog result = %d\n"), result);
-		if (result == -1) {
-			// Dialog box failed, so quit
-			PostQuitMessage(0);
-			if (iImpersonateResult == ERROR_SUCCESS)
-				RevertToSelf();
-			return;
-		}
-		// We're allowed to exit if the password is not empty
-		{
-			vncPasswd::ToText plain(settings->getPasswd(), settings->getSecure());
-			if ((strlen(plain) != 0) || !settings->getAuthRequired())
-				return;
-		}
-		vnclog.Print(LL_INTERR, VNCLOG("Warning - Empty password\n"));
-		// If we reached here then OK was used & there is no password!
-		MessageBoxSecure(NULL, sz_ID_NO_PASSWORD_WARN, sz_ID_WINVNC_WARNIN, MB_OK | MB_ICONEXCLAMATION);
+        int result = static_cast<int>(::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_PROPERTIESDIALOG), nullptr,
+                                                     reinterpret_cast<DLGPROC>(PropertiesDlgProc), reinterpret_cast<LONG_PTR>(this)));
+        vnclog.Print(LL_INTINFO, VNCLOG("dialog result = %d\n"), result);
+        if (result == -1)
+        {
+            // Dialog box failed, so quit
+            ::PostQuitMessage(0);
+            if (iImpersonateResult == ERROR_SUCCESS)
+            {
+                ::RevertToSelf();
+            }
+            return;
+        }
+        // We're allowed to exit if the password is not empty
+        {
+            vncPasswd::ToText plain(settings->getPasswd(), settings->getSecure());
+            if ((std::strlen(plain) != 0) || !settings->getAuthRequired())
+            {
+                return;
+            }
+        }
+        vnclog.Print(LL_INTERR, VNCLOG("Warning - Empty password\n"));
+        // If we reached here then OK was used & there is no password!
+        MessageBoxSecure(nullptr, sz_ID_NO_PASSWORD_WARN.data(), sz_ID_WINVNC_WARNIN.data(), MB_OK | MB_ICONEXCLAMATION);
 
-		// The password is empty, so if OK was used then redisplay the box,
-		// otherwise, if CANCEL was used, close down UltraVNC Server
-		if (result == IDCANCEL) {
-			vnclog.Print(LL_INTERR, VNCLOG("No password - QUITTING\n"));
-			PostQuitMessage(0);
-			if (iImpersonateResult == ERROR_SUCCESS)
-				RevertToSelf();
-			fShutdownOrdered = true;
-			return;
-		}
-		omni_thread::sleep(4);
+        // The password is empty, so if OK was used then redisplay the box,
+        // otherwise, if CANCEL was used, close down UltraVNC Server
+        if (result == IDCANCEL)
+        {
+            vnclog.Print(LL_INTERR, VNCLOG("No password - QUITTING\n"));
+            ::PostQuitMessage(0);
+            if (iImpersonateResult == ERROR_SUCCESS)
+            {
+                ::RevertToSelf();
+            }
+            fShutdownOrdered = true;
+            return;
+        }
+        omni_thread::sleep(4);
 
-		// Load in all the settings
-		// If you run as service, you reload the saved settings before they are actual saved
-		// via runas.....
+        // Load in all the settings
+        // If you run as service, you reload the saved settings before they are actual saved
+        // via runas.....
 
-		if (!settings->RunningFromExternalService())
-			UpdateServer();
-
-	}
-	if (iImpersonateResult == ERROR_SUCCESS)
-		RevertToSelf();
+        if (!settings->RunningFromExternalService())
+        {
+            UpdateServer();
+        }
+    }
+    if (iImpersonateResult == ERROR_SUCCESS)
+    {
+        ::RevertToSelf();
+    }
 }
 
-int PropertiesDialog::ShowDialog(bool standalone)
+int PropertiesDialog::ShowDialog(const bool standaloneIn)
 {
-	this->standalone = standalone;
-	int result = DialogBoxParam(hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_PROPERTIESDIALOG),
-		NULL, (DLGPROC)PropertiesDlgProc, (LONG_PTR)this);
-	// Apply settings to the running server so DSM plugin changes take effect
-	// immediately without requiring a restart.
-	UpdateServer();
-	return result;
+    this->standalone = standaloneIn;
+    const int result = static_cast<int>(::DialogBoxParam(hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_PROPERTIESDIALOG), nullptr,
+                                      reinterpret_cast<DLGPROC>(PropertiesDlgProc), reinterpret_cast<LONG_PTR>(this)));
+    // Apply settings to the running server so DSM plugin changes take effect
+    // immediately without requiring a restart.
+    UpdateServer();
+    return result;
 };
 
 
@@ -1651,1543 +1900,1803 @@ int PropertiesDialog::ShowDialog(bool standalone)
 
 void PropertiesDialog::UpdateServer()
 {
-	if (!m_server)
-		return;
+    if (!m_server)
+    {
+        return;
+    }
 #ifndef SC_20
-	settings->load();
-#endif // SC_20	
-	/*if (!settings->getLoopbackOnly()) {
-		if (settings->getAuthhosts() != 0) {
-			m_server->SetAuthHosts(settings->getAuthhosts());
-		}
-		else {
-			m_server->SetAuthHosts(0);
-		}
-	}
-	else {
-		m_server->SetAuthHosts(0);
-	}*/
-
-	m_server->SetNoScreensaver(settings->getnoscreensaver());
-	m_server->SetLoopbackOnly(settings->getLoopbackOnly());
-	m_server->EnableHTTPConnect(settings->getHTTPConnect());
-	m_server->EnableRemoteInputs(settings->getEnableRemoteInputs());
-	m_server->EnableJapInput(settings->getEnableJapInput());
-	m_server->ForceCursorShape(settings->getForceCursorShape());
-	m_server->EnableUnicodeInput(settings->getEnableUnicodeInput());
-
-	// Update the password
-
-	// Now change the listening port settings
-	m_server->SetAutoPortSelect(settings->getAutoPortSelect());
-	if (!settings->getAutoPortSelect())
-		m_server->SetPorts(settings->getPortNumber(), settings->getHttpPortNumber());
-
-	m_server->EnableConnections(settings->getEnableConnections());
-
-	// DSM Plugin prefs
-	if (settings->getUseDSMPlugin())
-		m_server->SetDSMPlugin(false);
-	else
-		m_server->SetDSMPlugin(false); // clears any pending activation
-
-	// adzm - 2010-07 - Disable more effects or font smoothing
-	m_server->EnableHTTPConnect(settings->getHTTPConnect());
-	m_server->EnableRemoteInputs(settings->getEnableRemoteInputs());
-	m_server->EnableJapInput(settings->getEnableJapInput());
-	m_server->ForceCursorShape(settings->getForceCursorShape());
-	m_server->EnableUnicodeInput(settings->getEnableUnicodeInput());
-
-	// Now change the listening port settings
-	m_server->SetAutoPortSelect(settings->getAutoPortSelect());
-	if (!settings->getAutoPortSelect()) {
-		m_server->SetPorts(settings->getPortNumber(), settings->getHttpPortNumber());
-	}
-
-	m_server->EnableConnections(settings->getEnableConnections());
-
-	// DSM Plugin prefs
-	if (settings->getUseDSMPlugin())
-		m_server->SetDSMPlugin(false);
-
-	bConnectSock = m_server->SockConnected();
-}
-
-int PropertiesDialog::ListPlugins(HWND hComboBox)
-{
-	// TODO: Log events
-	WIN32_FIND_DATA fd;
-	HANDLE ff;
-	int fRet = 1;
-	int nFiles = 0;
-	char szCurrentDir[MAX_PATH];
-	strcpy_s(szCurrentDir, winvncFolder);
-	if (szCurrentDir[strlen(szCurrentDir) - 1] != '\\') strcat_s(szCurrentDir, "\\");
-	strcat_s(szCurrentDir, "*.dsm"); // The DSMplugin dlls must have this extension
-
-	ff = FindFirstFile(szCurrentDir, &fd);
-	if (ff == INVALID_HANDLE_VALUE)
-	{
-		// Todo: Log error here
-		return 0;
-	}
-
-	while (fRet != 0)
-	{
-		SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM)(fd.cFileName));
-		nFiles++;
-		fRet = FindNextFile(ff, &fd);
-	}
-
-	FindClose(ff);
-
-	return nFiles;
-}
-static bool isRunning = false;
-
-bool PropertiesDialog::onCommand( int command, HWND hwnd, int subcommand)
-{
-	if ((command != IDC_SERVICE_COMMANDLINE && command != IDC_IDLETIMEINPUT && command != IDC_STARTLOG &&
-		command != IDC_KINTERVAL && command != IDC_PORTRFB && command != IDC_PORTHTTP &&
-		command != IDC_SCALE && command != IDC_CHECKIP && command != IDC_STARTREP && 
-		command != IDC_INSTALL_SERVICE && command != IDC_UNINSTALL_SERVICE  && command != IDC_START_SERVICE 
-		&& command != IDC_STOP_SERVICE )|| subcommand == 1024)
-	EnableWindow(GetDlgItem(PropertiesDialogHwnd, IDC_APPLY), true);
-	switch (command) {
-	case IDC_PLUGINS_COMBO: {
-			HWND hCombo = GetDlgItem(hwnd, IDC_PLUGINS_COMBO);
-			bool pluginset = false;
-			TCHAR szPlugin[MAX_PATH]{};
-			TCHAR szPluginDefault[MAX_PATH] = "No Plugin detected...";
-
-			if (subcommand == CBN_SELCHANGE) {
-				int selIndex = ComboBox_GetCurSel(hCombo); // Get selected index				
-				if (selIndex != CB_ERR) {
-					ComboBox_GetLBText(hCombo, selIndex, szPlugin); // Get text of selected item								
-					pluginset = (strcmp(szPlugin, szPluginDefault) != 0) && strlen(szPlugin) > 0;
-				}
-				if (m_server)
-					EnableWindow(GetDlgItem(hwnd, IDC_PLUGIN_BUTTON), m_server->AuthClientCount() == 0
-						? (SendMessage(GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED) && pluginset
-						: BST_UNCHECKED);
-				EnableWindow(GetDlgItem(hwnd, IDC_PLUGINS_COMBO), SendMessage(GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED);
-			}
-			if (subcommand == CBN_EDITCHANGE) {
-				EnableWindow(GetDlgItem(hwnd, IDC_PLUGIN_BUTTON), m_server->AuthClientCount() == 0
-					? (SendMessage(GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED) && pluginset
-					: BST_UNCHECKED);
-				EnableWindow(GetDlgItem(hwnd, IDC_PLUGINS_COMBO), SendMessage(GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED);
-			}
-		}
-		return TRUE;
-	case IDC_REMOVE_BUTTON:
-		if (isRunning)
-			break;
-		isRunning = true;
-		rulesListView->removeSelectedItem();
-		isRunning = false;
-		break;
-	case IDC_MOVE_DOWN_BUTTON:
-		if (isRunning)
-			break;
-		isRunning = true;
-		rulesListView->moveDown();
-		isRunning = false;
-		break;
-	case IDC_MOVE_UP_BUTTON:
-		if (isRunning)
-			break;
-		isRunning = true;
-		rulesListView->moveUp();
-		isRunning = false;
-		break;
-	case IDC_ADD_BUTTON:
-		if (isRunning)
-			break;
-		isRunning = true;
-		rulesListView->add();
-		isRunning = false;
-		break;
-	case IDC_EDIT_BUTTON:
-		if (isRunning)
-			break;
-		isRunning = true;
-		rulesListView->edit();
-		isRunning = false;
-		break;
-	case IDC_DRIVER:
-		if (m_server)
-		if (SendMessage(GetDlgItem(hwnd, IDC_DRIVER), BM_GETCHECK, 0, 0) == BST_CHECKED)
-			m_server->Driver(CheckVideoDriver(0));
-		else
-			m_server->Driver(false);
-		if (settings->getddEngine()) {
-			EnableWindow(GetDlgItem(hwnd, IDC_SLIDERFPS), settings->getDriver());
-			EnableWindow(GetDlgItem(hwnd, IDC_STATICFPS60), settings->getDriver());
-			EnableWindow(GetDlgItem(hwnd, IDC_STATICFPS5), settings->getDriver());
-		}
-		break;
-	case IDCANCEL:
-		EndDialog(PropertiesDialogHwnd, IDCANCEL);
-		m_dlgvisible = FALSE;
-		return TRUE;
-	case IDC_APPLY:
-		onTabsAPPLY(hwnd);
-		return TRUE;
-	case IDOK:
-		onTabsAPPLY(hwnd);
-		onTabsOK(hwnd);
-		return TRUE;
-	case IDC_POLL_FOREGROUND:
-	case IDC_POLL_UNDER_CURSOR: {
-		BOOL enabled = (SendMessage(GetDlgItem(hwnd, IDC_POLL_FOREGROUND), BM_GETCHECK, 0, 0) == BST_CHECKED) ||
-			(SendMessage(GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR), BM_GETCHECK, 0, 0) == BST_CHECKED);
-		EnableWindow(GetDlgItem(hwnd, IDC_CONSOLE_ONLY), enabled);
-		EnableWindow(GetDlgItem(hwnd, IDC_ONEVENT_ONLY), enabled);
-		return TRUE; }
-	case IDC_CHECKDRIVER:
-		CheckVideoDriver(1);
-		return TRUE;
-#ifndef SC_20
-	case IDC_INSTALL_SERVICE:
-		UltraVNCService::install_service();
-		Sleep(3000);
-		setServiceStatusText(hwnd);
-		break;
-	case IDC_UNINSTALL_SERVICE:
-		UltraVNCService::uninstall_service();
-		Sleep(3000);
-		setServiceStatusText(hwnd);
-		break;
-
-	case IDC_START_SERVICE:
-	{
-		serviceHelpers::Real_start_service();
-		Sleep(3000);
-		setServiceStatusText(hwnd);
-	}
-		break;
-	case IDC_STOP_SERVICE:
-	{
-		serviceHelpers::Real_stop_service();
-		Sleep(3000);
-		setServiceStatusText(hwnd);
-	}
-		break;
-#endif
-	case IDC_BLANK:
-	{
-		// only enable alpha blanking if blanking is enabled
-		HWND hBlank = ::GetDlgItem(hwnd, IDC_BLANK);
-		HWND hBlank2 = ::GetDlgItem(hwnd, IDC_BLANK2); //PGM
-		::EnableWindow(hBlank2, ::SendMessage(hBlank, BM_GETCHECK, 0, 0) == BST_CHECKED); //PGM
-	}
-	break;
-
-	case IDC_STARTLOG:
-		settings->setShowAllLogs(!settings->getShowAllLogs());
-		SetDlgItemText(hwnd, IDC_STARTLOG, settings->getShowAllLogs() 
-					?"HIDE ALL LOGS"
-					:"SHOW ALL LOGS");
-	break;
-
-	case IDC_VIDEO:
-	{
-		if (IsDlgButtonChecked(hwnd, IDC_VIDEO))
-			EnableWindow(GetDlgItem(hwnd, IDC_EDIT_PATH), true);
-		else
-			EnableWindow(GetDlgItem(hwnd, IDC_EDIT_PATH), false);
-		break;
-	}
-
-	case IDC_CLEAR:
-	{
-		vnclog.ClearAviConfig();
-		break;
-	}
-
-	case IDC_CONNECT_HTTP:
-	{
-		const BOOL httpEnabled = (SendDlgItemMessage(hwnd, IDC_CONNECT_HTTP,
-			BM_GETCHECK, 0, 0) == BST_CHECKED);
-		EnableWindow(GetDlgItem(hwnd, IDC_TLS), httpEnabled);
-		EnableWindow(GetDlgItem(hwnd, IDC_STATIC_HTTPPORT), httpEnabled);
-		EnableWindow(GetDlgItem(hwnd, IDC_PORTHTTP), httpEnabled);
-		UpdateWebClientTlsAvailability(hwnd, hTabTLS);
-	}
-		break;
-
-	case IDC_TLS:
-	{
-		BOOL bTLS = (SendDlgItemMessage(hwnd, IDC_TLS, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		if (GetDlgItem(hwnd, IDC_PORTHTTP))
-			ShowWindow(GetDlgItem(hwnd, IDC_PORTHTTP), bTLS ? SW_HIDE : SW_SHOW);
-		if (GetDlgItem(hwnd, IDC_PORTHTTPS)) {
-			ShowWindow(GetDlgItem(hwnd, IDC_PORTHTTPS), bTLS ? SW_SHOW : SW_HIDE);
-			if (bTLS)
-				SetDlgItemInt(hwnd, IDC_PORTHTTPS, settings->getTLSPort(), FALSE);
-		}
-		UpdateWebClientTlsAvailability(hwnd, hTabTLS);
-	}
-	break;
-
-	case IDC_TLS_CERT_SELECT:
-		SelectCertificateToEdit(hwnd, IDC_TLS_THUMBPRINT);
-		return TRUE;
-	case IDC_TLS_CERT_GEN:
-		GenerateSelfSignedToEdit(hwnd, IDC_TLS_THUMBPRINT);
-		return TRUE;
-	case IDC_VENCRYPT_CERT_SELECT:
-		SelectCertificateToEdit(hwnd, IDC_VENCRYPT_THUMBPRINT);
-		return TRUE;
-	case IDC_VENCRYPT_CERT_GEN:
-		GenerateSelfSignedToEdit(hwnd, IDC_VENCRYPT_THUMBPRINT);
-		return TRUE;
-	case IDC_VENCRYPT_ENABLE:
-	{
-		BOOL bVeNCrypt = (SendDlgItemMessage(hwnd, IDC_VENCRYPT_ENABLE, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_PLAIN), bVeNCrypt);
-		UpdateCertControlAvailability(hwnd, bVeNCrypt);
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_DLLPATH), bVeNCrypt);
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_DLL_BROWSE), bVeNCrypt);
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_REQUIRE_PLUS), bVeNCrypt);
-		EnableWindow(GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_LEGACY), bVeNCrypt);
-		EnableVeNCryptSubtypes(hwnd, bVeNCrypt);
-		UpdateVeNCryptSubtypeAvailability(hwnd,
-			SendDlgItemMessage(hTabAuthentication, IDC_MSLOGON_CHECKD, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		UpdateVncPasswordAvailability(hTabAuthentication, hwnd);
-		UpdateManageUsersButton(hwnd);
-	}
-	return TRUE;
-
-	case IDC_ENABLE_RA2:
-	case IDC_ENABLE_RA2NE:
-		UpdateCertControlAvailability(hwnd,
-			SendDlgItemMessage(hwnd, IDC_VENCRYPT_ENABLE, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		return TRUE;
-
-	case IDC_VENCRYPT_ALLOW_PLAIN:
-		if (SendDlgItemMessage(hwnd, IDC_VENCRYPT_ALLOW_PLAIN, BM_GETCHECK, 0, 0) == BST_CHECKED)
-			SendDlgItemMessage(hwnd, IDC_VENCRYPT_REQUIRE_PLUS, BM_SETCHECK, BST_UNCHECKED, 0);
-		UpdateVeNCryptSubtypeAvailability(hwnd,
-			SendDlgItemMessage(hTabAuthentication, IDC_MSLOGON_CHECKD, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		return TRUE;
-
-	case IDC_VENCRYPT_REQUIRE_PLUS:
-		if (SendDlgItemMessage(hwnd, IDC_VENCRYPT_REQUIRE_PLUS, BM_GETCHECK, 0, 0) == BST_CHECKED)
-			SendDlgItemMessage(hwnd, IDC_VENCRYPT_ALLOW_PLAIN, BM_SETCHECK, BST_UNCHECKED, 0);
-		UpdateVeNCryptSubtypeAvailability(hwnd,
-			SendDlgItemMessage(hTabAuthentication, IDC_MSLOGON_CHECKD, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		return TRUE;
-
-	case IDC_VENCRYPT_ALLOW_LEGACY:
-	case IDC_VENCRYPT_SUBTYPE_261:
-		UpdateVncPasswordAvailability(hTabAuthentication, hwnd);
-		return TRUE;
-
-	case IDC_VENCRYPT_DLLPATH:
-		if (subcommand == EN_CHANGE)
-			UpdateManageUsersButton(hwnd);
-		return TRUE;
-
-	case IDC_VENCRYPT_MANAGE:
-	{
-		char dllPath[MAX_PATH]{};
-		GetDlgItemTextA(hwnd, IDC_VENCRYPT_DLLPATH, dllPath, MAX_PATH);
-		HMODULE hMod = SafeLoadValidatorDllA(hwnd, dllPath, true);
-		if (!hMod)
-			return TRUE;
-
-		typedef int(__cdecl *TV_HAS_MANAGEMENT_UI)(void);
-		typedef int(__cdecl *TV_SHOW_MANAGEMENT_UI)(HWND);
-
-		TV_HAS_MANAGEMENT_UI hasUi = (TV_HAS_MANAGEMENT_UI)GetProcAddress(hMod, "tv_has_management_ui");
-		TV_SHOW_MANAGEMENT_UI showUi = (TV_SHOW_MANAGEMENT_UI)GetProcAddress(hMod, "tv_show_management_ui");
-
-		if (!hasUi || !showUi || !hasUi())
-		{
-			FreeLibrary(hMod);
-			MessageBoxA(hwnd, "The selected TokenValidator DLL does not provide a management UI.", "Token Manager", MB_OK | MB_ICONINFORMATION);
-			return TRUE;
-		}
-
-		showUi(hwnd);
-		FreeLibrary(hMod);
-	}
-	return TRUE;
-
-	case IDC_VENCRYPT_DLL_BROWSE:
-	{
-		char file[MAX_PATH]{};
-		GetDlgItemText(hwnd, IDC_VENCRYPT_DLLPATH, file, MAX_PATH);
-		OPENFILENAMEA ofn{};
-		ofn.lStructSize = sizeof(ofn);
-		ofn.hwndOwner = hwnd;
-		ofn.lpstrFile = file;
-		ofn.nMaxFile = MAX_PATH;
-		ofn.lpstrFilter = "DLL files (*.dll)\0*.dll\0All files (*.*)\0*.*\0";
-		ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-		if (GetOpenFileNameA(&ofn))
-			SetDlgItemText(hwnd, IDC_VENCRYPT_DLLPATH, file);
-	}
-	return TRUE;
-
-	case IDC_CONNECT_SOCK:
-		// TightVNC 1.2.7 method
-		// The user has clicked on the socket connect tickbox
-	{
-		BOOL bConnectSock =
-			(SendDlgItemMessage(hwnd, IDC_CONNECT_SOCK,
-				BM_GETCHECK, 0, 0) == BST_CHECKED);
-		BOOL bConnectHttp =
-			(SendDlgItemMessage(hwnd, IDC_CONNECT_HTTP,
-				BM_GETCHECK, 0, 0) == BST_CHECKED);
-
-		HWND hPortNoAuto = GetDlgItem(hwnd, IDC_PORTNO_AUTO);
-		EnableWindow(hPortNoAuto, bConnectSock);
-		HWND hSpecPort = GetDlgItem(hwnd, IDC_SPECPORT);
-		EnableWindow(hSpecPort, bConnectSock);
-		EnableWindow(GetDlgItem(hwnd, IDC_PORTRFB), bConnectSock &&
-			(SendMessage(hSpecPort, BM_GETCHECK, 0, 0) == BST_CHECKED));
-		EnableWindow(GetDlgItem(hwnd, IDC_PORTHTTP), bConnectSock &&
-			(SendMessage(hSpecPort, BM_GETCHECK, 0, 0) == BST_CHECKED) && bConnectHttp);
-	}
-	return TRUE;
-
-	// TightVNC 1.2.7 method
-	case IDC_PORTNO_AUTO:
-	{
-		EnableWindow(GetDlgItem(hwnd, IDC_PORTRFB), FALSE);
-		EnableWindow(GetDlgItem(hwnd, IDC_PORTHTTP), FALSE);
-		SetDlgItemText(hwnd, IDC_PORTRFB, "");
-		SetDlgItemText(hwnd, IDC_PORTHTTP, "");
-	}
-	return TRUE;
-
-	case IDC_SPECPORT:
-		{
-			BOOL bConnectHttp =
-				(SendDlgItemMessage(hwnd, IDC_CONNECT_HTTP,
-					BM_GETCHECK, 0, 0) == BST_CHECKED);
-
-			EnableWindow(GetDlgItem(hwnd, IDC_PORTRFB), TRUE);
-			EnableWindow(GetDlgItem(hwnd, IDC_PORTHTTP), bConnectHttp);
-
-			SetDlgItemInt(hwnd, IDC_PORTRFB, settings->getPortNumber(), FALSE);
-			SetDlgItemInt(hwnd, IDC_PORTHTTP, settings->getHttpPortNumber(), FALSE);
-
-			SetFocus(GetDlgItem(hwnd, IDC_PORTRFB));
-			SendDlgItemMessage(hwnd, IDC_PORTRFB, EM_SETSEL, 0, (LPARAM)-1);
-		}
-		return TRUE;
-
-	// Query window option - Taken from TightVNC advanced properties code
-	case IDQUERY:
-		{
-			HWND hQuery = GetDlgItem(hwnd, IDQUERY);
-			BOOL queryon = (SendMessage(hQuery, BM_GETCHECK, 0, 0) == BST_CHECKED);
-			settings->setQuerySetting(queryon ? 4 : 2);
-
-			EnableWindow(GetDlgItem(hwnd, IDQUERYTIMEOUT), queryon);
-			EnableWindow(GetDlgItem(hwnd, IDC_QUERYDISABLETIME), queryon);
-			EnableWindow(GetDlgItem(hwnd, IDC_DREFUSE), queryon);
-			EnableWindow(GetDlgItem(hwnd, IDC_DRefuseOnly), queryon);
-			EnableWindow(GetDlgItem(hwnd, IDC_DACCEPT), queryon);
-			EnableWindow(GetDlgItem(hwnd, IDC_QNOLOGON), queryon);
-			EnableWindow(GetDlgItem(hwnd, IDC_EDITQUERYTEXT), queryon);
-		}
-		return TRUE;
-
-	case IDC_STARTREP:
-		if (m_server) {
-			auto newconn = std::make_unique<vncConnDialog>(m_server);
-			if (newconn)
-				newconn->DoDialog(true);
-		}
-		return TRUE;
-
-	case IDC_PLUGIN_CHECK: {
-		TCHAR szPlugin[MAX_PATH];
-		TCHAR szPluginDefault[MAX_PATH] = "No Plugin detected...";
-		GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin, MAX_PATH);
-		bool pluginset = (strcmp(szPlugin, szPluginDefault) != 0) && strlen(szPlugin) > 0;
-		if (m_server)
-			EnableWindow(GetDlgItem(hwnd, IDC_PLUGIN_BUTTON), m_server->AuthClientCount() == 0
-				? (SendMessage(GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED) && pluginset
-				: BST_UNCHECKED);
-		EnableWindow(GetDlgItem(hwnd, IDC_PLUGINS_COMBO), SendMessage(GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED);
-		}
-		return TRUE;
-
-	case IDC_MSLOGON_CHECKD:
-	{
-		BOOL bMSLogonChecked =
-			(SendDlgItemMessage(hwnd, IDC_MSLOGON_CHECKD,
-				BM_GETCHECK, 0, 0) == BST_CHECKED);
-
-		EnableWindow(GetDlgItem(hwnd, IDC_NEW_MSLOGON), bMSLogonChecked);
-		EnableWindow(GetDlgItem(hwnd, IDC_MSLOGON), bMSLogonChecked);
-		UpdateVeNCryptSubtypeAvailability(hTabTLS, bMSLogonChecked);
-		UpdateVncPasswordAvailability(hwnd, hTabTLS);
-		return TRUE;
-	}
-	case IDC_AUTHREQUIRED:{
-		bool checked = (SendMessage(GetDlgItem(hwnd, IDC_AUTHREQUIRED), BM_GETCHECK, 0, 0) == BST_CHECKED);
-		bool vncPasswordEnabled = IsWindowEnabled(GetDlgItem(hwnd, IDC_AUTHREQUIRED)) != FALSE;
-		EnableWindow(GetDlgItem(hwnd, IDC_CLEARPASSWORD), vncPasswordEnabled && checked == 0);
-		EnableWindow(GetDlgItem(hwnd, IDC_CLEARPASSWORDVO), vncPasswordEnabled && checked == 0);
-	}
-
-
-	return TRUE;
-
-#ifndef SC_20
-	case IDC_MSLOGON:
-	{
-		// Marscha@2004 - authSSP: if "New MS-Logon" is checked,
-		// call vncEditSecurity from SecurityEditor.dll,
-		// else call "old" dialog.
-		BOOL bNewMSLogonChecked = (SendDlgItemMessage(hwnd, IDC_NEW_MSLOGON, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		if (bNewMSLogonChecked) {
-			HANDLE hPToken = DesktopUsersToken::getInstance()->getDesktopUsersToken();
-			if (!hPToken)
-				break;
-
-			char dir[MAX_PATH + 32];
-			char exe_file_name[MAX_PATH];
-			GetModuleFileName(0, exe_file_name, MAX_PATH);
-			sprintf_s(dir, "\"%s\" -securityeditorhelper", exe_file_name);
-
-			STARTUPINFO          StartUPInfo;
-			PROCESS_INFORMATION  ProcessInfo;
-			ZeroMemory(&StartUPInfo, sizeof(STARTUPINFO));
-			ZeroMemory(&ProcessInfo, sizeof(PROCESS_INFORMATION));
-			StartUPInfo.wShowWindow = SW_SHOW;
-			StartUPInfo.lpDesktop = "Winsta0\\Default";
-			StartUPInfo.cb = sizeof(STARTUPINFO);
-
-			CreateProcessAsUser(hPToken, NULL, dir, NULL, NULL, FALSE, DETACHED_PROCESS, NULL, NULL, &StartUPInfo, &ProcessInfo);
-			DWORD errorcode = GetLastError();
-			if (ProcessInfo.hThread)
-				CloseHandle(ProcessInfo.hThread);
-			if (ProcessInfo.hProcess)
-				CloseHandle(ProcessInfo.hProcess);
-			if (errorcode == 1314)
-				goto error;
-			break;
-		error:
-			serviceHelpers::winvncSecurityEditorHelper_as_admin();
-		}
-		else {
-			m_vncauth.Init();
-			m_vncauth.Show(TRUE);
-		}
-	}
-	return TRUE;
+    settings->load();
 #endif // SC_20
-	case IDC_CHANGEPASSWORD:
-	{
-		static bool isRunningPw = false;
-		if (isRunningPw)
-			return true;
-		isRunningPw = true;
-		DlgChangePassword* dlgChangePassword = new DlgChangePassword();
-		if (dlgChangePassword->ShowDlg(NULL, (!settings->isPasswdSet()) 
-			? "UltraVNC Server - Set Password"
-			: "UltraVNC Server - Change Password", 8)) {
-			char password[1024];
-			strcpy_s(password, dlgChangePassword->getPassword());
-			if (strlen(password) == 0) {
-				settings->setPasswd(password);
-				settings->savePassword();
-			}
-			else {
-				vncPasswd::FromText crypt(password, settings->getSecure());
-				settings->setPasswd(crypt);
-				settings->savePassword();
-			}
-		}
-		delete dlgChangePassword;
-		isRunningPw = false;
-		SetWindowText(GetDlgItem(hwnd, IDC_CHANGEPASSWORD), (!settings->isPasswdSet()) ? "SET" : "CHANGE");
-		return true;
-	}
-	case IDC_CHANGEPASSWORDVO:
-	{
-		static bool isRunningPwVo = false;
-		if (isRunningPwVo)
-			return true;
-		isRunningPwVo = true;
-		DlgChangePassword* dlgChangePassword = new DlgChangePassword();
-		if (dlgChangePassword->ShowDlg(NULL, (!settings->isPasswdSet()) 
-					? "UltraVNC Server - Set View-only Password"
-					: "UltraVNC Server - Change View-only Password", 8)) {
-			char password[1024];
-			strcpy_s(password, dlgChangePassword->getPassword());
-			if (strlen(password) == 0) {
-				settings->setPasswdViewOnly(password);
-				settings->saveViewOnlyPassword();
-			}
-			else {
-				vncPasswd::FromText crypt2(password, settings->getSecure());
-				settings->setPasswdViewOnly(crypt2);
-				settings->saveViewOnlyPassword();
-			}
-		}
-		delete dlgChangePassword;
-		SetWindowText(GetDlgItem(hwnd, IDC_CHANGEPASSWORDVO), (!settings->isPasswdViewOnlySet()) ? "SET" : "CHANGE");
-		isRunningPwVo = false;
-		return true;
-	}
-	case IDC_CHANGEPASSWORDADMIN: {
-		static bool isRunningPwaAdm = false;
-		if (isRunningPwaAdm)
-			return true;
-		isRunningPwaAdm = true;
-		DlgChangePassword* dlgChangePassword = new DlgChangePassword();
-		if (dlgChangePassword->ShowDlg(NULL, settings->isAdminPasswordSet() 
-					? "UltraVNC Server - Change Admin Password" 
-					: "UltraVNC Server - Set Admin Password", 128)) {
-			char password[1024];
-			strcpy_s(password, dlgChangePassword->getPassword());
-			settings->setAdminPasswordHash(password);
-			SetWindowText(GetDlgItem(hwnd, IDC_CHANGEPASSWORDADMIN), "CHANGE");
-		}
-		isRunningPwaAdm = false;
-		delete dlgChangePassword;
-	}
-		return true;
+    /*if (!settings->getLoopbackOnly()) {
+        if (settings->getAuthhosts() != 0) {
+            m_server->SetAuthHosts(settings->getAuthhosts());
+        }
+        else {
+            m_server->SetAuthHosts(0);
+        }
+    }
+    else {
+        m_server->SetAuthHosts(0);
+    }*/
 
-	case IDC_ADMINCLEAR: {
-		settings->setAdminPasswordHash("");
-		SetWindowText(GetDlgItem(hwnd, IDC_CHANGEPASSWORDADMIN), "SET");
-		return true;
-	}
+    m_server->SetNoScreensaver(settings->getnoscreensaver());
+    m_server->SetLoopbackOnly(settings->getLoopbackOnly());
+    m_server->EnableHTTPConnect(settings->getHTTPConnect());
+    m_server->EnableRemoteInputs(settings->getEnableRemoteInputs());
+    m_server->EnableJapInput(settings->getEnableJapInput());
+    m_server->ForceCursorShape(settings->getForceCursorShape());
+    m_server->EnableUnicodeInput(settings->getEnableUnicodeInput());
 
-	case IDC_CLEARPASSWORD:
-	{
-		settings->setPasswd("");
-		settings->savePassword();
-		SetWindowText(GetDlgItem(hwnd, IDC_CHANGEPASSWORD), (!settings->isPasswdSet()) ? "SET" : "CHANGE");
-		return true;
-	}
-	case IDC_CLEARPASSWORDVO:
-	{
-		settings->setPasswdViewOnly("");
-		settings->saveViewOnlyPassword();
-		SetWindowText(GetDlgItem(hwnd, IDC_CHANGEPASSWORDVO), (!settings->isPasswdViewOnlySet()) ? "SET" : "CHANGE");
-		return true;
-	}
-	case IDC_PLUGIN_BUTTON:
-	{
-		HWND hPlugin = GetDlgItem(hwnd, IDC_PLUGIN_CHECK);
-		if (SendMessage(hPlugin, BM_GETCHECK, 0, 0) == BST_CHECKED) {
-			TCHAR szPlugin[MAX_PATH];
-			GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin, MAX_PATH);
-			PathStripPathA(szPlugin);
-			if (m_server) {
-				if (!m_server->GetDSMPluginPointer()->IsLoaded())
-					m_server->GetDSMPluginPointer()->LoadPlugin(szPlugin, false);
-				else {
-					// sf@2003 - We check if the loaded plugin is the same than
-					// the currently selected one or not
-					m_server->GetDSMPluginPointer()->DescribePlugin();
-					if (_stricmp(m_server->GetDSMPluginPointer()->GetPluginFileName(), szPlugin)) {
-						m_server->GetDSMPluginPointer()->UnloadPlugin();
-						m_server->GetDSMPluginPointer()->LoadPlugin(szPlugin, false);
-					}
-				}
+    // Update the password
 
-				if (m_server->GetDSMPluginPointer()->IsLoaded())
-					PropertiesDialog::Secure_Plugin(szPlugin);
-				else
-					MessageBoxSecure(NULL, sz_ID_PLUGIN_NOT_LOAD, sz_ID_PLUGIN_LOADIN, MB_OK | MB_ICONEXCLAMATION);
-			}
-			else
-				PropertiesDialog::Secure_Plugin(szPlugin);
-		}
-		return TRUE;
-	}
+    // Now change the listening port settings
+    m_server->SetAutoPortSelect(settings->getAutoPortSelect());
+    if (!settings->getAutoPortSelect())
+    {
+        m_server->SetPorts(static_cast<UINT>(settings->getPortNumber()), static_cast<UINT>(settings->getHttpPortNumber()));
+    }
 
-	case IDC_CHECKIP: 
-		{
-		char oldAuthHost[1280];
-		strcpy_s(oldAuthHost, settings->getAuthhosts());
-		settings->setAuthhosts(rulesListView->getAuthHost());
-		char tempchar[25];
-		GetDlgItemText(hwnd, IDC_IP_FOR_CHECK_EDIT, tempchar, 25);
-		if (m_server) {
-			vncServer::AcceptQueryReject status = m_server->VerifyHost(tempchar);
-			switch (status) {
-			case vncServer::aqrAccept:
-				SetDlgItemText(hwnd, IDC_IP_CHECK_RESULT_LABEL, "Accept");
-				break;
-			case vncServer::aqrQuery:
-				SetDlgItemText(hwnd, IDC_IP_CHECK_RESULT_LABEL, "Query");
-				break;
-			case vncServer::aqrReject:
-				SetDlgItemText(hwnd, IDC_IP_CHECK_RESULT_LABEL, "Reject");
-				break;
-			}
-		settings->setAuthhosts(oldAuthHost);
-		}
-		break; 
-		}
-	case IDC_JAP_INPUTS:
-	{
-		// If enabling Japanese/Alternate keyboard, disable Unicode/International keys
-		// Both options enabled simultaneously causes "End of stream" connection failures
-		HWND hJap = GetDlgItem(hwnd, IDC_JAP_INPUTS);
-		BOOL japChecked = (SendMessage(hJap, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		if (japChecked) {
-			SendDlgItemMessage(hwnd, IDC_UNICODE_INPUTS, BM_SETCHECK, BST_UNCHECKED, 0);
-		}
-	}
-	return TRUE;
+    m_server->EnableConnections(settings->getEnableConnections());
 
-	case IDC_UNICODE_INPUTS:
-	{
-		// If enabling Unicode/International keys, disable Japanese/Alternate keyboard
-		// Both options enabled simultaneously causes "End of stream" connection failures
-		HWND hUnicode = GetDlgItem(hwnd, IDC_UNICODE_INPUTS);
-		BOOL unicodeChecked = (SendMessage(hUnicode, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		if (unicodeChecked) {
-			SendDlgItemMessage(hwnd, IDC_JAP_INPUTS, BM_SETCHECK, BST_UNCHECKED, 0);
-		}
-	}
-	return TRUE;
+    // DSM Plugin prefs
+    if (settings->getUseDSMPlugin())
+    {
+        m_server->SetDSMPlugin(false);
+    }
+    else
+    {
+        m_server->SetDSMPlugin(false);
+    } // clears any pending activation
 
-	default:
-		break;
-	}
-	return TRUE;
-}
-void PropertiesDialog::Secure_Plugin(char* szPlugin)
-{
-	auto m_pDSMPlugin = std::make_unique<CDSMPlugin>();
-	m_pDSMPlugin->LoadPlugin(szPlugin, false);
-	if (m_pDSMPlugin->IsLoaded()) {
-		char szParams[32];
-		strcpy_s(szParams, "NoPassword,");
-		strcat_s(szParams, "server-app");
+    // adzm - 2010-07 - Disable more effects or font smoothing
+    m_server->EnableHTTPConnect(settings->getHTTPConnect());
+    m_server->EnableRemoteInputs(settings->getEnableRemoteInputs());
+    m_server->EnableJapInput(settings->getEnableJapInput());
+    m_server->ForceCursorShape(settings->getForceCursorShape());
+    m_server->EnableUnicodeInput(settings->getEnableUnicodeInput());
 
-		HDESK desktop;
-		desktop = OpenInputDesktop(0, FALSE, DESKTOP_CREATEMENU | DESKTOP_CREATEWINDOW | DESKTOP_ENUMERATE | DESKTOP_HOOKCONTROL |
-			DESKTOP_WRITEOBJECTS | DESKTOP_READOBJECTS | DESKTOP_SWITCHDESKTOP | GENERIC_WRITE);
+    // Now change the listening port settings
+    m_server->SetAutoPortSelect(settings->getAutoPortSelect());
+    if (!settings->getAutoPortSelect())
+    {
+        m_server->SetPorts(static_cast<UINT>(settings->getPortNumber()), static_cast<UINT>(settings->getHttpPortNumber()));
+    }
 
-		if (desktop == NULL)
-			vnclog.Print(LL_INTERR, VNCLOG("OpenInputdesktop Error \n"));
+    m_server->EnableConnections(settings->getEnableConnections());
 
-		HDESK old_desktop = GetThreadDesktop(GetCurrentThreadId());
-		DWORD dummy{};
+    // DSM Plugin prefs
+    if (settings->getUseDSMPlugin())
+    {
+        m_server->SetDSMPlugin(false);
+    }
 
-		char new_name[256]{};
-		if (desktop) {
-			if (!GetUserObjectInformation(desktop, UOI_NAME, &new_name, 256, &dummy)) {
-				vnclog.Print(LL_INTERR, VNCLOG("!GetUserObjectInformation \n"));
-			}
-
-			vnclog.Print(LL_INTERR, VNCLOG("SelectHDESK to %s (%x) from %x\n"), new_name, desktop, old_desktop);
-
-			if (!SetThreadDesktop(desktop)) {
-				vnclog.Print(LL_INTERR, VNCLOG("SelectHDESK:!SetThreadDesktop \n"));
-			}
-		}
-
-		CoInitialize(NULL);
-		HWND hwnd2 = CreateWindowA("STATIC", "dummy", WS_VISIBLE, 0, 0, 100, 100, NULL, NULL, NULL, NULL);
-		ShowWindow(hwnd2, SW_HIDE);
-		char* szNewConfig = NULL;
-		char DSMPluginConfig[512];
-		DSMPluginConfig[0] = '\0';
-		strcpy_s(DSMPluginConfig, settings->getDSMPluginConfig());
-		m_pDSMPlugin->SetPluginParams(hwnd2, szParams, DSMPluginConfig, &szNewConfig);
-
-		if (szNewConfig != NULL && strlen(szNewConfig) > 0) {
-			strcpy_s(DSMPluginConfig, 511, szNewConfig);
-		}
-		settings->setDSMPluginConfig(DSMPluginConfig);
-
-		CoUninitialize();
-		SetThreadDesktop(old_desktop);
-		if (desktop) CloseDesktop(desktop);
-	}
+    bConnectSock = m_server->SockConnected();
 }
 
-void PropertiesDialog::onTabsAPPLY(HWND hwnd)
+int PropertiesDialog::ListPlugins(const HWND hComboBox)
 {
-	if (GetDlgItem(hwnd, IDC_PRIM))
-		settings->setPrimary(SendMessage(GetDlgItem(hwnd, IDC_PRIM), BM_GETCHECK, 0, 0) == BST_CHECKED);
-	if (GetDlgItem(hwnd, IDC_SEC))
-		settings->setSecondary(SendMessage(GetDlgItem(hwnd, IDC_SEC), BM_GETCHECK, 0, 0) == BST_CHECKED);
-
-	// Save language setting (restart required for changes to take effect)
-	if (GetDlgItem(hwnd, IDC_LANGUAGE_COMBO)) {
-		HWND hCombo = GetDlgItem(hwnd, IDC_LANGUAGE_COMBO);
-		int sel = (int)SendMessage(hCombo, CB_GETCURSEL, 0, 0);
-		if (sel >= 0) {
-			wchar_t* langCodeW = (wchar_t*)SendMessage(hCombo, CB_GETITEMDATA, sel, 0);
-			if (langCodeW) {
-				char langCodeA[32] = {0};
-				WideCharToMultiByte(CP_UTF8, 0, langCodeW, -1, langCodeA, sizeof(langCodeA), NULL, NULL);
-				settings->setLanguage(langCodeA);
-			}
-		}
-	}
-
-	if (GetDlgItem(hwnd, IDC_MAXCPU)) {
-		int maxcpu = GetDlgItemInt(hwnd, IDC_MAXCPU, NULL, FALSE);
-		settings->setMaxCpu(maxcpu);
-	}
-
-	if (GetDlgItem(hwnd, IDC_SLIDERFPS)) {
-		int pos = SendMessage(GetDlgItem(hwnd, IDC_SLIDERFPS), TBM_GETPOS, 0, 0L);
-		settings->setMaxFPS(pos);
-	}
-
-	if (GetDlgItem(hwnd, IDC_AUTOCAPT1)) {
-		HWND hcapt = GetDlgItem(hwnd, IDC_AUTOCAPT1);
-		if (SendMessage(hcapt, BM_GETCHECK, 0, 0) == BST_CHECKED)
-			settings->setAutocapt(1);
-		settings->setAutocapt(settings->getAutocapt());
-	}
-
-	if (GetDlgItem(hwnd, IDC_AUTOCAPT2)) {
-		HWND hcapt = GetDlgItem(hwnd, IDC_AUTOCAPT2);
-		if (SendMessage(hcapt, BM_GETCHECK, 0, 0) == BST_CHECKED)
-			settings->setAutocapt(2);
-		settings->setAutocapt(settings->getAutocapt());
-	}
-	if (GetDlgItem(hwnd, IDC_AUTOCAPT3)) {
-		HWND hcapt = GetDlgItem(hwnd, IDC_AUTOCAPT3);
-		if (SendMessage(hcapt, BM_GETCHECK, 0, 0) == BST_CHECKED)
-			settings->setAutocapt(3);
-		settings->setAutocapt(settings->getAutocapt());
-	}
-
-	if (GetDlgItem(hwnd, IDC_TURBOMODE)) {
-		HWND hTurboMode = GetDlgItem(hwnd, IDC_TURBOMODE);
-		settings->setTurboMode(SendMessage(hTurboMode, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_DRIVER)) {
-		HWND hDriver = GetDlgItem(hwnd, IDC_DRIVER);
-		bool result = (SendMessage(hDriver, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		if (result)
-		{
-			if (m_server)
-				m_server->Driver(CheckVideoDriver(0));
-			settings->setDriver(CheckVideoDriver(0));
-		}
-		else {
-			if (m_server)
-				m_server->Driver(false);
-			settings->setDriver(false);
-		}
-	}
-
-	if (GetDlgItem(hwnd, IDC_HOOK)) {
-		HWND hHook = GetDlgItem(hwnd, IDC_HOOK);
-		if (m_server)
-			m_server->Hook(SendMessage(hHook, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		settings->setHook(SendMessage(hHook, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-	if (m_server)
-		m_server->SetHookings();
-
-	if (GetDlgItem(hwnd, IDC_POLL_FULLSCREEN)) {
-		HWND hPollFullScreen = GetDlgItem(hwnd, IDC_POLL_FULLSCREEN);
-		settings->setPollFullScreen(SendMessage(hPollFullScreen, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_POLL_FOREGROUND)) {
-		HWND hPollForeground = GetDlgItem(hwnd, IDC_POLL_FOREGROUND);
-		settings->setPollForeground(
-			SendMessage(hPollForeground, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR)) {
-		HWND hPollUnderCursor = GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR);
-		settings->setPollUnderCursor(
-			SendMessage(hPollUnderCursor, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_CONSOLE_ONLY)) {
-		HWND hPollConsoleOnly = GetDlgItem(hwnd, IDC_CONSOLE_ONLY);
-		settings->setPollConsoleOnly(
-			SendMessage(hPollConsoleOnly, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_ONEVENT_ONLY)) {
-		HWND hPollOnEventOnly = GetDlgItem(hwnd, IDC_ONEVENT_ONLY);
-		settings->setPollOnEventOnly(
-			SendMessage(hPollOnEventOnly, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_EDIT_PATH)) {
-		char path[512];
-		int lenpath = GetDlgItemText(hwnd, IDC_EDIT_PATH, (LPSTR)&path, 512);
-		if (lenpath != 0)
-			vnclog.SetPath(path);
-		else {
-			strcpy_s(path, "");
-			vnclog.SetPath(path);
-		}
-		settings->setDebugPath(path);
-		vnclog.SetFile();
-	}
-
-	if (GetDlgItem(hwnd, IDC_SAVEPASSWORDSECURE)) {
-		bool Secure_old = settings->getSecure();
-		HWND hSecure = GetDlgItem(hwnd, IDC_SAVEPASSWORDSECURE);
-		settings->setSecure(SendMessage(hSecure, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		bool bSecure = settings->getSecure();
-		if (Secure_old != bSecure) {
-			// We changed the method to save the password
-			// load passwords and encrypt the other method
-			vncPasswd::ToText plain(settings->getPasswd(), Secure_old);
-			vncPasswd::ToText plainViewOnly(settings->getPasswdViewOnly(), Secure_old);
-			char passwd[MAXPWLEN + 1];
-			char passwdViewOnly[MAXPWLEN + 1];
-			memset(passwd, '\0', MAXPWLEN + 1); //PGM
-			memset(passwdViewOnly, '\0', MAXPWLEN + 1); //PGM
-			strcpy_s(passwd, plain);
-			strcpy_s(passwdViewOnly, plainViewOnly);
-			int lenPassword = (int)strlen(passwd);
-			int lenPasswordViewOnly = (int)strlen(passwdViewOnly);
-			if (lenPassword != 0) {
-				vncPasswd::FromText crypt(passwd, settings->getSecure());
-				settings->setPasswd(crypt);
-			}
-			if (lenPasswordViewOnly != 0) {
-				vncPasswd::FromText crypt2(passwdViewOnly, settings->getSecure());
-				settings->setPasswdViewOnly(crypt2);
-			}
-		}
-	}
-
-	if (GetDlgItem(hwnd, IDC_PORTNO_AUTO)) {
-
-		// Save the new settings to the server
-		int state = (int)SendDlgItemMessage(hwnd, IDC_PORTNO_AUTO, BM_GETCHECK, 0, 0);
-		if (m_server)
-			m_server->SetAutoPortSelect(state == BST_CHECKED);
-		settings->setAutoPortSelect(state == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_PORTHTTP) && GetDlgItem(hwnd, IDC_PORTRFB)) {
-
-		// Save port numbers if we're not auto selecting
-		if (!settings->getAutoPortSelect()) {
-			// Assuming that port numbers were specified
-			BOOL ok1{}, ok2{};
-			UINT port_rfb = GetDlgItemInt(hwnd, IDC_PORTRFB, &ok1, TRUE);
-			UINT port_http = GetDlgItemInt(hwnd, IDC_PORTHTTP, &ok2, TRUE);
-			if (ok1 && ok2) {
-				if (m_server)
-					m_server->SetPorts(port_rfb, port_http);
-				settings->setPortNumber(port_rfb);
-				settings->setHttpPortNumber(port_http);
-			}
-		}
-	}
-
-	if (GetDlgItem(hwnd, IDC_CONNECT_SOCK)) {
-		HWND hConnectSock = GetDlgItem(hwnd, IDC_CONNECT_SOCK);
-		if (m_server)
-			m_server->EnableConnections(SendMessage(hConnectSock, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		settings->setEnableConnections(SendMessage(hConnectSock, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (m_server)
-		InitPortSettings(hwnd);
-
-	if (GetDlgItem(hwnd, IDC_PORTNO_AUTO)) {
-		HWND hConnectHTTP = GetDlgItem(hwnd, IDC_CONNECT_HTTP);
-		if (m_server)
-			m_server->EnableHTTPConnect(SendMessage(hConnectHTTP, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		settings->setHTTPConnect(SendMessage(hConnectHTTP, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_TLS)) {
-		BOOL bTLS = (SendDlgItemMessage(hwnd, IDC_TLS, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		settings->setEnableTLS(bTLS);
-		if (bTLS && GetDlgItem(hwnd, IDC_PORTHTTPS)) {
-			BOOL ok{};
-			UINT tlsPort = GetDlgItemInt(hwnd, IDC_PORTHTTPS, &ok, FALSE);
-			if (ok)
-				settings->setTLSPort(tlsPort);
-		}
-	}
-
-	// SSL/TLS tab
-	if (GetDlgItem(hwnd, IDC_TLS_NOVNC_PORT)) {
-		BOOL ok{};
-		UINT tlsPort = GetDlgItemInt(hwnd, IDC_TLS_NOVNC_PORT, &ok, FALSE);
-		if (ok)
-			settings->setTLSPort(tlsPort);
-		char thumb[64]{};
-		GetDlgItemText(hwnd, IDC_TLS_THUMBPRINT, thumb, sizeof(thumb));
-		settings->setTLSCertThumbprint(thumb);
-	}
-	if (GetDlgItem(hwnd, IDC_VENCRYPT_ENABLE)) {
-		settings->setEnableVeNCryptTLS(
-			SendDlgItemMessage(hwnd, IDC_VENCRYPT_ENABLE, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		settings->setVeNCryptAllowPlainAuth(
-			SendDlgItemMessage(hwnd, IDC_VENCRYPT_ALLOW_PLAIN, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		settings->setVeNCryptAllowLegacyAuth(
-			SendDlgItemMessage(hwnd, IDC_VENCRYPT_ALLOW_LEGACY, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		settings->setVeNCryptRequireChannelBinding(
-			SendDlgItemMessage(hwnd, IDC_VENCRYPT_REQUIRE_PLUS, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		settings->setEnableRA2(
-			SendDlgItemMessage(hwnd, IDC_ENABLE_RA2, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		settings->setEnableRA2ne(
-			SendDlgItemMessage(hwnd, IDC_ENABLE_RA2NE, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		char thumb[64]{};
-		GetDlgItemText(hwnd, IDC_VENCRYPT_THUMBPRINT, thumb, sizeof(thumb));
-		settings->setVeNCryptTLSCertThumbprint(thumb);
-		if (HWND hBits = GetDlgItem(hwnd, IDC_VENCRYPT_KEYBITS)) {
-			const LRESULT sel = SendMessage(hBits, CB_GETCURSEL, 0, 0);
-			if (sel >= 0 && sel < (LRESULT)(sizeof(kSelfSignedKeyBits) / sizeof(kSelfSignedKeyBits[0])))
-				settings->setTLSCertKeyBits(kSelfSignedKeyBits[sel]);
-		}
-		char dllPath[MAX_PATH]{};
-		GetDlgItemText(hwnd, IDC_VENCRYPT_DLLPATH, dllPath, sizeof(dllPath));
-		settings->setVeNCryptTokenDLLPath(dllPath);
-		char subtypes[256]{};
-		SaveVeNCryptSubtypes(hwnd, subtypes, sizeof(subtypes));
-		settings->setVeNCryptSubtypes(subtypes);
-	}
-
-	if (GetDlgItem(hwnd, IDC_DISABLE_INPUTS)) {
-		HWND hEnableRemoteInputs = GetDlgItem(hwnd, IDC_DISABLE_INPUTS);
-		if (m_server)
-			m_server->EnableRemoteInputs(SendMessage(hEnableRemoteInputs, BM_GETCHECK, 0, 0) != BST_CHECKED);
-		settings->setEnableRemoteInputs(SendMessage(hEnableRemoteInputs, BM_GETCHECK, 0, 0) != BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_DISABLE_LOCAL_INPUTS)) {
-		HWND hDisableLocalInputs = GetDlgItem(hwnd, IDC_DISABLE_LOCAL_INPUTS);
-		settings->setDisableLocalInputs(SendMessage(hDisableLocalInputs, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_JAP_INPUTS)) {
-		HWND hJapInputs = GetDlgItem(hwnd, IDC_JAP_INPUTS);
-		if (m_server)
-			m_server->EnableJapInput(SendMessage(hJapInputs, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		settings->setEnableJapInput(SendMessage(hJapInputs, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_FORCE_SHAPE)) {
-		HWND hForceCursorShape = GetDlgItem(hwnd, IDC_FORCE_SHAPE);
-		if (m_server)
-			m_server->ForceCursorShape(SendMessage(hForceCursorShape, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		settings->setForceCursorShape(SendMessage(hForceCursorShape, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_UNICODE_INPUTS)) {
-		HWND hUnicodeInputs = GetDlgItem(hwnd, IDC_UNICODE_INPUTS);
-		BOOL unicodeChecked = (SendMessage(hUnicodeInputs, BM_GETCHECK, 0, 0) == BST_CHECKED);
-		// Safety check: Ensure both JapInput and UnicodeInput are not enabled simultaneously
-		// This prevents the "End of stream" connection failure bug
-		if (unicodeChecked && settings->getEnableJapInput()) {
-			unicodeChecked = FALSE;
-			SendDlgItemMessage(hwnd, IDC_UNICODE_INPUTS, BM_SETCHECK, BST_UNCHECKED, 0);
-		}
-		if (m_server)
-			m_server->EnableUnicodeInput(unicodeChecked);
-		settings->setEnableUnicodeInput(unicodeChecked);
-	}
-
-	if (GetDlgItem(hwnd, IDC_WIN8_HELPER)) {
-		HWND hwinhelper = GetDlgItem(hwnd, IDC_WIN8_HELPER);
-		settings->setEnableWin8Helper(SendMessage(hwinhelper, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_REMOVE_WALLPAPER)) {
-		HWND hRemoveWallpaper = GetDlgItem(hwnd, IDC_REMOVE_WALLPAPER);
-		settings->setRemoveWallpaper(SendMessage(hRemoveWallpaper, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_LOCKSETTING_LOCK) && GetDlgItem(hwnd, IDC_LOCKSETTING_LOGOFF)) {
-		if (SendMessage(GetDlgItem(hwnd, IDC_LOCKSETTING_LOCK), BM_GETCHECK, 0, 0) == BST_CHECKED) {
-			settings->setLockSettings(1);
-		}
-		else if (SendMessage(GetDlgItem(hwnd, IDC_LOCKSETTING_LOGOFF), BM_GETCHECK, 0, 0) == BST_CHECKED) {
-			settings->setLockSettings(2);
-		}
-		else {
-			settings->setLockSettings(0);
-		}
-	}
-
-	if (GetDlgItem(hwnd, IDC_RADIONOTIFICATIONON) && GetDlgItem(hwnd, IDC_RADIONOTIFICATIONIFPROVIDED)) {
-		if (SendMessage(GetDlgItem(hwnd, IDC_RADIONOTIFICATIONON), BM_GETCHECK, 0, 0) == BST_CHECKED) {
-			settings->setNotificationSelection(0);
-		}
-		else if (SendMessage(GetDlgItem(hwnd, IDC_RADIONOTIFICATIONIFPROVIDED), BM_GETCHECK, 0, 0) == BST_CHECKED) {
-			settings->setNotificationSelection(1);
-		}
-	}
-
-	if (GetDlgItem(hwnd, IDC_DREFUSE) && GetDlgItem(hwnd, IDC_DACCEPT)) {
-		if (SendMessage(GetDlgItem(hwnd, IDC_DREFUSE), BM_GETCHECK, 0, 0) == BST_CHECKED) {
-			settings->setQueryAccept(0);
-		}
-		else if (SendMessage(GetDlgItem(hwnd, IDC_DACCEPT), BM_GETCHECK, 0, 0) == BST_CHECKED) {
-			settings->setQueryAccept(1);
-		}
-		else if (SendMessage(GetDlgItem(hwnd, IDC_DRefuseOnly), BM_GETCHECK, 0, 0)
-			== BST_CHECKED) {
-			settings->setQueryAccept(2);
-		}
-	}
-	if (GetDlgItem(hwnd, IDC_QNOLOGON))
-		settings->setQueryIfNoLogon(!SendDlgItemMessage(hwnd, IDC_QNOLOGON, BM_GETCHECK, 0, 0));
-
-	if (GetDlgItem(hwnd, IDC_MAXREFUSE) && GetDlgItem(hwnd, IDC_MAXDISCONNECT)) {
-		if (SendMessage(GetDlgItem(hwnd, IDC_MAXREFUSE), BM_GETCHECK, 0, 0) == BST_CHECKED) {
-			settings->setMaxViewerSetting(0);
-		}
-		else if (SendMessage(GetDlgItem(hwnd, IDC_MAXDISCONNECT), BM_GETCHECK, 0, 0) == BST_CHECKED) {
-			settings->setMaxViewerSetting(1);
-		}
-	}
-
-	if (GetDlgItem(hwnd, IDC_IDLETIME)) {
-		char timeout[256];
-		GetDlgItemText(hwnd, IDC_IDLETIME, (LPSTR)&timeout, 600);
-		settings->setIdleTimeout(atoi(timeout));
-	}
-	if (GetDlgItem(hwnd, IDC_IDLETIMEINPUT)) {
-		char timeout[256];
-		GetDlgItemText(hwnd, IDC_IDLETIMEINPUT, (LPSTR)&timeout, 600);
-		settings->setIdleInputTimeout(atoi(timeout));
-	}
-	if (GetDlgItem(hwnd, IDC_KINTERVAL)) {
-		char timeout[256];
-		GetDlgItemText(hwnd, IDC_KINTERVAL, (LPSTR)&timeout, 600);
-		settings->setkeepAliveInterval(atoi(timeout));
-	}
-
-	if (GetDlgItem(hwnd, IDC_MAXVIEWERS)) {
-		char maxViewerChar[256];
-		strcpy_s(maxViewerChar, "128");
-		if (GetDlgItemText(hwnd, IDC_MAXVIEWERS, (LPSTR)&maxViewerChar, 256) == 0) {
-			int value = atoi(maxViewerChar);
-			if (value > 128)
-				value = 128;
-			settings->setMaxViewers(value);
-		}
-		else
-			settings->setMaxViewers(atoi(maxViewerChar));
-	}
-
-	if (GetDlgItem(hwnd, IDC_COLLABO)) {
-		HWND hCollabo = GetDlgItem(hwnd, IDC_COLLABO);
-		settings->setCollabo(SendMessage(hCollabo, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_FRAME)) {
-		HWND hwndDlg = GetDlgItem(hwnd, IDC_FRAME);
-		settings->setFrame(SendMessage(hwndDlg, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_NOTIFOCATION)) {
-		HWND hwndDlg = GetDlgItem(hwnd, IDC_NOTIFOCATION);
-		settings->setNotification(SendMessage(hwndDlg, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_OSD)) {
-		HWND hwndDlg = GetDlgItem(hwnd, IDC_OSD);
-		settings->setOSD(SendMessage(hwndDlg, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_MV1)) {
-		if (SendMessage(GetDlgItem(hwnd, IDC_MV1), BM_GETCHECK, 0, 0) == BST_CHECKED) {
-			settings->setConnectPriority(0);
-		}
-		else if (SendMessage(GetDlgItem(hwnd, IDC_MV2), BM_GETCHECK, 0, 0) == BST_CHECKED) {
-			settings->setConnectPriority(1);
-		}
-		else if (SendMessage(GetDlgItem(hwnd, IDC_MV3), BM_GETCHECK, 0, 0) == BST_CHECKED) {
-			settings->setConnectPriority(2);
-		}
-		else if (SendMessage(GetDlgItem(hwnd, IDC_MV4), BM_GETCHECK, 0, 0) == BST_CHECKED) {
-			settings->setConnectPriority(3);
-		}
-	}
-
-	if (GetDlgItem(hwnd, IDC_FILETRANSFER)) {
-		HWND hFileTransfer = GetDlgItem(hwnd, IDC_FILETRANSFER);
-		settings->setEnableFileTransfer(SendMessage(hFileTransfer, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_FTUSERIMPERSONATION_CHECK)) {
-		HWND hFileTransferUserImp = GetDlgItem(hwnd, IDC_FTUSERIMPERSONATION_CHECK);
-		settings->setFTUserImpersonation(SendMessage(hFileTransferUserImp, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_BLANK)) {
-		HWND hBlank = GetDlgItem(hwnd, IDC_BLANK);
-		settings->setEnableBlankMonitor(SendMessage(hBlank, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_BLANK2)) {
-		HWND hBlank2 = GetDlgItem(hwnd, IDC_BLANK2); //PGM
-		settings->setBlankInputsOnly(SendMessage(hBlank2, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_ALLOWLOOPBACK))
-		settings->setAllowLoopback(IsDlgButtonChecked(hwnd, IDC_ALLOWLOOPBACK));
-
-	if (GetDlgItem(hwnd, IDC_IPV6))
-		settings->setIPV6(IsDlgButtonChecked(hwnd, IDC_IPV6));
-
-	if (GetDlgItem(hwnd, IDC_LOOPBACKONLY)) {
-		if (m_server)
-			m_server->SetLoopbackOnly(IsDlgButtonChecked(hwnd, IDC_LOOPBACKONLY));
-		settings->setLoopbackOnly(IsDlgButtonChecked(hwnd, IDC_LOOPBACKONLY));
-	}
-
-	if (GetDlgItem(hwnd, IDC_DISABLETRAY))
-		settings->setDisableTrayIcon(IsDlgButtonChecked(hwnd, IDC_DISABLETRAY));
-
-	if (GetDlgItem(hwnd, IDC_RDPMODE))
-		settings->setRdpmode(IsDlgButtonChecked(hwnd, IDC_RDPMODE));
-
-	if (GetDlgItem(hwnd, IDC_NOSCREENSAVER)) {
-		settings->setNoScreensaver(IsDlgButtonChecked(hwnd, IDC_NOSCREENSAVER));
-		if (m_server)
-			m_server->SetNoScreensaver(IsDlgButtonChecked(hwnd, IDC_NOSCREENSAVER));
-	}
-
-	if (GetDlgItem(hwnd, IDC_ALLOWSHUTDOWN)) {
-		settings->setAllowShutdown(!IsDlgButtonChecked(hwnd, IDC_ALLOWSHUTDOWN));
-		vncMenu::updateMenu();
-	}
-
-	if (GetDlgItem(hwnd, IDC_ALLOWEDITCLIENTS)) {
-		settings->setAllowEditClients(!IsDlgButtonChecked(hwnd, IDC_ALLOWEDITCLIENTS));
-		vncMenu::updateMenu();
-	}
-
-
-
-	if (GetDlgItem(hwnd, IDC_LOG)) {
-		if (IsDlgButtonChecked(hwnd, IDC_LOG)) {
-			vnclog.SetMode(2);
-			vnclog.SetLevel(10);
-		}
-		else
-			vnclog.SetMode(0);
-	}
-
-	if (GetDlgItem(hwnd, IDC_VIDEO)) {
-		if (IsDlgButtonChecked(hwnd, IDC_VIDEO))
-			vnclog.SetVideo(true);
-		else
-			vnclog.SetVideo(false);
-	}
-
-	if (GetDlgItem(hwnd, IDC_MSLOGON_CHECKD)) {
-		HWND hMSLogon = GetDlgItem(hwnd, IDC_MSLOGON_CHECKD);
-		settings->setRequireMSLogon(SendMessage(hMSLogon, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-	if (GetDlgItem(hwnd, IDC_NEW_MSLOGON)) {
-		HWND hNewMSLogon = GetDlgItem(hwnd, IDC_NEW_MSLOGON);
-		settings->setNewMSLogon(SendMessage(hNewMSLogon, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_REVERSEAUTH)) {
-		HWND hReverseAuth = GetDlgItem(hwnd, IDC_REVERSEAUTH);
-		settings->setReverseAuthRequired(SendMessage(hReverseAuth, BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
-
-	if (GetDlgItem(hwnd, IDC_SCALE)) {
-		int nDScale = GetDlgItemInt(hwnd, IDC_SCALE, NULL, FALSE);
-		if (nDScale < 1 || nDScale > 9) nDScale = 1;
-		settings->setDefaultScale(nDScale);
-	}
-
-	if (GetDlgItem(hwnd, IDC_PLUGIN_CHECK)) {
-		if (SendMessage(GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED)
-		{
-			TCHAR szPlugin[MAX_PATH];
-			GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin, MAX_PATH);
-			settings->setSzDSMPlugin(szPlugin);
-			settings->setUseDSMPlugin(true);
-		}
-		else // If Use plugin unchecked but the plugin is loaded, unload it
-		{
-			settings->setUseDSMPlugin(false);
-			if (m_server && m_server->GetDSMPluginPointer()->IsLoaded())
-			{
-				m_server->GetDSMPluginPointer()->UnloadPlugin();
-				m_server->GetDSMPluginPointer()->SetEnabled(false);
-			}
-		}
-	}
-
-	if (GetDlgItem(hwnd, IDQUERYTIMEOUT)) {
-		char timeout[256];
-		strcpy_s(timeout, "5");
-		if (GetDlgItemText(hwnd, IDQUERYTIMEOUT, (LPSTR)&timeout, 256) == 0)
-			settings->setQueryTimeout(atoi(timeout));
-		else
-			settings->setQueryTimeout(atoi(timeout));
-	}
-
-	if (GetDlgItem(hwnd, IDC_QUERYDISABLETIME)) {
-		char disabletime[256];
-		strcpy_s(disabletime, "5");
-		if (GetDlgItemText(hwnd, IDC_QUERYDISABLETIME, (LPSTR)&disabletime, 256) == 0)
-			settings->setQueryDisableTime(atoi(disabletime));
-		else
-			settings->setQueryDisableTime(atoi(disabletime));
-	}
-
-	if (GetDlgItem(hwnd, IDC_SERVICE_COMMANDLINE)) {
-		char temp[1024]{};
-		GetDlgItemText(hwnd, IDC_SERVICE_COMMANDLINE, temp, 1024);
-		settings->setService_commandline(temp);
-	}
-
-	if (GetDlgItem(hwnd, IDC_EDITQUERYTEXT)) {
-		char temp2[512]{};
-		GetDlgItemText(hwnd, IDC_EDITQUERYTEXT, temp2, 512);
-		settings->setAccept_reject_mesg(temp2);
-	}
-
-	if (GetDlgItem(hwnd, IDQUERY)) {
-		HWND hQuery = GetDlgItem(hwnd, IDQUERY);
-		settings->setQuerySetting((SendMessage(hQuery, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 4 : 2);
-	}
-
-	if (GetDlgItem(hwnd, IDC_AUTHREQUIRED))
-		settings->setAuthRequired(SendMessage(GetDlgItem(hwnd, IDC_AUTHREQUIRED), BM_GETCHECK, 0, 0) == BST_CHECKED);
-
-	settings->setAuthhosts(rulesListView->getAuthHost());
-
-	if (GetDlgItem(hwnd, IDC_ALLOWUSERSSETTINGS)) {
-		settings->setAllowUserSettingsWithPassword(SendMessage(GetDlgItem(hwnd, IDC_ALLOWUSERSSETTINGS), BM_GETCHECK, 0, 0) == BST_CHECKED);
-	}
+    // TODO: Log events
+    WIN32_FIND_DATA fd;
+    HANDLE ff;
+    int fRet{ 1 };
+    int nFiles{ 0 };
+    std::array<char, MAX_PATH> szCurrentDir;
+    ::strcpy_s(szCurrentDir.data(), szCurrentDir.size(), winvncFolder.data());
+    if (szCurrentDir[std::strlen(szCurrentDir.data()) - 1] != '\\')
+    {
+        ::strcat_s(szCurrentDir.data(), szCurrentDir.size(), "\\");
+    }
+    ::strcat_s(szCurrentDir.data(), szCurrentDir.size(), "*.dsm"); // The DSMplugin dlls must have this extension
+
+    ff = ::FindFirstFile(szCurrentDir.data(), &fd);
+    if (ff == INVALID_HANDLE_VALUE)
+    {
+        // Todo: Log error here
+        return 0;
+    }
+
+    while (fRet != 0)
+    {
+        ::SendMessage(hComboBox, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>((fd.cFileName)));
+        ++nFiles;
+        fRet = ::FindNextFile(ff, &fd);
+    }
+
+    ::FindClose(ff);
+
+    return nFiles;
 }
-void PropertiesDialog::onTabsOK(HWND hwnd)
+static bool isRunning{ false };
+
+bool PropertiesDialog::onCommand(int command, const HWND hwnd, const int subcommand)
 {
-	EndDialog(hwnd, IDOK);
-	m_dlgvisible = FALSE;
-}
+    if (((command != IDC_SERVICE_COMMANDLINE) && (command != IDC_IDLETIMEINPUT) && (command != IDC_STARTLOG) &&
+         (command != IDC_KINTERVAL) && (command != IDC_PORTRFB) && (command != IDC_PORTHTTP) && (command != IDC_SCALE) &&
+         (command != IDC_CHECKIP) && (command != IDC_STARTREP) && (command != IDC_INSTALL_SERVICE) &&
+         (command != IDC_UNINSTALL_SERVICE) && (command != IDC_START_SERVICE) && (command != IDC_STOP_SERVICE)) ||
+        (subcommand == 1024))
+    {
+        ::EnableWindow(::GetDlgItem(PropertiesDialogHwnd, IDC_APPLY), true);
+    }
+    switch (command)
+    {
+    case IDC_PLUGINS_COMBO: {
+        HWND hCombo = ::GetDlgItem(hwnd, IDC_PLUGINS_COMBO);
+        bool pluginset{ false };
+        std::array<TCHAR, MAX_PATH> szPlugin{};
+        std::array<TCHAR, MAX_PATH> szPluginDefault{"No Plugin detected..."};
 
-void PropertiesDialog::InitPortSettings(HWND hwnd)
-{
-	BOOL bConnectSock = m_server ? m_server->SockConnected() : false;
-	BOOL bConnectHttp = settings->getHTTPConnect();
-	BOOL bAutoPort = settings->getAutoPortSelect();
-	UINT port_rfb = settings->getPortNumber();
-	UINT port_http = settings->getHttpPortNumber();
-	int d1 = PORT_TO_DISPLAY(port_rfb);
-	int d2 = HPORT_TO_DISPLAY(port_http);
-	BOOL bValidDisplay = (d1 == d2 && d1 >= 0 && d1 <= 99);
-
-	if (GetDlgItem(hwnd, IDC_PORTNO_AUTO)) {
-		CheckDlgButton(hwnd, IDC_PORTNO_AUTO,
-			(bAutoPort) ? BST_CHECKED : BST_UNCHECKED);
-		EnableWindow(GetDlgItem(hwnd, IDC_PORTNO_AUTO), bConnectSock);
-	}
-
-	if (GetDlgItem(hwnd, IDC_PORTRFB)) {
-		SetDlgItemInt(hwnd, IDC_PORTRFB, port_rfb, FALSE);
-		EnableWindow(GetDlgItem(hwnd, IDC_PORTRFB), bConnectSock && !bAutoPort && !bValidDisplay);
-	}
-
-	if (GetDlgItem(hwnd, IDC_PORTHTTP)) {
-		SetDlgItemInt(hwnd, IDC_PORTHTTP, port_http, FALSE);
-		EnableWindow(GetDlgItem(hwnd, IDC_PORTHTTP), bConnectSock && !bAutoPort && !bValidDisplay && bConnectHttp);
-	}
-}
-
-void PropertiesDialog::onApply(HWND hwnd)
-{
-	SendMessage(hTabAuthentication, WM_COMMAND, IDC_APPLY, 0);
-	SendMessage(hTabIncoming, WM_COMMAND, IDC_APPLY, 0);
-	SendMessage(hTabInput, WM_COMMAND, IDC_APPLY, 0);
-	SendMessage(hTabMisc, WM_COMMAND, IDC_APPLY, 0);
-	SendMessage(hTabNotifications, WM_COMMAND, IDC_APPLY, 0);
-	SendMessage(hTabNetwork, WM_COMMAND, IDC_APPLY, 0);
-	SendMessage(hTabRules, WM_COMMAND, IDC_APPLY, 0);
-	SendMessage(hTabCapture, WM_COMMAND, IDC_APPLY, 0);
-	SendMessage(hTabLog, WM_COMMAND, IDC_APPLY, 0);
-	SendMessage(hTabTLS, WM_COMMAND, IDC_APPLY, 0);
-	SendMessage(hTabAdministration, WM_COMMAND, IDC_APPLY, 0);
-	SendMessage(hTabService, WM_COMMAND, IDC_APPLY, 0);
+        if (subcommand == CBN_SELCHANGE)
+        {
+            int selIndex = ComboBox_GetCurSel(hCombo); // Get selected index
+            if (selIndex != CB_ERR)
+            {
+                ComboBox_GetLBText(hCombo, selIndex, szPlugin.data()); // Get text of selected item
+                pluginset = (std::strcmp(szPlugin.data(), szPluginDefault.data()) != 0) && (std::strlen(szPlugin.data()) > 0);
+            }
+            if (m_server)
+            {
+                ::EnableWindow(::GetDlgItem(hwnd, IDC_PLUGIN_BUTTON),
+                             (m_server->AuthClientCount() == 0
+                                  ? (::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED) && pluginset
+                                  : BST_UNCHECKED));
+            }
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_PLUGINS_COMBO),
+                         ::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED);
+        }
+        if (subcommand == CBN_EDITCHANGE)
+        {
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_PLUGIN_BUTTON),
+                         (m_server->AuthClientCount() == 0
+                              ? (::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED) && pluginset
+                              : BST_UNCHECKED));
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_PLUGINS_COMBO),
+                         ::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED);
+        }
+    }
+        return TRUE;
+    case IDC_REMOVE_BUTTON:
+        if (isRunning)
+        {
+            break;
+        }
+        isRunning = true;
+        rulesListView->removeSelectedItem();
+        isRunning = false;
+        break;
+    case IDC_MOVE_DOWN_BUTTON:
+        if (isRunning)
+        {
+            break;
+        }
+        isRunning = true;
+        rulesListView->moveDown();
+        isRunning = false;
+        break;
+    case IDC_MOVE_UP_BUTTON:
+        if (isRunning)
+        {
+            break;
+        }
+        isRunning = true;
+        rulesListView->moveUp();
+        isRunning = false;
+        break;
+    case IDC_ADD_BUTTON:
+        if (isRunning)
+        {
+            break;
+        }
+        isRunning = true;
+        rulesListView->add();
+        isRunning = false;
+        break;
+    case IDC_EDIT_BUTTON:
+        if (isRunning)
+        {
+            break;
+        }
+        isRunning = true;
+        rulesListView->edit();
+        isRunning = false;
+        break;
+    case IDC_DRIVER:
+        if (m_server)
+        {
+            if (::SendMessage(::GetDlgItem(hwnd, IDC_DRIVER), BM_GETCHECK, 0, 0) == BST_CHECKED)
+            {
+                m_server->Driver(CheckVideoDriver(0));
+            }
+        }
+        else
+        {
+            m_server->Driver(false);
+        }
+        if (settings->getddEngine())
+        {
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_SLIDERFPS), settings->getDriver());
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_STATICFPS60), settings->getDriver());
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_STATICFPS5), settings->getDriver());
+        }
+        break;
+    case IDCANCEL:
+        ::EndDialog(PropertiesDialogHwnd, IDCANCEL);
+        m_dlgvisible = FALSE;
+        return TRUE;
+    case IDC_APPLY:
+        onTabsAPPLY(hwnd);
+        return TRUE;
+    case IDOK:
+        onTabsAPPLY(hwnd);
+        onTabsOK(hwnd);
+        return TRUE;
+    case IDC_POLL_FOREGROUND:
+    case IDC_POLL_UNDER_CURSOR: {
+        BOOL enabled = (::SendMessage(::GetDlgItem(hwnd, IDC_POLL_FOREGROUND), BM_GETCHECK, 0, 0) == BST_CHECKED) ||
+                       (::SendMessage(::GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR), BM_GETCHECK, 0, 0) == BST_CHECKED);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_CONSOLE_ONLY), enabled);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_ONEVENT_ONLY), enabled);
+        return TRUE;
+    }
+    case IDC_CHECKDRIVER:
+        CheckVideoDriver(1);
+        return TRUE;
 #ifndef SC_20
-	settings->save();
-#endif // SC_20	
-}
-void PropertiesDialog::onOK(HWND hwnd)
-	{
-	SendMessage(hTabAuthentication, WM_COMMAND, IDOK, 0);
-	SendMessage(hTabIncoming, WM_COMMAND, IDOK, 0);
-	SendMessage(hTabInput, WM_COMMAND, IDOK, 0);
-	SendMessage(hTabMisc, WM_COMMAND, IDOK, 0);
-	SendMessage(hTabNotifications, WM_COMMAND, IDOK, 0);
-	SendMessage(hTabNetwork, WM_COMMAND, IDOK, 0);
-	SendMessage(hTabRules, WM_COMMAND, IDOK, 0);
-	SendMessage(hTabCapture, WM_COMMAND, IDOK, 0);
-	SendMessage(hTabLog, WM_COMMAND, IDOK, 0);
-	SendMessage(hTabTLS, WM_COMMAND, IDOK, 0);
-	SendMessage(hTabAdministration, WM_COMMAND, IDOK, 0);
-	SendMessage(hTabService, WM_COMMAND, IDOK, 0);
+    case IDC_INSTALL_SERVICE:
+        UltraVNCService::install_service();
+        ::Sleep(3000);
+        setServiceStatusText(hwnd);
+        break;
+    case IDC_UNINSTALL_SERVICE:
+        UltraVNCService::uninstall_service();
+        ::Sleep(3000);
+        setServiceStatusText(hwnd);
+        break;
+
+    case IDC_START_SERVICE: {
+        serviceHelpers::Real_start_service();
+        ::Sleep(3000);
+        setServiceStatusText(hwnd);
+    }
+    break;
+    case IDC_STOP_SERVICE: {
+        serviceHelpers::Real_stop_service();
+        ::Sleep(3000);
+        setServiceStatusText(hwnd);
+    }
+    break;
+#endif
+    case IDC_BLANK: {
+        // only enable alpha blanking if blanking is enabled
+        HWND hBlank = ::GetDlgItem(hwnd, IDC_BLANK);
+        HWND hBlank2 = ::GetDlgItem(hwnd, IDC_BLANK2);                                    //PGM
+        ::EnableWindow(hBlank2, ::SendMessage(hBlank, BM_GETCHECK, 0, 0) == BST_CHECKED); //PGM
+    }
+    break;
+
+    case IDC_STARTLOG:
+        settings->setShowAllLogs(!settings->getShowAllLogs());
+        ::SetDlgItemText(hwnd, IDC_STARTLOG, settings->getShowAllLogs() ? "HIDE ALL LOGS" : "SHOW ALL LOGS");
+        break;
+
+    case IDC_VIDEO: {
+        if (::IsDlgButtonChecked(hwnd, IDC_VIDEO))
+        {
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_EDIT_PATH), true);
+        }
+        else
+        {
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_EDIT_PATH), false);
+        }
+        break;
+    }
+
+    case IDC_CLEAR: {
+        vnclog.ClearAviConfig();
+        break;
+    }
+
+    case IDC_CONNECT_HTTP: {
+        const BOOL httpEnabled = (::SendDlgItemMessage(hwnd, IDC_CONNECT_HTTP, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_TLS), httpEnabled);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_STATIC_HTTPPORT), httpEnabled);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTHTTP), httpEnabled);
+        UpdateWebClientTlsAvailability(hwnd, hTabTLS);
+    }
+    break;
+
+    case IDC_TLS: {
+        BOOL bTLS = (::SendDlgItemMessage(hwnd, IDC_TLS, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        if (::GetDlgItem(hwnd, IDC_PORTHTTP))
+        {
+            ::ShowWindow(::GetDlgItem(hwnd, IDC_PORTHTTP), bTLS ? SW_HIDE : SW_SHOW);
+        }
+        if (::GetDlgItem(hwnd, IDC_PORTHTTPS))
+        {
+            ::ShowWindow(::GetDlgItem(hwnd, IDC_PORTHTTPS), bTLS ? SW_SHOW : SW_HIDE);
+            if (bTLS)
+            {
+                ::SetDlgItemInt(hwnd, IDC_PORTHTTPS, static_cast<UINT>(settings->getTLSPort()), FALSE);
+            }
+        }
+        UpdateWebClientTlsAvailability(hwnd, hTabTLS);
+    }
+    break;
+
+    case IDC_TLS_CERT_SELECT:
+        SelectCertificateToEdit(hwnd, IDC_TLS_THUMBPRINT);
+        return TRUE;
+    case IDC_TLS_CERT_GEN:
+        GenerateSelfSignedToEdit(hwnd, IDC_TLS_THUMBPRINT);
+        return TRUE;
+    case IDC_VENCRYPT_CERT_SELECT:
+        SelectCertificateToEdit(hwnd, IDC_VENCRYPT_THUMBPRINT);
+        return TRUE;
+    case IDC_VENCRYPT_CERT_GEN:
+        GenerateSelfSignedToEdit(hwnd, IDC_VENCRYPT_THUMBPRINT);
+        return TRUE;
+    case IDC_VENCRYPT_ENABLE: {
+        BOOL bVeNCrypt = (::SendDlgItemMessage(hwnd, IDC_VENCRYPT_ENABLE, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_PLAIN), bVeNCrypt);
+        UpdateCertControlAvailability(hwnd, bVeNCrypt);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_DLLPATH), bVeNCrypt);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_DLL_BROWSE), bVeNCrypt);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_REQUIRE_PLUS), bVeNCrypt);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_LEGACY), bVeNCrypt);
+        EnableVeNCryptSubtypes(hwnd, bVeNCrypt);
+        UpdateVeNCryptSubtypeAvailability(hwnd, ::SendDlgItemMessage(hTabAuthentication, IDC_MSLOGON_CHECKD, BM_GETCHECK, 0, 0) ==
+                                                    BST_CHECKED);
+        UpdateVncPasswordAvailability(hTabAuthentication, hwnd);
+        UpdateManageUsersButton(hwnd);
+    }
+        return TRUE;
+
+    case IDC_ENABLE_RA2:
+    case IDC_ENABLE_RA2NE:
+        UpdateCertControlAvailability(hwnd, ::SendDlgItemMessage(hwnd, IDC_VENCRYPT_ENABLE, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        return TRUE;
+
+    case IDC_VENCRYPT_ALLOW_PLAIN:
+        if (::SendDlgItemMessage(hwnd, IDC_VENCRYPT_ALLOW_PLAIN, BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            ::SendDlgItemMessage(hwnd, IDC_VENCRYPT_REQUIRE_PLUS, BM_SETCHECK, BST_UNCHECKED, 0);
+        }
+        UpdateVeNCryptSubtypeAvailability(hwnd, ::SendDlgItemMessage(hTabAuthentication, IDC_MSLOGON_CHECKD, BM_GETCHECK, 0, 0) ==
+                                                    BST_CHECKED);
+        return TRUE;
+
+    case IDC_VENCRYPT_REQUIRE_PLUS:
+        if (::SendDlgItemMessage(hwnd, IDC_VENCRYPT_REQUIRE_PLUS, BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            ::SendDlgItemMessage(hwnd, IDC_VENCRYPT_ALLOW_PLAIN, BM_SETCHECK, BST_UNCHECKED, 0);
+        }
+        UpdateVeNCryptSubtypeAvailability(hwnd, ::SendDlgItemMessage(hTabAuthentication, IDC_MSLOGON_CHECKD, BM_GETCHECK, 0, 0) ==
+                                                    BST_CHECKED);
+        return TRUE;
+
+    case IDC_VENCRYPT_ALLOW_LEGACY:
+    case IDC_VENCRYPT_SUBTYPE_261:
+        UpdateVncPasswordAvailability(hTabAuthentication, hwnd);
+        return TRUE;
+
+    case IDC_VENCRYPT_DLLPATH:
+        if (subcommand == EN_CHANGE)
+        {
+            UpdateManageUsersButton(hwnd);
+        }
+        return TRUE;
+
+    case IDC_VENCRYPT_MANAGE: {
+        std::array<char, MAX_PATH> dllPath{};
+        ::GetDlgItemTextA(hwnd, IDC_VENCRYPT_DLLPATH, dllPath.data(), static_cast<int>(dllPath.size()));
+        HMODULE hMod = SafeLoadValidatorDllA(hwnd, dllPath.data(), true);
+        if (!hMod)
+        {
+            return TRUE;
+        }
+
+        typedef int(__cdecl * TV_HAS_MANAGEMENT_UI)(void);
+        typedef int(__cdecl * TV_SHOW_MANAGEMENT_UI)(HWND);
+
+        TV_HAS_MANAGEMENT_UI hasUi = reinterpret_cast<TV_HAS_MANAGEMENT_UI>(::GetProcAddress(hMod, "tv_has_management_ui"));
+        TV_SHOW_MANAGEMENT_UI showUi = reinterpret_cast<TV_SHOW_MANAGEMENT_UI>(::GetProcAddress(hMod, "tv_show_management_ui"));
+
+        if (!hasUi || !showUi || !hasUi())
+        {
+            ::FreeLibrary(hMod);
+            ::MessageBoxA(hwnd, "The selected TokenValidator DLL does not provide a management UI.", "Token Manager",
+                        MB_OK | MB_ICONINFORMATION);
+            return TRUE;
+        }
+
+        showUi(hwnd);
+        ::FreeLibrary(hMod);
+    }
+        return TRUE;
+
+    case IDC_VENCRYPT_DLL_BROWSE: {
+        std::array<char, MAX_PATH> file{};
+        ::GetDlgItemText(hwnd, IDC_VENCRYPT_DLLPATH, file.data(), static_cast<int>(file.size()));
+        OPENFILENAMEA ofn{};
+        ofn.lStructSize = sizeof(ofn);
+        ofn.hwndOwner = hwnd;
+        ofn.lpstrFile = file.data();
+        ofn.nMaxFile = MAX_PATH;
+        ofn.lpstrFilter = "DLL files (*.dll)\0*.dll\0All files (*.*)\0*.*\0";
+        ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+        if (::GetOpenFileNameA(&ofn))
+        {
+            ::SetDlgItemText(hwnd, IDC_VENCRYPT_DLLPATH, file.data());
+        }
+    }
+        return TRUE;
+
+    case IDC_CONNECT_SOCK:
+        // TightVNC 1.2.7 method
+        // The user has clicked on the socket connect tickbox
+        {
+            BOOL bConnectSockIn = (::SendDlgItemMessage(hwnd, IDC_CONNECT_SOCK, BM_GETCHECK, 0, 0) == BST_CHECKED);
+            BOOL bConnectHttp = (::SendDlgItemMessage(hwnd, IDC_CONNECT_HTTP, BM_GETCHECK, 0, 0) == BST_CHECKED);
+
+            HWND hPortNoAuto = ::GetDlgItem(hwnd, IDC_PORTNO_AUTO);
+            ::EnableWindow(hPortNoAuto, bConnectSockIn);
+            HWND hSpecPort = ::GetDlgItem(hwnd, IDC_SPECPORT);
+            ::EnableWindow(hSpecPort, bConnectSockIn);
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTRFB),
+                         (bConnectSockIn && (::SendMessage(hSpecPort, BM_GETCHECK, 0, 0) == BST_CHECKED)));
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTHTTP),
+                         (bConnectSockIn && (::SendMessage(hSpecPort, BM_GETCHECK, 0, 0) == BST_CHECKED) && bConnectHttp));
+        }
+        return TRUE;
+
+    // TightVNC 1.2.7 method
+    case IDC_PORTNO_AUTO: {
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTRFB), FALSE);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTHTTP), FALSE);
+        ::SetDlgItemText(hwnd, IDC_PORTRFB, "");
+        ::SetDlgItemText(hwnd, IDC_PORTHTTP, "");
+    }
+        return TRUE;
+
+    case IDC_SPECPORT: {
+        BOOL bConnectHttp = (::SendDlgItemMessage(hwnd, IDC_CONNECT_HTTP, BM_GETCHECK, 0, 0) == BST_CHECKED);
+
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTRFB), TRUE);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTHTTP), bConnectHttp);
+
+        ::SetDlgItemInt(hwnd, IDC_PORTRFB, static_cast<UINT>(settings->getPortNumber()), FALSE);
+        ::SetDlgItemInt(hwnd, IDC_PORTHTTP, static_cast<UINT>(settings->getHttpPortNumber()), FALSE);
+
+        ::SetFocus(::GetDlgItem(hwnd, IDC_PORTRFB));
+        ::SendDlgItemMessage(hwnd, IDC_PORTRFB, EM_SETSEL, 0, static_cast<LPARAM>(-1));
+    }
+        return TRUE;
+
+    // Query window option - Taken from TightVNC advanced properties code
+    case IDQUERY: {
+        HWND hQuery = ::GetDlgItem(hwnd, IDQUERY);
+        BOOL queryon = (::SendMessage(hQuery, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        settings->setQuerySetting(queryon ? 4 : 2);
+
+        ::EnableWindow(::GetDlgItem(hwnd, IDQUERYTIMEOUT), queryon);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_QUERYDISABLETIME), queryon);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_DREFUSE), queryon);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_DRefuseOnly), queryon);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_DACCEPT), queryon);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_QNOLOGON), queryon);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_EDITQUERYTEXT), queryon);
+    }
+        return TRUE;
+
+    case IDC_STARTREP:
+        if (m_server)
+        {
+            auto newconn = std::make_unique<vncConnDialog>(m_server);
+            if (newconn)
+            {
+                newconn->DoDialog(true);
+            }
+        }
+        return TRUE;
+
+    case IDC_PLUGIN_CHECK: {
+        std::array<TCHAR, MAX_PATH> szPlugin;
+        std::array<TCHAR, MAX_PATH> szPluginDefault{"No Plugin detected..."};
+        ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), static_cast<int>(szPlugin.size()));
+        bool pluginset = (std::strcmp(szPlugin.data(), szPluginDefault.data()) != 0) && (std::strlen(szPlugin.data()) > 0);
+        if (m_server)
+        {
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_PLUGIN_BUTTON),
+                         (m_server->AuthClientCount() == 0
+                              ? (::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED) && pluginset
+                              : BST_UNCHECKED));
+        }
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PLUGINS_COMBO),
+                     ::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+        return TRUE;
+
+    case IDC_MSLOGON_CHECKD: {
+        BOOL bMSLogonChecked = (::SendDlgItemMessage(hwnd, IDC_MSLOGON_CHECKD, BM_GETCHECK, 0, 0) == BST_CHECKED);
+
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_NEW_MSLOGON), bMSLogonChecked);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_MSLOGON), bMSLogonChecked);
+        UpdateVeNCryptSubtypeAvailability(hTabTLS, bMSLogonChecked);
+        UpdateVncPasswordAvailability(hwnd, hTabTLS);
+        return TRUE;
+    }
+    case IDC_AUTHREQUIRED: {
+        bool checked = (::SendMessage(::GetDlgItem(hwnd, IDC_AUTHREQUIRED), BM_GETCHECK, 0, 0) == BST_CHECKED);
+        bool vncPasswordEnabled = ::IsWindowEnabled(::GetDlgItem(hwnd, IDC_AUTHREQUIRED)) != FALSE;
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_CLEARPASSWORD), (vncPasswordEnabled && (checked == 0)));
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_CLEARPASSWORDVO), (vncPasswordEnabled && (checked == 0)));
+    }
+
+
+        return TRUE;
 
 #ifndef SC_20
-	settings->save();
-#endif // SC_20	
+    case IDC_MSLOGON: {
+        // Marscha@2004 - authSSP: if "New MS-Logon" is checked,
+        // call vncEditSecurity from SecurityEditor.dll,
+        // else call "old" dialog.
+        BOOL bNewMSLogonChecked = (::SendDlgItemMessage(hwnd, IDC_NEW_MSLOGON, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        if (bNewMSLogonChecked)
+        {
+            HANDLE hPToken = DesktopUsersToken::getInstance()->getDesktopUsersToken();
+            if (!hPToken)
+            {
+                break;
+            }
 
-	DestroyWindow(hTabAuthentication);
-	DestroyWindow(hTabIncoming);
-	DestroyWindow(hTabInput);
-	DestroyWindow(hTabMisc);
-	DestroyWindow(hTabNotifications);
-	DestroyWindow(hTabNetwork);
-	DestroyWindow(hTabRules);
-	DestroyWindow(hTabCapture);
-	DestroyWindow(hTabLog);
-	DestroyWindow(hTabTLS);
-	DestroyWindow(hTabAdministration);
-	DestroyWindow(hTabService);
-	EndDialog(hwnd, TRUE);
+            std::array<char, MAX_PATH + 32> dir;
+            std::array<char, MAX_PATH> exe_file_name;
+            ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+            ::sprintf_s(dir.data(), dir.size(), "\"%s\" -securityeditorhelper", exe_file_name.data());
+
+            STARTUPINFO StartUPInfo;
+            PROCESS_INFORMATION ProcessInfo;
+            ::ZeroMemory(&StartUPInfo, sizeof(STARTUPINFO));
+            ::ZeroMemory(&ProcessInfo, sizeof(PROCESS_INFORMATION));
+            StartUPInfo.wShowWindow = SW_SHOW;
+            StartUPInfo.lpDesktop = "Winsta0\\Default";
+            StartUPInfo.cb = sizeof(STARTUPINFO);
+
+            ::CreateProcessAsUser(hPToken, nullptr, dir.data(), nullptr, nullptr, FALSE, DETACHED_PROCESS, nullptr, nullptr,
+                                &StartUPInfo, &ProcessInfo);
+            DWORD errorcode = ::GetLastError();
+            if (ProcessInfo.hThread)
+            {
+                ::CloseHandle(ProcessInfo.hThread);
+            }
+            if (ProcessInfo.hProcess)
+            {
+                ::CloseHandle(ProcessInfo.hProcess);
+            }
+            if (errorcode == 1314)
+            {
+                goto error;
+            }
+            break;
+        error:
+            serviceHelpers::winvncSecurityEditorHelper_as_admin();
+        }
+        else
+        {
+            m_vncauth.Init();
+            m_vncauth.Show(TRUE);
+        }
+    }
+        return TRUE;
+#endif // SC_20
+    case IDC_CHANGEPASSWORD: {
+        static bool isRunningPw{ false };
+        if (isRunningPw)
+        {
+            return true;
+        }
+        isRunningPw = true;
+        DlgChangePassword* dlgChangePassword = new DlgChangePassword();
+        if (dlgChangePassword->ShowDlg(
+                nullptr, (!settings->isPasswdSet()) ? "UltraVNC Server - Set Password" : "UltraVNC Server - Change Password", 8))
+        {
+            std::array<char, 1024U> password;
+            ::strcpy_s(password.data(), password.size(), dlgChangePassword->getPassword());
+            if (std::strlen(password.data()) == 0)
+            {
+                settings->setPasswd(password.data());
+                settings->savePassword();
+            }
+            else
+            {
+                vncPasswd::FromText crypt(password.data(), settings->getSecure());
+                settings->setPasswd(crypt);
+                settings->savePassword();
+            }
+        }
+        delete dlgChangePassword;
+        isRunningPw = false;
+        ::SetWindowText(::GetDlgItem(hwnd, IDC_CHANGEPASSWORD), (!settings->isPasswdSet()) ? "SET" : "CHANGE");
+        return true;
+    }
+    case IDC_CHANGEPASSWORDVO: {
+        static bool isRunningPwVo{ false };
+        if (isRunningPwVo)
+        {
+            return true;
+        }
+        isRunningPwVo = true;
+        DlgChangePassword* dlgChangePassword = new DlgChangePassword();
+        if (dlgChangePassword->ShowDlg(nullptr,
+                                       (!settings->isPasswdSet()) ? "UltraVNC Server - Set View-only Password"
+                                                                  : "UltraVNC Server - Change View-only Password",
+                                       8))
+        {
+            std::array<char, 1024U> password;
+            ::strcpy_s(password.data(), password.size(), dlgChangePassword->getPassword());
+            if (std::strlen(password.data()) == 0)
+            {
+                settings->setPasswdViewOnly(password.data());
+                settings->saveViewOnlyPassword();
+            }
+            else
+            {
+                vncPasswd::FromText crypt2(password.data(), settings->getSecure());
+                settings->setPasswdViewOnly(crypt2);
+                settings->saveViewOnlyPassword();
+            }
+        }
+        delete dlgChangePassword;
+        ::SetWindowText(::GetDlgItem(hwnd, IDC_CHANGEPASSWORDVO), (!settings->isPasswdViewOnlySet()) ? "SET" : "CHANGE");
+        isRunningPwVo = false;
+        return true;
+    }
+    case IDC_CHANGEPASSWORDADMIN: {
+        static bool isRunningPwaAdm{ false };
+        if (isRunningPwaAdm)
+        {
+            return true;
+        }
+        isRunningPwaAdm = true;
+        DlgChangePassword* dlgChangePassword = new DlgChangePassword();
+        if (dlgChangePassword->ShowDlg(nullptr,
+                                       settings->isAdminPasswordSet() ? "UltraVNC Server - Change Admin Password"
+                                                                      : "UltraVNC Server - Set Admin Password",
+                                       128))
+        {
+            std::array<char, 1024U> password;
+            ::strcpy_s(password.data(), password.size(), dlgChangePassword->getPassword());
+            settings->setAdminPasswordHash(password.data());
+            ::SetWindowText(::GetDlgItem(hwnd, IDC_CHANGEPASSWORDADMIN), "CHANGE");
+        }
+        isRunningPwaAdm = false;
+        delete dlgChangePassword;
+    }
+        return true;
+
+    case IDC_ADMINCLEAR: {
+        settings->setAdminPasswordHash("");
+        ::SetWindowText(::GetDlgItem(hwnd, IDC_CHANGEPASSWORDADMIN), "SET");
+        return true;
+    }
+
+    case IDC_CLEARPASSWORD: {
+        settings->setPasswd("");
+        settings->savePassword();
+        ::SetWindowText(::GetDlgItem(hwnd, IDC_CHANGEPASSWORD), (!settings->isPasswdSet()) ? "SET" : "CHANGE");
+        return true;
+    }
+    case IDC_CLEARPASSWORDVO: {
+        settings->setPasswdViewOnly("");
+        settings->saveViewOnlyPassword();
+        ::SetWindowText(::GetDlgItem(hwnd, IDC_CHANGEPASSWORDVO), (!settings->isPasswdViewOnlySet()) ? "SET" : "CHANGE");
+        return true;
+    }
+    case IDC_PLUGIN_BUTTON: {
+        HWND hPlugin = ::GetDlgItem(hwnd, IDC_PLUGIN_CHECK);
+        if (::SendMessage(hPlugin, BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            std::array<TCHAR, MAX_PATH> szPlugin;
+            ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), static_cast<int>(szPlugin.size()));
+            ::PathStripPathA(szPlugin.data());
+            if (m_server)
+            {
+                if (!m_server->GetDSMPluginPointer()->IsLoaded())
+                {
+                    m_server->GetDSMPluginPointer()->LoadPlugin(szPlugin.data(), false);
+                }
+                else
+                {
+                    // sf@2003 - We check if the loaded plugin is the same than
+                    // the currently selected one or not
+                    m_server->GetDSMPluginPointer()->DescribePlugin();
+                    if (::_stricmp(m_server->GetDSMPluginPointer()->GetPluginFileName(), szPlugin.data()))
+                    {
+                        m_server->GetDSMPluginPointer()->UnloadPlugin();
+                        m_server->GetDSMPluginPointer()->LoadPlugin(szPlugin.data(), false);
+                    }
+                }
+
+                if (m_server->GetDSMPluginPointer()->IsLoaded())
+                {
+                    PropertiesDialog::Secure_Plugin(szPlugin.data());
+                }
+                else
+                {
+                    MessageBoxSecure(nullptr, sz_ID_PLUGIN_NOT_LOAD.data(), sz_ID_PLUGIN_LOADIN.data(), MB_OK | MB_ICONEXCLAMATION);
+                }
+            }
+            else
+            {
+                PropertiesDialog::Secure_Plugin(szPlugin.data());
+            }
+        }
+        return TRUE;
+    }
+
+    case IDC_CHECKIP: {
+        std::array<char, 1280U> oldAuthHost;
+        ::strcpy_s(oldAuthHost.data(), oldAuthHost.size(), settings->getAuthhosts());
+        settings->setAuthhosts(rulesListView->getAuthHost());
+        std::array<char, 25U> tempchar;
+        ::GetDlgItemText(hwnd, IDC_IP_FOR_CHECK_EDIT, tempchar.data(), 25);
+        if (m_server)
+        {
+            vncServer::AcceptQueryReject status = m_server->VerifyHost(tempchar.data());
+            switch (status)
+            {
+            case vncServer::aqrAccept:
+                ::SetDlgItemText(hwnd, IDC_IP_CHECK_RESULT_LABEL, "Accept");
+                break;
+            case vncServer::aqrQuery:
+                ::SetDlgItemText(hwnd, IDC_IP_CHECK_RESULT_LABEL, "Query");
+                break;
+            case vncServer::aqrReject:
+                ::SetDlgItemText(hwnd, IDC_IP_CHECK_RESULT_LABEL, "Reject");
+                break;
+            }
+            settings->setAuthhosts(oldAuthHost.data());
+        }
+        break;
+    }
+    case IDC_JAP_INPUTS: {
+        // If enabling Japanese/Alternate keyboard, disable Unicode/International keys
+        // Both options enabled simultaneously causes "End of stream" connection failures
+        HWND hJap = ::GetDlgItem(hwnd, IDC_JAP_INPUTS);
+        BOOL japChecked = (::SendMessage(hJap, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        if (japChecked)
+        {
+            ::SendDlgItemMessage(hwnd, IDC_UNICODE_INPUTS, BM_SETCHECK, BST_UNCHECKED, 0);
+        }
+    }
+        return TRUE;
+
+    case IDC_UNICODE_INPUTS: {
+        // If enabling Unicode/International keys, disable Japanese/Alternate keyboard
+        // Both options enabled simultaneously causes "End of stream" connection failures
+        HWND hUnicode = ::GetDlgItem(hwnd, IDC_UNICODE_INPUTS);
+        BOOL unicodeChecked = (::SendMessage(hUnicode, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        if (unicodeChecked)
+        {
+            ::SendDlgItemMessage(hwnd, IDC_JAP_INPUTS, BM_SETCHECK, BST_UNCHECKED, 0);
+        }
+    }
+        return TRUE;
+
+    default:
+        break;
+    }
+    return TRUE;
 }
-void PropertiesDialog::onCancel(HWND hwnd)
+void PropertiesDialog::Secure_Plugin(char* const szPlugin)
 {
-	SendMessage(hTabAuthentication, WM_COMMAND, IDCANCEL, 0);
-	SendMessage(hTabIncoming, WM_COMMAND, IDCANCEL, 0);
-	SendMessage(hTabInput, WM_COMMAND, IDCANCEL, 0);
-	SendMessage(hTabMisc, WM_COMMAND, IDCANCEL, 0);
-	SendMessage(hTabNotifications, WM_COMMAND, IDCANCEL, 0);
-	SendMessage(hTabNetwork, WM_COMMAND, IDCANCEL, 0);
-	SendMessage(hTabRules, WM_COMMAND, IDCANCEL, 0);
-	SendMessage(hTabCapture, WM_COMMAND, IDCANCEL, 0);
-	SendMessage(hTabLog, WM_COMMAND, IDCANCEL, 0);
-	SendMessage(hTabTLS, WM_COMMAND, IDCANCEL, 0);
-	SendMessage(hTabAdministration, WM_COMMAND, IDCANCEL, 0);
-	SendMessage(hTabService, WM_COMMAND, IDCANCEL, 0);
-	DestroyWindow(hTabAuthentication);
-	DestroyWindow(hTabIncoming);
-	DestroyWindow(hTabInput);
-	DestroyWindow(hTabMisc);
-	DestroyWindow(hTabNotifications);
-	DestroyWindow(hTabNetwork);
-	DestroyWindow(hTabRules);
-	DestroyWindow(hTabCapture);
-	DestroyWindow(hTabLog);
-	DestroyWindow(hTabTLS);
-	DestroyWindow(hTabAdministration);
-	DestroyWindow(hTabService);
-	EndDialog(hwnd, FALSE);
+    auto m_pDSMPlugin = std::make_unique<CDSMPlugin>();
+    m_pDSMPlugin->LoadPlugin(szPlugin, false);
+    if (m_pDSMPlugin->IsLoaded())
+    {
+        std::array<char, 32U> szParams;
+        ::strcpy_s(szParams.data(), szParams.size(), "NoPassword,");
+        ::strcat_s(szParams.data(), szParams.size(), "server-app");
+
+        HDESK desktop;
+        desktop = ::OpenInputDesktop(0, FALSE,
+                                   DESKTOP_CREATEMENU | DESKTOP_CREATEWINDOW | DESKTOP_ENUMERATE | DESKTOP_HOOKCONTROL |
+                                       DESKTOP_WRITEOBJECTS | DESKTOP_READOBJECTS | DESKTOP_SWITCHDESKTOP | GENERIC_WRITE);
+
+        if (desktop == nullptr)
+        {
+            vnclog.Print(LL_INTERR, VNCLOG("OpenInputdesktop Error \n"));
+        }
+
+        HDESK old_desktop = ::GetThreadDesktop(::GetCurrentThreadId());
+        DWORD dummy{};
+
+        std::array<char, 256U> new_name{};
+        if (desktop)
+        {
+            if (!::GetUserObjectInformation(desktop, UOI_NAME, &new_name, 256, &dummy))
+            {
+                vnclog.Print(LL_INTERR, VNCLOG("!GetUserObjectInformation \n"));
+            }
+
+            vnclog.Print(LL_INTERR, VNCLOG("SelectHDESK to %s (%x) from %x\n"), new_name.data(), desktop, old_desktop);
+
+            if (!::SetThreadDesktop(desktop))
+            {
+                vnclog.Print(LL_INTERR, VNCLOG("SelectHDESK:!SetThreadDesktop \n"));
+            }
+        }
+
+        ::CoInitialize(nullptr);
+        HWND hwnd2 = ::CreateWindowA("STATIC", "dummy", WS_VISIBLE, 0, 0, 100, 100, nullptr, nullptr, nullptr, nullptr);
+        ::ShowWindow(hwnd2, SW_HIDE);
+        char* szNewConfig{ nullptr };
+        std::array<char, 512U> DSMPluginConfig;
+        DSMPluginConfig[0U] = '\0';
+        ::strcpy_s(DSMPluginConfig.data(), DSMPluginConfig.size(), settings->getDSMPluginConfig());
+        m_pDSMPlugin->SetPluginParams(hwnd2, szParams.data(), DSMPluginConfig.data(), &szNewConfig);
+
+        if ((szNewConfig != nullptr) && (std::strlen(szNewConfig) > 0))
+        {
+            ::strcpy_s(DSMPluginConfig.data(), 511, szNewConfig);
+        }
+        settings->setDSMPluginConfig(DSMPluginConfig.data());
+
+        ::CoUninitialize();
+        ::SetThreadDesktop(old_desktop);
+        if (desktop)
+        {
+            ::CloseDesktop(desktop);
+        }
+    }
 }
 
-const int MAX_LINES = 100;
-void PropertiesDialog::LogToEdit(const std::string & message) 
+void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
 {
-	if (hEditLog == NULL || !IsWindow(hEditLog))
-	{
-		// Convert buffer to a string
-		std::string content(buffer);
+    if (::GetDlgItem(hwnd, IDC_PRIM))
+    {
+        settings->setPrimary(::SendMessage(::GetDlgItem(hwnd, IDC_PRIM), BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+    if (::GetDlgItem(hwnd, IDC_SEC))
+    {
+        settings->setSecondary(::SendMessage(::GetDlgItem(hwnd, IDC_SEC), BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
 
-		// Split the content into lines
-		std::vector<std::string> lines;
-		std::istringstream iss(content);
-		std::string line;
-		while (std::getline(iss, line)) {
-			lines.push_back(line);
-		}
+    // Save language setting (restart required for changes to take effect)
+    if (::GetDlgItem(hwnd, IDC_LANGUAGE_COMBO))
+    {
+        HWND hCombo = ::GetDlgItem(hwnd, IDC_LANGUAGE_COMBO);
+        int sel = static_cast<int>(::SendMessage(hCombo, CB_GETCURSEL, 0, 0));
+        if (sel >= 0)
+        {
+            wchar_t* langCodeW = reinterpret_cast<wchar_t*>(::SendMessage(hCombo, CB_GETITEMDATA, sel, 0));
+            if (langCodeW)
+            {
+                std::array<char, 32U> langCodeA{ 0 };
+                ::WideCharToMultiByte(CP_UTF8, 0, langCodeW, -1, langCodeA.data(), sizeof(langCodeA), nullptr, nullptr);
+                settings->setLanguage(langCodeA.data());
+            }
+        }
+    }
 
-		// Add the new message
-		lines.insert(lines.begin(), message);
+    if (::GetDlgItem(hwnd, IDC_MAXCPU))
+    {
+        int maxcpu = static_cast<int>(::GetDlgItemInt(hwnd, IDC_MAXCPU, nullptr, FALSE));
+        settings->setMaxCpu(maxcpu);
+    }
 
-		// Remove excess lines if necessary
-		while (lines.size() > MAX_LINES) {
-			lines.pop_back();
-		}
+    if (::GetDlgItem(hwnd, IDC_SLIDERFPS))
+    {
+        int pos = static_cast<int>(::SendMessage(::GetDlgItem(hwnd, IDC_SLIDERFPS), TBM_GETPOS, 0, 0L));
+        settings->setMaxFPS(pos);
+    }
 
-		std::ostringstream oss;
-		for (const auto& ln : lines) {
-			oss << ln << '\n'; // Add newline between lines
-		}
-		std::string updatedContent = oss.str();
+    if (::GetDlgItem(hwnd, IDC_AUTOCAPT1))
+    {
+        HWND hcapt = ::GetDlgItem(hwnd, IDC_AUTOCAPT1);
+        if (::SendMessage(hcapt, BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setAutocapt(1);
+        }
+        settings->setAutocapt(settings->getAutocapt());
+    }
 
-		// Copy the updated content back to the buffer
-		if (updatedContent.size() < 65536) {
-			std::strcpy(buffer, updatedContent.c_str());
-		}
-		return;
-	}
-	// Get the current content of the edit control		
-	std::string content(buffer);
+    if (::GetDlgItem(hwnd, IDC_AUTOCAPT2))
+    {
+        HWND hcapt = ::GetDlgItem(hwnd, IDC_AUTOCAPT2);
+        if (::SendMessage(hcapt, BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setAutocapt(2);
+        }
+        settings->setAutocapt(settings->getAutocapt());
+    }
+    if (::GetDlgItem(hwnd, IDC_AUTOCAPT3))
+    {
+        HWND hcapt = ::GetDlgItem(hwnd, IDC_AUTOCAPT3);
+        if (::SendMessage(hcapt, BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setAutocapt(3);
+        }
+        settings->setAutocapt(settings->getAutocapt());
+    }
 
-	// Split the content into lines
-	std::vector<std::string> lines;
-	std::istringstream iss(content);
-	std::string line;
-	while (std::getline(iss, line)) {
-		lines.push_back(line);
-	}
+    if (::GetDlgItem(hwnd, IDC_TURBOMODE))
+    {
+        HWND hTurboMode = ::GetDlgItem(hwnd, IDC_TURBOMODE);
+        settings->setTurboMode(::SendMessage(hTurboMode, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
 
-	// Add the new message
-	lines.insert(lines.begin(), message);
+    if (::GetDlgItem(hwnd, IDC_DRIVER))
+    {
+        HWND hDriver = ::GetDlgItem(hwnd, IDC_DRIVER);
+        bool result = (::SendMessage(hDriver, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        if (result)
+        {
+            if (m_server)
+            {
+                m_server->Driver(CheckVideoDriver(0));
+            }
+            settings->setDriver(CheckVideoDriver(0));
+        }
+        else
+        {
+            if (m_server)
+            {
+                m_server->Driver(false);
+            }
+            settings->setDriver(false);
+        }
+    }
 
-	// Remove excess lines if necessary
-	while (lines.size() > MAX_LINES) {
-		lines.pop_back();
-	}
+    if (::GetDlgItem(hwnd, IDC_HOOK))
+    {
+        HWND hHook = ::GetDlgItem(hwnd, IDC_HOOK);
+        if (m_server)
+        {
+            m_server->Hook(::SendMessage(hHook, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        }
+        settings->setHook(::SendMessage(hHook, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+    if (m_server)
+    {
+        m_server->SetHookings();
+    }
 
-	// Rebuild the content
-	std::ostringstream oss;
-	for (const auto& l : lines) {
-		oss << l << "\r\n";
-	}
+    if (::GetDlgItem(hwnd, IDC_POLL_FULLSCREEN))
+    {
+        HWND hPollFullScreen = ::GetDlgItem(hwnd, IDC_POLL_FULLSCREEN);
+        settings->setPollFullScreen(::SendMessage(hPollFullScreen, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
 
-	// Set the new content and scroll to the end
-	SetWindowText(hEditLog, oss.str().c_str());
-	SendMessage(hEditLog, EM_SETSEL, -1, -1);  // Move the caret to the end
-	SendMessage(hEditLog, EM_SCROLLCARET, 0, 0);  // Ensure the last line is visible
-	GetWindowText(hEditLog, buffer, sizeof(buffer));
+    if (::GetDlgItem(hwnd, IDC_POLL_FOREGROUND))
+    {
+        HWND hPollForeground = ::GetDlgItem(hwnd, IDC_POLL_FOREGROUND);
+        settings->setPollForeground(::SendMessage(hPollForeground, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR))
+    {
+        HWND hPollUnderCursor = ::GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR);
+        settings->setPollUnderCursor(::SendMessage(hPollUnderCursor, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_CONSOLE_ONLY))
+    {
+        HWND hPollConsoleOnly = ::GetDlgItem(hwnd, IDC_CONSOLE_ONLY);
+        settings->setPollConsoleOnly(::SendMessage(hPollConsoleOnly, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_ONEVENT_ONLY))
+    {
+        HWND hPollOnEventOnly = ::GetDlgItem(hwnd, IDC_ONEVENT_ONLY);
+        settings->setPollOnEventOnly(::SendMessage(hPollOnEventOnly, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_EDIT_PATH))
+    {
+        std::array<char, 512U> path;
+        int lenpath = static_cast<int>(::GetDlgItemText(hwnd, IDC_EDIT_PATH, static_cast<LPSTR>(path.data()), 512));
+        if (lenpath != 0)
+        {
+            vnclog.SetPath(path.data());
+        }
+        else
+        {
+            ::strcpy_s(path.data(), path.size(), "");
+            vnclog.SetPath(path.data());
+        }
+        settings->setDebugPath(path.data());
+        vnclog.SetFile();
+    }
+
+    if (::GetDlgItem(hwnd, IDC_SAVEPASSWORDSECURE))
+    {
+        bool Secure_old = settings->getSecure();
+        HWND hSecure = ::GetDlgItem(hwnd, IDC_SAVEPASSWORDSECURE);
+        settings->setSecure(::SendMessage(hSecure, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        bool bSecure = settings->getSecure();
+        if (Secure_old != bSecure)
+        {
+            // We changed the method to save the password
+            // load passwords and encrypt the other method
+            vncPasswd::ToText plain(settings->getPasswd(), Secure_old);
+            vncPasswd::ToText plainViewOnly(settings->getPasswdViewOnly(), Secure_old);
+            std::array<char, MAXPWLEN + 1> passwd;
+            std::array<char, MAXPWLEN + 1> passwdViewOnly;
+            std::memset(passwd.data(), '\0', MAXPWLEN + 1);         //PGM
+            std::memset(passwdViewOnly.data(), '\0', MAXPWLEN + 1); //PGM
+            ::strcpy_s(passwd.data(), passwd.size(), plain);
+            ::strcpy_s(passwdViewOnly.data(), passwdViewOnly.size(), plainViewOnly);
+            int lenPassword = static_cast<int>(std::strlen(passwd.data()));
+            int lenPasswordViewOnly = static_cast<int>(std::strlen(passwdViewOnly.data()));
+            if (lenPassword != 0)
+            {
+                vncPasswd::FromText crypt(passwd.data(), settings->getSecure());
+                settings->setPasswd(crypt);
+            }
+            if (lenPasswordViewOnly != 0)
+            {
+                vncPasswd::FromText crypt2(passwdViewOnly.data(), settings->getSecure());
+                settings->setPasswdViewOnly(crypt2);
+            }
+        }
+    }
+
+    if (::GetDlgItem(hwnd, IDC_PORTNO_AUTO))
+    {
+
+        // Save the new settings to the server
+        int state = static_cast<int>(::SendDlgItemMessage(hwnd, IDC_PORTNO_AUTO, BM_GETCHECK, 0, 0));
+        if (m_server)
+        {
+            m_server->SetAutoPortSelect(state == BST_CHECKED);
+        }
+        settings->setAutoPortSelect(state == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_PORTHTTP) && GetDlgItem(hwnd, IDC_PORTRFB))
+    {
+
+        // Save port numbers if we're not auto selecting
+        if (!settings->getAutoPortSelect())
+        {
+            // Assuming that port numbers were specified
+            BOOL ok1{}, ok2{};
+            UINT port_rfb = ::GetDlgItemInt(hwnd, IDC_PORTRFB, &ok1, TRUE);
+            UINT port_http = ::GetDlgItemInt(hwnd, IDC_PORTHTTP, &ok2, TRUE);
+            if (ok1 && ok2)
+            {
+                if (m_server)
+                {
+                    m_server->SetPorts(port_rfb, port_http);
+                }
+                settings->setPortNumber(static_cast<LONG>(port_rfb));
+                settings->setHttpPortNumber(static_cast<LONG>(port_http));
+            }
+        }
+    }
+
+    if (::GetDlgItem(hwnd, IDC_CONNECT_SOCK))
+    {
+        HWND hConnectSock = ::GetDlgItem(hwnd, IDC_CONNECT_SOCK);
+        if (m_server)
+        {
+            m_server->EnableConnections(::SendMessage(hConnectSock, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        }
+        settings->setEnableConnections(::SendMessage(hConnectSock, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (m_server)
+    {
+        InitPortSettings(hwnd);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_PORTNO_AUTO))
+    {
+        HWND hConnectHTTP = ::GetDlgItem(hwnd, IDC_CONNECT_HTTP);
+        if (m_server)
+        {
+            m_server->EnableHTTPConnect(::SendMessage(hConnectHTTP, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        }
+        settings->setHTTPConnect(::SendMessage(hConnectHTTP, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_TLS))
+    {
+        BOOL bTLS = (::SendDlgItemMessage(hwnd, IDC_TLS, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        settings->setEnableTLS(bTLS);
+        if (bTLS && GetDlgItem(hwnd, IDC_PORTHTTPS))
+        {
+            BOOL ok{};
+            UINT tlsPort = ::GetDlgItemInt(hwnd, IDC_PORTHTTPS, &ok, FALSE);
+            if (ok)
+            {
+                settings->setTLSPort(static_cast<LONG>(tlsPort));
+            }
+        }
+    }
+
+    // SSL/TLS tab
+    if (::GetDlgItem(hwnd, IDC_TLS_NOVNC_PORT))
+    {
+        BOOL ok{};
+        UINT tlsPort = ::GetDlgItemInt(hwnd, IDC_TLS_NOVNC_PORT, &ok, FALSE);
+        if (ok)
+        {
+            settings->setTLSPort(static_cast<LONG>(tlsPort));
+        }
+        std::array<char, 64U> thumb{};
+        ::GetDlgItemText(hwnd, IDC_TLS_THUMBPRINT, thumb.data(), sizeof(thumb));
+        settings->setTLSCertThumbprint(thumb.data());
+    }
+    if (::GetDlgItem(hwnd, IDC_VENCRYPT_ENABLE))
+    {
+        settings->setEnableVeNCryptTLS(::SendDlgItemMessage(hwnd, IDC_VENCRYPT_ENABLE, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        settings->setVeNCryptAllowPlainAuth(::SendDlgItemMessage(hwnd, IDC_VENCRYPT_ALLOW_PLAIN, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        settings->setVeNCryptAllowLegacyAuth(::SendDlgItemMessage(hwnd, IDC_VENCRYPT_ALLOW_LEGACY, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        settings->setVeNCryptRequireChannelBinding(::SendDlgItemMessage(hwnd, IDC_VENCRYPT_REQUIRE_PLUS, BM_GETCHECK, 0, 0) ==
+                                                   BST_CHECKED);
+        settings->setEnableRA2(::SendDlgItemMessage(hwnd, IDC_ENABLE_RA2, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        settings->setEnableRA2ne(::SendDlgItemMessage(hwnd, IDC_ENABLE_RA2NE, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        std::array<char, 64U> thumb{};
+        ::GetDlgItemText(hwnd, IDC_VENCRYPT_THUMBPRINT, thumb.data(), sizeof(thumb));
+        settings->setVeNCryptTLSCertThumbprint(thumb.data());
+        if (HWND hBits = ::GetDlgItem(hwnd, IDC_VENCRYPT_KEYBITS))
+        {
+            const LRESULT sel = ::SendMessage(hBits, CB_GETCURSEL, 0, 0);
+            if ((sel >= 0) && (sel < static_cast<LRESULT>((sizeof(kSelfSignedKeyBits) / sizeof(kSelfSignedKeyBits[0U])))))
+            {
+                settings->setTLSCertKeyBits(kSelfSignedKeyBits[sel]);
+            }
+        }
+        std::array<char, MAX_PATH> dllPath{};
+        ::GetDlgItemText(hwnd, IDC_VENCRYPT_DLLPATH, dllPath.data(), sizeof(dllPath));
+        settings->setVeNCryptTokenDLLPath(dllPath.data());
+        std::array<char, 256U> subtypes{};
+        SaveVeNCryptSubtypes(hwnd, subtypes.data(), sizeof(subtypes));
+        settings->setVeNCryptSubtypes(subtypes.data());
+    }
+
+    if (::GetDlgItem(hwnd, IDC_DISABLE_INPUTS))
+    {
+        HWND hEnableRemoteInputs = ::GetDlgItem(hwnd, IDC_DISABLE_INPUTS);
+        if (m_server)
+        {
+            m_server->EnableRemoteInputs(::SendMessage(hEnableRemoteInputs, BM_GETCHECK, 0, 0) != BST_CHECKED);
+        }
+        settings->setEnableRemoteInputs(::SendMessage(hEnableRemoteInputs, BM_GETCHECK, 0, 0) != BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_DISABLE_LOCAL_INPUTS))
+    {
+        HWND hDisableLocalInputs = ::GetDlgItem(hwnd, IDC_DISABLE_LOCAL_INPUTS);
+        settings->setDisableLocalInputs(::SendMessage(hDisableLocalInputs, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_JAP_INPUTS))
+    {
+        HWND hJapInputs = ::GetDlgItem(hwnd, IDC_JAP_INPUTS);
+        if (m_server)
+        {
+            m_server->EnableJapInput(::SendMessage(hJapInputs, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        }
+        settings->setEnableJapInput(::SendMessage(hJapInputs, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_FORCE_SHAPE))
+    {
+        HWND hForceCursorShape = ::GetDlgItem(hwnd, IDC_FORCE_SHAPE);
+        if (m_server)
+        {
+            m_server->ForceCursorShape(::SendMessage(hForceCursorShape, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        }
+        settings->setForceCursorShape(::SendMessage(hForceCursorShape, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_UNICODE_INPUTS))
+    {
+        HWND hUnicodeInputs = ::GetDlgItem(hwnd, IDC_UNICODE_INPUTS);
+        BOOL unicodeChecked = (::SendMessage(hUnicodeInputs, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        // Safety check: Ensure both JapInput and UnicodeInput are not enabled simultaneously
+        // This prevents the "End of stream" connection failure bug
+        if (unicodeChecked && settings->getEnableJapInput())
+        {
+            unicodeChecked = FALSE;
+            ::SendDlgItemMessage(hwnd, IDC_UNICODE_INPUTS, BM_SETCHECK, BST_UNCHECKED, 0);
+        }
+        if (m_server)
+        {
+            m_server->EnableUnicodeInput(unicodeChecked);
+        }
+        settings->setEnableUnicodeInput(unicodeChecked);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_WIN8_HELPER))
+    {
+        HWND hwinhelper = ::GetDlgItem(hwnd, IDC_WIN8_HELPER);
+        settings->setEnableWin8Helper(::SendMessage(hwinhelper, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_REMOVE_WALLPAPER))
+    {
+        HWND hRemoveWallpaper = ::GetDlgItem(hwnd, IDC_REMOVE_WALLPAPER);
+        settings->setRemoveWallpaper(::SendMessage(hRemoveWallpaper, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_LOCKSETTING_LOCK) && GetDlgItem(hwnd, IDC_LOCKSETTING_LOGOFF))
+    {
+        if (::SendMessage(::GetDlgItem(hwnd, IDC_LOCKSETTING_LOCK), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setLockSettings(1);
+        }
+        else if (::SendMessage(::GetDlgItem(hwnd, IDC_LOCKSETTING_LOGOFF), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setLockSettings(2);
+        }
+        else
+        {
+            settings->setLockSettings(0);
+        }
+    }
+
+    if (::GetDlgItem(hwnd, IDC_RADIONOTIFICATIONON) && GetDlgItem(hwnd, IDC_RADIONOTIFICATIONIFPROVIDED))
+    {
+        if (::SendMessage(::GetDlgItem(hwnd, IDC_RADIONOTIFICATIONON), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setNotificationSelection(0);
+        }
+        else if (::SendMessage(::GetDlgItem(hwnd, IDC_RADIONOTIFICATIONIFPROVIDED), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setNotificationSelection(1);
+        }
+    }
+
+    if (::GetDlgItem(hwnd, IDC_DREFUSE) && GetDlgItem(hwnd, IDC_DACCEPT))
+    {
+        if (::SendMessage(::GetDlgItem(hwnd, IDC_DREFUSE), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setQueryAccept(0);
+        }
+        else if (::SendMessage(::GetDlgItem(hwnd, IDC_DACCEPT), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setQueryAccept(1);
+        }
+        else if (::SendMessage(::GetDlgItem(hwnd, IDC_DRefuseOnly), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setQueryAccept(2);
+        }
+    }
+    if (::GetDlgItem(hwnd, IDC_QNOLOGON))
+    {
+        settings->setQueryIfNoLogon(!::SendDlgItemMessage(hwnd, IDC_QNOLOGON, BM_GETCHECK, 0, 0));
+    }
+
+    if (::GetDlgItem(hwnd, IDC_MAXREFUSE) && GetDlgItem(hwnd, IDC_MAXDISCONNECT))
+    {
+        if (::SendMessage(::GetDlgItem(hwnd, IDC_MAXREFUSE), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setMaxViewerSetting(0);
+        }
+        else if (::SendMessage(::GetDlgItem(hwnd, IDC_MAXDISCONNECT), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setMaxViewerSetting(1);
+        }
+    }
+
+    if (::GetDlgItem(hwnd, IDC_IDLETIME))
+    {
+        std::array<char, 256U> timeout;
+        ::GetDlgItemText(hwnd, IDC_IDLETIME, reinterpret_cast<LPSTR>(timeout.data()), 600);
+        settings->setIdleTimeout(atoi(timeout.data()));
+    }
+    if (::GetDlgItem(hwnd, IDC_IDLETIMEINPUT))
+    {
+        std::array<char, 256U> timeout;
+        ::GetDlgItemText(hwnd, IDC_IDLETIMEINPUT, reinterpret_cast<LPSTR>(timeout.data()), 600);
+        settings->setIdleInputTimeout(atoi(timeout.data()));
+    }
+    if (::GetDlgItem(hwnd, IDC_KINTERVAL))
+    {
+        std::array<char, 256U> timeout;
+        ::GetDlgItemText(hwnd, IDC_KINTERVAL, reinterpret_cast<LPSTR>(timeout.data()), 600);
+        settings->setkeepAliveInterval(atoi(timeout.data()));
+    }
+
+    if (::GetDlgItem(hwnd, IDC_MAXVIEWERS))
+    {
+        std::array<char, 256U> maxViewerChar;
+        ::strcpy_s(maxViewerChar.data(), maxViewerChar.size(), "128");
+        if (::GetDlgItemText(hwnd, IDC_MAXVIEWERS, reinterpret_cast<LPSTR>(maxViewerChar.data()), 256) == 0)
+        {
+            int value = atoi(maxViewerChar.data());
+            if (value > 128)
+            {
+                value = 128;
+            }
+            settings->setMaxViewers(static_cast<UINT>(value));
+        }
+        else
+        {
+            settings->setMaxViewers(static_cast<UINT>(atoi(maxViewerChar.data())));
+        }
+    }
+
+    if (::GetDlgItem(hwnd, IDC_COLLABO))
+    {
+        HWND hCollabo = ::GetDlgItem(hwnd, IDC_COLLABO);
+        settings->setCollabo(::SendMessage(hCollabo, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_FRAME))
+    {
+        HWND hwndDlg = ::GetDlgItem(hwnd, IDC_FRAME);
+        settings->setFrame(::SendMessage(hwndDlg, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_NOTIFOCATION))
+    {
+        HWND hwndDlg = ::GetDlgItem(hwnd, IDC_NOTIFOCATION);
+        settings->setNotification(::SendMessage(hwndDlg, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_OSD))
+    {
+        HWND hwndDlg = ::GetDlgItem(hwnd, IDC_OSD);
+        settings->setOSD(::SendMessage(hwndDlg, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_MV1))
+    {
+        if (::SendMessage(::GetDlgItem(hwnd, IDC_MV1), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setConnectPriority(0);
+        }
+        else if (::SendMessage(::GetDlgItem(hwnd, IDC_MV2), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setConnectPriority(1);
+        }
+        else if (::SendMessage(::GetDlgItem(hwnd, IDC_MV3), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setConnectPriority(2);
+        }
+        else if (::SendMessage(::GetDlgItem(hwnd, IDC_MV4), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            settings->setConnectPriority(3);
+        }
+    }
+
+    if (::GetDlgItem(hwnd, IDC_FILETRANSFER))
+    {
+        HWND hFileTransfer = ::GetDlgItem(hwnd, IDC_FILETRANSFER);
+        settings->setEnableFileTransfer(::SendMessage(hFileTransfer, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_FTUSERIMPERSONATION_CHECK))
+    {
+        HWND hFileTransferUserImp = ::GetDlgItem(hwnd, IDC_FTUSERIMPERSONATION_CHECK);
+        settings->setFTUserImpersonation(::SendMessage(hFileTransferUserImp, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_BLANK))
+    {
+        HWND hBlank = ::GetDlgItem(hwnd, IDC_BLANK);
+        settings->setEnableBlankMonitor(::SendMessage(hBlank, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_BLANK2))
+    {
+        HWND hBlank2 = ::GetDlgItem(hwnd, IDC_BLANK2); //PGM
+        settings->setBlankInputsOnly(::SendMessage(hBlank2, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_ALLOWLOOPBACK))
+    {
+        settings->setAllowLoopback(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_ALLOWLOOPBACK)));
+    }
+
+    if (::GetDlgItem(hwnd, IDC_IPV6))
+    {
+        settings->setIPV6(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_IPV6)));
+    }
+
+    if (::GetDlgItem(hwnd, IDC_LOOPBACKONLY))
+    {
+        if (m_server)
+        {
+            m_server->SetLoopbackOnly(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_LOOPBACKONLY)));
+        }
+        settings->setLoopbackOnly(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_LOOPBACKONLY)));
+    }
+
+    if (::GetDlgItem(hwnd, IDC_DISABLETRAY))
+    {
+        settings->setDisableTrayIcon(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_DISABLETRAY)));
+    }
+
+    if (::GetDlgItem(hwnd, IDC_RDPMODE))
+    {
+        settings->setRdpmode(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_RDPMODE)));
+    }
+
+    if (::GetDlgItem(hwnd, IDC_NOSCREENSAVER))
+    {
+        settings->setNoScreensaver(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_NOSCREENSAVER)));
+        if (m_server)
+        {
+            m_server->SetNoScreensaver(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_NOSCREENSAVER)));
+        }
+    }
+
+    if (::GetDlgItem(hwnd, IDC_ALLOWSHUTDOWN))
+    {
+        settings->setAllowShutdown(!::IsDlgButtonChecked(hwnd, IDC_ALLOWSHUTDOWN));
+        vncMenu::updateMenu();
+    }
+
+    if (::GetDlgItem(hwnd, IDC_ALLOWEDITCLIENTS))
+    {
+        settings->setAllowEditClients(!::IsDlgButtonChecked(hwnd, IDC_ALLOWEDITCLIENTS));
+        vncMenu::updateMenu();
+    }
+
+
+
+    if (::GetDlgItem(hwnd, IDC_LOG))
+    {
+        if (::IsDlgButtonChecked(hwnd, IDC_LOG))
+        {
+            vnclog.SetMode(2);
+            vnclog.SetLevel(10);
+        }
+        else
+        {
+            vnclog.SetMode(0);
+        }
+    }
+
+    if (::GetDlgItem(hwnd, IDC_VIDEO))
+    {
+        if (::IsDlgButtonChecked(hwnd, IDC_VIDEO))
+        {
+            vnclog.SetVideo(true);
+        }
+        else
+        {
+            vnclog.SetVideo(false);
+        }
+    }
+
+    if (::GetDlgItem(hwnd, IDC_MSLOGON_CHECKD))
+    {
+        HWND hMSLogon = ::GetDlgItem(hwnd, IDC_MSLOGON_CHECKD);
+        settings->setRequireMSLogon(::SendMessage(hMSLogon, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+    if (::GetDlgItem(hwnd, IDC_NEW_MSLOGON))
+    {
+        HWND hNewMSLogon = ::GetDlgItem(hwnd, IDC_NEW_MSLOGON);
+        settings->setNewMSLogon(::SendMessage(hNewMSLogon, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_REVERSEAUTH))
+    {
+        HWND hReverseAuth = ::GetDlgItem(hwnd, IDC_REVERSEAUTH);
+        settings->setReverseAuthRequired(::SendMessage(hReverseAuth, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_SCALE))
+    {
+        int nDScale = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SCALE, nullptr, FALSE));
+        if ((nDScale < 1) || (nDScale > 9))
+        {
+            nDScale = 1;
+        }
+        settings->setDefaultScale(nDScale);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_PLUGIN_CHECK))
+    {
+        if (::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED)
+        {
+            std::array<TCHAR, MAX_PATH> szPlugin;
+            ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), static_cast<int>(szPlugin.size()));
+            settings->setSzDSMPlugin(szPlugin.data());
+            settings->setUseDSMPlugin(true);
+        }
+        else // If Use plugin unchecked but the plugin is loaded, unload it
+        {
+            settings->setUseDSMPlugin(false);
+            if (m_server && m_server->GetDSMPluginPointer()->IsLoaded())
+            {
+                m_server->GetDSMPluginPointer()->UnloadPlugin();
+                m_server->GetDSMPluginPointer()->SetEnabled(false);
+            }
+        }
+    }
+
+    if (::GetDlgItem(hwnd, IDQUERYTIMEOUT))
+    {
+        std::array<char, 256U> timeout;
+        ::strcpy_s(timeout.data(), timeout.size(), "5");
+        if (::GetDlgItemText(hwnd, IDQUERYTIMEOUT, reinterpret_cast<LPSTR>(timeout.data()), 256) == 0)
+        {
+            settings->setQueryTimeout(static_cast<UINT>(atoi(timeout.data())));
+        }
+        else
+        {
+            settings->setQueryTimeout(static_cast<UINT>(atoi(timeout.data())));
+        }
+    }
+
+    if (::GetDlgItem(hwnd, IDC_QUERYDISABLETIME))
+    {
+        std::array<char, 256U> disabletime;
+        ::strcpy_s(disabletime.data(), disabletime.size(), "5");
+        if (::GetDlgItemText(hwnd, IDC_QUERYDISABLETIME, reinterpret_cast<LPSTR>(disabletime.data()), 256) == 0)
+        {
+            settings->setQueryDisableTime(static_cast<UINT>(atoi(disabletime.data())));
+        }
+        else
+        {
+            settings->setQueryDisableTime(static_cast<UINT>(atoi(disabletime.data())));
+        }
+    }
+
+    if (::GetDlgItem(hwnd, IDC_SERVICE_COMMANDLINE))
+    {
+        std::array<char, 1024U> temp{};
+        ::GetDlgItemText(hwnd, IDC_SERVICE_COMMANDLINE, temp.data(), 1024);
+        settings->setService_commandline(temp.data());
+    }
+
+    if (::GetDlgItem(hwnd, IDC_EDITQUERYTEXT))
+    {
+        std::array<char, 512U> temp2{};
+        ::GetDlgItemText(hwnd, IDC_EDITQUERYTEXT, temp2.data(), 512);
+        settings->setAccept_reject_mesg(temp2.data());
+    }
+
+    if (::GetDlgItem(hwnd, IDQUERY))
+    {
+        HWND hQuery = ::GetDlgItem(hwnd, IDQUERY);
+        settings->setQuerySetting((::SendMessage(hQuery, BM_GETCHECK, 0, 0) == BST_CHECKED) ? 4 : 2);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_AUTHREQUIRED))
+    {
+        settings->setAuthRequired(::SendMessage(::GetDlgItem(hwnd, IDC_AUTHREQUIRED), BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    settings->setAuthhosts(rulesListView->getAuthHost());
+
+    if (::GetDlgItem(hwnd, IDC_ALLOWUSERSSETTINGS))
+    {
+        settings->setAllowUserSettingsWithPassword(::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWUSERSSETTINGS), BM_GETCHECK, 0, 0) ==
+                                                   BST_CHECKED);
+    }
+}
+void PropertiesDialog::onTabsOK(const HWND hwnd)
+{
+    ::EndDialog(hwnd, IDOK);
+    m_dlgvisible = FALSE;
 }
 
-void PropertiesDialog::setServiceStatusText(HWND hwnd)
+void PropertiesDialog::InitPortSettings(const HWND hwnd)
+{
+    BOOL bConnectSockIn = m_server ? m_server->SockConnected() : false;
+    BOOL bConnectHttp = settings->getHTTPConnect();
+    BOOL bAutoPort = settings->getAutoPortSelect();
+    UINT port_rfb = static_cast<UINT>(settings->getPortNumber());
+    UINT port_http = static_cast<UINT>(settings->getHttpPortNumber());
+    int d1 = static_cast<int>(PORT_TO_DISPLAY(port_rfb));
+    const int d2 = static_cast<int>(HPORT_TO_DISPLAY(port_http));
+    BOOL bValidDisplay = ((d1 == d2) && (d1 >= 0) && (d1 <= 99));
+
+    if (::GetDlgItem(hwnd, IDC_PORTNO_AUTO))
+    {
+        ::CheckDlgButton(hwnd, IDC_PORTNO_AUTO, (bAutoPort) ? BST_CHECKED : BST_UNCHECKED);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTNO_AUTO), bConnectSockIn);
+    }
+
+    if (::GetDlgItem(hwnd, IDC_PORTRFB))
+    {
+        ::SetDlgItemInt(hwnd, IDC_PORTRFB, port_rfb, FALSE);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTRFB), (bConnectSockIn && !bAutoPort && !bValidDisplay));
+    }
+
+    if (::GetDlgItem(hwnd, IDC_PORTHTTP))
+    {
+        ::SetDlgItemInt(hwnd, IDC_PORTHTTP, port_http, FALSE);
+        ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTHTTP), (bConnectSockIn && !bAutoPort && !bValidDisplay && bConnectHttp));
+    }
+}
+
+void PropertiesDialog::onApply([[maybe_unused]] const HWND hwnd)
+{
+    ::SendMessage(hTabAuthentication, WM_COMMAND, IDC_APPLY, 0);
+    ::SendMessage(hTabIncoming, WM_COMMAND, IDC_APPLY, 0);
+    ::SendMessage(hTabInput, WM_COMMAND, IDC_APPLY, 0);
+    ::SendMessage(hTabMisc, WM_COMMAND, IDC_APPLY, 0);
+    ::SendMessage(hTabNotifications, WM_COMMAND, IDC_APPLY, 0);
+    ::SendMessage(hTabNetwork, WM_COMMAND, IDC_APPLY, 0);
+    ::SendMessage(hTabRules, WM_COMMAND, IDC_APPLY, 0);
+    ::SendMessage(hTabCapture, WM_COMMAND, IDC_APPLY, 0);
+    ::SendMessage(hTabLog, WM_COMMAND, IDC_APPLY, 0);
+    ::SendMessage(hTabTLS, WM_COMMAND, IDC_APPLY, 0);
+    ::SendMessage(hTabAdministration, WM_COMMAND, IDC_APPLY, 0);
+    ::SendMessage(hTabService, WM_COMMAND, IDC_APPLY, 0);
+#ifndef SC_20
+    settings->save();
+#endif // SC_20
+}
+void PropertiesDialog::onOK(const HWND hwnd)
+{
+    ::SendMessage(hTabAuthentication, WM_COMMAND, IDOK, 0);
+    ::SendMessage(hTabIncoming, WM_COMMAND, IDOK, 0);
+    ::SendMessage(hTabInput, WM_COMMAND, IDOK, 0);
+    ::SendMessage(hTabMisc, WM_COMMAND, IDOK, 0);
+    ::SendMessage(hTabNotifications, WM_COMMAND, IDOK, 0);
+    ::SendMessage(hTabNetwork, WM_COMMAND, IDOK, 0);
+    ::SendMessage(hTabRules, WM_COMMAND, IDOK, 0);
+    ::SendMessage(hTabCapture, WM_COMMAND, IDOK, 0);
+    ::SendMessage(hTabLog, WM_COMMAND, IDOK, 0);
+    ::SendMessage(hTabTLS, WM_COMMAND, IDOK, 0);
+    ::SendMessage(hTabAdministration, WM_COMMAND, IDOK, 0);
+    ::SendMessage(hTabService, WM_COMMAND, IDOK, 0);
+
+#ifndef SC_20
+    settings->save();
+#endif // SC_20
+
+    ::DestroyWindow(hTabAuthentication);
+    ::DestroyWindow(hTabIncoming);
+    ::DestroyWindow(hTabInput);
+    ::DestroyWindow(hTabMisc);
+    ::DestroyWindow(hTabNotifications);
+    ::DestroyWindow(hTabNetwork);
+    ::DestroyWindow(hTabRules);
+    ::DestroyWindow(hTabCapture);
+    ::DestroyWindow(hTabLog);
+    ::DestroyWindow(hTabTLS);
+    ::DestroyWindow(hTabAdministration);
+    ::DestroyWindow(hTabService);
+    ::EndDialog(hwnd, TRUE);
+}
+void PropertiesDialog::onCancel(const HWND hwnd)
+{
+    ::SendMessage(hTabAuthentication, WM_COMMAND, IDCANCEL, 0);
+    ::SendMessage(hTabIncoming, WM_COMMAND, IDCANCEL, 0);
+    ::SendMessage(hTabInput, WM_COMMAND, IDCANCEL, 0);
+    ::SendMessage(hTabMisc, WM_COMMAND, IDCANCEL, 0);
+    ::SendMessage(hTabNotifications, WM_COMMAND, IDCANCEL, 0);
+    ::SendMessage(hTabNetwork, WM_COMMAND, IDCANCEL, 0);
+    ::SendMessage(hTabRules, WM_COMMAND, IDCANCEL, 0);
+    ::SendMessage(hTabCapture, WM_COMMAND, IDCANCEL, 0);
+    ::SendMessage(hTabLog, WM_COMMAND, IDCANCEL, 0);
+    ::SendMessage(hTabTLS, WM_COMMAND, IDCANCEL, 0);
+    ::SendMessage(hTabAdministration, WM_COMMAND, IDCANCEL, 0);
+    ::SendMessage(hTabService, WM_COMMAND, IDCANCEL, 0);
+    ::DestroyWindow(hTabAuthentication);
+    ::DestroyWindow(hTabIncoming);
+    ::DestroyWindow(hTabInput);
+    ::DestroyWindow(hTabMisc);
+    ::DestroyWindow(hTabNotifications);
+    ::DestroyWindow(hTabNetwork);
+    ::DestroyWindow(hTabRules);
+    ::DestroyWindow(hTabCapture);
+    ::DestroyWindow(hTabLog);
+    ::DestroyWindow(hTabTLS);
+    ::DestroyWindow(hTabAdministration);
+    ::DestroyWindow(hTabService);
+    ::EndDialog(hwnd, FALSE);
+}
+
+const int MAX_LINES{ 100 };
+void PropertiesDialog::LogToEdit(const std::string& message)
+{
+    if ((hEditLog == nullptr) || !::IsWindow(hEditLog))
+    {
+        // Convert buffer to a string
+        std::string content(buffer);
+
+        // Split the content into lines
+        std::vector<std::string> lines;
+        std::istringstream iss(content);
+        std::string line;
+        while (std::getline(iss, line))
+        {
+            lines.push_back(line);
+        }
+
+        // Add the new message
+        lines.insert(lines.begin(), message);
+
+        // Remove excess lines if necessary
+        while (lines.size() > MAX_LINES)
+        {
+            lines.pop_back();
+        }
+
+        std::ostringstream oss;
+        for (const auto& ln : lines)
+        {
+            oss << ln << '\n'; // Add newline between lines
+        }
+        std::string updatedContent = oss.str();
+
+        // Copy the updated content back to the buffer
+        if (updatedContent.size() < 65536)
+        {
+            std::strcpy(buffer, updatedContent.c_str());
+        }
+        return;
+    }
+    // Get the current content of the edit control
+    std::string content(buffer);
+
+    // Split the content into lines
+    std::vector<std::string> lines;
+    std::istringstream iss(content);
+    std::string line;
+    while (std::getline(iss, line))
+    {
+        lines.push_back(line);
+    }
+
+    // Add the new message
+    lines.insert(lines.begin(), message);
+
+    // Remove excess lines if necessary
+    while (lines.size() > MAX_LINES)
+    {
+        lines.pop_back();
+    }
+
+    // Rebuild the content
+    std::ostringstream oss;
+    for (const auto& l : lines)
+    {
+        oss << l << "\r\n";
+    }
+
+    // Set the new content and scroll to the end
+    ::SetWindowText(hEditLog, oss.str().c_str());
+    ::SendMessage(hEditLog, EM_SETSEL, static_cast<WPARAM>(-1), -1);    // Move the caret to the end
+    ::SendMessage(hEditLog, EM_SCROLLCARET, 0, 0); // Ensure the last line is visible
+    ::GetWindowText(hEditLog, buffer, sizeof(buffer));
+}
+
+void PropertiesDialog::setServiceStatusText(const HWND hwnd)
 {
 #ifndef SC_20
-	if (GetDlgItem(hwnd, IDC_SERVICE_STATUS)) {
-		bool installed = processHelper::IsServiceInstalled();
-		bool running = processHelper::IsServiceRunning();
-		if (!installed) {
-			SetWindowText(GetDlgItem(hwnd, IDC_SERVICE_STATUS), "Service is not installed");
-			EnableWindow(GetDlgItem(hwnd, IDC_INSTALL_SERVICE), 1);
-			EnableWindow(GetDlgItem(hwnd, IDC_UNINSTALL_SERVICE), 0);
-			EnableWindow(GetDlgItem(hwnd, IDC_START_SERVICE), 0);
-			EnableWindow(GetDlgItem(hwnd, IDC_STOP_SERVICE), 0);
-		}
-		if (installed && running) {
-			SetWindowText(GetDlgItem(hwnd, IDC_SERVICE_STATUS), "Service installed and running");
-			EnableWindow(GetDlgItem(hwnd, IDC_INSTALL_SERVICE), 0);
-			EnableWindow(GetDlgItem(hwnd, IDC_UNINSTALL_SERVICE), 0);
-			EnableWindow(GetDlgItem(hwnd, IDC_START_SERVICE), 0);
-			EnableWindow(GetDlgItem(hwnd, IDC_STOP_SERVICE), 1);
-		}
+    if (::GetDlgItem(hwnd, IDC_SERVICE_STATUS))
+    {
+        bool installed = processHelper::IsServiceInstalled();
+        bool running = processHelper::IsServiceRunning();
+        if (!installed)
+        {
+            ::SetWindowText(::GetDlgItem(hwnd, IDC_SERVICE_STATUS), "Service is not installed");
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_INSTALL_SERVICE), 1);
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_UNINSTALL_SERVICE), 0);
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_START_SERVICE), 0);
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_STOP_SERVICE), 0);
+        }
+        if (installed && running)
+        {
+            ::SetWindowText(::GetDlgItem(hwnd, IDC_SERVICE_STATUS), "Service installed and running");
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_INSTALL_SERVICE), 0);
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_UNINSTALL_SERVICE), 0);
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_START_SERVICE), 0);
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_STOP_SERVICE), 1);
+        }
 
-		if (installed && !running) {
-			SetWindowText(GetDlgItem(hwnd, IDC_SERVICE_STATUS), "Service installed and not running");
-			EnableWindow(GetDlgItem(hwnd, IDC_INSTALL_SERVICE), 0);
-			EnableWindow(GetDlgItem(hwnd, IDC_UNINSTALL_SERVICE), 1);
-			EnableWindow(GetDlgItem(hwnd, IDC_START_SERVICE), 1);
-			EnableWindow(GetDlgItem(hwnd, IDC_STOP_SERVICE), 0);
-		}
-
-
-		
-	}
-#endif	
+        if (installed && !running)
+        {
+            ::SetWindowText(::GetDlgItem(hwnd, IDC_SERVICE_STATUS), "Service installed and not running");
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_INSTALL_SERVICE), 0);
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_UNINSTALL_SERVICE), 1);
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_START_SERVICE), 1);
+            ::EnableWindow(::GetDlgItem(hwnd, IDC_STOP_SERVICE), 0);
+        }
+    }
+#endif
 }
-
-

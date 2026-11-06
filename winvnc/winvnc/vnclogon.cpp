@@ -10,145 +10,148 @@
 
 
 #include "stdhdrs.h"
-#include "resource.h"
-#include <omnithread.h>
-#include "vncdesktop.h"
+
 #include "vnclogon.h"
 
+#include "resource.h"
+#include "vncdesktop.h"
 
-extern HINSTANCE	hAppInstance;
+#include <omnithread.h>
+
+#include <array>
+#include <cstring>
+
+extern HINSTANCE hAppInstance;
 extern BOOL WINAPI SSPLogonUser(LPTSTR szDomain, LPTSTR szUser, LPTSTR szPassword);
-TCHAR szUsername[64];
-TCHAR szPassword[64];
-TCHAR szDomain[64];
+std::array<TCHAR, 64U> szUsername;
+TCHAR szPassword[64U];
+std::array<TCHAR, 64U> szDomain;
 
 // [v1.0.2-jp1 fix] Load resouce from dll
-extern HINSTANCE	hInstResDLL;
+extern HINSTANCE hInstResDLL;
 
-BOOL vncLogonThread::Init(vncDesktop *desktop)
+BOOL vncLogonThread::Init(vncDesktop* desktop)
 {
-	m_desktop = desktop;
-	m_desktop->logon=1;
-	logonhwnd=NULL;
-	rect.left=0;
-	rect.top=0;
-	rect.right=32;
-	rect.bottom=32;
-	start_undetached();
-	return TRUE;
+    m_desktop = desktop;
+    m_desktop->logon = 1;
+    logonhwnd = nullptr;
+    rect.left = 0;
+    rect.top = 0;
+    rect.right = 32;
+    rect.bottom = 32;
+    start_undetached();
+    return TRUE;
 }
 
-void *vncLogonThread::run_undetached(void * arg)
+void* vncLogonThread::run_undetached(void* const arg)
 {
-	int logonstatus;
-	logonstatus=CreateLogonWindow(hAppInstance);
-	m_desktop->logon=logonstatus;
+    int logonstatus;
+    logonstatus = CreateLogonWindow(hAppInstance);
+    m_desktop->logon = logonstatus;
 
-	return NULL;
+    return nullptr;
 }
-BOOL CALLBACK  
-vncLogonThread::LogonDlgProc(HWND hDlg,
-							 UINT Message,
-							 WPARAM wParam,
-							 LPARAM lParam)
+BOOL CALLBACK vncLogonThread::LogonDlgProc(const HWND hDlg, const UINT Message, const WPARAM wParam, const LPARAM lParam)
 {
- TCHAR TempString[63];
- vncLogonThread *_this = (vncLogonThread *) GetWindowLong(hDlg, GWL_USERDATA);
-  switch (Message)
+    std::array<TCHAR, 63U> TempString;
+    vncLogonThread* _this = (vncLogonThread*)::GetWindowLong(hDlg, GWL_USERDATA);
+    switch (Message)
     {
     case WM_INITDIALOG:
-		_this = (vncLogonThread *) lParam;
-      _this->CenterWindow(hDlg);
-	  SetDlgItemText(hDlg, IDD_DOMAIN,TEXT("."));
-      SetDlgItemText(hDlg, IDD_USER_NAME,TEXT(""));
-      SetDlgItemText(hDlg, IDD_PASSWORD, TEXT(""));
-      SetFocus(GetDlgItem(hDlg, IDD_USER_NAME));
+        _this = (vncLogonThread*)lParam;
+        _this->CenterWindow(hDlg);
+        ::SetDlgItemText(hDlg, IDD_DOMAIN, TEXT("."));
+        ::SetDlgItemText(hDlg, IDD_USER_NAME, TEXT(""));
+        ::SetDlgItemText(hDlg, IDD_PASSWORD, TEXT(""));
+        ::SetFocus(::GetDlgItem(hDlg, IDD_USER_NAME));
 
-      return(TRUE);
+        return (TRUE);
 
     case WM_COMMAND:
-      if (LOWORD(wParam) == IDCANCEL)
-			{
-				EndDialog(hDlg, 0);
-			}
-      if (LOWORD(wParam) == IDOK)
-			{
-			GetDlgItemText(hDlg, IDD_USER_NAME, TempString, 63);
-			strcpy(szUsername,TempString);
-			GetDlgItemText(hDlg, IDD_PASSWORD,TempString, 63);
-			strcpy(szPassword,TempString);
-			GetDlgItemText(hDlg, IDD_DOMAIN,TempString, 63);
-			strcpy(szDomain,TempString);
-			EndDialog(hDlg, 1);
-			}
-      return(TRUE);
+        if (LOWORD(wParam) == IDCANCEL)
+        {
+            ::EndDialog(hDlg, 0);
+        }
+        if (LOWORD(wParam) == IDOK)
+        {
+            ::GetDlgItemText(hDlg, IDD_USER_NAME, TempString.data(), 63);
+            std::strcpy(szUsername.data(), TempString.data());
+            ::GetDlgItemText(hDlg, IDD_PASSWORD, TempString.data(), 63);
+            std::strcpy(szPassword, TempString.data());
+            ::GetDlgItemText(hDlg, IDD_DOMAIN, TempString.data(), 63);
+            std::strcpy(szDomain, TempString.data());
+            ::EndDialog(hDlg, 1);
+        }
+        return (TRUE);
     }
 
-  return(FALSE);
-
+    return (FALSE);
 }
-int vncLogonThread::CreateLogonWindow(HINSTANCE hInstance)
+int vncLogonThread::CreateLogonWindow(const HINSTANCE hInstance)
 {
-	int returnvalue=0;
+    int returnvalue{ 0 };
 
-	// [v1.0.2-jp1 fix] Load resouce from dll
-	//returnvalue = DialogBoxParam(hAppInstance,MAKEINTRESOURCE(IDD_LOGON),
-	returnvalue = DialogBoxParam(hInstResDLL,MAKEINTRESOURCE(IDD_LOGON),
-				NULL,
-				(DLGPROC) LogonDlgProc,
-				(LONG) this);
+    // [v1.0.2-jp1 fix] Load resouce from dll
+    //returnvalue = DialogBoxParam(hAppInstance,MAKEINTRESOURCE(IDD_LOGON),
+    returnvalue = ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_LOGON), nullptr, (DLGPROC)LogonDlgProc, static_cast<LONG>(this));
 
-	if (returnvalue==1)
-			
-				if ((strcmp(szUsername ,TEXT(""))!=0) && (strcmp(szPassword ,TEXT(""))!=0))
-					
-						
-						if (SSPLogonUser(szDomain, szUsername,szPassword)) return 3;
-						
-						
-					
-	
-		
-	return 2;
+    if (returnvalue == 1)
+    {
+
+        if ((std::strcmp(szUsername.data(), TEXT("")) != 0) && (std::strcmp(szPassword, TEXT("")) != 0))
+        {
+
+
+            if (SSPLogonUser(szDomain, szUsername.data(), szPassword))
+            {
+                return 3;
+            }
+        }
+    }
+
+
+
+
+
+    return 2;
 }
 VOID vncLogonThread::CenterWindow(HWND hwnd)
 {
-  LONG    dx, dy;
-  LONG    dxParent, dyParent;
-  LONG    Style;
-  logonhwnd=hwnd;
-  GetWindowRect(hwnd, &rect);
-  dx = rect.right - rect.left;
-  dy = rect.bottom - rect.top;
+    LONG dx, dy;
+    LONG dxParent, dyParent;
+    LONG Style;
+    logonhwnd = hwnd;
+    ::GetWindowRect(hwnd, &rect);
+    dx = rect.right - rect.left;
+    dy = rect.bottom - rect.top;
 
-  Style = GetWindowLong(hwnd, GWL_STYLE);
-  if ((Style & WS_CHILD) == 0) 
+    Style = ::GetWindowLong(hwnd, GWL_STYLE);
+    if ((Style & WS_CHILD) == 0)
     {
-      dxParent = GetSystemMetrics(SM_CXSCREEN);
-      dyParent = GetSystemMetrics(SM_CYSCREEN);
-    } 
-  else 
+        dxParent = GetSystemMetrics(SM_CXSCREEN);
+        dyParent = GetSystemMetrics(SM_CYSCREEN);
+    }
+    else
     {
-      HWND    hwndParent;
-      RECT    rectParent;
+        HWND hwndParent;
+        RECT rectParent;
 
-      hwndParent = GetParent(hwnd);
-      if (hwndParent == NULL) 
-	{
-	  hwndParent = GetDesktopWindow();
-	}
+        hwndParent = ::GetParent(hwnd);
+        if (hwndParent == nullptr)
+        {
+            hwndParent = ::GetDesktopWindow();
+        }
 
-      GetWindowRect(hwndParent, &rectParent);
+        ::GetWindowRect(hwndParent, &rectParent);
 
-      dxParent = rectParent.right - rectParent.left;
-      dyParent = rectParent.bottom - rectParent.top;
+        dxParent = rectParent.right - rectParent.left;
+        dyParent = rectParent.bottom - rectParent.top;
     }
 
-  rect.left = (dxParent - dx) / 2+m_desktop->m_ScreenOffsetx;
-  rect.top  = (dyParent - dy) / 3+m_desktop->m_ScreenOffsety;
+    rect.left = (dxParent - dx) / 2 + m_desktop->m_ScreenOffsetx;
+    rect.top = (dyParent - dy) / 3 + m_desktop->m_ScreenOffsety;
 
-  SetWindowPos(hwnd, HWND_TOPMOST, rect.left, rect.top, 0, 0, SWP_NOSIZE);
+    ::SetWindowPos(hwnd, HWND_TOPMOST, rect.left, rect.top, 0, 0, SWP_NOSIZE);
 
-  SetForegroundWindow(hwnd);
+    ::SetForegroundWindow(hwnd);
 }
-

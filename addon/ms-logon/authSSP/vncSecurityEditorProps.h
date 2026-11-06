@@ -21,36 +21,29 @@
 // Notice that I left some of the more esoteric permissions for the Advanced dialog,
 // and that I only show "Full Control" in the basic permissions editor.
 // This is consistent with the way the file acl editor works.
-SI_ACCESS g_vncAccess[] = {	
-	// these are a easy-to-swallow listing of basic rights for VNC
-//	{ &GUID_NULL, 0x00000007, L"Full control", SI_ACCESS_GENERAL  },	// Full Control
-	{ &GUID_NULL, 0x00000003, L"Full control", SI_ACCESS_GENERAL  },	// Full Control
-	{ &GUID_NULL, 0x00000003, L"Interact",     SI_ACCESS_GENERAL  },	// Write
-	{ &GUID_NULL, 0x00000001, L"View",     SI_ACCESS_GENERAL  },	// Read
-//	{ &GUID_NULL, 0x00000004, L"File Transfer",     SI_ACCESS_GENERAL  },	// ??
+SI_ACCESS g_vncAccess[] = {
+    // these are a easy-to-swallow listing of basic rights for VNC
+    //	{ &GUID_NULL, 0x00000007, L"Full control", SI_ACCESS_GENERAL  },	// Full Control
+    { &GUID_NULL, 0x00000003, L"Full control", SI_ACCESS_GENERAL }, // Full Control
+    { &GUID_NULL, 0x00000003, L"Interact", SI_ACCESS_GENERAL },     // Write
+    { &GUID_NULL, 0x00000001, L"View", SI_ACCESS_GENERAL },         // Read
+    //	{ &GUID_NULL, 0x00000004, L"File Transfer",     SI_ACCESS_GENERAL  },	// ??
 };
 
 // Here's my crufted-up mapping for VNC generic rights
-GENERIC_MAPPING g_vncGenericMapping = {
-	STANDARD_RIGHTS_READ,
-	STANDARD_RIGHTS_WRITE,
-	STANDARD_RIGHTS_EXECUTE,
-	STANDARD_RIGHTS_REQUIRED
-};
+GENERIC_MAPPING g_vncGenericMapping{ STANDARD_RIGHTS_READ, STANDARD_RIGHTS_WRITE, STANDARD_RIGHTS_EXECUTE,
+                                     STANDARD_RIGHTS_REQUIRED };
 
-const DWORD ViewOnly	   = 0x0001;
-const DWORD Interact	   = 0x0002;
+#undef ViewOnly
+#undef Interact
 
-const DWORD GenericRead    = STANDARD_RIGHTS_READ |
-							 ViewOnly;
+const DWORD ViewOnly{ 0x0001U };
+const DWORD Interact{ 0x0002U };
 
-const DWORD GenericWrite   = STANDARD_RIGHTS_WRITE |
-							 Interact;
+const DWORD GenericRead = STANDARD_RIGHTS_READ | ViewOnly;
+
+const DWORD GenericWrite = STANDARD_RIGHTS_WRITE | Interact;
 
 const DWORD GenericExecute = STANDARD_RIGHTS_EXECUTE;
 
-const DWORD GenericAll     = STANDARD_RIGHTS_REQUIRED |
-							  GenericRead |
-							  GenericWrite |
-							  GenericExecute;
-
+const DWORD GenericAll = STANDARD_RIGHTS_REQUIRED | GenericRead | GenericWrite | GenericExecute;

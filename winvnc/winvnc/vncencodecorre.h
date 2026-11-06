@@ -18,52 +18,50 @@
 
 class vncEncodeCoRRE;
 
-#if !defined(_WINVNC_ENCODECORRRE)
-#define _WINVNC_ENCODECORRE
+#if !defined(WINVNC_ENCODECORRRE)
+#define WINVNC_ENCODECORRE
 #pragma once
 
 #include "vncencoder.h"
-
 // Class definition
 
 class vncEncodeCoRRE : public vncEncoder
 {
-// Fields
+    // Fields
 public:
-
-// Methods
+    // Methods
 public:
-	// Create/Destroy methods
-	vncEncodeCoRRE();
-	~vncEncodeCoRRE();
+    // Create/Destroy methods
+    explicit vncEncodeCoRRE();
+    ~vncEncodeCoRRE();
 
-	virtual void Init();
+    virtual void Init();
 
-	virtual UINT RequiredBuffSize(UINT width, UINT height);
-	virtual UINT NumCodedRects(const rfb::Rect &rect);
+    virtual UINT RequiredBuffSize(UINT width, UINT height);
+    virtual UINT NumCodedRects(const rfb::Rect& rect);
 
-	virtual UINT EncodeRect(BYTE *source, BYTE *dest, const rfb::Rect &rect);
-	virtual void SetCoRREMax(BYTE width, BYTE height);
+    virtual UINT EncodeRect(BYTE* source, BYTE* dest, const rfb::Rect& rect);
+    virtual void SetCoRREMax(BYTE width, BYTE height);
+
 protected:
-	virtual UINT InternalEncodeRect(BYTE *source, BYTE *dest, const rfb::Rect &rect);
-	virtual UINT EncodeSmallRect(BYTE *source, BYTE *dest, const rfb::Rect &rect);
+    virtual UINT InternalEncodeRect(BYTE* source, BYTE* dest, const rfb::Rect& rect);
+    virtual UINT EncodeSmallRect(BYTE* source, BYTE* dest, const rfb::Rect& rect);
 
-// Implementation
+    // Implementation
 protected:
-	BYTE		*m_buffer;
-	int			m_bufflen;
+    BYTE* m_buffer;
+    int m_bufflen;
 
-	// Maximum height & width for CoRRE
-	UINT		m_maxwidth;
-	UINT		m_maxheight;
+    // Maximum height & width for CoRRE
+    UINT m_maxwidth;
+    UINT m_maxheight;
 
-	// Last-update stats for CoRRE
-	UINT		m_encodedbytes, m_rectbytes;
-	UINT		m_lastencodedbytes, m_lastrectbytes;
-	int			m_maxadjust;
-	int			m_threshold;
-	BOOL		m_statsready;
+    // Last-update stats for CoRRE
+    UINT m_encodedbytes, m_rectbytes;
+    UINT m_lastencodedbytes, m_lastrectbytes;
+    int m_maxadjust;
+    int m_threshold;
+    BOOL m_statsready;
 };
 
-#endif // _WINVNC_ENCODECORRE
-
+#endif // WINVNC_ENCODECORRE

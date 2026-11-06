@@ -27,49 +27,45 @@
 //
 //    You should have received a copy of the GNU Library General Public
 //    License along with this library; if not, write to the Free
-//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
 //    02111-1307, USA
 //
 //
 // OMNI thread implementation classes for NT threads.
 //
 
-#ifndef __omnithread_nt_h_
-#define __omnithread_nt_h_
+#ifndef omnithread_nt_h
+#define omnithread_nt_h
 
-#include <windows.h>
+#include <Windows.h>
 
 #ifndef __BCPLUSPLUS__
-#define OMNI_THREAD_WRAPPER \
-    unsigned __stdcall omni_thread_wrapper(LPVOID ptr)
+#define OMNI_THREAD_WRAPPER unsigned __stdcall omni_thread_wrapper(LPVOID ptr)
 #else
-#define OMNI_THREAD_WRAPPER \
-    void _USERENTRY omni_thread_wrapper(void *ptr)
+#define OMNI_THREAD_WRAPPER void _USERENTRY omni_thread_wrapper(void* ptr)
 #endif
 
 extern "C" OMNI_THREAD_WRAPPER;
 
-#define OMNI_MUTEX_IMPLEMENTATION			\
-    CRITICAL_SECTION crit;
+#define OMNI_MUTEX_IMPLEMENTATION CRITICAL_SECTION crit;
 
-#define OMNI_CONDITION_IMPLEMENTATION			\
-    CRITICAL_SECTION crit;				\
-    omni_thread* waiting_head;				\
+#define OMNI_CONDITION_IMPLEMENTATION                                                                                              \
+    CRITICAL_SECTION crit;                                                                                                         \
+    omni_thread* waiting_head;                                                                                                     \
     omni_thread* waiting_tail;
 
-#define OMNI_SEMAPHORE_IMPLEMENTATION			\
-    HANDLE nt_sem;
+#define OMNI_SEMAPHORE_IMPLEMENTATION HANDLE nt_sem;
 
-#define OMNI_THREAD_IMPLEMENTATION			\
-    HANDLE handle;					\
-    DWORD nt_id;					\
-    void* return_val;					\
-    HANDLE cond_semaphore;				\
-    omni_thread* cond_next;				\
-    omni_thread* cond_prev;				\
-    BOOL cond_waiting;					\
-    static int nt_priority(priority_t);			\
-    friend class omni_condition;			\
+#define OMNI_THREAD_IMPLEMENTATION                                                                                                 \
+    HANDLE handle;                                                                                                                 \
+    DWORD nt_id;                                                                                                                   \
+    void* return_val;                                                                                                              \
+    HANDLE cond_semaphore;                                                                                                         \
+    omni_thread* cond_next;                                                                                                        \
+    omni_thread* cond_prev;                                                                                                        \
+    BOOL cond_waiting;                                                                                                             \
+    static int nt_priority(priority_t);                                                                                            \
+    friend class omni_condition;                                                                                                   \
     friend OMNI_THREAD_WRAPPER;
 
 #endif

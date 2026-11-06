@@ -11,7 +11,7 @@
 
 //
 // IF YOU USE THIS GPL SOURCE CODE TO MAKE YOUR DSM PLUGIN, PLEASE ADD YOUR
-// COPYRIGHT TO THE TOP OF THIS FILE AND SHORTLY DESCRIBE/EXPLAIN THE 
+// COPYRIGHT TO THE TOP OF THIS FILE AND SHORTLY DESCRIBE/EXPLAIN THE
 // MODIFICATIONS YOU'VE MADE. THANKS.
 //
 // IF YOU DON'T USE THIS CODE AS A BASE FOR YOUR PLUGIN, THE HEADER ABOVE AND
@@ -27,11 +27,11 @@
 //
 // WARNING : In order to avoid multithreading issues with your DSM Plugin, it is recommended
 // (not to say mandatory...) to use 2 distincts contexts (buffers, structs, objects, keys on so on)
-// for "Tranformation" and "Restoration" operations. 
-// Actually, 2 distinct mutexes are used at DSMPlugin.cpp level (one in the TransformBuffer 
+// for "Tranformation" and "Restoration" operations.
+// Actually, 2 distinct mutexes are used at DSMPlugin.cpp level (one in the TransformBuffer
 // function, and the other in the RestoreBuffer function) so Transform and Restore events
 // may occur at the same time.
-// 
+//
 //////////////////////////////////////////////////////////////////////////////
 
 #ifdef TESTPLUGIN_EXPORTS
@@ -40,18 +40,22 @@
 #define TESTPLUGIN_API __declspec(dllimport)
 #endif
 
-#include <stdlib.h>
-#include <windows.h>
-#include <memory.h>
 #include "resource.h"
 
+#include <Windows.h>
+
+#include <memory.h>
+
+#include <array>
+#include <stdlib.h>
 // Plugin struct example - Of course some classes can be used instead...
+
 typedef struct
 {
-	char szDescription[256];
-	int nMode;
-	int nInternalParam1;
-	int nInternalParam2;  // And so on.. add what you need.
+    std::array<char, 256U> szDescription;
+    int nMode;
+    int nInternalParam1;
+    int nInternalParam2; // And so on.. add what you need.
 
 } PLUGINSTRUCT;
 
@@ -65,7 +69,7 @@ int GiveRestDataLen(int nDataLen);
 BYTE* CheckLocalTransBufferSize(int nBufferSize);
 BYTE* CheckLocalRestBufferSize(int nBufferSize);
 // Config procs if necessary (the plugin is allowed to have no config dialog at all)
-BOOL CALLBACK ConfigDlgProc(HWND hwnd,  UINT uMsg,  WPARAM wParam, LPARAM lParam );
+BOOL CALLBACK ConfigDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 int DoDialog(void);
 
 
@@ -73,8 +77,7 @@ int DoDialog(void);
 // A DSM Plugin MUST export (extern "C" - __cdecl) all the following functions
 // (same names, same signatures)
 
-extern "C"
-{
+extern "C" {
 TESTPLUGIN_API char* Description(void);
 TESTPLUGIN_API int Startup(void);
 TESTPLUGIN_API int Shutdown(void);

@@ -51,7 +51,8 @@
  * affecting alignment.
  */
 
-typedef struct {
+typedef struct
+{
     CARD16 x;
     CARD16 y;
     CARD16 w;
@@ -65,48 +66,49 @@ typedef struct {
  * Structure used to specify pixel format.
  */
 
-typedef struct {
+typedef struct
+{
 
-    CARD8 bitsPerPixel;		/* 8,16,32 only */
+    CARD8 bitsPerPixel; /* 8,16,32 only */
 
-    CARD8 depth;		/* 8 to 32 */
+    CARD8 depth; /* 8 to 32 */
 
-    CARD8 bigEndian;		/* True if multi-byte pixels are interpreted
-				   as big endian, or if single-bit-per-pixel
-				   has most significant bit of the byte
-				   corresponding to first (leftmost) pixel. Of
-				   course this is meaningless for 8-bit/pix */
+    CARD8 bigEndian; /* True if multi-byte pixels are interpreted
+            as big endian, or if single-bit-per-pixel
+            has most significant bit of the byte
+            corresponding to first (leftmost) pixel. Of
+            course this is meaningless for 8-bit/pix */
 
-    CARD8 trueColour;		/* If false then we need a "colour map" to
-				   convert pixels to RGB. If true, xxxMax and
-				   xxxShift specify bits used for red, green
-				   and blue */
+    CARD8 trueColour; /* If false then we need a "colour map" to
+             convert pixels to RGB. If true, xxxMax and
+             xxxShift specify bits used for red, green
+             and blue */
 
     /* the following fields are only meaningful if trueColour is true */
 
-    CARD16 redMax;		/* maximum red value (= 2^n - 1 where n is the
-				   number of bits used for red). Note this
-				   value is always in big endian order. */
+    CARD16 redMax; /* maximum red value (= 2^n - 1 where n is the
+              number of bits used for red). Note this
+              value is always in big endian order. */
 
-    CARD16 greenMax;		/* similar for green */
+    CARD16 greenMax; /* similar for green */
 
-    CARD16 blueMax;		/* and blue */
+    CARD16 blueMax; /* and blue */
 
-    CARD8 redShift;		/* number of shifts needed to get the red
-				   value in a pixel to the least significant
-				   bit. To find the red value from a given
-				   pixel, do the following:
-				   1) Swap pixel value according to bigEndian
-				      (e.g. if bigEndian is false and host byte
-				      order is big endian, then swap).
-				   2) Shift right by redShift.
-				   3) AND with redMax (in host byte order).
-				   4) You now have the red value between 0 and
-				      redMax. */
+    CARD8 redShift; /* number of shifts needed to get the red
+               value in a pixel to the least significant
+               bit. To find the red value from a given
+               pixel, do the following:
+               1) Swap pixel value according to bigEndian
+                  (e.g. if bigEndian is false and host byte
+                  order is big endian, then swap).
+               2) Shift right by redShift.
+               3) AND with redMax (in host byte order).
+               4) You now have the red value between 0 and
+                  redMax. */
 
-    CARD8 greenShift;		/* similar for green */
+    CARD8 greenShift; /* similar for green */
 
-    CARD8 blueShift;		/* and blue */
+    CARD8 blueShift; /* and blue */
 
     CARD8 pad1;
     CARD16 pad2;
@@ -116,13 +118,13 @@ typedef struct {
 #define sz_rfbPixelFormat 16
 
 // Color settings values
-#define rfbPFFullColors		0
-#define rfbPF256Colors		1
-#define rfbPF64Colors		2
-#define rfbPF8Colors		3
-#define rfbPF8GreyColors	4
-#define rfbPF4GreyColors	5
-#define rfbPF2GreyColors	6
+#define rfbPFFullColors 0
+#define rfbPF256Colors 1
+#define rfbPF64Colors 2
+#define rfbPF8Colors 3
+#define rfbPF8GreyColors 4
+#define rfbPF4GreyColors 5
+#define rfbPF2GreyColors 6
 
 
 /*****************************************************************************
@@ -204,7 +206,7 @@ typedef struct {
    Since the basic VNC functionality remains, I think that is acceptable.
 */
 
-typedef char rfbProtocolVersionMsg[13];	/* allow extra byte for null */
+typedef char rfbProtocolVersionMsg[13U]; /* allow extra byte for null */
 
 #define sz_rfbProtocolVersionMsg 12
 
@@ -233,7 +235,7 @@ typedef char rfbProtocolVersionMsg[13];	/* allow extra byte for null */
    viewer responds with 16-bit little-endian response length, followed by the response
    this continues until the plugin says to stop the loop. Currently the SecureVNC plugin only
      does one loop, but this functionality exists in order to implement more complicated handshakes.
- 
+
  If there was a failure, and an error message is available, rfbVncAuthFailedEx (3) is sent followed by the length of the
    error string and then the error string
  If there was a failure, and no error message is available, simply send rfbVncAuthFailed (1)
@@ -249,7 +251,7 @@ typedef char rfbProtocolVersionMsg[13];	/* allow extra byte for null */
 
  rfbUltraVNC is not being used for anything, although rfbUltraVNC_SecureVNCPlugin has been established somewhat.
  Like a lot of these things, most of the values in the authentication range will end up going unused.
- 
+
  Rather than complicate things further, I hereby declare this scheme: the top 4-bit will define the 'owner'
  of that set of values, and the bottom 4-bit will define the type. All of the values in the RFB 3.8 spec
  can then be covered by 0x0 and 0x1 for the top 4-bit.
@@ -292,9 +294,9 @@ typedef char rfbProtocolVersionMsg[13];	/* allow extra byte for null */
 // adzm 2010-09 - Ultra subtypes
 #define rfbUltraVNC_MsLogonIAuth 0x70
 
-	// MS-Logon I never seems to be used anymore -- the old code would say if (m_ms_logon) AuthMsLogon (II) else AuthVnc
-	// and within AuthVnc would be if (m_ms_logon) { /* MS-Logon code */ }. That could never be hit since the first case
-	// would always match!
+// MS-Logon I never seems to be used anymore -- the old code would say if (m_ms_logon) AuthMsLogon (II) else AuthVnc
+// and within AuthVnc would be if (m_ms_logon) { /* MS-Logon code */ }. That could never be hit since the first case
+// would always match!
 
 #define rfbUltraVNC_MsLogonIIAuth 0x71
 //Handshake needed to change for a possible security leak
@@ -308,24 +310,24 @@ typedef char rfbProtocolVersionMsg[13];	/* allow extra byte for null */
 // MS-Logon IV: X25519 + XChaCha20-Poly1305 AEAD on the credential buffers
 #define rfbUltraVNC_MsLogonIVAuth 0x77
 
-#define secTypePlain        256
-#define secTypeTLSNone      257
-#define secTypeTLSVnc       258
-#define secTypeTLSPlain     259
-#define secTypeX509None     260
-#define secTypeX509Vnc      261
-#define secTypeX509Plain    262
+#define secTypePlain 256
+#define secTypeTLSNone 257
+#define secTypeTLSVnc 258
+#define secTypeTLSPlain 259
+#define secTypeX509None 260
+#define secTypeX509Vnc 261
+#define secTypeX509Plain 262
 // SASL subtype numbers follow QEMU, gtk-vnc and libvncserver/libvncclient.
 // rfbproto.rst lists them the other way round; no implementation uses that.
-#define secTypeX509SASL     263
-#define secTypeTLSSASL      264
-#define secTypeIdent        265
-#define secTypeTLSIdent     266
-#define secTypeX509Ident    267
+#define secTypeX509SASL 263
+#define secTypeTLSSASL 264
+#define secTypeIdent 265
+#define secTypeTLSIdent 266
+#define secTypeX509Ident 267
 // UltraVNC private VeNCrypt extension, outside the official subtype range.
 // The encrypted payload begins with "UVNC", protocol version 1.0, an auth
 // method and feature flags; see TokenValidator/PROTOCOL.md.
-#define secTypeTokenTLS     300
+#define secTypeTokenTLS 300
 // UltraVNC-private X.509/TLS transport with MS-Logon III authentication.
 #define secTypeX509MsLogonIII 301
 #define uvncTokenProtoMajor 1
@@ -385,21 +387,24 @@ typedef char rfbProtocolVersionMsg[13];	/* allow extra byte for null */
  */
 
 // adzm 2010-09 - worked around this after all, but left the enum in here anyway.
-typedef struct {
+typedef struct
+{
     CARD8 flags; // rfbClientInitMsgFlags
 } rfbClientInitMsg;
 
-typedef struct {
+typedef struct
+{
     CARD8 textLength;
     /* followed by char text[nameLength] */
 } rfbClientInitExtraMsg;
 
 // adzm 2010-09
-typedef enum {
-    clientInitNotShare      = 0x00, // 00
-	clientInitShared        = 0x01, // 01
+typedef enum
+{
+    clientInitNotShare = 0x00, // 00
+    clientInitShared = 0x01,   // 01
     clientInitExtraMsgSupport = 0x02,
-    clientInitExtraMsgUnicode = 0x04  // Client sends UTF-16LE encoded text (textLength is byte count, not char count)
+    clientInitExtraMsgUnicode = 0x04 // Client sends UTF-16LE encoded text (textLength is byte count, not char count)
 } rfbClientInitMsgFlags;
 
 #define sz_rfbClientInitMsg 1
@@ -414,10 +419,11 @@ typedef enum {
  * its pixel format and the name associated with the desktop.
  */
 
-typedef struct {
+typedef struct
+{
     CARD16 framebufferWidth;
     CARD16 framebufferHeight;
-    rfbPixelFormat format;	/* the server's preferred pixel format */
+    rfbPixelFormat format; /* the server's preferred pixel format */
     CARD32 nameLength;
     /* followed by char name[nameLength] */
 } rfbServerInitMsg;
@@ -452,7 +458,7 @@ typedef struct {
 #define rfbSetColourMapEntries 1
 #define rfbBell 2
 #define rfbServerCutText 3
-#define rfbResizeFrameBuffer 4 // Modif sf@2002 
+#define rfbResizeFrameBuffer 4 // Modif sf@2002
 #define rfbPalmVNCReSizeFrameBuffer 0xF
 #define rfbServerState 0xAD // 26 March 2008 jdp
 
@@ -466,12 +472,12 @@ typedef struct {
 #define rfbKeyEvent 4
 #define rfbPointerEvent 5
 #define rfbClientCutText 6
-#define rfbFileTransfer 7 // Modif sf@2002 - actually bidirectionnal
-#define rfbSetScale 8 // Modif sf@2002
-#define rfbSetServerInput 9 // Modif rdv@2002
-#define rfbSetSW 10 // Modif rdv@2002
-#define rfbTextChat 11 // Modif sf@2002 - Text Chat - Bidirectionnal
-#define rfbKeepAlive 13 // 16 July 2008 jdp -- bidirectional
+#define rfbFileTransfer 7            // Modif sf@2002 - actually bidirectionnal
+#define rfbSetScale 8                // Modif sf@2002
+#define rfbSetServerInput 9          // Modif rdv@2002
+#define rfbSetSW 10                  // Modif rdv@2002
+#define rfbTextChat 11               // Modif sf@2002 - Text Chat - Bidirectionnal
+#define rfbKeepAlive 13              // 16 July 2008 jdp -- bidirectional
 #define rfbPalmVNCSetScaleFactor 0xF // PalmVNC 1.4 & 2.0 SetScale Factor message
 // adzm 2010-09 - Notify streaming DSM plugin support
 #define rfbNotifyPluginStreaming 0x50
@@ -488,11 +494,11 @@ typedef struct {
 
 /* Xen VNC Proxy (xvp) - bidirectional message type 250 */
 #define rfbXvp 250
-#define rfbXvpFail     0
-#define rfbXvpInit     1
+#define rfbXvpFail 0
+#define rfbXvpInit 1
 #define rfbXvpShutdown 2
-#define rfbXvpReboot   3
-#define rfbXvpReset    4
+#define rfbXvpReboot 3
+#define rfbXvpReset 4
 
 
 
@@ -507,11 +513,11 @@ typedef struct {
 #define rfbEncodingRRE 2
 #define rfbEncodingCoRRE 4
 #define rfbEncodingHextile 5
-#define rfbEncodingZlib    6
-#define rfbEncodingTight   7
+#define rfbEncodingZlib 6
+#define rfbEncodingTight 7
 #define rfbEncodingZlibHex 8
-#define rfbEncodingUltra	9
-#define rfbEncodingUltra2	10
+#define rfbEncodingUltra 9
+#define rfbEncodingUltra2 10
 #define rfbEncodingZRLE 16
 // nyama/2006/08/02:new YUV-Wavlet lossy codec based on ZRLE
 #define rfbEncodingZYWRLE 17
@@ -519,42 +525,42 @@ typedef struct {
 #define rfbEncodingXZ 18
 #define rfbEncodingXZYW 19
 #endif
-#define rfbEncodingZstd    25
-#define rfbEncodingTightZstd   26
+#define rfbEncodingZstd 25
+#define rfbEncodingTightZstd 26
 #define rfbEncodingZstdHex 27
 #define rfbEncodingZSTDRLE 28
 #define rfbEncodingZSTDYWRLE 29
 
 
 // Cache & XOR-Zlib - rdv@2002
-#define rfbEncodingCache					0xFFFF0000
-#define rfbEncodingCacheEnable				0xFFFF0001
+#define rfbEncodingCache 0xFFFF0000
+#define rfbEncodingCacheEnable 0xFFFF0001
 //#define rfbEncodingXOR_Zlib					0xFFFF0002
 //#define rfbEncodingXORMonoColor_Zlib		0xFFFF0003
 //#define rfbEncodingXORMultiColor_Zlib		0xFFFF0004
 //#define rfbEncodingSolidColor				0xFFFF0005
 //#define rfbEncodingXOREnable				0xFFFF0006
-#define rfbEncodingCacheZip					0xFFFF0007
-#define rfbEncodingQueueZip					0xFFFF0008
-#define rfbEncodingUltraZip					0xFFFF0009
-#define rfbEncodingQueueZstd				0xFFFF000A
-#define rfbEncodingQueueEnable				0xFFFF000B
+#define rfbEncodingCacheZip 0xFFFF0007
+#define rfbEncodingQueueZip 0xFFFF0008
+#define rfbEncodingUltraZip 0xFFFF0009
+#define rfbEncodingQueueZstd 0xFFFF000A
+#define rfbEncodingQueueEnable 0xFFFF000B
 
 // Xen VNC Proxy (xvp) pseudo-encoding (-309)
-#define rfbEncodingXvp                      0xFFFFFECB
+#define rfbEncodingXvp 0xFFFFFECB
 
 // viewer requests server state updates
-#define rfbEncodingServerState              0xFFFF8000
-#define rfbEncodingEnableKeepAlive          0xFFFF8001
-#define rfbEncodingFTProtocolVersion    	0xFFFF8002
-#define rfbEncodingpseudoSession    		0xFFFF8003
-#define rfbEncodingEnableIdleTime           0xFFFF8004
-#define rfbEncodingMonitorInfo              0xFFFF8005
-#define rfbEncodingUnicodeTextChat          0xFFFF8006
-#define rfbEncodingChatFileTransfer         0xFFFF8007
-#define rfbEncodingHighResolutionWheel      0xFFFF8008
+#define rfbEncodingServerState 0xFFFF8000
+#define rfbEncodingEnableKeepAlive 0xFFFF8001
+#define rfbEncodingFTProtocolVersion 0xFFFF8002
+#define rfbEncodingpseudoSession 0xFFFF8003
+#define rfbEncodingEnableIdleTime 0xFFFF8004
+#define rfbEncodingMonitorInfo 0xFFFF8005
+#define rfbEncodingUnicodeTextChat 0xFFFF8006
+#define rfbEncodingChatFileTransfer 0xFFFF8007
+#define rfbEncodingHighResolutionWheel 0xFFFF8008
 
-// Same encoder number as in tight 
+// Same encoder number as in tight
 /*
 #define rfbEncodingXCursor         0xFFFFFF10
 #define rfbEncodingRichCursor      0xFFFFFF11
@@ -573,56 +579,56 @@ typedef struct {
  *   0xFFFFFFF0 .. 0xFFFFFFFF -- cross-encoding compression levels.
  */
 
-#define rfbEncodingFineQualityLevel0   0xFFFFFE00
+#define rfbEncodingFineQualityLevel0 0xFFFFFE00
 #define rfbEncodingFineQualityLevel100 0xFFFFFE64
-#define rfbEncodingSubsamp1X           0xFFFFFD00
-#define rfbEncodingSubsamp4X           0xFFFFFD01
-#define rfbEncodingSubsamp2X           0xFFFFFD02
-#define rfbEncodingSubsampGray         0xFFFFFD03
-#define rfbEncodingSubsamp8X           0xFFFFFD04
-#define rfbEncodingSubsamp16X          0xFFFFFD05
+#define rfbEncodingSubsamp1X 0xFFFFFD00
+#define rfbEncodingSubsamp4X 0xFFFFFD01
+#define rfbEncodingSubsamp2X 0xFFFFFD02
+#define rfbEncodingSubsampGray 0xFFFFFD03
+#define rfbEncodingSubsamp8X 0xFFFFFD04
+#define rfbEncodingSubsamp16X 0xFFFFFD05
 
-#define rfbEncodingCompressLevel0  0xFFFFFF00
-#define rfbEncodingCompressLevel1  0xFFFFFF01
-#define rfbEncodingCompressLevel2  0xFFFFFF02
-#define rfbEncodingCompressLevel3  0xFFFFFF03
-#define rfbEncodingCompressLevel4  0xFFFFFF04
-#define rfbEncodingCompressLevel5  0xFFFFFF05
-#define rfbEncodingCompressLevel6  0xFFFFFF06
-#define rfbEncodingCompressLevel7  0xFFFFFF07
-#define rfbEncodingCompressLevel8  0xFFFFFF08
-#define rfbEncodingCompressLevel9  0xFFFFFF09
+#define rfbEncodingCompressLevel0 0xFFFFFF00
+#define rfbEncodingCompressLevel1 0xFFFFFF01
+#define rfbEncodingCompressLevel2 0xFFFFFF02
+#define rfbEncodingCompressLevel3 0xFFFFFF03
+#define rfbEncodingCompressLevel4 0xFFFFFF04
+#define rfbEncodingCompressLevel5 0xFFFFFF05
+#define rfbEncodingCompressLevel6 0xFFFFFF06
+#define rfbEncodingCompressLevel7 0xFFFFFF07
+#define rfbEncodingCompressLevel8 0xFFFFFF08
+#define rfbEncodingCompressLevel9 0xFFFFFF09
 
-#define rfbEncodingXCursor         0xFFFFFF10
-#define rfbEncodingRichCursor      0xFFFFFF11
-#define rfbEncodingPointerPos      0xFFFFFF18
-#define rfbEncodingLastRect        0xFFFFFF20
-#define rfbEncodingNewFBSize       0xFFFFFF21
-#define rfbEncodingExtDesktopSize  0xFFFFFECC
-#define rfbEncodingExtViewSize     0xFFFFFECD
- 
-#define rfbEncodingQualityLevel0   0xFFFFFFE0
-#define rfbEncodingQualityLevel1   0xFFFFFFE1
-#define rfbEncodingQualityLevel2   0xFFFFFFE2
-#define rfbEncodingQualityLevel3   0xFFFFFFE3
-#define rfbEncodingQualityLevel4   0xFFFFFFE4
-#define rfbEncodingQualityLevel5   0xFFFFFFE5
-#define rfbEncodingQualityLevel6   0xFFFFFFE6
-#define rfbEncodingQualityLevel7   0xFFFFFFE7
-#define rfbEncodingQualityLevel8   0xFFFFFFE8
-#define rfbEncodingQualityLevel9   0xFFFFFFE9
+#define rfbEncodingXCursor 0xFFFFFF10
+#define rfbEncodingRichCursor 0xFFFFFF11
+#define rfbEncodingPointerPos 0xFFFFFF18
+#define rfbEncodingLastRect 0xFFFFFF20
+#define rfbEncodingNewFBSize 0xFFFFFF21
+#define rfbEncodingExtDesktopSize 0xFFFFFECC
+#define rfbEncodingExtViewSize 0xFFFFFECD
+
+#define rfbEncodingQualityLevel0 0xFFFFFFE0
+#define rfbEncodingQualityLevel1 0xFFFFFFE1
+#define rfbEncodingQualityLevel2 0xFFFFFFE2
+#define rfbEncodingQualityLevel3 0xFFFFFFE3
+#define rfbEncodingQualityLevel4 0xFFFFFFE4
+#define rfbEncodingQualityLevel5 0xFFFFFFE5
+#define rfbEncodingQualityLevel6 0xFFFFFFE6
+#define rfbEncodingQualityLevel7 0xFFFFFFE7
+#define rfbEncodingQualityLevel8 0xFFFFFFE8
+#define rfbEncodingQualityLevel9 0xFFFFFFE9
 
 /*
  *  XZ Special encoding numbers (future possibilities)
  *  using the existing levels is an option, too, but they have a much more
  *  significant impact on memory and CPU compared to Zlib
  *   0x585A0000 .. 0x585AFFFF -- XZ encoding-specific parameters;
-*/
+ */
 
 // adzm - 2010-07 - Extended clipboard support
-#define rfbEncodingExtendedClipboard  0xC0A1E5CE
-  // adzm 2010-09 - Notify streaming DSM plugin support
-#define rfbEncodingPluginStreaming       0xC0A1E5CF
+#define rfbEncodingExtendedClipboard 0xC0A1E5CE
+// adzm 2010-09 - Notify streaming DSM plugin support
+#define rfbEncodingPluginStreaming 0xC0A1E5CF
 
 
 /*****************************************************************************
@@ -641,8 +647,9 @@ typedef struct {
  * with alignment of 32-bit pixels):
  */
 
-typedef struct {
-    CARD8 type;			/* always rfbFramebufferUpdate */
+typedef struct
+{
+    CARD8 type; /* always rfbFramebufferUpdate */
     CARD8 pad;
     CARD16 nRects;
     /* followed by nRects rectangles */
@@ -658,9 +665,10 @@ typedef struct {
  * Also note again that this structure is a multiple of 4 bytes.
  */
 
-typedef struct {
+typedef struct
+{
     rfbRectangle r;
-    CARD32 encoding;	/* one of the encoding types rfbEncoding... */
+    CARD32 encoding; /* one of the encoding types rfbEncoding... */
 } rfbFramebufferUpdateRectHeader;
 
 #define sz_rfbFramebufferUpdateRectHeader (sz_rfbRectangle + 4)
@@ -677,7 +685,8 @@ typedef struct {
  * of the source rectangle.
  */
 
-typedef struct {
+typedef struct
+{
     CARD16 srcX;
     CARD16 srcY;
 } rfbCopyRect;
@@ -692,7 +701,8 @@ typedef struct {
  * [<pixel><rfbRectangle>].
  */
 
-typedef struct {
+typedef struct
+{
     CARD32 nSubrects;
 } rfbRREHeader;
 
@@ -707,7 +717,8 @@ typedef struct {
  * the whole rectangle must be at most 255x255 pixels.
  */
 
-typedef struct {
+typedef struct
+{
     CARD8 x;
     CARD8 y;
     CARD8 w;
@@ -756,14 +767,14 @@ typedef struct {
  * the two bytes.
  */
 
-#define rfbHextileRaw			(1 << 0)
-#define rfbHextileBackgroundSpecified	(1 << 1)
-#define rfbHextileForegroundSpecified	(1 << 2)
-#define rfbHextileAnySubrects		(1 << 3)
-#define rfbHextileSubrectsColoured	(1 << 4)
+#define rfbHextileRaw (1 << 0)
+#define rfbHextileBackgroundSpecified (1 << 1)
+#define rfbHextileForegroundSpecified (1 << 2)
+#define rfbHextileAnySubrects (1 << 3)
+#define rfbHextileSubrectsColoured (1 << 4)
 
-#define rfbHextilePackXY(x,y) (((x) << 4) | (y))
-#define rfbHextilePackWH(w,h) ((((w)-1) << 4) | ((h)-1))
+#define rfbHextilePackXY(x, y) (((x) << 4) | (y))
+#define rfbHextilePackWH(w, h) ((((w) - 1) << 4) | ((h) - 1))
 #define rfbHextileExtractX(byte) ((byte) >> 4)
 #define rfbHextileExtractY(byte) ((byte) & 0xf)
 #define rfbHextileExtractW(byte) (((byte) >> 4) + 1)
@@ -775,7 +786,8 @@ typedef struct {
  * zlib compressed format.
  */
 
-typedef struct {
+typedef struct
+{
     CARD32 nBytes;
 } rfbZlibHeader;
 
@@ -786,7 +798,8 @@ typedef struct {
  * run-length encoding.
  */
 
-typedef struct {
+typedef struct
+{
     CARD32 length;
 } rfbZRLEHeader;
 
@@ -800,8 +813,9 @@ typedef struct {
  * XZ - encoding combining XZ compression, tiling, palettisation and
  * run-length encoding.
  */
- 
-typedef struct {
+
+typedef struct
+{
     CARD32 length;
 } rfbXZHeader;
 
@@ -885,7 +899,7 @@ typedef struct {
  *-- The "gradient" filter pre-processes pixel data with a simple algorithm
  * which converts each color component to a difference between a "predicted"
  * intensity and the actual intensity. Such a technique does not affect
- * uncompressed data size, but helps to compress photo-like images better. 
+ * uncompressed data size, but helps to compress photo-like images better.
  * Pseudo-code for converting intensities to differences is the following:
  *
  *   P[i,j] := V[i-1,j] + V[i,j-1] - V[i-1,j-1];
@@ -944,16 +958,16 @@ typedef struct {
  *
  */
 
-#define rfbTightExplicitFilter         0x04
-#define rfbTightFill                   0x08
-#define rfbTightJpeg                   0x09
-#define rfbTightNoZlib                 0x0A
-#define rfbTightMaxSubencoding         0x09
+#define rfbTightExplicitFilter 0x04
+#define rfbTightFill 0x08
+#define rfbTightJpeg 0x09
+#define rfbTightNoZlib 0x0A
+#define rfbTightMaxSubencoding 0x09
 
 /* Filters to improve compression efficiency */
-#define rfbTightFilterCopy             0x00
-#define rfbTightFilterPalette          0x01
-#define rfbTightFilterGradient         0x02
+#define rfbTightFilterCopy 0x00
+#define rfbTightFilterPalette 0x01
+#define rfbTightFilterGradient 0x02
 
 
 /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -966,9 +980,9 @@ typedef struct {
  * values, if they are also set.
  */
 
-#define rfbHextileZlibRaw		(1 << 5)
-#define rfbHextileZlibHex		(1 << 6)
-#define rfbHextileZlibMono		(1 << 7)
+#define rfbHextileZlibRaw (1 << 5)
+#define rfbHextileZlibHex (1 << 6)
+#define rfbHextileZlibMono (1 << 7)
 
 
 /*-----------------------------------------------------------------------------
@@ -980,8 +994,9 @@ typedef struct {
  * trueColour then it never needs to process this type of message.
  */
 
-typedef struct {
-    CARD8 type;			/* always rfbSetColourMapEntries */
+typedef struct
+{
+    CARD8 type; /* always rfbSetColourMapEntries */
     CARD8 pad;
     CARD16 firstColour;
     CARD16 nColours;
@@ -1013,7 +1028,8 @@ typedef struct {
  * should be hidden (or default local cursor should be set by the client).
  */
 
-typedef struct {
+typedef struct
+{
     CARD8 foreRed;
     CARD8 foreGreen;
     CARD8 foreBlue;
@@ -1027,8 +1043,9 @@ typedef struct {
  * Bell - ring a bell on the client if it has one.
  */
 
-typedef struct {
-    CARD8 type;			/* always rfbBell */
+typedef struct
+{
+    CARD8 type; /* always rfbBell */
 } rfbBellMsg;
 
 #define sz_rfbBellMsg 1
@@ -1039,22 +1056,23 @@ typedef struct {
  * ServerCutText - the server has new text in its cut buffer.
  */
 
-typedef struct {
-    CARD8 type;			/* always rfbServerCutText */
+typedef struct
+{
+    CARD8 type; /* always rfbServerCutText */
     CARD8 pad1;
     CARD16 pad2;
     CARD32 length; // will be negative to notify viewer that it accepts extended clipboard data.
-	// adzm - 2010-07 - Extended clipboard support
-	/*
-	rfbEncodingExtendedClipboard provides extended clipboard functionality.
-	If extended clipboard data is being used, the length will be negative.
-	The message follows with unsigned char[abs(length)] data. The first sz_rfbExtendedClipboardData is the rfbExtendedClipboardData struct.
-	The server notifies the viewer that it accepts the rfbEncodingExtendedClipboard extension to the protocol
-	by immediately sending an rfbServerCutTextMsg with the clipCaps flags set in rfbExtendedClipboardData,
-	which determines current version and also size limits of the main clipboard formats.
-
-	if using classic clipboard, followed by char text[length]
-    */
+                   // adzm - 2010-07 - Extended clipboard support
+                   /*
+                   rfbEncodingExtendedClipboard provides extended clipboard functionality.
+                   If extended clipboard data is being used, the length will be negative.
+                   The message follows with unsigned char[abs(length)] data. The first sz_rfbExtendedClipboardData is the rfbExtendedClipboardData
+                   struct.                The server notifies the viewer that it accepts the rfbEncodingExtendedClipboard extension to the protocol
+                   by immediately                sending an rfbServerCutTextMsg with the clipCaps flags set in rfbExtendedClipboardData,                which
+                   determines current version and                also size limits of the main clipboard formats.
+               
+                   if using classic clipboard, followed by char text[length]
+                   */
 } rfbServerCutTextMsg;
 
 #define sz_rfbServerCutTextMsg 8
@@ -1062,90 +1080,94 @@ typedef struct {
 
 // adzm - 2010-07 - Extended clipboard support
 // this struct is used as the data within an rfbServerCutTextMsg or rfbClientCutTextMsg.
-typedef struct {
-	CARD32 flags;		// see rfbExtendedClipboardDataFlags
+typedef struct
+{
+    CARD32 flags; // see rfbExtendedClipboardDataFlags
 
-	// followed by unsigned char data[(rfbServerCutTextMsg|rfbClientCutTextMsg).length - sz_rfbExtendedClipboardData]
+    // followed by unsigned char data[(rfbServerCutTextMsg|rfbClientCutTextMsg).length - sz_rfbExtendedClipboardData]
 } rfbExtendedClipboardData;
 
 #define sz_rfbExtendedClipboardData 4
 
-typedef enum {
-	// formats
-	clipText		= 0x00000001,	// Unicode text (UTF-8 encoding)
-	clipRTF			= 0x00000002,	// Microsoft RTF format
-	clipHTML		= 0x00000004,	// Microsoft HTML clipboard format
-	clipDIB			= 0x00000008,	// Microsoft DIBv5
-	// line endings are not touched and remain as \r\n for Windows machines. Terminating NULL characters are preserved.
+typedef enum
+{
+    // formats
+    clipText = 0x00000001, // Unicode text (UTF-8 encoding)
+    clipRTF = 0x00000002,  // Microsoft RTF format
+    clipHTML = 0x00000004, // Microsoft HTML clipboard format
+    clipDIB = 0x00000008,  // Microsoft DIBv5
+                           // line endings are not touched and remain as \r\n for Windows machines. Terminating NULL characters are
+                           // preserved.
 
-	// Complex formats
-	// These formats should also have 3 more CARD32 values after rfbExtendedClipboardData.flags. This will allow them
-	// to set up more complex messages (such as preview) or subformats (such as lossless, png, jpeg, lossy) etc.
-	// The rest should follow the standard format of a 32-bit length of the uncompressed data, followed by the data.
-	//
-	// Please note none of these are implemented yet, but seem obvious enough that their values are reserved here
-	// for posterity.
-	clipFiles		= 0x00000010,	// probably also more than one file
-	clipFormatMask	= 0x0000FFFF,
+    // Complex formats
+    // These formats should also have 3 more CARD32 values after rfbExtendedClipboardData.flags. This will allow them
+    // to set up more complex messages (such as preview) or subformats (such as lossless, png, jpeg, lossy) etc.
+    // The rest should follow the standard format of a 32-bit length of the uncompressed data, followed by the data.
+    //
+    // Please note none of these are implemented yet, but seem obvious enough that their values are reserved here
+    // for posterity.
+    clipFiles = 0x00000010, // probably also more than one file
+    clipFormatMask = 0x0000FFFF,
 
-	// reserved
-	clipReservedMask= 0x00FF0000,	// more than likely will be used for more formats, but may be used for more actions
-									// or remain unused for years to come.
+    // reserved
+    clipReservedMask = 0x00FF0000, // more than likely will be used for more formats, but may be used for more actions
+                                   // or remain unused for years to come.
 
-	// actions
-	clipCaps		= 0x01000000,	// which formats are supported / desired.
-									// Message data should include limits on maximum automatic uncompressed data size for each format
-									// in 32-bit values (in order of enum value). If the data exceeds that value, it must be requested.
-									// This can be used to disable the clipboard entirely by setting no supported formats, or to
-									// only enable manual clipboard transfers by setting the maximum sizes to 0.
-									// can be combined with other actions to denote actions that are supported
-									// The server must send this to the client to notify that it understands the new clipboard format.
-									// The client may respond with its own clipCaps; otherwise the server should use the defaults.
-									// Currently, the defaults are the messages and formats defined in this initial implementation
-									// that are common to both server and viewer:
-									//    clipCaps | clipRequest | clipProvide | (clipNotify if viewer, clipPeek if server)
-									//    clipText | clipRTF | clipHTML | clipDIB
-									//    (Note that clipNotify is only relevant from server->viewer, and clipPeek is only relevant
-									//     from viewer->server. Therefore they are left out of the defaults but can be set with the
-									//     rest of the caps if desired.)
-									// It is also strongly recommended to set up maximum sizes for the formats since currently
-									// the data is sent synchronously and cannot be interrupted. If data exceeds the maximum size,
-									// then the server should send the clipNotify so the client may send clipRequest. Current default 
-									// limits were somewhat arbitrarily chosen as 2mb (10mb for text) and 0 for image
-									// Note that these limits are referring to the length of uncompressed data.
-	clipRequest		= 0x02000000,	// request clipboard data (should be combined with desired formats)
-									// Message should be empty
-									// Response should be a clipProvide message with appropriate formats. This should ignore any
-									// maximum size limitations specified in clipCaps.
-	clipPeek		= 0x04000000,	// Peek at what is currently available in the clipboard.
-									// Message should be empty
-									// Respond with clipNotify including all available formats in the flags
-	clipNotify		= 0x08000000,	// notify that the formats combined with the flags are available for transfer.
-									// Message should be empty
-									// When a clipProvide message is received, then all formats notified as being available are 
-									// invalidated. Therefore, when implementing, ensure that clipProvide messages are sent before
-									// clipNotify messages, specifically when in response to a change in the clipboard
-	clipProvide		= 0x10000000,	// send clipboard data (should be combined with sent formats)
-									// All message data including the length is compressed by a single zlib stream.
-									// First is the 32-bit length of the uncompressed data, followed by the data itself
-									// Repeat for each format listed in order of enum value
-									// Invalidate any formats that were notified as being available.
-	clipActionMask	= 0xFF000000,
+    // actions
+    clipCaps = 0x01000000,    // which formats are supported / desired.
+                              // Message data should include limits on maximum automatic uncompressed data size for each format
+                              // in 32-bit values (in order of enum value). If the data exceeds that value, it must be requested.
+                              // This can be used to disable the clipboard entirely by setting no supported formats, or to
+                              // only enable manual clipboard transfers by setting the maximum sizes to 0.
+                              // can be combined with other actions to denote actions that are supported
+                              // The server must send this to the client to notify that it understands the new clipboard format.
+                              // The client may respond with its own clipCaps; otherwise the server should use the defaults.
+                              // Currently, the defaults are the messages and formats defined in this initial implementation
+                              // that are common to both server and viewer:
+                              //    clipCaps | clipRequest | clipProvide | (clipNotify if viewer, clipPeek if server)
+                              //    clipText | clipRTF | clipHTML | clipDIB
+                              //    (Note that clipNotify is only relevant from server->viewer, and clipPeek is only relevant
+                              //     from viewer->server. Therefore they are left out of the defaults but can be set with the
+                              //     rest of the caps if desired.)
+                              // It is also strongly recommended to set up maximum sizes for the formats since currently
+                              // the data is sent synchronously and cannot be interrupted. If data exceeds the maximum size,
+                              // then the server should send the clipNotify so the client may send clipRequest. Current default
+                              // limits were somewhat arbitrarily chosen as 2mb (10mb for text) and 0 for image
+                              // Note that these limits are referring to the length of uncompressed data.
+    clipRequest = 0x02000000, // request clipboard data (should be combined with desired formats)
+                              // Message should be empty
+                              // Response should be a clipProvide message with appropriate formats. This should ignore any
+                              // maximum size limitations specified in clipCaps.
+    clipPeek = 0x04000000,    // Peek at what is currently available in the clipboard.
+                              // Message should be empty
+                              // Respond with clipNotify including all available formats in the flags
+    clipNotify = 0x08000000,  // notify that the formats combined with the flags are available for transfer.
+                              // Message should be empty
+                              // When a clipProvide message is received, then all formats notified as being available are
+                              // invalidated. Therefore, when implementing, ensure that clipProvide messages are sent before
+                              // clipNotify messages, specifically when in response to a change in the clipboard
+    clipProvide = 0x10000000, // send clipboard data (should be combined with sent formats)
+                              // All message data including the length is compressed by a single zlib stream.
+                              // First is the 32-bit length of the uncompressed data, followed by the data itself
+                              // Repeat for each format listed in order of enum value
+                              // Invalidate any formats that were notified as being available.
+    clipActionMask = 0xFF000000,
 
-	clipInvalid		= 0xFFFFFFFF,
+    clipInvalid = 0xFFFFFFFF,
 
 } rfbExtendedClipboardDataFlags;
 
 
 
 // adzm 2010-09 - Notify streaming DSM plugin support
-typedef struct {
-    CARD8 type;			/* always rfbServerCutText */
+typedef struct
+{
+    CARD8 type; /* always rfbServerCutText */
     CARD8 pad1;
     CARD16 flags; // reserved - always 0
 } rfbNotifyPluginStreamingMsg;
 
-#define sz_rfbNotifyPluginStreamingMsg	4
+#define sz_rfbNotifyPluginStreamingMsg 4
 
 /*-----------------------------------------------------------------------------
  * // Modif sf@2002
@@ -1153,85 +1175,94 @@ typedef struct {
  * Bidirectional message - Files can be sent from client to server & vice versa
  */
 
-typedef struct _rfbFileTransferMsg {
+typedef struct _rfbFileTransferMsg
+{
     CARD8 type;          /* always rfbFileTransfer */
     CARD8 contentType;   // See defines below
     CARD16 contentParam; // Other possible content classification (Dir or File name, etc..)
-	CARD32 size;         // FileSize or packet index or error or other 
-	// CARD32 sizeH;     // Additional 32Bits params to handle big values. Only for V2 (we want backward compatibility between all V1 versions)
+    CARD32 size;         // FileSize or packet index or error or other
+    // CARD32 sizeH;     // Additional 32Bits params to handle big values. Only for V2 (we want backward compatibility between all
+    // V1 versions)
     CARD32 length;
     /* followed by data char text[length] */
 } rfbFileTransferMsg;
 
-#define sz_rfbFileTransferMsg	12
+#define sz_rfbFileTransferMsg 12
 
-#define rfbFileTransferVersion  3 // v1 is the old File Transfer version (<= 1.0.0 RC18)
+#define rfbFileTransferVersion 3 // v1 is the old File Transfer version (<= 1.0.0 RC18)
 
 // FileTransfer Content types and Params defines
-#define rfbDirContentRequest	1 // Client asks for the content of a given Server directory
-#define rfbDirPacket			2 // Full directory name or full file name.
-								  // Null content means end of Directory
-#define rfbFileTransferRequest	3 // Client asks the server for the transfer of a given file
-#define rfbFileHeader			4 // First packet of a File Transfer, containing file's features
-#define rfbFilePacket			5 // One chunk of the file
-#define rfbEndOfFile			6 // End of File Transfer (the file has been received or error)
-#define rfbAbortFileTransfer	7 // The File Transfer must be aborted, whatever the state
-#define rfbFileTransferOffer	8 // The client offers to send a file to the server
-#define rfbFileAcceptHeader		9 // The server accepts or rejects the file
-#define rfbCommand				10 // The Client sends a simple command (File Delete, Dir create etc...)
-#define rfbCommandReturn		11 // The Client receives the server's answer about a simple command
-#define rfbFileChecksums		12 // The zipped checksums of the destination file (Delta Transfer)
-#define rfbFileTransferAccess	14 // Request File Transfer authorization
+#define rfbDirContentRequest 1 // Client asks for the content of a given Server directory
+#define rfbDirPacket                                                                                                               \
+    2                                  // Full directory name or full file name.
+                                       // Null content means end of Directory
+#define rfbFileTransferRequest 3       // Client asks the server for the transfer of a given file
+#define rfbFileHeader 4                // First packet of a File Transfer, containing file's features
+#define rfbFilePacket 5                // One chunk of the file
+#define rfbEndOfFile 6                 // End of File Transfer (the file has been received or error)
+#define rfbAbortFileTransfer 7         // The File Transfer must be aborted, whatever the state
+#define rfbFileTransferOffer 8         // The client offers to send a file to the server
+#define rfbFileAcceptHeader 9          // The server accepts or rejects the file
+#define rfbCommand 10                  // The Client sends a simple command (File Delete, Dir create etc...)
+#define rfbCommandReturn 11            // The Client receives the server's answer about a simple command
+#define rfbFileChecksums 12            // The zipped checksums of the destination file (Delta Transfer)
+#define rfbFileTransferAccess 14       // Request File Transfer authorization
 #define rfbFileTransferSessionStart 15 // indicates a client has the File Transfer GUI open
-#define rfbFileTransferSessionEnd   16 // indicates a client has closed the File Transfer GUI.
-#define rfbFileTransferProtocolVersion 17 // indicates File Transfer Protocol version understood by sender. contentParam is version #
+#define rfbFileTransferSessionEnd 16   // indicates a client has closed the File Transfer GUI.
+#define rfbFileTransferProtocolVersion                                                                                             \
+    17 // indicates File Transfer Protocol version understood by sender. contentParam is version #
 
-								// rfbDirContentRequest client Request - content params 
-#define rfbRDirContent			1 // Request a Server Directory contents
-#define rfbRDrivesList			2 // Request the server's drives list
-#define rfbRDirRecursiveList	3 // Request a server directory content recursive sorted list
-#define rfbRDirRecursiveSize	4 // Request a server directory content recursive size
+// rfbDirContentRequest client Request - content params
+#define rfbRDirContent 1       // Request a Server Directory contents
+#define rfbRDrivesList 2       // Request the server's drives list
+#define rfbRDirRecursiveList 3 // Request a server directory content recursive sorted list
+#define rfbRDirRecursiveSize 4 // Request a server directory content recursive size
 // Extension flags ORed into contentParam of rfbDirContentRequest (backward compatible: old servers ignore high bits)
-#define rfbRDirContentUnicode	0x8000 // Client supports unicode WIN32_FIND_DATAW entries in rfbDirPacket
+#define rfbRDirContentUnicode 0x8000 // Client supports unicode WIN32_FIND_DATAW entries in rfbDirPacket
 
-								// rfbDirPacket & rfbCommandReturn  server Answer - content params
-#define rfbADirectory			1 // Reception of a directory name
-#define rfbAFile				2 // Reception of a file name 
-#define rfbADrivesList			3 // Reception of a list of drives
-#define rfbADirCreate			4 // Response to a create dir command 
-#define rfbADirDelete			5 // Response to a delete dir command 
-#define rfbAFileCreate			6 // Response to a create file command 
-#define rfbAFileDelete			7 // Response to a delete file command 
-#define rfbAFileRename			8 // Response to a rename file command 
-#define rfbADirRename			9 // Response to a rename dir command 
-#define rfbADirRecursiveListItem	10 
-#define rfbADirRecursiveSize		11 
-#define rfbADirInaccessible		18 // Folder exists but cannot be read (permission denied etc.)
-                                   // Old viewers receive contentParam=18 with length=0 and treat it as end-of-dir (graceful degradation)
-#define rfbFD_INACCESSIBLE		0xFFFFFFFE // Sentinel set in WIN32_FIND_DATA.dwReserved0 to flag a subfolder as inaccessible in the listing
+// rfbDirPacket & rfbCommandReturn  server Answer - content params
+#define rfbADirectory 1  // Reception of a directory name
+#define rfbAFile 2       // Reception of a file name
+#define rfbADrivesList 3 // Reception of a list of drives
+#define rfbADirCreate 4  // Response to a create dir command
+#define rfbADirDelete 5  // Response to a delete dir command
+#define rfbAFileCreate 6 // Response to a create file command
+#define rfbAFileDelete 7 // Response to a delete file command
+#define rfbAFileRename 8 // Response to a rename file command
+#define rfbADirRename 9  // Response to a rename dir command
+#define rfbADirRecursiveListItem 10
+#define rfbADirRecursiveSize 11
+#define rfbADirInaccessible                                                                                                        \
+    18 // Folder exists but cannot be read (permission denied etc.)
+       // Old viewers receive contentParam=18 with length=0 and treat it as end-of-dir (graceful degradation)
+#define rfbFD_INACCESSIBLE                                                                                                         \
+    0xFFFFFFFE // Sentinel set in WIN32_FIND_DATA.dwReserved0 to flag a subfolder as inaccessible in the listing
 // Extension flag ORed into contentParam of rfbDirPacket directory/file entries when server sends unicode data
-#define rfbADirUnicode			0x8000 // WIN32_FIND_DATAW used instead of WIN32_FIND_DATA
+#define rfbADirUnicode 0x8000 // WIN32_FIND_DATAW used instead of WIN32_FIND_DATA
 
-								// rfbCommand Command - content params
-#define rfbCDirCreate			1 // Request the server to create the given directory
-#define rfbCDirDelete			2 // Request the server to delete the given directory
-#define rfbCFileCreate			3 // Request the server to create the given file
-#define rfbCFileDelete			4 // Request the server to delete the given file
-#define rfbCFileRename			5 // Request the server to rename the given file 
-#define rfbCDirRename			6 // Request the server to rename the given directory
+// rfbCommand Command - content params
+#define rfbCDirCreate 1  // Request the server to create the given directory
+#define rfbCDirDelete 2  // Request the server to delete the given directory
+#define rfbCFileCreate 3 // Request the server to create the given file
+#define rfbCFileDelete 4 // Request the server to delete the given file
+#define rfbCFileRename 5 // Request the server to rename the given file
+#define rfbCDirRename 6  // Request the server to rename the given directory
 
-								// Errors - content params or "size" field
-#define rfbRErrorUnknownCmd     1  // Unknown File Transfer command.
-#define rfbRErrorCmd			0xFFFFFFFF// Error when a command fails on remote side (ret in "size" field)
+// Errors - content params or "size" field
+#define rfbRErrorUnknownCmd 1   // Unknown File Transfer command.
+#define rfbRErrorCmd 0xFFFFFFFF // Error when a command fails on remote side (ret in "size" field)
 
-#define sz_rfbBlockSize			32768  // Size of a File Transfer packet (before compression) - increased from 8192 for better throughput on fast networks
-#define rfbZipDirectoryPrefix   "!UVNCDIR-\0" // Transfered directory are zipped in a file with this prefix. Must end with "-"
-#define sz_rfbZipDirectoryPrefix 9 
-#define rfbDirPrefix			"[ "
-#define rfbDirSuffix			" ]"		
+#define sz_rfbBlockSize                                                                                                            \
+    32768 // Size of a File Transfer packet (before compression) - increased from 8192 for better throughput on fast networks
+#define rfbZipDirectoryPrefix "!UVNCDIR-\0" // Transfered directory are zipped in a file with this prefix. Must end with "-"
+#define sz_rfbZipDirectoryPrefix 9
+#define rfbDirPrefix "[ "
+#define rfbDirSuffix " ]"
 
-#define rfbPartialFilePrefix   "!UVNCPFT-\0" // Files are transferred with this prefix, until complete. Must end with "-", does not apply to directory transfers
-#define sz_rfbPartialFilePrefix 9 
+#define rfbPartialFilePrefix                                                                                                       \
+    "!UVNCPFT-\0" // Files are transferred with this prefix, until complete. Must end with "-", does not apply to directory
+                  // transfers
+#define sz_rfbPartialFilePrefix 9
 
 
 
@@ -1241,20 +1272,21 @@ typedef struct _rfbFileTransferMsg {
  * Bidirectional message
  */
 
-typedef struct _rfbTextChatMsg {
-    CARD8 type;			/* always rfbTextChat */
-    CARD8 pad1;         // Could be used later as an additionnal param
-    CARD16 pad2;		// Could be used later as text offset, for instance
-    CARD32 length;      // Specific values for Open, close, finished (-1, -2, -3)
+typedef struct _rfbTextChatMsg
+{
+    CARD8 type;    /* always rfbTextChat */
+    CARD8 pad1;    // Could be used later as an additionnal param
+    CARD16 pad2;   // Could be used later as text offset, for instance
+    CARD32 length; // Specific values for Open, close, finished (-1, -2, -3)
     /* followed by char text[length] */
 } rfbTextChatMsg;
 
 #define sz_rfbTextChatMsg 8
 
-#define rfbTextMaxSize		4096
-#define rfbTextChatOpen		0xFFFFFFFF 
-#define rfbTextChatClose	0xFFFFFFFE  
-#define rfbTextChatFinished 0xFFFFFFFD 
+#define rfbTextMaxSize 4096
+#define rfbTextChatOpen 0xFFFFFFFF
+#define rfbTextChatClose 0xFFFFFFFE
+#define rfbTextChatFinished 0xFFFFFFFD
 
 /*-----------------------------------------------------------------------------
  * Xen VNC Proxy (xvp) message - bidirectional, type 250
@@ -1263,11 +1295,12 @@ typedef struct _rfbTextChatMsg {
  * Client -> server: code is rfbXvpShutdown, rfbXvpReboot or rfbXvpReset.
  */
 
-typedef struct _rfbXvpMsg {
-    CARD8 type;			/* always rfbXvp */
+typedef struct _rfbXvpMsg
+{
+    CARD8 type; /* always rfbXvp */
     CARD8 pad;
-    CARD8 version;		/* xvp extension version, currently 1 */
-    CARD8 code;			/* rfbXvp* message code */
+    CARD8 version; /* xvp extension version, currently 1 */
+    CARD8 code;    /* rfbXvp* message code */
 } rfbXvpMsg;
 
 #define sz_rfbXvpMsg 4
@@ -1281,14 +1314,16 @@ typedef struct _rfbXvpMsg {
  * resolution changes using SetDesktopSize.
  */
 
-typedef struct rfbExtDesktopSizeMsg {
+typedef struct rfbExtDesktopSizeMsg
+{
     CARD8 numberOfScreens;
-    CARD8 pad[3];
+    CARD8 pad[3U];
 
     /* Followed by rfbExtDesktopScreen[numberOfScreens] */
 } rfbExtDesktopSizeMsg;
 
-typedef struct rfbExtDesktopScreen {
+typedef struct rfbExtDesktopScreen
+{
     CARD32 id;
     CARD16 x;
     CARD16 y;
@@ -1323,8 +1358,9 @@ typedef struct rfbExtDesktopScreen {
  * resolutions are changed.
  */
 
-typedef struct rfbSetDesktopSizeMsg {
-    CARD8 type;                       /* always rfbSetDesktopSize */
+typedef struct rfbSetDesktopSizeMsg
+{
+    CARD8 type; /* always rfbSetDesktopSize */
     CARD8 pad1;
     CARD16 width;
     CARD16 height;
@@ -1341,14 +1377,15 @@ typedef struct rfbSetDesktopSizeMsg {
 
 /*-----------------------------------------------------------------------------
  * Modif sf@2002
- * ResizeFrameBuffer - The Client must change the size of its framebuffer  
+ * ResizeFrameBuffer - The Client must change the size of its framebuffer
  */
 
-typedef struct _rfbResizeFrameBufferMsg {
-    CARD8 type;			/* always rfbResizeFrameBuffer */
-	CARD8 pad1;
-	CARD16 framebufferWidth;	// FrameBuffer width
-	CARD16 framebufferHeigth;	// FrameBuffer height
+typedef struct _rfbResizeFrameBufferMsg
+{
+    CARD8 type; /* always rfbResizeFrameBuffer */
+    CARD8 pad1;
+    CARD16 framebufferWidth;  // FrameBuffer width
+    CARD16 framebufferHeigth; // FrameBuffer height
 } rfbResizeFrameBufferMsg;
 
 #define sz_rfbResizeFrameBufferMsg 6
@@ -1362,13 +1399,14 @@ typedef struct _rfbResizeFrameBufferMsg {
  * The pixel format remains unchanged.
  */
 
-typedef struct {
-    CARD8 type;			/* always rfbReSizeFrameBuffer */
-	CARD8 pad1;
-	CARD16 desktop_w;	/* Desktop width */
-	CARD16 desktop_h;	/* Desktop height */
-	CARD16 buffer_w;	/* FrameBuffer width */
-	CARD16 buffer_h;	/* Framebuffer height */
+typedef struct
+{
+    CARD8 type; /* always rfbReSizeFrameBuffer */
+    CARD8 pad1;
+    CARD16 desktop_w; /* Desktop width */
+    CARD16 desktop_h; /* Desktop height */
+    CARD16 buffer_w;  /* FrameBuffer width */
+    CARD16 buffer_h;  /* Framebuffer height */
     CARD16 pad2;
 
 } rfbPalmVNCReSizeFrameBufferMsg;
@@ -1378,45 +1416,50 @@ typedef struct {
 
 // new message for sending server state to client
 
-#define rfbServerState_Disabled     0
-#define rfbServerState_Enabled      1
+#define rfbServerState_Disabled 0
+#define rfbServerState_Enabled 1
 
-#define rfbServerRemoteInputsState  1
-#define rfbKeepAliveInterval        2
-#define rfbIdleInputTimeout				3
-#define rfbUnicodeTextChatState     4
-#define rfbHighResolutionWheelState  5
+#define rfbServerRemoteInputsState 1
+#define rfbKeepAliveInterval 2
+#define rfbIdleInputTimeout 3
+#define rfbUnicodeTextChatState 4
+#define rfbHighResolutionWheelState 5
 
-typedef struct {
-    CARD8   type;          /* always rfbServerState */
-    CARD8   pad1;
-    CARD8   pad2;
-    CARD8   pad3;
-    CARD32  state;         /* state id*/
-    CARD32  value;         /* state value */ 
+typedef struct
+{
+    CARD8 type; /* always rfbServerState */
+    CARD8 pad1;
+    CARD8 pad2;
+    CARD8 pad3;
+    CARD32 state; /* state id*/
+    CARD32 value; /* state value */
 } rfbServerStateMsg;
 
 #define sz_rfbServerStateMsg 12
 
 
-typedef struct {
+typedef struct
+{
     CARD8 type;
 } rfbKeepAliveMsg;
 
-typedef struct {
-    CARD8   type;          /* always rfbServerState */
-    CARD8   nbr;
-    CARD8   pad2;
-    CARD8   pad3;
+typedef struct
+{
+    CARD8 type; /* always rfbServerState */
+    CARD8 nbr;
+    CARD8 pad2;
+    CARD8 pad3;
 } rfbMonitorMsg;
 
-typedef struct {
+typedef struct
+{
     CARD8 type;
 } rfbRequestSessionMsg;
 
-typedef struct {
+typedef struct
+{
     CARD8 type;
-	CARD8 number;
+    CARD8 number;
 } rfbSetSessionMsg;
 
 #define sz_rfbKeepAliveMsg 1
@@ -1430,27 +1473,28 @@ typedef struct {
 #define SOCKET_KEEPALIVE_TIMEOUT 10000
 #define SOCKET_KEEPALIVE_INTERVAL 1000
 
-#define FT_RECV_TIMEOUT    30
+#define FT_RECV_TIMEOUT 30
 
 
 /*-----------------------------------------------------------------------------
  * Union of all server->client messages.
  */
 
-typedef union {
+typedef union
+{
     CARD8 type;
     rfbFramebufferUpdateMsg fu;
     rfbSetColourMapEntriesMsg scme;
     rfbBellMsg b;
     rfbServerCutTextMsg sct;
-	rfbResizeFrameBufferMsg rsfb;
-	rfbPalmVNCReSizeFrameBufferMsg prsfb; 
-	rfbFileTransferMsg ft;
-	rfbTextChatMsg tc;
+    rfbResizeFrameBufferMsg rsfb;
+    rfbPalmVNCReSizeFrameBufferMsg prsfb;
+    rfbFileTransferMsg ft;
+    rfbTextChatMsg tc;
     rfbServerStateMsg ss;
     rfbKeepAliveMsg kp;
-	rfbNotifyPluginStreamingMsg nsd;
-	rfbRequestSessionMsg rs;
+    rfbNotifyPluginStreamingMsg nsd;
+    rfbRequestSessionMsg rs;
     rfbExtDesktopSizeMsg eds;
 } rfbServerToClientMsg;
 
@@ -1461,7 +1505,8 @@ typedef union {
  * just put it to make sure we don't have to change the encoding again.
  */
 
-typedef struct {
+typedef struct
+{
     CARD16 special;
 } rfbCacheRect;
 
@@ -1483,8 +1528,9 @@ typedef struct {
  * pixels sent.
  */
 
-typedef struct {
-    CARD8 type;			/* always rfbSetPixelFormat */
+typedef struct
+{
+    CARD8 type; /* always rfbSetPixelFormat */
     CARD8 pad1;
     CARD16 pad2;
     rfbPixelFormat format;
@@ -1500,8 +1546,9 @@ typedef struct {
  *    ***************** NOT CURRENTLY SUPPORTED *****************
  */
 
-typedef struct {
-    CARD8 type;			/* always rfbFixColourMapEntries */
+typedef struct
+{
+    CARD8 type; /* always rfbFixColourMapEntries */
     CARD8 pad;
     CARD16 firstColour;
     CARD16 nColours;
@@ -1520,8 +1567,9 @@ typedef struct {
  * encoding, even if we don't specify it here.
  */
 
-typedef struct {
-    CARD8 type;			/* always rfbSetEncodings */
+typedef struct
+{
+    CARD8 type; /* always rfbSetEncodings */
     CARD8 pad;
     CARD16 nEncodings;
     /* followed by nEncodings * CARD32 encoding types */
@@ -1536,8 +1584,9 @@ typedef struct {
  * false then it wants the whole of the specified rectangle.
  */
 
-typedef struct {
-    CARD8 type;			/* always rfbFramebufferUpdateRequest */
+typedef struct
+{
+    CARD8 type; /* always rfbFramebufferUpdateRequest */
     CARD8 incremental;
     CARD16 x;
     CARD16 y;
@@ -1579,11 +1628,12 @@ typedef struct {
  * Alt			0xffe9
  */
 
-typedef struct {
-    CARD8 type;			/* always rfbKeyEvent */
-    CARD8 down;			/* true if down (press), false if up */
+typedef struct
+{
+    CARD8 type; /* always rfbKeyEvent */
+    CARD8 down; /* true if down (press), false if up */
     CARD16 pad;
-    CARD32 key;			/* key is specified as an X keysym */
+    CARD32 key; /* key is specified as an X keysym */
 } rfbKeyEventMsg;
 
 #define sz_rfbKeyEventMsg 8
@@ -1593,9 +1643,10 @@ typedef struct {
  * PointerEvent - mouse/pen move and/or button press.
  */
 
-typedef struct {
-    CARD8 type;			/* always rfbPointerEvent */
-    CARD8 buttonMask;		/* bits 0-7 are buttons 1-8, 0=up, 1=down */
+typedef struct
+{
+    CARD8 type;       /* always rfbPointerEvent */
+    CARD8 buttonMask; /* bits 0-7 are buttons 1-8, 0=up, 1=down */
     CARD16 x;
     CARD16 y;
 } rfbPointerEventMsg;
@@ -1608,10 +1659,10 @@ typedef struct {
 #define rfbButton6Mask 32
 #define rfbButton7Mask 64
 #define rfbButton8Mask 128
-#define rfbWheelUpMask rfbButton4Mask    // RealVNC 335 method
+#define rfbWheelUpMask rfbButton4Mask // RealVNC 335 method
 #define rfbWheelDownMask rfbButton5Mask
-#define rfbWheelLeftMask rfbButton6Mask    // RFB protocol: bit 5 = scroll left
-#define rfbWheelRightMask rfbButton7Mask   // RFB protocol: bit 6 = scroll right
+#define rfbWheelLeftMask rfbButton6Mask  // RFB protocol: bit 5 = scroll left
+#define rfbWheelRightMask rfbButton7Mask // RFB protocol: bit 6 = scroll right
 
 #define sz_rfbPointerEventMsg 6
 
@@ -1668,11 +1719,12 @@ typedef struct {
  */
 #define rfbWheelVertical 0
 #define rfbWheelHorizontal 1
-typedef struct {
-    CARD8 type;                  /* always rfbHighResolutionWheel */
-    CARD8 axis;                  /* rfbWheelVertical or rfbWheelHorizontal */
-    CARD16 delta;                /* signed two's-complement wheel units */
-    CARD16 x;                    /* framebuffer coordinates, as PointerEvent */
+typedef struct
+{
+    CARD8 type;   /* always rfbHighResolutionWheel */
+    CARD8 axis;   /* rfbWheelVertical or rfbWheelHorizontal */
+    CARD16 delta; /* signed two's-complement wheel units */
+    CARD16 x;     /* framebuffer coordinates, as PointerEvent */
     CARD16 y;
 } rfbHighResolutionWheelMsg;
 
@@ -1684,18 +1736,19 @@ typedef struct {
  * ClientCutText - the client has new text in its cut buffer.
  */
 
-typedef struct {
-    CARD8 type;			/* always rfbClientCutText */
+typedef struct
+{
+    CARD8 type; /* always rfbClientCutText */
     CARD8 pad1;
-    CARD16 pad2;	
+    CARD16 pad2;
     CARD32 length;
-	// adzm - 2010-07 - Extended clipboard support
-	/*
-	rfbEncodingExtendedClipboard provides extended clipboard functionality.
-	If extended clipboard data is being used, the length will be negative.
-	See rfbExtendedClipboardData for more info.
+    // adzm - 2010-07 - Extended clipboard support
+    /*
+    rfbEncodingExtendedClipboard provides extended clipboard functionality.
+    If extended clipboard data is being used, the length will be negative.
+    See rfbExtendedClipboardData for more info.
 
-	Otherwise, if using classic clipboard, followed by char text[length]
+    Otherwise, if using classic clipboard, followed by char text[length]
     */
 } rfbClientCutTextMsg;
 
@@ -1707,9 +1760,10 @@ typedef struct {
  * SetServerScale - Server must change the scale of the client buffer.
  */
 
-typedef struct _rfbSetScaleMsg {
-    CARD8 type;			/* always rfbSetScale */
-    CARD8 scale;		/* Scale value 1<sv<n */
+typedef struct _rfbSetScaleMsg
+{
+    CARD8 type;  /* always rfbSetScale */
+    CARD8 scale; /* Scale value 1<sv<n */
     CARD16 pad;
 } rfbSetScaleMsg;
 
@@ -1718,14 +1772,15 @@ typedef struct _rfbSetScaleMsg {
 
 /*-----------------------------------------------------------------------------
  * Copyright (C) 2001 Harakan Software
- * PalmVNC 1.4 & 2.? SetScale Factor message 
+ * PalmVNC 1.4 & 2.? SetScale Factor message
  * SetScaleFactor - tell the RFB server to alter the scale factor for the
  * client buffer.
  */
-typedef struct {
-    CARD8 type;			/* always rfbSetScaleFactor */
+typedef struct
+{
+    CARD8 type; /* always rfbSetScaleFactor */
 
-    CARD8 scale;		/* Scale factor (positive non-zero integer) */
+    CARD8 scale; /* Scale factor (positive non-zero integer) */
     CARD16 pad2;
 } rfbPalmVNCSetScaleFactorMsg;
 
@@ -1737,9 +1792,10 @@ typedef struct {
  * SetServerInput - Server input is dis/enabled
  */
 
-typedef struct _rfbSetServerInputMsg {
-    CARD8 type;			/* always rfbSetScale */
-    CARD8 status;		/* Scale value 1<sv<n */
+typedef struct _rfbSetServerInputMsg
+{
+    CARD8 type;   /* always rfbSetScale */
+    CARD8 status; /* Scale value 1<sv<n */
     CARD16 pad;
 } rfbSetServerInputMsg;
 
@@ -1750,9 +1806,10 @@ typedef struct _rfbSetServerInputMsg {
  * SetSW - Server SW/full desktop
  */
 
-typedef struct _rfbSetSWMsg {
-    CARD8 type;			/* always rfbSetSW */
-    CARD8 status;		
+typedef struct _rfbSetSWMsg
+{
+    CARD8 type; /* always rfbSetSW */
+    CARD8 status;
     CARD16 x;
     CARD16 y;
 } rfbSetSWMsg;
@@ -1764,7 +1821,8 @@ typedef struct _rfbSetSWMsg {
  * Union of all client->server messages.
  */
 
-typedef union {
+typedef union
+{
     CARD8 type;
     rfbSetPixelFormatMsg spf;
     rfbFixColourMapEntriesMsg fcme;
@@ -1774,15 +1832,15 @@ typedef union {
     rfbPointerEventMsg pe;
     rfbHighResolutionWheelMsg wheel;
     rfbClientCutTextMsg cct;
-	rfbSetScaleMsg ssc;
-	rfbPalmVNCSetScaleFactorMsg pssf;
-	rfbSetServerInputMsg sim;
-	rfbFileTransferMsg ft;
-	rfbSetSWMsg sw;
-	rfbTextChatMsg tc;
+    rfbSetScaleMsg ssc;
+    rfbPalmVNCSetScaleFactorMsg pssf;
+    rfbSetServerInputMsg sim;
+    rfbFileTransferMsg ft;
+    rfbSetSWMsg sw;
+    rfbTextChatMsg tc;
     rfbKeepAliveMsg kp;
-	rfbRequestSessionMsg rs;
-	rfbSetSessionMsg ss;
+    rfbRequestSessionMsg rs;
+    rfbSetSessionMsg ss;
     rfbSetDesktopSizeMsg sdm;
     rfbMonitorMsg mm;
 } rfbClientToServerMsg;

@@ -15,63 +15,79 @@
 // The bits of the ClientConnection object to do with CopyRect.
 
 #include "stdhdrs.h"
-#include "vncviewer.h"
+
 #include "ClientConnection.h"
+#include "vncviewer.h"
 
-void ClientConnection::ReadCopyRect(rfbFramebufferUpdateRectHeader *pfburh) {
-	rfbCopyRect cr;
-	ReadExact((char *) &cr, sz_rfbCopyRect);
-	cr.srcX = Swap16IfLE(cr.srcX); 
-	cr.srcY = Swap16IfLE(cr.srcY);
-	// By sure the rect is insite the border memcopy does not like it 
-	if (!Check_Rectangle_borders(pfburh->r.x, pfburh->r.y, pfburh->r.w, pfburh->r.h)) return;
-	if (!Check_Rectangle_borders(cr.srcX, cr.srcY, pfburh->r.w, pfburh->r.h)) return;
+#include <cstring>
 
-	// tight If *Cursor encoding is used, we should extend our "cursor lock area"
-	// (previously set to destination rectangle) to the source rect as well.
-	SoftCursorLockArea(cr.srcX, cr.srcY, pfburh->r.w, pfburh->r.h);
+void ClientConnection::ReadCopyRect(rfbFramebufferUpdateRectHeader* const pfburh)
+{
+    rfbCopyRect cr;
+    ReadExact(reinterpret_cast<char*>(&cr), sz_rfbCopyRect);
+    cr.srcX = Swap16IfLE(cr.srcX);
+    cr.srcY = Swap16IfLE(cr.srcY);
+    // By sure the rect is insite the border memcopy does not like it
+    if (!Check_Rectangle_borders(pfburh->r.x, pfburh->r.y, pfburh->r.w, pfburh->r.h))
+    {
+        return;
+    }
+    if (!Check_Rectangle_borders(cr.srcX, cr.srcY, pfburh->r.w, pfburh->r.h))
+    {
+        return;
+    }
 
-	if (m_DIBbits)
-		{
-		omni_mutex_lock l(m_bitmapdcMutex);
-		int bytesPerInputRow = m_si.framebufferWidth * m_myFormat.bitsPerPixel/8;
+    // tight If *Cursor encoding is used, we should extend our "cursor lock area"
+    // (previously set to destination rectangle) to the source rect as well.
+    SoftCursorLockArea(cr.srcX, cr.srcY, pfburh->r.w, pfburh->r.h);
 
-		// Pitch
-		if (bytesPerInputRow % 4)
-		bytesPerInputRow += 4 - bytesPerInputRow % 4;
+    if (m_DIBbits)
+    {
+        omni_mutex_lock l(m_bitmapdcMutex);
+        int bytesPerInputRow = m_si.framebufferWidth * m_myFormat.bitsPerPixel / 8;
 
-		int bytesPerOutputRow = pfburh->r.w * m_myFormat.bitsPerPixel/8;
-		int OutputHeight=pfburh->r.h;
-		BYTE *sourcepos,*iptr,*destpos,*optr;
-		if (cr.srcY<=pfburh->r.y)
-		{
-			{
-				destpos = (BYTE*)m_DIBbits + (bytesPerInputRow * (pfburh->r.y+pfburh->r.h-1))+(pfburh->r.x * m_myFormat.bitsPerPixel/8);
-			sourcepos = (BYTE*)m_DIBbits + (bytesPerInputRow * (cr.srcY+pfburh->r.h-1))+((cr.srcX) * m_myFormat.bitsPerPixel/8);
-				iptr=sourcepos;
-				optr=destpos;
-				while (OutputHeight > 0) {
-					memcpy(optr, iptr, bytesPerOutputRow);			
-					iptr -= bytesPerInputRow;
-					optr -= bytesPerInputRow;
-					OutputHeight--;
-				}
-			}
-		}
-		else if (cr.srcY>pfburh->r.y)
-		{
-			{
-				destpos = (BYTE*)m_DIBbits + (bytesPerInputRow * pfburh->r.y)+(pfburh->r.x * m_myFormat.bitsPerPixel/8);
-				sourcepos = (BYTE*)m_DIBbits + (bytesPerInputRow * (cr.srcY))+((cr.srcX) * m_myFormat.bitsPerPixel/8);
-				iptr=sourcepos;
-				optr=destpos;
-				while (OutputHeight > 0) {
-					memcpy(optr, iptr, bytesPerOutputRow);				
-					iptr += bytesPerInputRow;
-					optr += bytesPerInputRow;
-					OutputHeight--;
-				}
-			}
-		}
-	}
+        // Pitch
+        if (bytesPerInputRow % 4)
+        {
+            bytesPerInputRow += 4 - bytesPerInputRow % 4;
+        }
+
+        int bytesPerOutputRow = pfburh->r.w * m_myFormat.bitsPerPixel / 8;
+        int OutputHeight = pfburh->r.h;
+        BYTE *sourcepos, *iptr, *destpos, *optr;
+        if (cr.srcY <= pfburh->r.y)
+        {
+            {
+                destpos = reinterpret_cast<BYTE*>(m_DIBbits) + (bytesPerInputRow * (pfburh->r.y + pfburh->r.h - 1)) +
+                          (pfburh->r.x * m_myFormat.bitsPerPixel / 8);
+                sourcepos =
+                    reinterpret_cast<BYTE*>(m_DIBbits) + (bytesPerInputRow * (cr.srcY + pfburh->r.h - 1)) + ((cr.srcX) * m_myFormat.bitsPerPixel / 8);
+                iptr = sourcepos;
+                optr = destpos;
+                while (OutputHeight > 0)
+                {
+                    std::memcpy(optr, iptr, static_cast<size_t>(bytesPerOutputRow));
+                    iptr -= bytesPerInputRow;
+                    optr -= bytesPerInputRow;
+                    --OutputHeight;
+                }
+            }
+        }
+        else if (cr.srcY > pfburh->r.y)
+        {
+            {
+                destpos = reinterpret_cast<BYTE*>(m_DIBbits) + (bytesPerInputRow * pfburh->r.y) + (pfburh->r.x * m_myFormat.bitsPerPixel / 8);
+                sourcepos = reinterpret_cast<BYTE*>(m_DIBbits) + (bytesPerInputRow * (cr.srcY)) + ((cr.srcX) * m_myFormat.bitsPerPixel / 8);
+                iptr = sourcepos;
+                optr = destpos;
+                while (OutputHeight > 0)
+                {
+                    std::memcpy(optr, iptr, static_cast<size_t>(bytesPerOutputRow));
+                    iptr += bytesPerInputRow;
+                    optr += bytesPerInputRow;
+                    --OutputHeight;
+                }
+            }
+        }
+    }
 }

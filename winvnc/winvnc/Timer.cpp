@@ -13,13 +13,14 @@
 
 
 #include "Timer.h"
-Timer :: Timer()
+
+Timer ::Timer()
 {
-  total = 0.0;
-  endT.tv_sec = startT.tv_sec = 0;
-  endT.tv_usec = startT.tv_usec = 0;
-  tScale = 1.0 / CLOCKS_PER_SEC;
-  start();
-  stop();
-  reset();
+    total = 0.0;
+    endT.tv_sec = startT.tv_sec = 0;
+    endT.tv_usec = startT.tv_usec = 0;
+    tScale = 1.0 / CLOCKS_PER_SEC;
+    start();
+    stop();
+    reset();
 }

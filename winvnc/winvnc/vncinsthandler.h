@@ -19,22 +19,22 @@
 
 class vncInstHandler;
 
-#if (!defined(_WINVNC_VNCINSTHANDLER))
-#define _WINVNC_VNCINSTHANDLER
+#if (!defined(WINVNC_VNCINSTHANDLER))
+#define WINVNC_VNCINSTHANDLER
 
 // Includes
 #include "stdhdrs.h"
-
 // The vncInstHandler class itself
+
 class vncInstHandler
 {
-	
+
 public:
-	vncInstHandler();
-	~vncInstHandler();
-	// Constructor/destructor
-	BOOL Init();
-	HANDLE mutex;
+    explicit vncInstHandler();
+    ~vncInstHandler();
+    // Constructor/destructor
+    BOOL Init();
+    HANDLE mutex;
 };
 
-#endif // _WINVNC_VNCINSTHANDLER
+#endif // WINVNC_VNCINSTHANDLER

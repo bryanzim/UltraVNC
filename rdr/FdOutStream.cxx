@@ -16,8 +16,8 @@
 #include <sys/types.h>
 #ifdef _WIN32
 // adzm 2010-08 - use winsock2
-#include <winsock2.h>
-#define write(s,b,l) send(s,(const char*)b,l,0)
+#include <WinSock2.h>
+#define write(s,b,l) send(s,reinterpret_cast<const char*>(b),l,0)
 #undef errno
 #define errno WSAGetLastError()
 #else
@@ -37,7 +37,7 @@ enum { DEFAULT_BUF_SIZE = 16384,
 FdOutStream::FdOutStream(int fd_, int bufSize_)
   : fd(fd_), bufSize(bufSize_ ? bufSize_ : DEFAULT_BUF_SIZE), offset(0)
 {
-  ptr = start = new U8[bufSize];
+  ptr = start = new U8[static_cast<unsigned long long>(bufSize)];
   end = start + bufSize;
 }
 
@@ -51,23 +51,24 @@ FdOutStream::~FdOutStream()
 }
 
 
-void FdOutStream::writeBytes(const void* data, int length)
+void FdOutStream::writeBytes(const void* const data, const int length)
 {
   if (length < MIN_BULK_SIZE) {
     OutStream::writeBytes(data, length);
     return;
   }
 
-  const U8* dataPtr = (const U8*)data;
+  const U8* dataPtr = reinterpret_cast<const U8*>(data);
+  int remaining = length;
 
   flush();
 
-  while (length > 0) {
-    int n = write(fd, dataPtr, length);
+  while (remaining > 0) {
+    int n = write(static_cast<SOCKET>(fd), dataPtr, remaining);
 
     if (n < 0) throw SystemException("write",errno);
 
-    length -= n;
+    remaining -= n;
     dataPtr += n;
     offset += n;
   }
@@ -75,14 +76,14 @@ void FdOutStream::writeBytes(const void* data, int length)
 
 int FdOutStream::length()
 {
-  return (int)(offset + ptr - start);
+  return static_cast<int>((offset + ptr - start));
 }
 
 void FdOutStream::flush()
 {
   U8* sentUpTo = start;
   while (sentUpTo < ptr) {
-    int n = write(fd, (const void*) sentUpTo, (int)(ptr - sentUpTo));
+    int n = write(static_cast<SOCKET>(fd), reinterpret_cast<const void*>(sentUpTo), static_cast<int>((ptr - sentUpTo)));
 
     if (n < 0) throw SystemException("write",errno);
 
@@ -102,7 +103,7 @@ int FdOutStream::overrun(int itemSize, int nItems)
   flush();
 
   if (itemSize * nItems > end - ptr)
-    nItems = (int)((end - ptr) / itemSize);
+    nItems = static_cast<int>(((end - ptr) / itemSize));
 
   return nItems;
 }

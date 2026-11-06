@@ -11,7 +11,11 @@
 
 #pragma once
 
+#include <WinSock2.h>
 
+#include <Windows.h>
+
+#include <array>
 ////////////////////////////////////////
 // class CProcessorUsage;
 //
@@ -25,52 +29,51 @@
 //
 class CProcessorUsage
 {
-   typedef BOOL (WINAPI * pfnGetSystemTimes)(LPFILETIME lpIdleTime, LPFILETIME lpKernelTime, LPFILETIME lpUserTime );
-   typedef LONG (WINAPI * pfnNtQuerySystemInformation)(ULONG SystemInformationClass, PVOID SystemInformation, ULONG SystemInformationLength, PULONG ReturnLength);
+    typedef BOOL(WINAPI* pfnGetSystemTimes)(LPFILETIME lpIdleTime, LPFILETIME lpKernelTime, LPFILETIME lpUserTime);
+    typedef LONG(WINAPI* pfnNtQuerySystemInformation)(ULONG SystemInformationClass, PVOID SystemInformation,
+                                                      ULONG SystemInformationLength, PULONG ReturnLength);
 
-   struct PROC_PERF_INFO
-   {
-      LARGE_INTEGER IdleTime;
-      LARGE_INTEGER KernelTime;
-      LARGE_INTEGER UserTime;
-      LARGE_INTEGER Reserved1[2];
-      ULONG Reserved2;
-   };
+    struct PROC_PERF_INFO
+    {
+        LARGE_INTEGER IdleTime;
+        LARGE_INTEGER KernelTime;
+        LARGE_INTEGER UserTime;
+        std::array<LARGE_INTEGER, 2U> Reserved1;
+        ULONG Reserved2;
+    };
 
 public:
-
-    CProcessorUsage();
+    explicit CProcessorUsage();
     ~CProcessorUsage();
 
     short GetUsage();
-	bool m_bLocked;
+    bool m_bLocked;
 
 private:
+    void GetSysTimes(__int64& idleTime, __int64& kernelTime, __int64& userTime);
 
-   void GetSysTimes(__int64 & idleTime, __int64 & kernelTime, __int64 & userTime);
-
-   ////////////////////////////////////////////////
-   // Set of static variables to be accessed from
-   // within critical section by multiple threads:
-   //
-   static DWORD s_TickMark;
-   static __int64 s_time;
-   static __int64 s_idleTime;
-   static __int64 s_kernelTime;
-   static __int64 s_userTime;
-   static int s_lastCpu;
-   static int s_cpu[5];
-   static __int64 s_kernelTimeProcess;
-   static __int64 s_userTimeProcess;
-   static int s_cpuProcess[5];
+    ////////////////////////////////////////////////
+    // Set of static variables to be accessed from
+    // within critical section by multiple threads:
+    //
+    static DWORD s_TickMark;
+    static __int64 s_time;
+    static __int64 s_idleTime;
+    static __int64 s_kernelTime;
+    static __int64 s_userTime;
+    static int s_lastCpu;
+    static std::array<int, 5U> s_cpu;
+    static __int64 s_kernelTimeProcess;
+    static __int64 s_userTimeProcess;
+    static std::array<int, 5U> s_cpuProcess;
     static int s_count;
     static int s_index;
-   //
-   /////////////////////////////////////////////////
+    //
+    /////////////////////////////////////////////////
 
-   pfnGetSystemTimes s_pfnGetSystemTimes;
-   pfnNtQuerySystemInformation s_pfnNtQuerySystemInformation;
-   CRITICAL_SECTION m_cs;
-   PROC_PERF_INFO * m_pInfo;
-   ULONG m_uInfoLength;
+    pfnGetSystemTimes s_pfnGetSystemTimes;
+    pfnNtQuerySystemInformation s_pfnNtQuerySystemInformation;
+    CRITICAL_SECTION m_cs;
+    PROC_PERF_INFO* m_pInfo;
+    ULONG m_uInfoLength;
 };

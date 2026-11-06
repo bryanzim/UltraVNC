@@ -23,6 +23,7 @@ bld/
 [Ll]ogs/
 build/
 cmake/build*/
+/out/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -156,6 +157,8 @@ cmake/build/
 cmake/out/
 
 zlib/
+!vcpkg-ports/zlib/
+!vcpkg-ports/zlib/**
 zstd/
 
 # End Customized ignore section ----------------------

@@ -10,7 +10,7 @@
 //
 
 
-/* 
+/*
  * vncauth.h - describes the functions provided by the vncauth library.
  */
 
@@ -20,17 +20,16 @@
 #define CHALLENGESIZEMS 64
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
-extern int vncEncryptPasswd(char *passwd, char *fname, int secure);
-extern char *vncDecryptPasswd(char *fname, int secure);
-extern void vncRandomBytes(unsigned char *bytes);
-extern void vncRandomBytesMs(unsigned char *bytes);
-extern void vncEncryptBytes(unsigned char *bytes, const char *passwd);
+extern int vncEncryptPasswd(char* passwd, char* fname, int secure);
+extern char* vncDecryptPasswd(char* fname, int secure);
+extern void vncRandomBytes(unsigned char* bytes);
+extern void vncRandomBytesMs(unsigned char* bytes);
+extern void vncEncryptBytes(unsigned char* bytes, const char* passwd);
 extern void vncSetDynKey(unsigned char key[8]);
 // marscha
-extern void vncDecryptBytes(unsigned char *bytes, const int length, const unsigned char *key);
+extern void vncDecryptBytes(unsigned char* bytes, const int length, const unsigned char* key);
 #ifdef __cplusplus
 }
 #endif

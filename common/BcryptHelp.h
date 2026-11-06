@@ -9,20 +9,20 @@
 // BcryptHelp.h - minimal BCrypt wrappers (SHA-256, HMAC-SHA256, PBKDF2, RNG)
 // used by the SASL/SCRAM implementation.
 #pragma once
-#include <windows.h>
+#include <Windows.h>
+
 #include <bcrypt.h>
-#include <cstdint>
+
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 namespace BcryptHelp
 {
-    bool Sha256(const void* data, size_t len, uint8_t out[32]);
-    bool Sha256(const std::vector<uint8_t>& data, uint8_t out[32]);
-    bool HmacSha256(const void* key, size_t keyLen,
-                    const void* data, size_t dataLen, uint8_t out[32]);
-    bool Pbkdf2Sha256(const void* password, size_t passLen,
-                      const void* salt, size_t saltLen,
-                      uint64_t iterations, uint8_t* out, size_t outLen);
-    bool Random(uint8_t* buf, size_t len);
+    bool Sha256(const void* data, std::size_t len, std::uint8_t out[32U]);
+    bool Sha256(const std::vector<std::uint8_t>& data, std::uint8_t out[32U]);
+    bool HmacSha256(const void* key, std::size_t keyLen, const void* data, std::size_t dataLen, std::uint8_t out[32U]);
+    bool Pbkdf2Sha256(const void* password, std::size_t passLen, const void* salt, std::size_t saltLen, std::uint64_t iterations,
+                      std::uint8_t* out, std::size_t outLen);
+    bool Random(std::uint8_t* buf, std::size_t len);
 }

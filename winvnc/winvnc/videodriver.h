@@ -9,42 +9,45 @@
 //
 
 
-#ifndef _VIDEOD_H
-#define _VIDEOD_H
+#ifndef VIDEOD_H
+#define VIDEOD_H
 
+#include "ScreenCapture.h"
+
+#include <WinSock2.h>
+
+#include <Windows.h>
+
+#include <tchar.h>
+#include <WinBase.h>
+#include <winreg.h>
+
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
-#include <winsock2.h>
-#include <windows.h>
-#include <tchar.h>
-#include <winbase.h>
-#include <winreg.h>
-#include "ScreenCapture.h"
 
 class VideoDriver : public ScreenCapture
 {
 public:
-	VideoDriver();
-	virtual ~VideoDriver();
-	virtual void videoDriver_start(int x, int y, int w, int h, bool onlyVirtual, int maxFPS);
-	virtual void videoDriver_Stop();
-	virtual bool hardwareCursor();
-	virtual bool noHardwareCursor();
-	virtual void Lock(){};
-	virtual void Unlock(){};
-	virtual HANDLE getHScreenEvent(){return NULL;}
-	virtual HANDLE getHPointerEvent(){return NULL;}
+    explicit VideoDriver();
+    virtual ~VideoDriver();
+    virtual void videoDriver_start(int x, int y, int w, int h, bool onlyVirtual, int maxFPS);
+    virtual void videoDriver_Stop();
+    virtual bool hardwareCursor();
+    virtual bool noHardwareCursor();
+    virtual void Lock() {}
+    virtual void Unlock() {}
+    virtual HANDLE getHScreenEvent() { return nullptr; }
+    virtual HANDLE getHPointerEvent() { return nullptr; }
 
 private:
-	
-	bool mirror_driver_attach_XP(int x, int y, int w, int h);
-	void mirror_driver_detach_XP();
-	bool mirror_driver_Vista(DWORD dwAttach, int x, int y, int w, int h);
-	PCHAR videoMemory_GetSharedMemory(void);
-	void videoMemory_ReleaseSharedMemory(PCHAR pVideoMemory);
-	HDC getDcMirror();		
-	DWORD shared_buffer_size;
+    bool mirror_driver_attach_XP(int x, int y, int w, int h);
+    void mirror_driver_detach_XP();
+    bool mirror_driver_Vista(DWORD dwAttach, int x, int y, int w, int h);
+    PCHAR videoMemory_GetSharedMemory(void);
+    void videoMemory_ReleaseSharedMemory(PCHAR pVideoMemory);
+    HDC getDcMirror();
+    DWORD shared_buffer_size;
 };
 
 #endif

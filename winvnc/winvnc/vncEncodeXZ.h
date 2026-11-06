@@ -10,35 +10,39 @@
 //
 
 
-#ifndef _WINVNC_ENCODEXZ
-#define _WINVNC_ENCODEXZ
+#ifndef WINVNC_ENCODEXZ
+#define WINVNC_ENCODEXZ
 
-#include "vncEncoder.h"
+#include "vncencoder.h"
 
-namespace rdr { class xzOutStream; class MemOutStream; }
+namespace rdr
+{
+    class xzOutStream;
+    class MemOutStream;
+}
 
 class vncEncodeXZ : public vncEncoder
 {
 public:
-  vncEncodeXZ();
-  ~vncEncodeXZ();
+    explicit vncEncodeXZ();
+    ~vncEncodeXZ();
 
-  virtual void Init();
+    virtual void Init();
 
-  virtual UINT RequiredBuffSize(UINT width, UINT height);
+    virtual UINT RequiredBuffSize(UINT width, UINT height);
 
-  virtual UINT EncodeRect(BYTE *source, BYTE *dest, const rfb::Rect &rect);
-  
-  virtual UINT EncodeBulkRects(const rfb::RectVector &rects, BYTE *source, BYTE *dest, VSocket *outConn);
+    virtual UINT EncodeRect(BYTE* source, BYTE* dest, const rfb::Rect& rect);
 
-  void EncodeRect_Internal(BYTE *source, int x, int y, int w, int h);
+    virtual UINT EncodeBulkRects(const rfb::RectVector& rects, BYTE* const source, BYTE* const dest, VSocket* const outConn);
 
-  BOOL m_use_xzyw;
+    void EncodeRect_Internal(BYTE* source, int x, int y, int w, int h);
+
+    BOOL m_use_xzyw;
 
 private:
-  rdr::xzOutStream* xzos;
-  rdr::MemOutStream* mos;
-  void* beforeBuf;
+    rdr::xzOutStream* xzos;
+    rdr::MemOutStream* mos;
+    void* beforeBuf;
 };
 
 #endif

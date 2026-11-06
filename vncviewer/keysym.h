@@ -61,8 +61,8 @@ SOFTWARE.
 ******************************************************************/
 /* $XFree86: xc/include/keysym.h,v 1.3 2001/01/17 17:53:12 dawes Exp $ */
 
-#ifndef __KEYSYM_H__
-#define __KEYSYM_H__
+#ifndef KEYSYM_H
+#define KEYSYM_H
 
 /* default keysyms */
 #define XK_MISCELLANY
@@ -88,4 +88,4 @@ SOFTWARE.
 
 #include "keysymdef.h"
 
-#endif // __KEYSYM_H__
+#endif // KEYSYM_H

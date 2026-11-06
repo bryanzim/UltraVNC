@@ -10,21 +10,30 @@
 
 
 #include "stdhdrs.h"
-#if !defined(AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_)
-#define AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_
+
+#include <array>
+#include <cstring>
+
+#if !defined(AFX_STDAFX_H_A9DB83DB_A9FD_11D0_BFD1_444553540000_INCLUDED)
+#define AFX_STDAFX_H_A9DB83DB_A9FD_11D0_BFD1_444553540000_INCLUDED
 #if _MSC_VER > 1000
-#endif // _MSC_VER > 1000
-#define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
-#include <winsock2.h>
-#include <windows.h>
-#endif // !defined(AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_)
-#include <time.h>
+#endif                      // _MSC_VER > 1000
+#define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
+#include <WinSock2.h>
+
+#include <Windows.h>
+
+#endif // !defined(AFX_STDAFX_H_A9DB83DB_A9FD_11D0_BFD1_444553540000_INCLUDED)
 #include "stdhdrs.h"
+
+#include "LayeredWindows.h"
+
 #include "resource.h"
 #include "vncdesktop.h"
 #include "vncdesktopthread.h"
 #include "vncOSVersion.h"
-#include "LayeredWindows.h"
+
+#include <time.h>
 
 HWND LayeredWindows::hwnd;
 HINSTANCE LayeredWindows::hInst;
@@ -33,59 +42,67 @@ int LayeredWindows::ht;
 RECT LayeredWindows::rect;
 HFONT LayeredWindows::hFont;
 HPEN LayeredWindows::hPen;
-char LayeredWindows::infoMsg[255] = { 0 };
+char LayeredWindows::infoMsg[255U] = { 0 };
 bool LayeredWindows::set_OSD = false;
 
 LayeredWindows::LayeredWindows()
 {
-   wd = 0;
-   ht = 0;
-   hwnd = NULL;
-   hInst = NULL;
-   HDC hDC = GetDC(NULL);
-   nHeight = MulDiv(-18, GetDeviceCaps(hDC, LOGPIXELSY), 72);
-   ReleaseDC(NULL, hDC);
-   hPen = CreatePen(PS_DASHDOTDOT, 5, RGB(255, 0, 0));
-   hFont = CreateFont(nHeight, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, NONANTIALIASED_QUALITY, DEFAULT_PITCH, "Verdana");   
+    wd = 0;
+    ht = 0;
+    hwnd = nullptr;
+    hInst = nullptr;
+    HDC hDC = ::GetDC(nullptr);
+    nHeight = ::MulDiv(-18, ::GetDeviceCaps(hDC, LOGPIXELSY), 72);
+    ::ReleaseDC(nullptr, hDC);
+    hPen = ::CreatePen(PS_DASHDOTDOT, 5, RGB(255, 0, 0));
+    hFont = ::CreateFont(nHeight, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                       NONANTIALIASED_QUALITY, DEFAULT_PITCH, "Verdana");
 }
 LayeredWindows::~LayeredWindows()
 {
-    DeleteObject(hFont);
-    DeleteObject(hPen);
+    ::DeleteObject(hFont);
+    ::DeleteObject(hPen);
 }
 
-HBITMAP LayeredWindows::DoGetBkGndBitmap2(IN CONST UINT uBmpResId)
+HBITMAP LayeredWindows::DoGetBkGndBitmap2([[maybe_unused]] IN CONST UINT uBmpResId)
 {
-    static HBITMAP hbmBkGnd = NULL;
-    if (NULL == hbmBkGnd)
+    static HBITMAP hbmBkGnd = nullptr;
+    if (nullptr == hbmBkGnd)
     {
-        char WORKDIR[MAX_PATH];
-        char mycommand[MAX_PATH];
-        if (GetModuleFileName(NULL, WORKDIR, MAX_PATH)) {
-            char* p = strrchr(WORKDIR, '\\');
-            if (p == NULL) return 0;
+        std::array<char, MAX_PATH> WORKDIR;
+        std::array<char, MAX_PATH> mycommand;
+        if (::GetModuleFileName(nullptr, WORKDIR.data(), static_cast<DWORD>(WORKDIR.size())))
+        {
+            char* p = std::strrchr(WORKDIR.data(), '\\');
+            if (p == nullptr)
+            {
+                return nullptr;
+            }
             *p = '\0';
         }
-        strcpy_s(mycommand, WORKDIR);
-        strcat_s(mycommand, "\\background.bmp");
+        ::strcpy_s(mycommand.data(), mycommand.size(), WORKDIR.data());
+        ::strcat_s(mycommand.data(), mycommand.size(), "\\background.bmp");
 
-        hbmBkGnd = (HBITMAP)LoadImage(NULL, mycommand, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-        if (hbmBkGnd == NULL) {
-            hbmBkGnd = (HBITMAP)LoadImage(
-                GetModuleHandle(NULL), MAKEINTRESOURCE(IDB_LOGO64), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+        hbmBkGnd = reinterpret_cast<HBITMAP>(::LoadImage(nullptr, mycommand.data(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+        if (hbmBkGnd == nullptr)
+        {
+            hbmBkGnd =
+                reinterpret_cast<HBITMAP>(::LoadImage(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDB_LOGO64), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
         }
         BITMAPINFOHEADER h2;
         h2.biSize = sizeof(h2);
         h2.biBitCount = 0;
-        HDC hxdc = CreateDC("DISPLAY", NULL, NULL, NULL);
-        GetDIBits(hxdc, hbmBkGnd, 0, 0, NULL, (BITMAPINFO*)&h2, DIB_RGB_COLORS);
-        wd = h2.biWidth; ht = h2.biHeight;
-        DeleteDC(hxdc);
-        if (NULL == hbmBkGnd)
-            hbmBkGnd = (HBITMAP)-1;
+        HDC hxdc = ::CreateDC("DISPLAY", nullptr, nullptr, nullptr);
+        ::GetDIBits(hxdc, hbmBkGnd, 0, 0, nullptr, reinterpret_cast<BITMAPINFO*>(&h2), DIB_RGB_COLORS);
+        wd = h2.biWidth;
+        ht = h2.biHeight;
+        ::DeleteDC(hxdc);
+        if (nullptr == hbmBkGnd)
+        {
+            hbmBkGnd = reinterpret_cast<HBITMAP>(-1);
+        }
     }
-    return (hbmBkGnd == (HBITMAP)-1)
-        ? NULL : hbmBkGnd;
+    return (hbmBkGnd == reinterpret_cast<HBITMAP>(-1)) ? nullptr : hbmBkGnd;
 }
 
 
@@ -95,54 +112,63 @@ BOOL LayeredWindows::DoSDKEraseBkGnd2(IN CONST HDC hDC, IN CONST COLORREF crBkGn
     if (hDC && hbmBkGnd)
     {
         RECT rc;
-        if ((ERROR != GetClipBox(hDC, &rc)) && !IsRectEmpty(&rc)) {
-            HDC hdcMem = CreateCompatibleDC(hDC);
-            if (hdcMem) {
-                HBRUSH hbrBkGnd = CreateSolidBrush(crBkGndFill);
-                if (hbrBkGnd) {
-                    HGDIOBJ hbrOld = SelectObject(hDC, hbrBkGnd);
-                    if (hbrOld) {
-                        SIZE size = { (rc.right - rc.left), (rc.bottom - rc.top) };
-                        if (PatBlt(hDC, rc.left, rc.top, size.cx, size.cy, PATCOPY)) {
-                            HGDIOBJ hbmOld = SelectObject(hdcMem, hbmBkGnd);
-                            if (hbmOld) {
-                                StretchBlt(hDC, 0, 0, size.cx, size.cy, hdcMem, 0, 0, wd, ht, SRCCOPY);
-                                SelectObject(hdcMem, hbmOld);
+        if ((ERROR != ::GetClipBox(hDC, &rc)) && !::IsRectEmpty(&rc))
+        {
+            HDC hdcMem = ::CreateCompatibleDC(hDC);
+            if (hdcMem)
+            {
+                HBRUSH hbrBkGnd = ::CreateSolidBrush(crBkGndFill);
+                if (hbrBkGnd)
+                {
+                    HGDIOBJ hbrOld = ::SelectObject(hDC, hbrBkGnd);
+                    if (hbrOld)
+                    {
+                        SIZE size{ (rc.right - rc.left), (rc.bottom - rc.top) };
+                        if (::PatBlt(hDC, rc.left, rc.top, size.cx, size.cy, PATCOPY))
+                        {
+                            HGDIOBJ hbmOld = ::SelectObject(hdcMem, hbmBkGnd);
+                            if (hbmOld)
+                            {
+                                ::StretchBlt(hDC, 0, 0, size.cx, size.cy, hdcMem, 0, 0, wd, ht, SRCCOPY);
+                                ::SelectObject(hdcMem, hbmOld);
                             }
                         }
-                        SelectObject(hDC, hbrOld);
+                        ::SelectObject(hDC, hbrOld);
                     }
-                    DeleteObject(hbrBkGnd);
+                    ::DeleteObject(hbrBkGnd);
                 }
-                DeleteDC(hdcMem);
+                ::DeleteDC(hdcMem);
             }
         }
     }
     return TRUE;
 }
 
-LRESULT CALLBACK  LayeredWindows::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK LayeredWindows::WndProc(const HWND hwndIn, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
-    switch (uMsg) {
+    switch (uMsg)
+    {
     case WM_CREATE:
-        SetTimer(hwnd, 100, 20, NULL);
+        ::SetTimer(hwndIn, 100, 20, nullptr);
         break;
     case WM_TIMER:
         if (wParam == 100)
-            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        {
+            ::SetWindowPos(hwndIn, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        }
 
     case WM_ERASEBKGND:
-        DoSDKEraseBkGnd2((HDC)wParam, RGB(0, 0, 0));
+        DoSDKEraseBkGnd2(reinterpret_cast<HDC>(wParam), RGB(0, 0, 0));
         return true;
     case WM_CTLCOLORSTATIC:
-        SetBkMode((HDC)wParam, TRANSPARENT);
-        return (LONG_PTR)GetStockObject(NULL_BRUSH);
+        ::SetBkMode(reinterpret_cast<HDC>(wParam), TRANSPARENT);
+        return reinterpret_cast<LONG_PTR>(::GetStockObject(NULL_BRUSH));
     case WM_DESTROY:
-        KillTimer(hwnd, 100);
-        PostQuitMessage(0);
+        ::KillTimer(hwndIn, 100);
+        ::PostQuitMessage(0);
         break;
     default:
-        return DefWindowProc(hwnd, uMsg, wParam, lParam);
+        return ::DefWindowProc(hwndIn, uMsg, wParam, lParam);
     }
     return 0;
 }
@@ -150,20 +176,20 @@ LRESULT CALLBACK  LayeredWindows::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, L
 bool LayeredWindows::create_black_window(void)
 {
     WNDCLASSEX wndClass;
-    ZeroMemory(&wndClass, sizeof(wndClass));
+    ::ZeroMemory(&wndClass, sizeof(wndClass));
     wndClass.cbSize = sizeof(wndClass);
     wndClass.style = CS_HREDRAW | CS_VREDRAW;
     wndClass.lpfnWndProc = WndProc;
     wndClass.cbClsExtra = 0;
     wndClass.cbWndExtra = 0;
     wndClass.hInstance = hInst;
-    wndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    wndClass.hIconSm = NULL;
-    wndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wndClass.hbrBackground = (HBRUSH)GetStockObject(GRAY_BRUSH);
-    wndClass.lpszMenuName = NULL;
+    wndClass.hIcon = ::LoadIcon(nullptr, IDI_APPLICATION);
+    wndClass.hIconSm = nullptr;
+    wndClass.hCursor = ::LoadCursor(nullptr, IDC_ARROW);
+    wndClass.hbrBackground = reinterpret_cast<HBRUSH>(::GetStockObject(GRAY_BRUSH));
+    wndClass.lpszMenuName = nullptr;
     wndClass.lpszClassName = "blackscreen";
-    RegisterClassEx(&wndClass);
+    ::RegisterClassEx(&wndClass);
 
     RECT clientRect;
     clientRect.left = 0;
@@ -171,286 +197,325 @@ bool LayeredWindows::create_black_window(void)
     clientRect.right = GetSystemMetrics(SM_CXSCREEN);
     clientRect.bottom = GetSystemMetrics(SM_CYSCREEN);
 
-    UINT x(GetSystemMetrics(SM_XVIRTUALSCREEN));
-    UINT y(GetSystemMetrics(SM_YVIRTUALSCREEN));
-    UINT cx(GetSystemMetrics(SM_CXVIRTUALSCREEN));
-    UINT cy(GetSystemMetrics(SM_CYVIRTUALSCREEN));
+    UINT x(static_cast<UINT>(GetSystemMetrics(SM_XVIRTUALSCREEN)));
+    UINT y(static_cast<UINT>(GetSystemMetrics(SM_YVIRTUALSCREEN)));
+    UINT cx(static_cast<UINT>(GetSystemMetrics(SM_CXVIRTUALSCREEN)));
+    UINT cy(static_cast<UINT>(GetSystemMetrics(SM_CYVIRTUALSCREEN)));
 
-    clientRect.left = x;
-    clientRect.top = y;
-    clientRect.right = x + cx;
-    clientRect.bottom = y + cy;
+    clientRect.left = static_cast<LONG>(x);
+    clientRect.top = static_cast<LONG>(y);
+    clientRect.right = static_cast<LONG>(x + cx);
+    clientRect.bottom = static_cast<LONG>(y + cy);
 
-    AdjustWindowRect(&clientRect, WS_CAPTION, FALSE);
-    hwnd = CreateWindowEx(WS_EX_TOOLWINDOW, "blackscreen", "blackscreen",
-        WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
-        CW_USEDEFAULT, CW_USEDEFAULT, cx, cy, NULL, NULL, hInst, NULL);
-    typedef DWORD(WINAPI* PSLWA)(HWND, DWORD, BYTE, DWORD);
+    ::AdjustWindowRect(&clientRect, WS_CAPTION, FALSE);
+    hwnd = ::CreateWindowEx(WS_EX_TOOLWINDOW, "blackscreen", "blackscreen", WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
+                          CW_USEDEFAULT, CW_USEDEFAULT, static_cast<int>(cx), static_cast<int>(cy), nullptr, nullptr, hInst, nullptr);
+    typedef DWORD(WINAPI * PSLWA)(HWND, DWORD, BYTE, DWORD);
 
-    PSLWA pSetLayeredWindowAttributes = NULL;
-    HMODULE hDLL = LoadLibrary("user32");
-    if (hDLL) pSetLayeredWindowAttributes = (PSLWA)GetProcAddress(hDLL, "SetLayeredWindowAttributes");
-
-#ifndef _X64
-    LONG style = GetWindowLong(hwnd, GWL_STYLE);
-    style = GetWindowLong(hwnd, GWL_STYLE);
-    style &= ~(WS_DLGFRAME | WS_THICKFRAME);
-    SetWindowLong(hwnd, GWL_STYLE, style);
-#else
-    LONG_PTR style = GetWindowLongPtr(hwnd, GWL_STYLE);
-    style = GetWindowLongPtr(hwnd, GWL_STYLE);
-    style &= ~(WS_DLGFRAME | WS_THICKFRAME);
-    SetWindowLongPtr(hwnd, GWL_STYLE, style);
-#endif
-
-    if (pSetLayeredWindowAttributes != NULL) {
-#ifndef _X64
-        SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST);
-#else
-        SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST);
-#endif
-        ShowWindow(hwnd, SW_SHOWNORMAL);
+    PSLWA pSetLayeredWindowAttributes = nullptr;
+    HMODULE hDLL = ::LoadLibrary("user32");
+    if (hDLL)
+    {
+        pSetLayeredWindowAttributes = reinterpret_cast<PSLWA>(::GetProcAddress(hDLL, "SetLayeredWindowAttributes"));
     }
-    if (pSetLayeredWindowAttributes != NULL)
+
+#ifndef _X64
+    LONG style = ::GetWindowLong(hwnd, GWL_STYLE);
+    style = ::GetWindowLong(hwnd, GWL_STYLE);
+    style &= ~(WS_DLGFRAME | WS_THICKFRAME);
+    ::SetWindowLong(hwnd, GWL_STYLE, style);
+#else
+    LONG_PTR style = ::GetWindowLongPtr(hwnd, GWL_STYLE);
+    style = ::GetWindowLongPtr(hwnd, GWL_STYLE);
+    style &= ~(WS_DLGFRAME | WS_THICKFRAME);
+    ::SetWindowLongPtr(hwnd, GWL_STYLE, style);
+#endif
+
+    if (pSetLayeredWindowAttributes != nullptr)
+    {
+#ifndef _X64
+        ::SetWindowLong(hwnd, GWL_EXSTYLE, ::GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST);
+#else
+        ::SetWindowLongPtr(hwnd, GWL_EXSTYLE,
+                         ::GetWindowLongPtr(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST);
+#endif
+        ::ShowWindow(hwnd, SW_SHOWNORMAL);
+    }
+    if (pSetLayeredWindowAttributes != nullptr)
+    {
         pSetLayeredWindowAttributes(hwnd, RGB(255, 255, 255), 255, LWA_ALPHA);
-    SetWindowPos(hwnd, HWND_TOPMOST, x, y, cx, cy, SWP_FRAMECHANGED | SWP_NOACTIVATE);
+    }
+    ::SetWindowPos(hwnd, HWND_TOPMOST, static_cast<int>(x), static_cast<int>(y), static_cast<int>(cx), static_cast<int>(cy), SWP_FRAMECHANGED | SWP_NOACTIVATE);
     if (VNC_OSVersion::getInstance()->OS_WIN10_TRANS)
-        SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE);
+    {
+        ::SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE);
+    }
     return true;
 }
 
-DWORD WINAPI LayeredWindows::BlackWindow(LPVOID lpParam)
+DWORD WINAPI LayeredWindows::BlackWindow([[maybe_unused]] const LPVOID lpParam)
 {
     HDESK desktop;
-    desktop = OpenInputDesktop(0, FALSE,
-        DESKTOP_CREATEMENU | DESKTOP_CREATEWINDOW |
-        DESKTOP_ENUMERATE | DESKTOP_HOOKCONTROL |
-        DESKTOP_WRITEOBJECTS | DESKTOP_READOBJECTS |
-        DESKTOP_SWITCHDESKTOP | GENERIC_WRITE
-    );
+    desktop = ::OpenInputDesktop(0, FALSE,
+                               DESKTOP_CREATEMENU | DESKTOP_CREATEWINDOW | DESKTOP_ENUMERATE | DESKTOP_HOOKCONTROL |
+                                   DESKTOP_WRITEOBJECTS | DESKTOP_READOBJECTS | DESKTOP_SWITCHDESKTOP | GENERIC_WRITE);
 
-    HDESK old_desktop = GetThreadDesktop(GetCurrentThreadId());
+    HDESK old_desktop = ::GetThreadDesktop(::GetCurrentThreadId());
     DWORD dummy{};
 
-    char new_name[256]{};
-    if (desktop) {
-        GetUserObjectInformation(desktop, UOI_NAME, &new_name, 256, &dummy);
-        SetThreadDesktop(desktop);
+    std::array<char, 256U> new_name{};
+    if (desktop)
+    {
+        ::GetUserObjectInformation(desktop, UOI_NAME, &new_name, 256, &dummy);
+        ::SetThreadDesktop(desktop);
     }
 
     create_black_window();
     MSG msg;
-    while (GetMessage(&msg, 0, 0, 0) != 0)
+    while (::GetMessage(&msg, nullptr, 0, 0) != 0)
     {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+        ::TranslateMessage(&msg);
+        ::DispatchMessage(&msg);
     }
     vnclog.Print(LL_INTERR, VNCLOG("end BlackWindow \n"));
-    SetThreadDesktop(old_desktop);
-    if (desktop) CloseDesktop(desktop);
+    ::SetThreadDesktop(old_desktop);
+    if (desktop)
+    {
+        ::CloseDesktop(desktop);
+    }
 
     return 0;
 }
 
-LRESULT CALLBACK LayeredWindows::WndBorderProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK LayeredWindows::WndBorderProc(const HWND hwndIn, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
 {
     PAINTSTRUCT ps;
     HDC hdc;
-    switch (uMsg) {
+    switch (uMsg)
+    {
     case WM_PAINT: {
-        HGDIOBJ original = NULL;
-        hdc = BeginPaint(hwnd, &ps);
-        original = SelectObject(hdc, GetStockObject(DC_PEN));       
-        SelectObject(hdc, hPen);
-        SelectObject(hdc, hFont);
+        HGDIOBJ original = nullptr;
+        hdc = ::BeginPaint(hwndIn, &ps);
+        original = ::SelectObject(hdc, ::GetStockObject(DC_PEN));
+        ::SelectObject(hdc, hPen);
+        ::SelectObject(hdc, hFont);
 
-        Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
-        SetTextColor(hdc, RGB(255, 0, 0));
-        SetBkMode(hdc, TRANSPARENT);
-        
-        if (set_OSD) {
+        ::Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
+        ::SetTextColor(hdc, RGB(255, 0, 0));
+        ::SetBkMode(hdc, TRANSPARENT);
+
+        if (set_OSD)
+        {
             RECT rc;
-            GetClientRect(hwnd, &rc);
+            ::GetClientRect(hwndIn, &rc);
             rc.left += 10;
             rc.top += 10;
-            DrawText(hdc, infoMsg, strlen(infoMsg), &rc, DT_LEFT);
+            ::DrawText(hdc, infoMsg, static_cast<int>(std::strlen(infoMsg)), &rc, DT_LEFT);
         }
 
-        SelectObject(hdc, original);
-        DeleteObject(hPen);
-        EndPaint(hwnd, &ps);
+        ::SelectObject(hdc, original);
+        ::DeleteObject(hPen);
+        ::EndPaint(hwndIn, &ps);
     }
-                 break;
-    case WM_CLOSE:        
-        DestroyWindow(hwnd);
+    break;
+    case WM_CLOSE:
+        ::DestroyWindow(hwndIn);
         break;
     case WM_DESTROY:
-        PostQuitMessage(0);
+        ::PostQuitMessage(0);
         break;
     default:
-        return DefWindowProc(hwnd, uMsg, wParam, lParam);
+        return ::DefWindowProc(hwndIn, uMsg, wParam, lParam);
     }
     return 0;
 }
 
-DWORD WINAPI LayeredWindows::BorderWindow(LPVOID lpParam)
+DWORD WINAPI LayeredWindows::BorderWindow([[maybe_unused]] const LPVOID lpParam)
 {
-    Sleep(1000);
+    ::Sleep(1000);
     HDESK desktop;
-    desktop = OpenInputDesktop(0, FALSE,
-        DESKTOP_CREATEMENU | DESKTOP_CREATEWINDOW |
-        DESKTOP_ENUMERATE | DESKTOP_HOOKCONTROL |
-        DESKTOP_WRITEOBJECTS | DESKTOP_READOBJECTS |
-        DESKTOP_SWITCHDESKTOP | GENERIC_WRITE
-    );
+    desktop = ::OpenInputDesktop(0, FALSE,
+                               DESKTOP_CREATEMENU | DESKTOP_CREATEWINDOW | DESKTOP_ENUMERATE | DESKTOP_HOOKCONTROL |
+                                   DESKTOP_WRITEOBJECTS | DESKTOP_READOBJECTS | DESKTOP_SWITCHDESKTOP | GENERIC_WRITE);
 
-    HDESK old_desktop = GetThreadDesktop(GetCurrentThreadId());
+    HDESK old_desktop = ::GetThreadDesktop(::GetCurrentThreadId());
     DWORD dummy{};
 
-    char new_name[256]{};
-    if (desktop) {
-        GetUserObjectInformation(desktop, UOI_NAME, &new_name, 256, &dummy);
-        SetThreadDesktop(desktop);
+    std::array<char, 256U> new_name{};
+    if (desktop)
+    {
+        ::GetUserObjectInformation(desktop, UOI_NAME, &new_name, 256, &dummy);
+        ::SetThreadDesktop(desktop);
     }
 
     create_border_window(rect);
     MSG msg;
-    while (GetMessage(&msg, 0, 0, 0) != 0)
+    while (::GetMessage(&msg, nullptr, 0, 0) != 0)
     {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+        ::TranslateMessage(&msg);
+        ::DispatchMessage(&msg);
     }
-    SetThreadDesktop(old_desktop);
-    if (desktop) CloseDesktop(desktop);
+    ::SetThreadDesktop(old_desktop);
+    if (desktop)
+    {
+        ::CloseDesktop(desktop);
+    }
 
     return 0;
 }
 
-bool LayeredWindows::create_border_window(RECT rect)
-{    
+bool LayeredWindows::create_border_window(const RECT rectIn)
+{
     WNDCLASSEX wndClass;
-    ZeroMemory(&wndClass, sizeof(wndClass));
+    ::ZeroMemory(&wndClass, sizeof(wndClass));
     wndClass.cbSize = sizeof(wndClass);
     wndClass.style = CS_HREDRAW | CS_VREDRAW;
     wndClass.lpfnWndProc = WndBorderProc;
     wndClass.cbClsExtra = 0;
     wndClass.cbWndExtra = 0;
     wndClass.hInstance = hInst;
-    wndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-    wndClass.hIconSm = NULL;
-    wndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-    wndClass.hbrBackground = CreateSolidBrush(RGB(255, 255, 255));
-    wndClass.lpszMenuName = NULL;
+    wndClass.hIcon = ::LoadIcon(nullptr, IDI_APPLICATION);
+    wndClass.hIconSm = nullptr;
+    wndClass.hCursor = ::LoadCursor(nullptr, IDC_ARROW);
+    wndClass.hbrBackground = ::CreateSolidBrush(RGB(255, 255, 255));
+    wndClass.lpszMenuName = nullptr;
     wndClass.lpszClassName = "borderscreen";
 
-    RegisterClassEx(&wndClass);
-    hwnd = CreateWindowEx(WS_EX_TOOLWINDOW, "borderscreen", "borderscreen",
-        WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
-        CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, hInst, NULL);
-    typedef DWORD(WINAPI* PSLWA)(HWND, DWORD, BYTE, DWORD);
+    ::RegisterClassEx(&wndClass);
+    hwnd = ::CreateWindowEx(WS_EX_TOOLWINDOW, "borderscreen", "borderscreen", WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
+                          CW_USEDEFAULT, CW_USEDEFAULT, rectIn.right - rectIn.left, rectIn.bottom - rectIn.top, nullptr, nullptr, hInst,
+                          nullptr);
+    typedef DWORD(WINAPI * PSLWA)(HWND, DWORD, BYTE, DWORD);
 
-    PSLWA pSetLayeredWindowAttributes = NULL;
-    HMODULE hDLL = LoadLibrary("user32");
-    if (hDLL) pSetLayeredWindowAttributes = (PSLWA)GetProcAddress(hDLL, "SetLayeredWindowAttributes");
-
-#ifndef _X64
-    LONG style = GetWindowLong(hwnd, GWL_STYLE);
-    style = GetWindowLong(hwnd, GWL_STYLE);
-    style &= ~(WS_DLGFRAME | WS_THICKFRAME);
-    SetWindowLong(hwnd, GWL_STYLE, style);
-#else
-    LONG_PTR style = GetWindowLongPtr(hwnd, GWL_STYLE);
-    style = GetWindowLongPtr(hwnd, GWL_STYLE);
-    style &= ~(WS_DLGFRAME | WS_THICKFRAME);
-    SetWindowLongPtr(hwnd, GWL_STYLE, style);
-#endif
-
-    if (pSetLayeredWindowAttributes != NULL) {
-#ifndef _X64
-        SetWindowLong(hwnd, GWL_EXSTYLE, GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST);
-#else
-        SetWindowLongPtr(hwnd, GWL_EXSTYLE, GetWindowLongPtr(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST);
-#endif
-        ShowWindow(hwnd, SW_SHOWNORMAL);
+    PSLWA pSetLayeredWindowAttributes = nullptr;
+    HMODULE hDLL = ::LoadLibrary("user32");
+    if (hDLL)
+    {
+        pSetLayeredWindowAttributes = reinterpret_cast<PSLWA>(::GetProcAddress(hDLL, "SetLayeredWindowAttributes"));
     }
-    if (pSetLayeredWindowAttributes != NULL)
+
+#ifndef _X64
+    LONG style = ::GetWindowLong(hwnd, GWL_STYLE);
+    style = ::GetWindowLong(hwnd, GWL_STYLE);
+    style &= ~(WS_DLGFRAME | WS_THICKFRAME);
+    ::SetWindowLong(hwnd, GWL_STYLE, style);
+#else
+    LONG_PTR style = ::GetWindowLongPtr(hwnd, GWL_STYLE);
+    style = ::GetWindowLongPtr(hwnd, GWL_STYLE);
+    style &= ~(WS_DLGFRAME | WS_THICKFRAME);
+    ::SetWindowLongPtr(hwnd, GWL_STYLE, style);
+#endif
+
+    if (pSetLayeredWindowAttributes != nullptr)
+    {
+#ifndef _X64
+        ::SetWindowLong(hwnd, GWL_EXSTYLE, ::GetWindowLong(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST);
+#else
+        ::SetWindowLongPtr(hwnd, GWL_EXSTYLE,
+                         ::GetWindowLongPtr(hwnd, GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST);
+#endif
+        ::ShowWindow(hwnd, SW_SHOWNORMAL);
+    }
+    if (pSetLayeredWindowAttributes != nullptr)
+    {
         pSetLayeredWindowAttributes(hwnd, RGB(255, 255, 255), 0, LWA_COLORKEY);
-    SetWindowPos(hwnd, HWND_TOPMOST, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_FRAMECHANGED | SWP_NOACTIVATE);
+    }
+    ::SetWindowPos(hwnd, HWND_TOPMOST, rectIn.left, rectIn.top, rectIn.right - rectIn.left, rectIn.bottom - rectIn.top,
+                 SWP_FRAMECHANGED | SWP_NOACTIVATE);
     if (VNC_OSVersion::getInstance()->OS_WIN10_TRANS)
-        SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE);
+    {
+        ::SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE);
+    }
     return true;
 }
 
-bool LayeredWindows::SetBlankMonitor(bool enabled, bool blankMonitorEnabled, bool black_window_active, bool &screen_in_powersave, HWND hwnd)
+bool LayeredWindows::SetBlankMonitor(const bool enabled, const bool blankMonitorEnabled, bool black_window_active,
+                                     bool& screen_in_powersave, const HWND hwndIn)
 {
     // Also Turn Off the Monitor if allowed ("Blank Screen", "Blank Monitor")
     if (blankMonitorEnabled)
     {
 
-        if ((!VNC_OSVersion::getInstance()->OS_WIN10_TRANS && VNC_OSVersion::getInstance()->OS_WIN10)
-            || VNC_OSVersion::getInstance()->OS_WIN8)
+        if ((!VNC_OSVersion::getInstance()->OS_WIN10_TRANS && VNC_OSVersion::getInstance()->OS_WIN10) ||
+            VNC_OSVersion::getInstance()->OS_WIN8)
         {
-            if (enabled) {
-                SendMessage(hwnd, WM_SYSCOMMAND, SC_MONITORPOWER, (LPARAM)2);
+            if (enabled)
+            {
+                ::SendMessage(hwndIn, WM_SYSCOMMAND, SC_MONITORPOWER, static_cast<LPARAM>(2));
                 screen_in_powersave = true;
             }
-            else {
-                SendMessage(hwnd, WM_SYSCOMMAND, SC_MONITORPOWER, (LPARAM)-1);
+            else
+            {
+                ::SendMessage(hwndIn, WM_SYSCOMMAND, SC_MONITORPOWER, static_cast<LPARAM>(-1));
                 screen_in_powersave = false;
                 //win8 require mouse move
-                mouse_event(MOUSEEVENTF_MOVE, 0, 1, 0, NULL);
-                Sleep(40);
-                mouse_event(MOUSEEVENTF_MOVE, 0, -1, 0, NULL);
+                mouse_event(MOUSEEVENTF_MOVE, 0, 1, 0, 0);
+                ::Sleep(40);
+                mouse_event(MOUSEEVENTF_MOVE, 0, static_cast<DWORD>(-1), 0, 0);
                 //Just in case video driver state was changed
-                HWND Blackhnd = FindWindow(("blackscreen"), 0);
+                HWND Blackhnd = ::FindWindow(("blackscreen"), nullptr);
                 if (Blackhnd)
-                    PostMessage(Blackhnd, WM_CLOSE, 0, 0);
+                {
+                    ::PostMessage(Blackhnd, WM_CLOSE, 0, 0);
+                }
                 black_window_active = false;
                 VNC_OSVersion::getInstance()->ResetAero();
             }
-
         }
-        else {
-            if (enabled) {
+        else
+        {
+            if (enabled)
+            {
                 if (VNC_OSVersion::getInstance()->OS_AERO_ON)
+                {
                     VNC_OSVersion::getInstance()->DisableAero();
+                }
 
-                HANDLE ThreadHandle2 = NULL;
+                HANDLE ThreadHandle2 = nullptr;
                 DWORD dwTId;
-                ThreadHandle2 = CreateThread(NULL, 0, BlackWindow, NULL, 0, &dwTId);
+                ThreadHandle2 = ::CreateThread(nullptr, 0, BlackWindow, nullptr, 0, &dwTId);
                 if (ThreadHandle2)
-                    CloseHandle(ThreadHandle2);
+                {
+                    ::CloseHandle(ThreadHandle2);
+                }
                 black_window_active = true;
             }
-            else {
-                HWND Blackhnd = FindWindow(("blackscreen"), 0);
+            else
+            {
+                HWND Blackhnd = ::FindWindow(("blackscreen"), nullptr);
                 if (Blackhnd)
-                    PostMessage(Blackhnd, WM_CLOSE, 0, 0);
+                {
+                    ::PostMessage(Blackhnd, WM_CLOSE, 0, 0);
+                }
                 black_window_active = false;
                 VNC_OSVersion::getInstance()->ResetAero();
             }
-
         }
     }
     return black_window_active;
 }
 
-void LayeredWindows::SetBorderWindow(bool enabled, RECT rect, char* infoMsg, bool set_OSD)
+void LayeredWindows::SetBorderWindow(const bool enabled, const RECT rectIn, char* const infoMsgIn, const bool set_OSDIn)
 {
-    strcpy_s(this->infoMsg, infoMsg);
-    this->rect = rect;
-    this->set_OSD = set_OSD;
-    if (enabled) {
-        HANDLE ThreadHandle2 = NULL;
+    ::strcpy_s(this->infoMsg, infoMsgIn);
+    this->rect = rectIn;
+    this->set_OSD = set_OSDIn;
+    if (enabled)
+    {
+        HANDLE ThreadHandle2 = nullptr;
         DWORD dwTId;
-        ThreadHandle2 = CreateThread(NULL, 0, BorderWindow, NULL, 0, &dwTId);
+        ThreadHandle2 = ::CreateThread(nullptr, 0, BorderWindow, nullptr, 0, &dwTId);
         if (ThreadHandle2)
-            CloseHandle(ThreadHandle2);
+        {
+            ::CloseHandle(ThreadHandle2);
+        }
     }
-    else {
-        HWND Blackhnd = FindWindow(("borderscreen"), 0);
+    else
+    {
+        HWND Blackhnd = ::FindWindow(("borderscreen"), nullptr);
         if (Blackhnd)
-            PostMessage(Blackhnd, WM_CLOSE, 0, 0);
+        {
+            ::PostMessage(Blackhnd, WM_CLOSE, 0, 0);
+        }
     }
 }
-

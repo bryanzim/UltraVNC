@@ -10,19 +10,18 @@
 //
 
 
-#ifndef _ENVREG_H
-#define _ENVREG_H
+#ifndef ENVREG_H
+#define ENVREG_H
 
 #include "registry.h"
+
 #include <tchar.h>
+
 #include <stdlib.h>
 
-
-static TCHAR * PROGRAMFILES = _T("programfiles");
-static TCHAR * PROGRAMFILESDIR = _T("programfilesdir");
+static TCHAR* PROGRAMFILES = _T("programfiles");
+static TCHAR* PROGRAMFILESDIR = _T("programfilesdir");
 
 BOOL GetEnvironmentVariableFromRegistry(LPTSTR lpName, LPTSTR buffer, DWORD nSize);
 
 #endif
-
-

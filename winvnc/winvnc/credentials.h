@@ -12,25 +12,28 @@
 #pragma once
 #include "stdhdrs.h"
 
-class Credentials {
+class Credentials
+{
 private:
-	static DWORD GetCurrentUserToken(HANDLE& process, HANDLE& Token, bool RunningFromExternalService);
+    static DWORD GetCurrentUserToken(HANDLE& process, HANDLE& Token, bool RunningFromExternalService);
+
 public:
-	static bool RunningAsAdministrator(bool RunningFromExternalService);
+    static bool RunningAsAdministrator(bool RunningFromExternalService);
 };
 
-class DesktopUsersToken {
+class DesktopUsersToken
+{
 private:
-	HANDLE hProcess, hPToken;
-	DesktopUsersToken();
-	static DesktopUsersToken* instance;
-	DWORD dwExplorerLogonPid = 0;
-	char username[257]{};
-	HANDLE save_hPtoken = 0;
+    HANDLE hProcess, hPToken;
+    explicit DesktopUsersToken();
+    static DesktopUsersToken* instance;
+    DWORD dwExplorerLogonPid{ 0U };
+    char username[257U]{};
+    HANDLE save_hPtoken = nullptr;
 
 public:
-	static DesktopUsersToken* getInstance();
-	~DesktopUsersToken();
-	HANDLE getDesktopUsersToken();
-	bool GetConsoleUser(char* buffer, UINT size);
+    static DesktopUsersToken* getInstance();
+    ~DesktopUsersToken();
+    HANDLE getDesktopUsersToken();
+    bool GetConsoleUser(char* buffer, UINT size);
 };

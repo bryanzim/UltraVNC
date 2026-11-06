@@ -14,49 +14,51 @@
 // ZstdInStream streams from a compressed data stream ("underlying"),
 // decompressing with zlib or zstd on the fly.
 //
-#ifndef __RDR_ZSTDINSTREAM_H__
-#define __RDR_ZSTDINSTREAM_H__
+#ifndef RDR_ZSTDINSTREAM_H
+#define RDR_ZSTDINSTREAM_H
 
 #pragma once
 
 #include "InStream.h"
+
 #ifdef _VCPKG
 #include <zstd.h>
+
 #else
 #include "../zstd/lib/zstd.h"
+
 #endif
 
 struct z_stream_s;
 
-namespace rdr {
+namespace rdr
+{
 
-  class ZstdInStream : public InStream {
+    class ZstdInStream : public InStream
+    {
 
-  public:
+    public:
+        explicit ZstdInStream(int bufSize = 0);
+        virtual ~ZstdInStream();
 
-    ZstdInStream(int bufSize=0);
-    virtual ~ZstdInStream();
+        void setUnderlying(InStream* is, int bytesIn);
+        void reset();
+        int pos();
 
-    void setUnderlying(InStream* is, int bytesIn);
-    void reset();
-    int pos();
+    private:
+        int overrun(int itemSize, int nItems);
+        void decompress();
 
-  private:
+        InStream* underlying;
+        int bufSize;
+        int offset;
+        int bytesIn;
+        U8* start;
 
-    int overrun(int itemSize, int nItems);
-    void decompress();
-
-    InStream* underlying;
-    int bufSize;
-    int offset;
-    int bytesIn;
-    U8* start;
-
-	ZSTD_outBuffer* outBuffer;
-	ZSTD_inBuffer* inBuffer;
-	ZSTD_DStream* zstds;
-
-  };
+        ZSTD_outBuffer* outBuffer;
+        ZSTD_inBuffer* inBuffer;
+        ZSTD_DStream* zstds;
+    };
 } // end of namespace rdr
 
 #endif

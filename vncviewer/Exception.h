@@ -13,27 +13,28 @@
 
 // Exceptions used in UltraVNC Viewer
 
-class Exception  
+class Exception
 {
 public:
-	Exception(const wchar_t *info, int error_nr = 0);
-	virtual void Report() = 0;
-	virtual ~Exception();
-	const wchar_t* GetInfo() const { return m_info; }
-	int m_error_nr;
-private:
-	wchar_t* m_info;
+    explicit Exception(const wchar_t* info, int error_nr = 0);
+    virtual void Report() = 0;
+    virtual ~Exception();
+    const wchar_t* GetInfo() const { return m_info; }
+    int m_error_nr;
 
+private:
+    wchar_t* m_info;
 };
 
-// This indicates something that the catcher should close 
+// This indicates something that the catcher should close
 // the connection quietly.
 // Report() will display a TRACE message
-class QuietException : public Exception {
+class QuietException : public Exception
+{
 public:
-	QuietException(const wchar_t *info, int error_nr = 0);
-	virtual void Report();
-	virtual ~QuietException();
+    explicit QuietException(const wchar_t* info, int error_nr = 0);
+    virtual void Report();
+    virtual ~QuietException();
 };
 
 // This indicates something the user should be told about.
@@ -41,20 +42,22 @@ public:
 // to specify whether or not the connection is closed as a result.
 // In general it will be.
 // Report() will display a message box
-class WarningException : public Exception {
+class WarningException : public Exception
+{
 public:
-	WarningException(const wchar_t *info, int error_nr = 0, bool close = true);
-	virtual void Report();
-	virtual ~WarningException();
-	bool m_close;
+    explicit WarningException(const wchar_t* info, int error_nr = 0, bool close = true);
+    virtual void Report();
+    virtual ~WarningException();
+    bool m_close;
 };
 
 // This is serious stuff - similar to an assert - we may not use?
 // Report will display an important message box. Connection definitely
 // closed.
-class ErrorException : public Exception {
+class ErrorException : public Exception
+{
 public:
-	ErrorException(const wchar_t *info, int error_nr = 0);
-	virtual void Report();
-	virtual ~ErrorException();
+    explicit ErrorException(const wchar_t* info, int error_nr = 0);
+    virtual void Report();
+    virtual ~ErrorException();
 };

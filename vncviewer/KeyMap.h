@@ -11,169 +11,173 @@
 
 
 #pragma once
-#pragma warning(disable:4786) // Debug identifier truncated
+#pragma warning(disable : 4786) // Debug identifier truncated
 
 
 class KeyMap;
 
 
-#include <map>
+#include "ClientConnection.h"
 #include "keysym.h"
 #include "rfb.h"
-#include "ClientConnection.h"
+
+#include <array>
+#include <map>
 
 const CARD32 KEYMAP_LCONTROL = 0x0001;
 const CARD32 KEYMAP_RCONTROL = 0x0002;
-const CARD32 KEYMAP_LALT     = 0x0004;
-const CARD32 KEYMAP_RALT     = 0x0008;
+const CARD32 KEYMAP_LALT = 0x0004;
+const CARD32 KEYMAP_RALT = 0x0008;
 
 // Define the keyMap structure
-struct vncKeyMapping_t {
+struct vncKeyMapping_t
+{
     CARD32 XCode;
     BYTE WinCode;
     bool extVK;
 };
 
 static const vncKeyMapping_t keyMap[] = {
-    {XK_BackSpace           , VK_BACK           , 0},
-    {XK_Tab                 , VK_TAB            , 0},
-    {XK_Clear               , VK_CLEAR          , 0},
-    {XK_Return              , VK_RETURN         , 0},
-    {XK_Pause               , VK_PAUSE          , 0},
-    {XK_Scroll_Lock         , VK_SCROLL         , 0},
-    {XK_Escape              , VK_ESCAPE         , 0},
-    {XK_Delete              , VK_DELETE         , 1},
+    { XK_BackSpace, VK_BACK, 0 },
+    { XK_Tab, VK_TAB, 0 },
+    { XK_Clear, VK_CLEAR, 0 },
+    { XK_Return, VK_RETURN, 0 },
+    { XK_Pause, VK_PAUSE, 0 },
+    { XK_Scroll_Lock, VK_SCROLL, 0 },
+    { XK_Escape, VK_ESCAPE, 0 },
+    { XK_Delete, VK_DELETE, 1 },
 
     // Modifiers
-    {XK_Shift_L             , VK_SHIFT          , 0},
-    {XK_Shift_R             , VK_SHIFT          , 1},
-    {XK_Shift_L             , VK_LSHIFT         , 0},
-    {XK_Shift_R             , VK_RSHIFT         , 1},
-    {XK_Control_L           , VK_CONTROL        , 0},
-    {XK_Control_R           , VK_CONTROL        , 1},
-    {XK_Control_L           , VK_LCONTROL       , 0},
-    {XK_Control_R           , VK_RCONTROL       , 1},
-    {XK_Alt_L               , VK_MENU           , 0},
-    {XK_Alt_R               , VK_MENU           , 1},
-    {XK_Alt_L               , VK_LMENU          , 0},
-    {XK_Alt_R               , VK_RMENU          , 1},
-    {XK_Caps_Lock           , VK_CAPITAL        , 0},
+    { XK_Shift_L, VK_SHIFT, 0 },
+    { XK_Shift_R, VK_SHIFT, 1 },
+    { XK_Shift_L, VK_LSHIFT, 0 },
+    { XK_Shift_R, VK_RSHIFT, 1 },
+    { XK_Control_L, VK_CONTROL, 0 },
+    { XK_Control_R, VK_CONTROL, 1 },
+    { XK_Control_L, VK_LCONTROL, 0 },
+    { XK_Control_R, VK_RCONTROL, 1 },
+    { XK_Alt_L, VK_MENU, 0 },
+    { XK_Alt_R, VK_MENU, 1 },
+    { XK_Alt_L, VK_LMENU, 0 },
+    { XK_Alt_R, VK_RMENU, 1 },
+    { XK_Caps_Lock, VK_CAPITAL, 0 },
 
     // Left & Right Windows keys & Windows Menu Key
-    {XK_Super_L             , VK_LWIN           , 1},
-    {XK_Super_R             , VK_RWIN           , 1},
-    {XK_Menu                , VK_APPS           , 1},
+    { XK_Super_L, VK_LWIN, 1 },
+    { XK_Super_R, VK_RWIN, 1 },
+    { XK_Menu, VK_APPS, 1 },
 
     // Cursor control & motion
-    {XK_Home                , VK_HOME           , 1},
-    {XK_Left                , VK_LEFT           , 1},
-    {XK_Up                  , VK_UP             , 1},
-    {XK_Right               , VK_RIGHT          , 1},
-    {XK_Down                , VK_DOWN           , 1},
-    {XK_Page_Up             , VK_PRIOR          , 1},
-    {XK_Page_Down           , VK_NEXT           , 1},
-    {XK_End                 , VK_END            , 1},
+    { XK_Home, VK_HOME, 1 },
+    { XK_Left, VK_LEFT, 1 },
+    { XK_Up, VK_UP, 1 },
+    { XK_Right, VK_RIGHT, 1 },
+    { XK_Down, VK_DOWN, 1 },
+    { XK_Page_Up, VK_PRIOR, 1 },
+    { XK_Page_Down, VK_NEXT, 1 },
+    { XK_End, VK_END, 1 },
 
     // Misc Functions
-    {XK_Select              , VK_SELECT         , 0},
-    {XK_Print               , VK_SNAPSHOT       , 0},
-    {XK_Execute             , VK_EXECUTE        , 0},
-    {XK_Insert              , VK_INSERT         , 1},
-    {XK_Help                , VK_HELP           , 0},
-    {XK_Break               , VK_CANCEL         , 1},
-    {XK_Num_Lock            , VK_NUMLOCK        , 1},
+    { XK_Select, VK_SELECT, 0 },
+    { XK_Print, VK_SNAPSHOT, 0 },
+    { XK_Execute, VK_EXECUTE, 0 },
+    { XK_Insert, VK_INSERT, 1 },
+    { XK_Help, VK_HELP, 0 },
+    { XK_Break, VK_CANCEL, 1 },
+    { XK_Num_Lock, VK_NUMLOCK, 1 },
 
     // Auxilliary Functions - must come before XK_KP_F1, etc
-    {XK_F1                  , VK_F1             , 0},
-    {XK_F2                  , VK_F2             , 0},
-    {XK_F3                  , VK_F3             , 0},
-    {XK_F4                  , VK_F4             , 0},
-    {XK_F5                  , VK_F5             , 0},
-    {XK_F6                  , VK_F6             , 0},
-    {XK_F7                  , VK_F7             , 0},
-    {XK_F8                  , VK_F8             , 0},
-    {XK_F9                  , VK_F9             , 0},
-    {XK_F10                 , VK_F10            , 0},
-    {XK_F11                 , VK_F11            , 0},
-    {XK_F12                 , VK_F12            , 0},
-    {XK_F13                 , VK_F13            , 0},
-    {XK_F14                 , VK_F14            , 0},
-    {XK_F15                 , VK_F15            , 0},
-    {XK_F16                 , VK_F16            , 0},
-    {XK_F17                 , VK_F17            , 0},
-    {XK_F18                 , VK_F18            , 0},
-    {XK_F19                 , VK_F19            , 0},
-    {XK_F20                 , VK_F20            , 0},
-    {XK_F21                 , VK_F21            , 0},
-    {XK_F22                 , VK_F22            , 0},
-    {XK_F23                 , VK_F23            , 0},
-    {XK_F24                 , VK_F24            , 0},
+    { XK_F1, VK_F1, 0 },
+    { XK_F2, VK_F2, 0 },
+    { XK_F3, VK_F3, 0 },
+    { XK_F4, VK_F4, 0 },
+    { XK_F5, VK_F5, 0 },
+    { XK_F6, VK_F6, 0 },
+    { XK_F7, VK_F7, 0 },
+    { XK_F8, VK_F8, 0 },
+    { XK_F9, VK_F9, 0 },
+    { XK_F10, VK_F10, 0 },
+    { XK_F11, VK_F11, 0 },
+    { XK_F12, VK_F12, 0 },
+    { XK_F13, VK_F13, 0 },
+    { XK_F14, VK_F14, 0 },
+    { XK_F15, VK_F15, 0 },
+    { XK_F16, VK_F16, 0 },
+    { XK_F17, VK_F17, 0 },
+    { XK_F18, VK_F18, 0 },
+    { XK_F19, VK_F19, 0 },
+    { XK_F20, VK_F20, 0 },
+    { XK_F21, VK_F21, 0 },
+    { XK_F22, VK_F22, 0 },
+    { XK_F23, VK_F23, 0 },
+    { XK_F24, VK_F24, 0 },
 
     // Keypad Functions, keypad numbers
-    {XK_KP_Tab              , VK_TAB            , 0},
-    {XK_KP_Enter            , VK_RETURN         , 1},
-    {XK_KP_F1               , VK_F1             , 0},
-    {XK_KP_F2               , VK_F2             , 0},
-    {XK_KP_F3               , VK_F3             , 0},
-    {XK_KP_F4               , VK_F4             , 0},
-    {XK_KP_Home             , VK_HOME           , 0},
-    {XK_KP_Left             , VK_LEFT           , 0},
-    {XK_KP_Up               , VK_UP             , 0},
-    {XK_KP_Right            , VK_RIGHT          , 0},
-    {XK_KP_Down             , VK_DOWN           , 0},
-    {XK_KP_End              , VK_END            , 0},
-    {XK_KP_Page_Up          , VK_PRIOR          , 0},
-    {XK_KP_Page_Down        , VK_NEXT           , 0},
-    {XK_KP_Begin            , VK_CLEAR          , 0},
-    {XK_KP_Insert           , VK_INSERT         , 0},
-    {XK_KP_Delete           , VK_DELETE         , 0},
-    {XK_KP_Multiply         , VK_MULTIPLY       , 0},
-    {XK_KP_Add              , VK_ADD            , 0},
-    {XK_KP_Separator        , VK_SEPARATOR      , 0},  // Often comma
-    {XK_KP_Subtract         , VK_SUBTRACT       , 0},
-    {XK_KP_Decimal          , VK_DECIMAL        , 0},
-    {XK_KP_Divide           , VK_DIVIDE         , 1},
+    { XK_KP_Tab, VK_TAB, 0 },
+    { XK_KP_Enter, VK_RETURN, 1 },
+    { XK_KP_F1, VK_F1, 0 },
+    { XK_KP_F2, VK_F2, 0 },
+    { XK_KP_F3, VK_F3, 0 },
+    { XK_KP_F4, VK_F4, 0 },
+    { XK_KP_Home, VK_HOME, 0 },
+    { XK_KP_Left, VK_LEFT, 0 },
+    { XK_KP_Up, VK_UP, 0 },
+    { XK_KP_Right, VK_RIGHT, 0 },
+    { XK_KP_Down, VK_DOWN, 0 },
+    { XK_KP_End, VK_END, 0 },
+    { XK_KP_Page_Up, VK_PRIOR, 0 },
+    { XK_KP_Page_Down, VK_NEXT, 0 },
+    { XK_KP_Begin, VK_CLEAR, 0 },
+    { XK_KP_Insert, VK_INSERT, 0 },
+    { XK_KP_Delete, VK_DELETE, 0 },
+    { XK_KP_Multiply, VK_MULTIPLY, 0 },
+    { XK_KP_Add, VK_ADD, 0 },
+    { XK_KP_Separator, VK_SEPARATOR, 0 }, // Often comma
+    { XK_KP_Subtract, VK_SUBTRACT, 0 },
+    { XK_KP_Decimal, VK_DECIMAL, 0 },
+    { XK_KP_Divide, VK_DIVIDE, 1 },
 
-    {XK_KP_0                , VK_NUMPAD0        , 0},
-    {XK_KP_1                , VK_NUMPAD1        , 0},
-    {XK_KP_2                , VK_NUMPAD2        , 0},
-    {XK_KP_3                , VK_NUMPAD3        , 0},
-    {XK_KP_4                , VK_NUMPAD4        , 0},
-    {XK_KP_5                , VK_NUMPAD5        , 0},
-    {XK_KP_6                , VK_NUMPAD6        , 0},
-    {XK_KP_7                , VK_NUMPAD7        , 0},
-    {XK_KP_8                , VK_NUMPAD8        , 0},
-    {XK_KP_9                , VK_NUMPAD9        , 0},
+    { XK_KP_0, VK_NUMPAD0, 0 },
+    { XK_KP_1, VK_NUMPAD1, 0 },
+    { XK_KP_2, VK_NUMPAD2, 0 },
+    { XK_KP_3, VK_NUMPAD3, 0 },
+    { XK_KP_4, VK_NUMPAD4, 0 },
+    { XK_KP_5, VK_NUMPAD5, 0 },
+    { XK_KP_6, VK_NUMPAD6, 0 },
+    { XK_KP_7, VK_NUMPAD7, 0 },
+    { XK_KP_8, VK_NUMPAD8, 0 },
+    { XK_KP_9, VK_NUMPAD9, 0 },
 
     // Add hangul keymapping
-    {XK_Hangul              , VK_HANGEUL        , 0},
+    { XK_Hangul, VK_HANGEUL, 0 },
 };
 
 // Define the deadKeyMap structure
 // deadKeyChar = {L'<c>' | L'\x<uuuu>'}
 //   <c> is a single UCS printable Latin-1 character
 //   <uuuu> is UCS CodePoint in hexadecimal
-struct vncDeadKeyMapping_t {
+struct vncDeadKeyMapping_t
+{
     CARD32 XCode;
     WCHAR deadKeyChar;
 };
 
 static const vncDeadKeyMapping_t deadKeyMap[] = {
-    {XK_dead_grave          , L'`'    },  // +U0060
-    {XK_dead_acute          , L'´'    },  // +U00B4
-    {XK_dead_acute          , L'\''   },  // +U0027
-    {XK_dead_circumflex     , L'^'    },  // +U005E
-    {XK_dead_tilde          , L'~'    },  // +U007E
-    {XK_dead_diaeresis      , L'¨'    },  // +U00A8
-    {XK_dead_diaeresis      , L'"'    },  // +U0022
-    {XK_dead_abovering      , L'°'    },  // +U00B0
-    {XK_dead_cedilla        , L'¸'    },  // +U00B8
+    { XK_dead_grave, L'`' },      // +U0060
+    { XK_dead_acute, L'´' },      // +U00B4
+    { XK_dead_acute, L'\'' },     // +U0027
+    { XK_dead_circumflex, L'^' }, // +U005E
+    { XK_dead_tilde, L'~' },      // +U007E
+    { XK_dead_diaeresis, L'¨' },  // +U00A8
+    { XK_dead_diaeresis, L'"' },  // +U0022
+    { XK_dead_abovering, L'°' },  // +U00B0
+    { XK_dead_cedilla, L'¸' },    // +U00B8
 };
 
 // Define the X11 KeySym and UCS map, excerpted from X11R6.8.1
 /* $XFree86: xc/lib/X11/imKStoUCS.c,v 1.4 2003/04/29 11:29:18 pascal Exp $ */
 static unsigned short const keysym_to_unicode_1a1_1ff[] = {
-            0x0104, 0x02d8, 0x0141, 0x0000, 0x013d, 0x015a, 0x0000, /* 0x01a0-0x01a7 */
+    0x0104, 0x02d8, 0x0141, 0x0000, 0x013d, 0x015a, 0x0000,         /* 0x01a0-0x01a7 */
     0x0000, 0x0160, 0x015e, 0x0164, 0x0179, 0x0000, 0x017d, 0x017b, /* 0x01a8-0x01af */
     0x0000, 0x0105, 0x02db, 0x0142, 0x0000, 0x013e, 0x015b, 0x02c7, /* 0x01b0-0x01b7 */
     0x0000, 0x0161, 0x015f, 0x0165, 0x017a, 0x02dd, 0x017e, 0x017c, /* 0x01b8-0x01bf */
@@ -188,7 +192,7 @@ static unsigned short const keysym_to_unicode_1a1_1ff[] = {
 };
 
 static unsigned short const keysym_to_unicode_2a1_2fe[] = {
-            0x0126, 0x0000, 0x0000, 0x0000, 0x0000, 0x0124, 0x0000, /* 0x02a0-0x02a7 */
+    0x0126, 0x0000, 0x0000, 0x0000, 0x0000, 0x0124, 0x0000,         /* 0x02a0-0x02a7 */
     0x0000, 0x0130, 0x0000, 0x011e, 0x0134, 0x0000, 0x0000, 0x0000, /* 0x02a8-0x02af */
     0x0000, 0x0127, 0x0000, 0x0000, 0x0000, 0x0000, 0x0125, 0x0000, /* 0x02b0-0x02b7 */
     0x0000, 0x0131, 0x0000, 0x011f, 0x0135, 0x0000, 0x0000, 0x0000, /* 0x02b8-0x02bf */
@@ -203,7 +207,7 @@ static unsigned short const keysym_to_unicode_2a1_2fe[] = {
 };
 
 static unsigned short const keysym_to_unicode_3a2_3fe[] = {
-                    0x0138, 0x0156, 0x0000, 0x0128, 0x013b, 0x0000, /* 0x03a0-0x03a7 */
+    0x0138, 0x0156, 0x0000, 0x0128, 0x013b, 0x0000,                 /* 0x03a0-0x03a7 */
     0x0000, 0x0000, 0x0112, 0x0122, 0x0166, 0x0000, 0x0000, 0x0000, /* 0x03a8-0x03af */
     0x0000, 0x0000, 0x0000, 0x0157, 0x0000, 0x0129, 0x013c, 0x0000, /* 0x03b0-0x03b7 */
     0x0000, 0x0000, 0x0113, 0x0123, 0x0167, 0x014a, 0x0000, 0x014b, /* 0x03b8-0x03bf */
@@ -218,7 +222,7 @@ static unsigned short const keysym_to_unicode_3a2_3fe[] = {
 };
 
 static unsigned short const keysym_to_unicode_4a1_4df[] = {
-            0x3002, 0x3008, 0x3009, 0x3001, 0x30fb, 0x30f2, 0x30a1, /* 0x04a0-0x04a7 */
+    0x3002, 0x3008, 0x3009, 0x3001, 0x30fb, 0x30f2, 0x30a1,         /* 0x04a0-0x04a7 */
     0x30a3, 0x30a5, 0x30a7, 0x30a9, 0x30e3, 0x30e5, 0x30e7, 0x30c3, /* 0x04a8-0x04af */
     0x30fc, 0x30a2, 0x30a4, 0x30a6, 0x30a8, 0x30aa, 0x30ab, 0x30ad, /* 0x04b0-0x04b7 */
     0x30af, 0x30b1, 0x30b3, 0x30b5, 0x30b7, 0x30b9, 0x30bb, 0x30bd, /* 0x04b8-0x04bf */
@@ -265,7 +269,7 @@ static unsigned short const keysym_to_unicode_680_6ff[] = {
 };
 
 static unsigned short const keysym_to_unicode_7a1_7f9[] = {
-            0x0386, 0x0388, 0x0389, 0x038a, 0x03aa, 0x0000, 0x038c, /* 0x07a0-0x07a7 */
+    0x0386, 0x0388, 0x0389, 0x038a, 0x03aa, 0x0000, 0x038c,         /* 0x07a0-0x07a7 */
     0x038e, 0x03ab, 0x0000, 0x038f, 0x0000, 0x0000, 0x0385, 0x2015, /* 0x07a8-0x07af */
     0x0000, 0x03ac, 0x03ad, 0x03ae, 0x03af, 0x03ca, 0x0390, 0x03cc, /* 0x07b0-0x07b7 */
     0x03cd, 0x03cb, 0x03b0, 0x03ce, 0x0000, 0x0000, 0x0000, 0x0000, /* 0x07b8-0x07bf */
@@ -280,7 +284,7 @@ static unsigned short const keysym_to_unicode_7a1_7f9[] = {
 };
 
 static unsigned short const keysym_to_unicode_8a4_8fe[] = {
-                                    0x2320, 0x2321, 0x0000, 0x231c, /* 0x08a0-0x08a7 */
+    0x2320, 0x2321, 0x0000, 0x231c,                                 /* 0x08a0-0x08a7 */
     0x231d, 0x231e, 0x231f, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, /* 0x08a8-0x08af */
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, /* 0x08b0-0x08b7 */
     0x0000, 0x0000, 0x0000, 0x0000, 0x2264, 0x2260, 0x2265, 0x222b, /* 0x08b8-0x08bf */
@@ -295,7 +299,7 @@ static unsigned short const keysym_to_unicode_8a4_8fe[] = {
 };
 
 static unsigned short const keysym_to_unicode_9df_9f8[] = {
-                                                            0x2422, /* 0x09d8-0x09df */
+    0x2422,                                                         /* 0x09d8-0x09df */
     0x2666, 0x25a6, 0x2409, 0x240c, 0x240d, 0x240a, 0x0000, 0x0000, /* 0x09e0-0x09e7 */
     0x240a, 0x240b, 0x2518, 0x2510, 0x250c, 0x2514, 0x253c, 0x2500, /* 0x09e8-0x09ef */
     0x0000, 0x0000, 0x0000, 0x0000, 0x251c, 0x2524, 0x2534, 0x252c, /* 0x09f0-0x09f7 */
@@ -303,7 +307,7 @@ static unsigned short const keysym_to_unicode_9df_9f8[] = {
 };
 
 static unsigned short const keysym_to_unicode_aa1_afe[] = {
-            0x2003, 0x2002, 0x2004, 0x2005, 0x2007, 0x2008, 0x2009, /* 0x0aa0-0x0aa7 */
+    0x2003, 0x2002, 0x2004, 0x2005, 0x2007, 0x2008, 0x2009,         /* 0x0aa0-0x0aa7 */
     0x200a, 0x2014, 0x2013, 0x0000, 0x0000, 0x0000, 0x2026, 0x2025, /* 0x0aa8-0x0aaf */
     0x2153, 0x2154, 0x2155, 0x2156, 0x2157, 0x2158, 0x2159, 0x215a, /* 0x0ab0-0x0ab7 */
     0x2105, 0x0000, 0x0000, 0x2012, 0x2039, 0x2024, 0x203a, 0x0000, /* 0x0ab8-0x0abf */
@@ -320,7 +324,7 @@ static unsigned short const keysym_to_unicode_aa1_afe[] = {
 /* none of the APL keysyms match the Unicode characters */
 
 static unsigned short const keysym_to_unicode_cdf_cfa[] = {
-                                                            0x2017, /* 0x0cd8-0x0cdf */
+    0x2017,                                                         /* 0x0cd8-0x0cdf */
     0x05d0, 0x05d1, 0x05d2, 0x05d3, 0x05d4, 0x05d5, 0x05d6, 0x05d7, /* 0x0ce0-0x0ce7 */
     0x05d8, 0x05d9, 0x05da, 0x05db, 0x05dc, 0x05dd, 0x05de, 0x05df, /* 0x0ce8-0x0cef */
     0x05e0, 0x05e1, 0x05e2, 0x05e3, 0x05e4, 0x05e5, 0x05e6, 0x05e7, /* 0x0cf0-0x0cf7 */
@@ -328,7 +332,7 @@ static unsigned short const keysym_to_unicode_cdf_cfa[] = {
 };
 
 static unsigned short const keysym_to_unicode_da1_df9[] = {
-            0x0e01, 0x0e02, 0x0e03, 0x0e04, 0x0e05, 0x0e06, 0x0e07, /* 0x0da0-0x0da7 */
+    0x0e01, 0x0e02, 0x0e03, 0x0e04, 0x0e05, 0x0e06, 0x0e07,         /* 0x0da0-0x0da7 */
     0x0e08, 0x0e09, 0x0e0a, 0x0e0b, 0x0e0c, 0x0e0d, 0x0e0e, 0x0e0f, /* 0x0da8-0x0daf */
     0x0e10, 0x0e11, 0x0e12, 0x0e13, 0x0e14, 0x0e15, 0x0e16, 0x0e17, /* 0x0db0-0x0db7 */
     0x0e18, 0x0e19, 0x0e1a, 0x0e1b, 0x0e1c, 0x0e1d, 0x0e1e, 0x0e1f, /* 0x0db8-0x0dbf */
@@ -358,7 +362,7 @@ static unsigned short const keysym_to_unicode_ea0_eff[] = {
 };
 
 static unsigned short const keysym_to_unicode_12a1_12fe[] = {
-            0x1e02, 0x1e03, 0x0000, 0x0000, 0x0000, 0x1e0a, 0x0000, /* 0x12a0-0x12a7 */
+    0x1e02, 0x1e03, 0x0000, 0x0000, 0x0000, 0x1e0a, 0x0000,         /* 0x12a0-0x12a7 */
     0x1e80, 0x0000, 0x1e82, 0x1e0b, 0x1ef2, 0x0000, 0x0000, 0x0000, /* 0x12a8-0x12af */
     0x1e1e, 0x1e1f, 0x0000, 0x0000, 0x1e40, 0x1e41, 0x0000, 0x1e56, /* 0x12b0-0x12b7 */
     0x1e81, 0x1e57, 0x1e83, 0x1e60, 0x1ef3, 0x1e84, 0x1e85, 0x1e61, /* 0x12b8-0x12bf */
@@ -373,11 +377,11 @@ static unsigned short const keysym_to_unicode_12a1_12fe[] = {
 };
 
 static unsigned short const keysym_to_unicode_13bc_13be[] = {
-                                    0x0152, 0x0153, 0x0178          /* 0x13b8-0x13bf */
+    0x0152, 0x0153, 0x0178 /* 0x13b8-0x13bf */
 };
 
 static unsigned short const keysym_to_unicode_14a1_14ff[] = {
-            0x2741, 0x00a7, 0x0589, 0x0029, 0x0028, 0x00bb, 0x00ab, /* 0x14a0-0x14a7 */
+    0x2741, 0x00a7, 0x0589, 0x0029, 0x0028, 0x00bb, 0x00ab,         /* 0x14a0-0x14a7 */
     0x2014, 0x002e, 0x055d, 0x002c, 0x2013, 0x058a, 0x2026, 0x055c, /* 0x14a8-0x14af */
     0x055b, 0x055e, 0x0531, 0x0561, 0x0532, 0x0562, 0x0533, 0x0563, /* 0x14b0-0x14b7 */
     0x0534, 0x0564, 0x0535, 0x0565, 0x0536, 0x0566, 0x0537, 0x0567, /* 0x14b8-0x14bf */
@@ -414,19 +418,18 @@ static unsigned short const keysym_to_unicode_16a0_16f6[] = {
 };
 
 static unsigned short const keysym_to_unicode_1e9f_1eff[] = {
-                                                            0x0303,
-    0x1ea0, 0x1ea1, 0x1ea2, 0x1ea3, 0x1ea4, 0x1ea5, 0x1ea6, 0x1ea7, /* 0x1ea0-0x1ea7 */
-    0x1ea8, 0x1ea9, 0x1eaa, 0x1eab, 0x1eac, 0x1ead, 0x1eae, 0x1eaf, /* 0x1ea8-0x1eaf */
-    0x1eb0, 0x1eb1, 0x1eb2, 0x1eb3, 0x1eb4, 0x1eb5, 0x1eb6, 0x1eb7, /* 0x1eb0-0x1eb7 */
-    0x1eb8, 0x1eb9, 0x1eba, 0x1ebb, 0x1ebc, 0x1ebd, 0x1ebe, 0x1ebf, /* 0x1eb8-0x1ebf */
-    0x1ec0, 0x1ec1, 0x1ec2, 0x1ec3, 0x1ec4, 0x1ec5, 0x1ec6, 0x1ec7, /* 0x1ec0-0x1ec7 */
-    0x1ec8, 0x1ec9, 0x1eca, 0x1ecb, 0x1ecc, 0x1ecd, 0x1ece, 0x1ecf, /* 0x1ec8-0x1ecf */
-    0x1ed0, 0x1ed1, 0x1ed2, 0x1ed3, 0x1ed4, 0x1ed5, 0x1ed6, 0x1ed7, /* 0x1ed0-0x1ed7 */
-    0x1ed8, 0x1ed9, 0x1eda, 0x1edb, 0x1edc, 0x1edd, 0x1ede, 0x1edf, /* 0x1ed8-0x1edf */
-    0x1ee0, 0x1ee1, 0x1ee2, 0x1ee3, 0x1ee4, 0x1ee5, 0x1ee6, 0x1ee7, /* 0x1ee0-0x1ee7 */
-    0x1ee8, 0x1ee9, 0x1eea, 0x1eeb, 0x1eec, 0x1eed, 0x1eee, 0x1eef, /* 0x1ee8-0x1eef */
-    0x1ef0, 0x1ef1, 0x0300, 0x0301, 0x1ef4, 0x1ef5, 0x1ef6, 0x1ef7, /* 0x1ef0-0x1ef7 */
-    0x1ef8, 0x1ef9, 0x01a0, 0x01a1, 0x01af, 0x01b0, 0x0309, 0x0323  /* 0x1ef8-0x1eff */
+    0x0303, 0x1ea0, 0x1ea1, 0x1ea2, 0x1ea3, 0x1ea4, 0x1ea5, 0x1ea6, 0x1ea7, /* 0x1ea0-0x1ea7 */
+    0x1ea8, 0x1ea9, 0x1eaa, 0x1eab, 0x1eac, 0x1ead, 0x1eae, 0x1eaf,         /* 0x1ea8-0x1eaf */
+    0x1eb0, 0x1eb1, 0x1eb2, 0x1eb3, 0x1eb4, 0x1eb5, 0x1eb6, 0x1eb7,         /* 0x1eb0-0x1eb7 */
+    0x1eb8, 0x1eb9, 0x1eba, 0x1ebb, 0x1ebc, 0x1ebd, 0x1ebe, 0x1ebf,         /* 0x1eb8-0x1ebf */
+    0x1ec0, 0x1ec1, 0x1ec2, 0x1ec3, 0x1ec4, 0x1ec5, 0x1ec6, 0x1ec7,         /* 0x1ec0-0x1ec7 */
+    0x1ec8, 0x1ec9, 0x1eca, 0x1ecb, 0x1ecc, 0x1ecd, 0x1ece, 0x1ecf,         /* 0x1ec8-0x1ecf */
+    0x1ed0, 0x1ed1, 0x1ed2, 0x1ed3, 0x1ed4, 0x1ed5, 0x1ed6, 0x1ed7,         /* 0x1ed0-0x1ed7 */
+    0x1ed8, 0x1ed9, 0x1eda, 0x1edb, 0x1edc, 0x1edd, 0x1ede, 0x1edf,         /* 0x1ed8-0x1edf */
+    0x1ee0, 0x1ee1, 0x1ee2, 0x1ee3, 0x1ee4, 0x1ee5, 0x1ee6, 0x1ee7,         /* 0x1ee0-0x1ee7 */
+    0x1ee8, 0x1ee9, 0x1eea, 0x1eeb, 0x1eec, 0x1eed, 0x1eee, 0x1eef,         /* 0x1ee8-0x1eef */
+    0x1ef0, 0x1ef1, 0x0300, 0x0301, 0x1ef4, 0x1ef5, 0x1ef6, 0x1ef7,         /* 0x1ef0-0x1ef7 */
+    0x1ef8, 0x1ef9, 0x01a0, 0x01a1, 0x01af, 0x01b0, 0x0309, 0x0323          /* 0x1ef8-0x1eff */
 };
 
 static unsigned short const keysym_to_unicode_20a0_20ac[] = {
@@ -435,110 +438,106 @@ static unsigned short const keysym_to_unicode_20a0_20ac[] = {
 };
 
 
-#define IsUCSPrintableLatin1(c) ( ( ((c) >= 32) && ((c) <= 126) ) || \
-                                  ( ((c) >= 160) && ((c) <= 255) ) \
-                                )
-#define IsUCSLatinExtAB(c)      ( ((c) >= 0x0100) && ((c) <= 0x024f) )
-#define IsUCSGreek_Coptic(c)    ( ((c) >= 0x0370) && ((c) <= 0x03ff) )
-#define IsUCSCyrillic(c)        ( ((c) >= 0x0400) && ((c) <= 0x04ff) )
-#define IsUCSArmenian(c)        ( ((c) >= 0x0530) && ((c) <= 0x058f) )
-#define IsUCSHebrew(c)          ( ((c) >= 0x0590) && ((c) <= 0x05ff) )
-#define IsUCSArabic(c)          ( ((c) >= 0x0600) && ((c) <= 0x06ff) )
-#define IsUCSThai(c)            ( ((c) >= 0x0e00) && ((c) <= 0x0e7f) )
-#define IsUCSGeorgian(c)        ( (((c) >= 0x10a0) && ((c) <= 0x10ff)) || (((c) >= 0x1c90) && ((c) <= 0x1cbf)) )
-#define IsUCSHangulJamo(c)      ( ((c) >= 0x1100) && ((c) <= 0x11ff) )
-#define IsUCSLatinExtAdd(c)     ( ((c) >= 0x1e00) && ((c) <= 0x1eff) )
-#define IsUCSGenPunc(c)         ( ((c) >= 0x2000) && ((c) <= 0x206f) )
-#define IsUCSCurrSym(c)         ( ((c) >= 0x20a0) && ((c) <= 0x20cf) )
-#define IsUCSCJKSym_Punc(c)     ( ((c) >= 0x3000) && ((c) <= 0x303f) )
-#define IsUCSKatakana(c)        ( ((c) >= 0x30a0) && ((c) <= 0x30ff) )
+#define IsUCSPrintableLatin1(c) ((((c) >= 32) && ((c) <= 126)) || (((c) >= 160) && ((c) <= 255)))
+#define IsUCSLatinExtAB(c) (((c) >= 0x0100) && ((c) <= 0x024f))
+#define IsUCSGreek_Coptic(c) (((c) >= 0x0370) && ((c) <= 0x03ff))
+#define IsUCSCyrillic(c) (((c) >= 0x0400) && ((c) <= 0x04ff))
+#define IsUCSArmenian(c) (((c) >= 0x0530) && ((c) <= 0x058f))
+#define IsUCSHebrew(c) (((c) >= 0x0590) && ((c) <= 0x05ff))
+#define IsUCSArabic(c) (((c) >= 0x0600) && ((c) <= 0x06ff))
+#define IsUCSThai(c) (((c) >= 0x0e00) && ((c) <= 0x0e7f))
+#define IsUCSGeorgian(c) ((((c) >= 0x10a0) && ((c) <= 0x10ff)) || (((c) >= 0x1c90) && ((c) <= 0x1cbf)))
+#define IsUCSHangulJamo(c) (((c) >= 0x1100) && ((c) <= 0x11ff))
+#define IsUCSLatinExtAdd(c) (((c) >= 0x1e00) && ((c) <= 0x1eff))
+#define IsUCSGenPunc(c) (((c) >= 0x2000) && ((c) <= 0x206f))
+#define IsUCSCurrSym(c) (((c) >= 0x20a0) && ((c) <= 0x20cf))
+#define IsUCSCJKSym_Punc(c) (((c) >= 0x3000) && ((c) <= 0x303f))
+#define IsUCSKatakana(c) (((c) >= 0x30a0) && ((c) <= 0x30ff))
 
-#define IsKSLatinExt(c)         ( ( ((c) & 0xff00) == 0x01 ) || \
-                                  ( ((c) & 0xff00) == 0x02 ) || \
-                                  ( ((c) & 0xff00) == 0x03 ) || \
-                                  ( ((c) & 0xff00) == 0x12 ) || \
-                                  ( ((c) & 0xff00) == 0x13 ) \
-                                )
-#define IsKSKatakana(c)         ( ((c) & 0xff00) == 0x0400 )
-#define IsKSArabic(c)           ( ((c) & 0xff00) == 0x0500 )
-#define IsKSCyrillic(c)         ( ((c) & 0xff00) == 0x0600 )
-#define IsKSGreek(c)            ( ((c) & 0xff00) == 0x0700 )
-#define IsKSTechnical(c)        ( ((c) & 0xff00) == 0x0800 )
-#define IsKSSpecial(c)          ( ((c) & 0xff00) == 0x0900 )
-#define IsKSPublishing(c)       ( ((c) & 0xff00) == 0x0a00 )
-#define IsKSAPL(c)              ( ((c) & 0xff00) == 0x0b00 )
-#define IsKSHebrew(c)           ( ((c) & 0xff00) == 0x0c00 )
-#define IsKSThai(c)             ( ((c) & 0xff00) == 0x0d00 )
-#define IsKSKorean(c)           ( ((c) & 0xff00) == 0x0e00 )
-#define IsKSArmenian(c)         ( ((c) & 0xff00) == 0x1400 )
-#define IsKSGeorgian(c)         ( ((c) & 0xff00) == 0x1500 )
-#define IsKSAzeri(c)            ( ((c) & 0xff00) == 0x1600 )
-#define IsKSVietnamese(c)       ( ((c) & 0xff00) == 0x1e00 )
-#define IsKSCurrency(c)         ( ((c) & 0xff00) == 0x2000 )
-#define IsKSUnicode(c)          ( ((c) & 0x01000000) == 0x01000000 )
+#define IsKSLatinExt(c)                                                                                                            \
+    ((((c) & 0xff00) == 0x01) || (((c) & 0xff00) == 0x02) || (((c) & 0xff00) == 0x03) || (((c) & 0xff00) == 0x12) ||               \
+     (((c) & 0xff00) == 0x13))
+#define IsKSKatakana(c) (((c) & 0xff00) == 0x0400)
+#define IsKSArabic(c) (((c) & 0xff00) == 0x0500)
+#define IsKSCyrillic(c) (((c) & 0xff00) == 0x0600)
+#define IsKSGreek(c) (((c) & 0xff00) == 0x0700)
+#define IsKSTechnical(c) (((c) & 0xff00) == 0x0800)
+#define IsKSSpecial(c) (((c) & 0xff00) == 0x0900)
+#define IsKSPublishing(c) (((c) & 0xff00) == 0x0a00)
+#define IsKSAPL(c) (((c) & 0xff00) == 0x0b00)
+#define IsKSHebrew(c) (((c) & 0xff00) == 0x0c00)
+#define IsKSThai(c) (((c) & 0xff00) == 0x0d00)
+#define IsKSKorean(c) (((c) & 0xff00) == 0x0e00)
+#define IsKSArmenian(c) (((c) & 0xff00) == 0x1400)
+#define IsKSGeorgian(c) (((c) & 0xff00) == 0x1500)
+#define IsKSAzeri(c) (((c) & 0xff00) == 0x1600)
+#define IsKSVietnamese(c) (((c) & 0xff00) == 0x1e00)
+#define IsKSCurrency(c) (((c) & 0xff00) == 0x2000)
+#define IsKSUnicode(c) (((c) & 0x01000000) == 0x01000000)
 
 class ClientConnection;
 
-class KeyMap {
-  public:
-    KeyMap();
-    void    PCtoX(BYTE virtKey, DWORD keyData, ClientConnection* clientCon);
-    void    SetKeyMapOption1(bool sendDeadKeyOpt);
-    void    SetKeyMapOption2(bool useUnicodeKeysymOpt);
-    void    Reset();
-    void    ReleaseAllKeys(ClientConnection* clientCon);
+class KeyMap
+{
+public:
+    explicit KeyMap();
+    void PCtoX(BYTE virtKey, DWORD keyData, ClientConnection* clientCon);
+    void SetKeyMapOption1(bool sendDeadKeyOpt);
+    void SetKeyMapOption2(bool useUnicodeKeysymOpt);
+    void Reset();
+    void ReleaseAllKeys(ClientConnection* clientCon);
 
-  private:
-    void    BuildUCS2KS_Map(void);
-    std::map<WCHAR,CARD32> ucsLatinExtABMap;
-    std::map<WCHAR,CARD32> ucsGreek_CopticMap;
-    std::map<WCHAR,CARD32> ucsCyrillicMap;
-    std::map<WCHAR,CARD32> ucsArmenianMap;
-    std::map<WCHAR,CARD32> ucsHebrewMap;
-    std::map<WCHAR,CARD32> ucsArabicMap;
-    std::map<WCHAR,CARD32> ucsThaiMap;
-    std::map<WCHAR,CARD32> ucsGeorgianMap;
-    std::map<WCHAR,CARD32> ucsHangulJamoMap;
-    std::map<WCHAR,CARD32> ucsLatinExtAddMap;
-    std::map<WCHAR,CARD32> ucsGenPuncMap;
-    std::map<WCHAR,CARD32> ucsCurrSymMap;
-    std::map<WCHAR,CARD32> ucsCJKSym_PuncMap;
-    std::map<WCHAR,CARD32> ucsKatakanaMap;
-    std::map<WCHAR,CARD32> ucsOthersMap;
-    std::map<CARD32,WCHAR> ksLatinExtMap;
-    std::map<CARD32,WCHAR> ksKatakanaMap;
-    std::map<CARD32,WCHAR> ksArabicMap;
-    std::map<CARD32,WCHAR> ksCyrillicMap;
-    std::map<CARD32,WCHAR> ksGreekMap;
-    std::map<CARD32,WCHAR> ksTechnicalMap;
-    std::map<CARD32,WCHAR> ksSpecialMap;
-    std::map<CARD32,WCHAR> ksPublishingMap;
-    std::map<CARD32,WCHAR> ksHebrewMap;
-    std::map<CARD32,WCHAR> ksThaiMap;
-    std::map<CARD32,WCHAR> ksKoreanMap;
-    std::map<CARD32,WCHAR> ksArmenianMap;
-    std::map<CARD32,WCHAR> ksGeorgianMap;
-    std::map<CARD32,WCHAR> ksAzeriMap;
-    std::map<CARD32,WCHAR> ksVietnameseMap;
-    std::map<CARD32,WCHAR> ksCurrencyMap;
-    WCHAR   ucsChar[4]; // Lots of space for now
-    BYTE    KBKeysState[256];
-    CARD32  downKeysym[512];
-    WCHAR   downUnicode[512];
-    WORD    keybId;
-    WORD    langId;
-    TCHAR   inputLocaleID[KL_NAMELENGTH];
-    HKL     keybHandle;
-    WCHAR   storedDeadChar;
-    void    FlushDeadKey(BYTE* keyState);
-    bool    sendDeadKey;
-    bool    useUnicodeKeysym;
-    void    StoreModifier(BYTE* modifierState, BYTE* keyState);
-    void    SetModifier(BYTE modifierState, BYTE* keyState);
-    CARD32  UCS2X(WCHAR UnicodeChar);
-    void    releaseKey(ClientConnection* clientCon, UINT extVkey);
-    void    pressKey(ClientConnection* clientCon, UINT extVkey, CARD32 keysym);
+private:
+    void BuildUCS2KS_Map(void);
+    std::map<WCHAR, CARD32> ucsLatinExtABMap;
+    std::map<WCHAR, CARD32> ucsGreek_CopticMap;
+    std::map<WCHAR, CARD32> ucsCyrillicMap;
+    std::map<WCHAR, CARD32> ucsArmenianMap;
+    std::map<WCHAR, CARD32> ucsHebrewMap;
+    std::map<WCHAR, CARD32> ucsArabicMap;
+    std::map<WCHAR, CARD32> ucsThaiMap;
+    std::map<WCHAR, CARD32> ucsGeorgianMap;
+    std::map<WCHAR, CARD32> ucsHangulJamoMap;
+    std::map<WCHAR, CARD32> ucsLatinExtAddMap;
+    std::map<WCHAR, CARD32> ucsGenPuncMap;
+    std::map<WCHAR, CARD32> ucsCurrSymMap;
+    std::map<WCHAR, CARD32> ucsCJKSym_PuncMap;
+    std::map<WCHAR, CARD32> ucsKatakanaMap;
+    std::map<WCHAR, CARD32> ucsOthersMap;
+    std::map<CARD32, WCHAR> ksLatinExtMap;
+    std::map<CARD32, WCHAR> ksKatakanaMap;
+    std::map<CARD32, WCHAR> ksArabicMap;
+    std::map<CARD32, WCHAR> ksCyrillicMap;
+    std::map<CARD32, WCHAR> ksGreekMap;
+    std::map<CARD32, WCHAR> ksTechnicalMap;
+    std::map<CARD32, WCHAR> ksSpecialMap;
+    std::map<CARD32, WCHAR> ksPublishingMap;
+    std::map<CARD32, WCHAR> ksHebrewMap;
+    std::map<CARD32, WCHAR> ksThaiMap;
+    std::map<CARD32, WCHAR> ksKoreanMap;
+    std::map<CARD32, WCHAR> ksArmenianMap;
+    std::map<CARD32, WCHAR> ksGeorgianMap;
+    std::map<CARD32, WCHAR> ksAzeriMap;
+    std::map<CARD32, WCHAR> ksVietnameseMap;
+    std::map<CARD32, WCHAR> ksCurrencyMap;
+    std::array<WCHAR, 4U> ucsChar; // Lots of space for now
+    std::array<BYTE, 256U> KBKeysState;
+    CARD32 downKeysym[512U];
+    std::array<WCHAR, 512U> downUnicode;
+    WORD keybId;
+    WORD langId;
+    std::array<TCHAR, KL_NAMELENGTH> inputLocaleID;
+    HKL keybHandle;
+    WCHAR storedDeadChar;
+    void FlushDeadKey(BYTE* keyState);
+    bool sendDeadKey;
+    bool useUnicodeKeysym;
+    void StoreModifier(BYTE* modifierState, BYTE* keyState);
+    void SetModifier(BYTE modifierState, BYTE* keyState);
+    CARD32 UCS2X(WCHAR UnicodeChar);
+    void releaseKey(ClientConnection* clientCon, UINT extVkey);
+    void pressKey(ClientConnection* clientCon, UINT extVkey, CARD32 keysym);
 };
 
 
-#pragma warning(default:4786) // Debug identifier truncated
+#pragma warning(default : 4786) // Debug identifier truncated

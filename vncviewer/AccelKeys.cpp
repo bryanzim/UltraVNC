@@ -10,103 +10,108 @@
 
 
 #include "stdhdrs.h"
-#include "vncviewer.h"
+
 #include "AccelKeys.h"
 
+#include "vncviewer.h"
+
+#include <array>
 //
 // Build the Accelerators Table
-// 
+//
+
 AccelKeys::AccelKeys()
 {
-	ACCEL AccelTable[16];
-	int i = 0;
-	m_hWnd = 0;
+    std::array<ACCEL, 16U> AccelTable;
+    int i{ 0 };
+    m_hWnd = nullptr;
 
-	/*
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
-	AccelTable[i].key = VK_F3;
-	AccelTable[i++].cmd = ID_CONN_CTLESC;
-	*/
+    /*
+    AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
+    AccelTable[i].key = VK_F3;
+    AccelTable[i++].cmd = ID_CONN_CTLESC;
+    */
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
-	AccelTable[i].key = VK_F3;
-	AccelTable[i++].cmd = ID_VIEWONLYTOGGLE;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
+    AccelTable[static_cast<unsigned long long>(i)].key = VK_F3;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_VIEWONLYTOGGLE;
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
-	AccelTable[i].key = VK_F4;
-	AccelTable[i++].cmd = ID_CONN_CTLALTDEL;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
+    AccelTable[static_cast<unsigned long long>(i)].key = VK_F4;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_CONN_CTLALTDEL;
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
-	AccelTable[i].key = VK_F5;
-	AccelTable[i++].cmd = ID_CONN_SAVE_AS;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
+    AccelTable[static_cast<unsigned long long>(i)].key = VK_F5;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_CONN_SAVE_AS;
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
-	AccelTable[i].key = VK_F6;
-	AccelTable[i++].cmd = IDC_OPTIONBUTTON;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
+    AccelTable[static_cast<unsigned long long>(i)].key = VK_F6;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = IDC_OPTIONBUTTON;
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
-	AccelTable[i].key = VK_F7;
-	AccelTable[i++].cmd = ID_FILETRANSFER;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
+    AccelTable[static_cast<unsigned long long>(i)].key = VK_F7;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_FILETRANSFER;
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
-	AccelTable[i].key = VK_F8;
-	AccelTable[i++].cmd = ID_TEXTCHAT;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
+    AccelTable[static_cast<unsigned long long>(i)].key = VK_F8;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_TEXTCHAT;
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
-	AccelTable[i].key = VK_F9;
-	AccelTable[i++].cmd = ID_DBUTTON;  // Toolbar Toggle
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
+    AccelTable[static_cast<unsigned long long>(i)].key = VK_F9;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_DBUTTON; // Toolbar Toggle
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
-	AccelTable[i].key = VK_F10;
-	AccelTable[i++].cmd = ID_AUTOSCALING;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
+    AccelTable[static_cast<unsigned long long>(i)].key = VK_F10;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_AUTOSCALING;
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FNOINVERT;
-	AccelTable[i].key = VK_F11;
-	AccelTable[i++].cmd = ID_NORMALSCREEN2;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FNOINVERT;
+    AccelTable[static_cast<unsigned long long>(i)].key = VK_F11;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_NORMALSCREEN2;
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
-	AccelTable[i].key = VK_F11;
-	AccelTable[i++].cmd = ID_HALFSCREEN;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
+    AccelTable[static_cast<unsigned long long>(i)].key = VK_F11;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_HALFSCREEN;
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
-	AccelTable[i].key = VK_F12;
-	AccelTable[i++].cmd = ID_FULLSCREEN;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT;
+    AccelTable[static_cast<unsigned long long>(i)].key = VK_F12;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_FULLSCREEN;
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT |FSHIFT;
-	AccelTable[i].key = 0x49;
-	AccelTable[i++].cmd = ID_CONN_ABOUT;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT | FSHIFT;
+    AccelTable[static_cast<unsigned long long>(i)].key = 0x49;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_CONN_ABOUT;
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT |FSHIFT;
-	AccelTable[i].key = 0x52;
-	AccelTable[i++].cmd = ID_REQUEST_REFRESH;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT | FSHIFT;
+    AccelTable[static_cast<unsigned long long>(i)].key = 0x52;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_REQUEST_REFRESH;
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT|FSHIFT;
-	AccelTable[i].key =0x4E;
-	AccelTable[i++].cmd = ID_NEWCONN;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT | FSHIFT;
+    AccelTable[static_cast<unsigned long long>(i)].key = 0x4E;
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_NEWCONN;
 
-	AccelTable[i].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT | FSHIFT;
-	AccelTable[i].key = 0x56; // V: type the clipboard as keystrokes
-	AccelTable[i++].cmd = ID_CONN_TYPECLIPBOARD;
+    AccelTable[static_cast<unsigned long long>(i)].fVirt = FVIRTKEY | FCONTROL | FALT | FNOINVERT | FSHIFT;
+    AccelTable[static_cast<unsigned long long>(i)].key = 0x56; // V: type the clipboard as keystrokes
+    AccelTable[static_cast<unsigned long long>(i++)].cmd = ID_CONN_TYPECLIPBOARD;
 
-	m_hAccelTable = CreateAcceleratorTable((LPACCEL)AccelTable, i);
+    m_hAccelTable = ::CreateAcceleratorTable(reinterpret_cast<LPACCEL>(AccelTable.data()), i);
 }
 
 //
 //
 //
-bool AccelKeys::TranslateAccelKeys(MSG *pMsg)
+bool AccelKeys::TranslateAccelKeys(MSG* const pMsg)
 {
-	if (m_hWnd == 0)
-		return false;
-	else
-		return (TranslateAccelerator(m_hWnd, m_hAccelTable, pMsg) != 0);
+    if (m_hWnd == nullptr)
+    {
+        return false;
+    }
+    else
+    {
+        return (::TranslateAccelerator(m_hWnd, m_hAccelTable, pMsg) != 0);
+    }
 }
 
 
 //
-// 
 //
-AccelKeys::~AccelKeys()
-{
-	DestroyAcceleratorTable(m_hAccelTable);
-}
+//
+AccelKeys::~AccelKeys() { ::DestroyAcceleratorTable(m_hAccelTable); }

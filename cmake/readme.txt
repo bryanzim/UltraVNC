@@ -11,6 +11,27 @@
 
 ######################
 
+# Windows, Visual Studio 2026 or clang-cl
+
+# Install Visual Studio 2026 with the Desktop development with C++ workload,
+# MFC (the resource scripts include afxres.h), and C++ Clang tools for Windows.
+# Install vcpkg and set VCPKG_ROOT, or clone it next to this repository
+# (for example F:\Git\vcpkg when this repository is F:\Git\UltraVNC).
+
+cd cmake
+cmake --preset vs2026
+cmake --build --preset vs2026
+
+cmake --preset vs2026-clang
+cmake --build --preset vs2026-clang
+
+# vs2026 uses the MSVC v145 toolset. vs2026-clang uses clang-cl.
+# Both are x64, static CRT (/MT), and link the vcpkg ports in the root vcpkg.json
+# (zlib, zstd, libjpeg-turbo, liblzma, libsodium, minizip-ng).
+
+
+######################
+
 # Debian Trixie/unstable amd64 qemu VM 2024-07-28
 
 apt install git curl zip unzip tar build-essential cmake ninja-build mingw-w64 nasm pkg-config ccache

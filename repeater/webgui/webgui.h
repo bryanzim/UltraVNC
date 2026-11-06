@@ -17,43 +17,43 @@
 
 typedef struct _mycomstruct
 {
-	char comment[256];
-	ULONG code;
-}mycomstruct,*pmycomstruct;
+    char comment[256];
+    ULONG code;
+} mycomstruct, *pmycomstruct;
 
 typedef struct _mystruct
 {
-	SOCKET local_in;
-	SOCKET local_out;
-	SOCKET remote;
-	ULONG	code;
-	DWORD timestamp;
-	BOOL used;
-	BOOL waitingThread;
-	BOOL server;
-	int nummer;
-	int size_buffer;
-	char preloadbuffer[1028];
-	char hostname[16];
-	char extracheck[64];
-	char time[100];
-	long recvbytes;
-	long sendbytes;
-	long average;
-	int viewer_nummer;
-	int server_nummer;
-}mystruct,*pmystruct;
+    SOCKET local_in;
+    SOCKET local_out;
+    SOCKET remote;
+    ULONG code;
+    DWORD timestamp;
+    BOOL used;
+    BOOL waitingThread;
+    BOOL server;
+    int nummer;
+    int size_buffer;
+    char preloadbuffer[1028];
+    char hostname[16];
+    char extracheck[64];
+    char time[100];
+    long recvbytes;
+    long sendbytes;
+    long average;
+    int viewer_nummer;
+    int server_nummer;
+} mystruct, *pmystruct;
 
 extern mystruct Servers[MAX_LIST];
 extern mystruct Viewers[MAX_LIST];
-extern mycomstruct comment[MAX_LIST*2];
+extern mycomstruct comment[MAX_LIST * 2];
 
 DWORD WINAPI ThreadStartWeb(LPVOID);
-char * lookup_comment(ULONG code);
+char* lookup_comment(ULONG code);
 
 void Read_settings();
 void Save_settings();
-void win_log(char *line);
+void win_log(char* line);
 
 extern int saved_mode2;
 extern int saved_mode1;

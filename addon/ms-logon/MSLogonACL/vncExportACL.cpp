@@ -11,201 +11,232 @@
 //
 
 
-#include <wchar.h>
-#include <tchar.h>
 #include "vncExportACL.h"
 
+#include <tchar.h>
+
+#include <array>
+#include <wchar.h>
 // Get ACL from regkey HKLM\Software\ORL\WinVNC3\ACL
-bool vncExportACL::GetACL(PACL *pACL){
-	HKEY hk = NULL; 
-	DWORD dwValueLength = SECURITY_DESCRIPTOR_MIN_LENGTH;
-	
-	_ftprintf(stderr, _T("== Entering GetACL\n"));
-	__try{
-		
-		if (ERROR_SUCCESS != RegOpenKeyEx( HKEY_LOCAL_MACHINE,
-			_T("Software\\ORL\\WinVNC3"),
-			0, KEY_QUERY_VALUE, &hk )){
-			_ftprintf(stderr, _T("== Error %d: RegOpenKeyEx\n"), GetLastError());
-			__leave;
-		}
-		// Read the ACL value from the VNC registry key
-		// First call to RegQueryValueEx just gets the buffer length.
-		if (ERROR_SUCCESS != RegQueryValueEx(hk,	// subkey handle 
-            _T("ACL"),				// value name 
-            0,                      // must be zero 
-            0,						// value type , not needed here
-			NULL,					// 
-            &dwValueLength)){       // length of value data 
-			_ftprintf(stderr, _T("== Error %d: RegQueryValueEx 1\tValueLength = %d\n"), 
-				GetLastError(), dwValueLength);
-			__leave;
-		}
-		*pACL = (PACL) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwValueLength);
-		
-		if (ERROR_SUCCESS != RegQueryValueEx(hk,	// subkey handle 
-            _T("ACL"),								// value name 
-            0,										// must be zero 
-            0,										// value type 
-			(LPBYTE) *pACL,
-            &dwValueLength)){						// length of value data 
-			_ftprintf(stderr, _T("== Error %d: RegQueryValueEx 2\n"), GetLastError());
-			__leave;
-		}
-		_ftprintf(stderr, _T("== RegQueryValueEx passed\tdwValueLength = %d\n"), dwValueLength);
 
-	} __finally {
-		if (hk)
-			RegCloseKey(hk); 
-	}
-	return true;
-}
-
-
-
-const TCHAR *vncExportACL::SidToText( PSID psid )
+bool vncExportACL::GetACL(PACL* pACL)
 {
-	// S-rev- + SIA + subauthlen*maxsubauth + terminator
-	static TCHAR buf[15 + 12 + 12*SID_MAX_SUB_AUTHORITIES + 1];
-	TCHAR *p = &buf[0];
-	PSID_IDENTIFIER_AUTHORITY psia;
-	DWORD numSubAuths, i;
+    HKEY hk = nullptr;
+    DWORD dwValueLength = SECURITY_DESCRIPTOR_MIN_LENGTH;
 
-	// Validate the binary SID.
+    _ftprintf(stderr, _T("== Entering GetACL\n"));
+    __try
+    {
 
-	if (!IsValidSid(psid))
-		return FALSE;
+        if (ERROR_SUCCESS != ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, _T("Software\\ORL\\WinVNC3"), 0, KEY_QUERY_VALUE, &hk))
+        {
+            _ftprintf(stderr, _T("== Error %d: RegOpenKeyEx\n"), ::GetLastError());
+            __leave;
+        }
+        // Read the ACL value from the VNC registry key
+        // First call to RegQueryValueEx just gets the buffer length.
+        if (ERROR_SUCCESS != RegQueryValueEx(hk,        // subkey handle
+                                             _T("ACL"), // value name
+                                             nullptr,         // must be zero
+                                             nullptr,         // value type , not needed here
+                                             nullptr,   //
+                                             &dwValueLength))
+        { // length of value data
+            _ftprintf(stderr, _T("== Error %d: RegQueryValueEx 1\tValueLength = %d\n"), ::GetLastError(), dwValueLength);
+            __leave;
+        }
+        *pACL = reinterpret_cast<PACL>(::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, dwValueLength));
 
-	psia = GetSidIdentifierAuthority(psid);
-
-	p = buf;
-	p += _sntprintf(p, &buf[sizeof buf] - p, _T("S-%lu-"), 0x0f & *((byte *)psid));
-
-	if ((psia->Value[0] != 0) || (psia->Value[1] != 0))
-		p += _sntprintf( p, &buf[sizeof buf] - p, _T("0x%02hx%02hx%02hx%02hx%02hx%02hx"),
-			(USHORT) psia->Value[0], (USHORT) psia->Value[1],
-			(USHORT) psia->Value[2], (USHORT) psia->Value[3],
-			(USHORT) psia->Value[4], (USHORT) psia->Value[5] );
-	else
-		p += _sntprintf(p, &buf[sizeof buf] - p, _T("%lu"), (ULONG) (psia->Value[5]) +
-			(ULONG) (psia->Value[4] << 8) + (ULONG) (psia->Value[3] << 16) +
-			(ULONG) (psia->Value[2] << 24));
-
-	// Add SID subauthorities to the string.
-
-	numSubAuths = *GetSidSubAuthorityCount(psid);
-	for (i = 0; i < numSubAuths; ++ i)
-		p += _sntprintf(p, &buf[sizeof buf] - p, _T("-%lu"), *GetSidSubAuthority(psid, i));
-
-	return buf;
+        if (ERROR_SUCCESS != RegQueryValueEx(hk,        // subkey handle
+                                             _T("ACL"), // value name
+                                             nullptr,         // must be zero
+                                             nullptr,         // value type
+                                             reinterpret_cast<LPBYTE>(*pACL), &dwValueLength))
+        { // length of value data
+            _ftprintf(stderr, _T("== Error %d: RegQueryValueEx 2\n"), ::GetLastError());
+            __leave;
+        }
+        _ftprintf(stderr, _T("== RegQueryValueEx passed\tdwValueLength = %d\n"), dwValueLength);
+    }
+    __finally
+    {
+        if (hk)
+        {
+            ::RegCloseKey(hk);
+        }
+    }
+    return true;
 }
 
-void vncExportACL::PrintSid(PSID psid)
+
+
+const TCHAR* vncExportACL::SidToText(const PSID psid)
 {
-	TCHAR name[256], domain[256];
-	DWORD cbname = sizeof name, cbdomain = sizeof domain, rc;
-	SID_NAME_USE sidUse;
+    // S-rev- + SIA + subauthlen*maxsubauth + terminator
+    static std::array<TCHAR, 15 + 12 + 12 * SID_MAX_SUB_AUTHORITIES + 1> buf;
+    TCHAR* p = &buf[0U];
+    PSID_IDENTIFIER_AUTHORITY psia;
+    DWORD numSubAuths, i;
 
-	//!! next line has hardcoded server name !!
-	// NULL server name is usually appropriate, though.
-	if (LookupAccountSid(NULL, psid, name, &cbname, domain, &cbdomain, &sidUse))
-	{
-		//Todo: Check if WellKnownSID and reserve special names for them.
+    // Validate the binary SID.
 
-/*		switch ( sidUse )
-		{
-			case SidTypeWellKnownGroup:	type = "well-known group"; break;
-			default:					type = "bad sidUse value"; break;
-		}
-*/
-		LPWKSTA_INFO_100 wkstainfo = NULL;
-		NET_API_STATUS nStatus;
-		TCHAR langroup[MAXLEN];
-		TCHAR computername[MAXLEN];
+    if (!::IsValidSid(psid))
+    {
+        return FALSE;
+    }
 
-		nStatus = NetWkstaGetInfo( 0 , 100 , (LPBYTE *) &wkstainfo);
-		if (nStatus == NERR_Success){
-			_tcsncpy(langroup, wkstainfo->wki100_langroup, MAXLEN);
-			_tcsncpy(computername, wkstainfo->wki100_computername, MAXLEN);
-			langroup[MAXLEN - 1] = _T('\0');
-			computername[MAXLEN - 1] = _T('\0');
-			// replace computername with a dot
-			if (_tcsicmp(computername, domain) == 0)
-				_tcscpy(domain,_T("."));
-			else if (_tcsicmp(langroup, domain) == 0)
-				_tcscpy(domain, _T(".."));
-		}
-		else
-			_tprintf(_T("NetWkstaGetInfo() returned %lu \n"), nStatus);
+    psia = ::GetSidIdentifierAuthority(psid);
 
-		NetApiBufferFree(wkstainfo);
-		wkstainfo = NULL;
+    p = buf.data();
+    p += _sntprintf(p, &buf[sizeof buf] - p, _T("S-%lu-"), 0x0f & *(reinterpret_cast<byte*>(psid)));
 
-		// If domain or username contains whitespace, print enclosing quotes
-		if (_tcschr(domain, _T(' ')) || _tcschr(name, _T(' ')))
-			_tprintf(_T("\"%s%s%s\"\n"), domain, (domain == 0 || *domain == _T('\0'))? _T(""): _T("\\"), name);
-		else
-			_tprintf(_T("%s%s%s\n"), domain, (domain == 0 || *domain == _T('\0'))? _T(""): _T("\\"), name);
-	}
-	else
-	{
-		rc = GetLastError();
-		_tprintf(_T("[%s] *** error %lu\n"), SidToText( psid ), rc);
-	}
+    if ((psia->Value[0U] != 0) || (psia->Value[1U] != 0))
+    {
+        p += _sntprintf(p, &buf[sizeof buf] - p, _T("0x%02hx%02hx%02hx%02hx%02hx%02hx"), static_cast<USHORT>(psia->Value[0U]),
+                        static_cast<USHORT>(psia->Value[1U]), static_cast<USHORT>(psia->Value[2U]), static_cast<USHORT>(psia->Value[3U]), static_cast<USHORT>(psia->Value[4U]),
+                        static_cast<USHORT>(psia->Value[5U]));
+    }
+    else
+    {
+        p += _sntprintf(p, &buf[sizeof buf] - p, _T("%lu"),
+                        static_cast<ULONG>((psia->Value[5U])) + static_cast<ULONG>((psia->Value[4U] << 8)) +
+                            static_cast<ULONG>((psia->Value[3U] << 16)) + static_cast<ULONG>((psia->Value[2U] << 24)));
+    }
+
+    // Add SID subauthorities to the string.
+
+    numSubAuths = *GetSidSubAuthorityCount(psid);
+    for (i = 0; i < numSubAuths; ++i)
+    {
+        p += _sntprintf(p, &buf[sizeof buf] - p, _T("-%lu"), *GetSidSubAuthority(psid, i));
+    }
+
+    return buf.data();
 }
 
-void vncExportACL::PrintAce(int index, PACL acl){
-
-	ACE_HEADER *ace;
-	TCHAR *type;
-	PSID psid;
-
-	if (!GetAce(acl, index, (void **) &ace)) {
-		_tprintf(_T("DACL, entry %d: GetAce() failed, gle == %lu\n"),
-			index, GetLastError());
-		return;
-	}
-
-	switch ( ace->AceType ) {
-		case ACCESS_ALLOWED_ACE_TYPE:
-			type = _T("allow");
-			psid = &((ACCESS_ALLOWED_ACE *) ace)->SidStart;
-			break;
-		case ACCESS_DENIED_ACE_TYPE:
-			type = _T("deny");
-			psid = &((ACCESS_DENIED_ACE *) ace)->SidStart;
-			break;
-		default:
-			type = _T("invalid");
-			psid = &((ACCESS_ALLOWED_ACE *) ace)->SidStart;
-			break;
-	}
-	_tprintf(_T("%s\t"), type);
-
-	_tprintf(_T("0x%08lX\t"), ((ACCESS_ALLOWED_ACE *) ace)->Mask);
-
-	PrintSid( psid );
-}
-
-
-
-void vncExportACL::PrintAcl(PACL acl)
+void vncExportACL::PrintSid(const PSID psid)
 {
-	DWORD i;
-	ACL_SIZE_INFORMATION aci;
+    std::array<TCHAR, 256U> name;
+    std::array<TCHAR, 256U> domain;
+    DWORD cbname = sizeof name, cbdomain = sizeof domain, rc;
+    SID_NAME_USE sidUse;
 
-	if ( acl == 0 )
-		return;
+    //!! next line has hardcoded server name !!
+    // NULL server name is usually appropriate, though.
+    if (::LookupAccountSid(nullptr, psid, name.data(), &cbname, domain.data(), &cbdomain, &sidUse))
+    {
+        //Todo: Check if WellKnownSID and reserve special names for them.
 
-	if (!GetAclInformation( acl, &aci, sizeof aci, AclSizeInformation))	{
-		_tprintf(_T("GAI(): gle == %lu\n"), GetLastError());
-		return;
-	}
+        /*		switch ( sidUse )
+                {
+                    case SidTypeWellKnownGroup:	type = "well-known group"; break;
+                    default:					type = "bad sidUse value"; break;
+                }
+        */
+        LPWKSTA_INFO_100 wkstainfo = nullptr;
+        NET_API_STATUS nStatus;
+        std::array<TCHAR, MAXLEN> langroup;
+        std::array<TCHAR, MAXLEN> computername;
 
-	for ( i = 0; i < aci.AceCount; ++ i )
-		PrintAce(i, acl);
+        nStatus = ::NetWkstaGetInfo(nullptr, 100, reinterpret_cast<LPBYTE*>(&wkstainfo));
+        if (nStatus == NERR_Success)
+        {
+            _tcsncpy(langroup.data(), wkstainfo->wki100_langroup, MAXLEN);
+            _tcsncpy(computername.data(), wkstainfo->wki100_computername, MAXLEN);
+            langroup[MAXLEN - 1] = _T('\0');
+            computername[MAXLEN - 1] = _T('\0');
+            // replace computername with a dot
+            if (::_tcsicmp(computername.data(), domain.data()) == 0)
+            {
+                _tcscpy(domain.data(), _T("."));
+            }
+            else if (::_tcsicmp(langroup.data(), domain.data()) == 0)
+            {
+                _tcscpy(domain.data(), _T(".."));
+            }
+        }
+        else
+        {
+            _tprintf(_T("NetWkstaGetInfo() returned %lu \n"), nStatus);
+        }
 
+        NetApiBufferFree(wkstainfo);
+        wkstainfo = nullptr;
+
+        // If domain or username contains whitespace, print enclosing quotes
+        if (::_tcschr(domain.data(), _T(' ')) || ::_tcschr(name.data(), _T(' ')))
+        {
+            _tprintf(_T("\"%s%s%s\"\n"), domain.data(), ((domain.data() == nullptr) || (*domain.data() == _T('\0'))) ? _T("") : _T("\\"),
+                     name.data());
+        }
+        else
+        {
+            _tprintf(_T("%s%s%s\n"), domain.data(), ((domain.data() == nullptr) || (*domain.data() == _T('\0'))) ? _T("") : _T("\\"),
+                     name.data());
+        }
+    }
+    else
+    {
+        rc = ::GetLastError();
+        _tprintf(_T("[%s] *** error %lu\n"), SidToText(psid), rc);
+    }
+}
+
+void vncExportACL::PrintAce(const int index, const PACL acl)
+{
+
+    ACE_HEADER* ace;
+    TCHAR* type;
+    PSID psid;
+
+    if (!::GetAce(acl, static_cast<DWORD>(index), reinterpret_cast<void**>(&ace)))
+    {
+        _tprintf(_T("DACL, entry %d: GetAce() failed, gle == %lu\n"), index, ::GetLastError());
+        return;
+    }
+
+    switch (ace->AceType)
+    {
+    case ACCESS_ALLOWED_ACE_TYPE:
+        type = _T("allow");
+        psid = &(reinterpret_cast<ACCESS_ALLOWED_ACE*>(ace))->SidStart;
+        break;
+    case ACCESS_DENIED_ACE_TYPE:
+        type = _T("deny");
+        psid = &(reinterpret_cast<ACCESS_DENIED_ACE*>(ace))->SidStart;
+        break;
+    default:
+        type = _T("invalid");
+        psid = &(reinterpret_cast<ACCESS_ALLOWED_ACE*>(ace))->SidStart;
+        break;
+    }
+    _tprintf(_T("%s\t"), type);
+
+    _tprintf(_T("0x%08lX\t"), (reinterpret_cast<ACCESS_ALLOWED_ACE*>(ace))->Mask);
+
+    PrintSid(psid);
 }
 
 
 
+void vncExportACL::PrintAcl(const PACL acl)
+{
+    DWORD i;
+    ACL_SIZE_INFORMATION aci;
+
+    if (acl == nullptr)
+    {
+        return;
+    }
+
+    if (!::GetAclInformation(acl, &aci, sizeof aci, AclSizeInformation))
+    {
+        _tprintf(_T("GAI(): gle == %lu\n"), ::GetLastError());
+        return;
+    }
+
+    for (i = 0; i < aci.AceCount; ++i)
+    {
+        PrintAce(static_cast<int>(i), acl);
+    }
+}

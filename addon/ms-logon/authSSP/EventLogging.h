@@ -12,38 +12,43 @@
 
 #define _CRT_NON_CONFORMING_SWPRINTFS 1
 
-#include <windows.h>
-#include <stdio.h>
+#include <Windows.h>
+
+#include <LM.h>
 #include <lmcons.h>
+#include <tchar.h>
+
+#include <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <wchar.h>
-#include <tchar.h>
-#include <lm.h>
-#include <stdio.h>
+
 #define SECURITY_WIN32
 #include <sspi.h>
+
 #ifndef SEC_I_COMPLETE_NEEDED
 #include <issperr.h>
+
 #include <time.h>
+
 #endif
 #pragma hdrstop
 #include <stdarg.h>
 
 #define MAXLEN 256
-#define MAX_PREFERRED_LENGTH    ((DWORD) -1)
+#define MAX_PREFERRED_LENGTH ((DWORD) - 1)
 #define BUFSIZE 1024
 
 class EventLogging
 {
 public:
-	EventLogging();
-	virtual ~EventLogging();
-	virtual void LogIt(WORD CategoryID, DWORD EventID, LPCTSTR *ArrayOfStrings,
-		UINT NumOfArrayStr = 0,LPVOID RawData = NULL,DWORD RawDataSize = 0);
-	HANDLE m_hEventLinker;
-	void AddEventSourceToRegistry(LPCTSTR lpszSourceName);
-
+    explicit EventLogging();
+    virtual ~EventLogging();
+    virtual void LogIt(WORD CategoryID, DWORD EventID, LPCTSTR* ArrayOfStrings, UINT NumOfArrayStr = 0U, LPVOID RawData = nullptr,
+                       DWORD RawDataSize = 0U);
+    HANDLE m_hEventLinker;
+    void AddEventSourceToRegistry(LPCTSTR lpszSourceName);
 };
 
-void LOGV2(TCHAR* szMslogonLog, long EvenID, const TCHAR *format, ...);
+void LOGV2(TCHAR* szMslogonLog, long EvenID, const TCHAR* format, ...);
 void LOG(long EvenID, const TCHAR* format, ...);

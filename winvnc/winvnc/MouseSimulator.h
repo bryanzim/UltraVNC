@@ -1,3 +1,4 @@
+#include <array>
 // This file is part of UltraVNC
 // https://github.com/ultravnc/UltraVNC
 // https://uvnc.com/
@@ -11,42 +12,43 @@
 
 #pragma once
 
-class CursorColorManager {
+class CursorColorManager
+{
 private:
-	HICON hCorsor[9];
-	bool usedCursor[9];
-	static HINSTANCE hInst;
-	static CursorColorManager* instance;
+    std::array<HICON, 9U> hCorsor;
+    std::array<bool, 9U> usedCursor;
+    static HINSTANCE hInst;
+    static CursorColorManager* instance;
 
 public:
-	CursorColorManager();
-	~CursorColorManager();
-	void Init(HINSTANCE hInst);
-	HICON getCursor();
-	void releaseCursor(HICON icon);
-	HICON getEraser();
-	static CursorColorManager* getInstance();
+    explicit CursorColorManager();
+    ~CursorColorManager();
+    void Init(HINSTANCE hInst);
+    HICON getCursor();
+    void releaseCursor(HICON icon);
+    HICON getEraser();
+    static CursorColorManager* getInstance();
 };
 
-class SimulateCursor {
+class SimulateCursor
+{
 private:
-	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-	LRESULT CALLBACK realWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-	bool drawn = false;
-	int oldx = 0;
-	int oldy = 0;
-	int x = 0;
-	int y = 0;
-	HICON hIconMouse;
-	HICON hIconErase;
-	HWND hWnd;
-	HINSTANCE hInst;
-	static DWORD WINAPI Start(LPVOID lpParam);
-	static HWND create_window(SimulateCursor* simulateCursor);
+    static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+    LRESULT CALLBACK realWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+    bool drawn{ false };
+    int oldx{ 0 };
+    int oldy{ 0 };
+    int x{ 0 };
+    int y{ 0 };
+    HICON hIconMouse;
+    HICON hIconErase;
+    HWND hWnd;
+    HINSTANCE hInst;
+    static DWORD WINAPI Start(LPVOID lpParam);
+    static HWND create_window(SimulateCursor* simulateCursor);
 
 public:
-	SimulateCursor(HINSTANCE hInst);
-	~SimulateCursor();
-	void moveCursor(int x, int y);
-
+    explicit SimulateCursor(HINSTANCE hInst);
+    ~SimulateCursor();
+    void moveCursor(int x, int y);
 };

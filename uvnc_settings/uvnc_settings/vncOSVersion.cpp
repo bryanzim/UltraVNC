@@ -8,45 +8,52 @@
 // SPDX-FileCopyrightText: Copyright (C) 1999-2002 Vdacc-VNC & eSVNC Projects. All Rights Reserved.
 //
 
-#pragma warning(disable: 4996)
+#pragma warning(disable : 4996)
 #include "stdafx.h"
 
-#include <windows.h>
-int OSTYPE=4;
-void
-SetOSVersion()
+#include <Windows.h>
+
+int OSTYPE{ 4 };
+void SetOSVersion()
 {
-	OSVERSIONINFO OSversion;
-	
-	OSversion.dwOSVersionInfoSize=sizeof(OSVERSIONINFO);
+    OSVERSIONINFO OSversion;
 
-	GetVersionEx(&OSversion);
+    OSversion.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 
-	switch(OSversion.dwPlatformId)
-	{
-		case VER_PLATFORM_WIN32_NT:
-								  if(OSversion.dwMajorVersion==5 && OSversion.dwMinorVersion==0)
-									 OSTYPE=1;							    
-								  if(OSversion.dwMajorVersion==5 && OSversion.dwMinorVersion==1)
-									 OSTYPE=1;
-								  if(OSversion.dwMajorVersion==5)
-									 OSTYPE=1;
-								  if(OSversion.dwMajorVersion==6)
-									 OSTYPE=2;
-								  if(OSversion.dwMajorVersion<=4) 	  
-								     OSTYPE=3;
-								  break;
-		case VER_PLATFORM_WIN32_WINDOWS:
-								if(OSversion.dwMinorVersion==0) 
-								{
-									OSTYPE=5; //95
-									break;
-								}
-								OSTYPE=4;
-	}
+    GetVersionEx(&OSversion);
+
+    switch (OSversion.dwPlatformId)
+    {
+    case VER_PLATFORM_WIN32_NT:
+        if ((OSversion.dwMajorVersion == 5) && (OSversion.dwMinorVersion == 0))
+        {
+            OSTYPE = 1;
+        }
+        if ((OSversion.dwMajorVersion == 5) && (OSversion.dwMinorVersion == 1))
+        {
+            OSTYPE = 1;
+        }
+        if (OSversion.dwMajorVersion == 5)
+        {
+            OSTYPE = 1;
+        }
+        if (OSversion.dwMajorVersion == 6)
+        {
+            OSTYPE = 2;
+        }
+        if (OSversion.dwMajorVersion <= 4)
+        {
+            OSTYPE = 3;
+        }
+        break;
+    case VER_PLATFORM_WIN32_WINDOWS:
+        if (OSversion.dwMinorVersion == 0)
+        {
+            OSTYPE = 5; //95
+            break;
+        }
+        OSTYPE = 4;
+    }
 }
 
-int OSversion()
-{
-	return OSTYPE;
-}
+int OSversion() { return OSTYPE; }

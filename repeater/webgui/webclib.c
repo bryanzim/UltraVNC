@@ -53,7 +53,7 @@ wi_printf(wi_sess * sess, char * fmt, ...)
       return;
 
    /* Try to make sure we won't overflow the print buffer */
-   len = strlen(fmt);
+   len = (int)(strlen(fmt));
    if(len > sizeof(output)/2 )
    {
       dtrap();
@@ -67,7 +67,7 @@ wi_printf(wi_sess * sess, char * fmt, ...)
    output[sizeof(output) - 1] = '\0';
 
    /* See if we overflowed the print buffer */
-   len = strlen(output);
+   len = (int)(strlen(output));
    if(len >= sizeof(output) - 1)
    {
       dprintf("wi_printf: overflow, output: %s\n", output);
@@ -92,7 +92,7 @@ wi_printf(wi_sess * sess, char * fmt, ...)
    }
 
    MEMCPY( &sess->ws_txtail->tb_data[sess->ws_txtail->tb_total],
-      output, len);
+      output, (unsigned long long)(len));
    sess->ws_txtail->tb_total += len;
    return;
 }
@@ -127,11 +127,11 @@ wi_formvalue( wi_sess * sess, char * ctlname )
    int      namelen;
    struct wi_form_s * form;
 
-   namelen = strlen(ctlname);
+   namelen = (int)(strlen(ctlname));
    for(form = sess->ws_formlist; form; form = form->next)
    {
       for(i = 0; i < form->paircount; i++)
-         if( _strnicmp(form->pairs[i].name, ctlname, namelen) == 0 )
+         if( _strnicmp(form->pairs[i].name, ctlname, (size_t)(namelen)) == 0 )
          {
             if( (*form->pairs[i].value) == 0)
                return NULL;
@@ -162,7 +162,7 @@ wi_checkip(u_long * out, char * input)
      */
     for(octet = 1; octet < 5; octet++)
     {
-        value = atoi(cp);
+        value = (unsigned int)(atoi(cp));
         if((value == 0) && (*cp != '0'))
             return ("All chars must be digits or dots");
 

@@ -11,26 +11,31 @@
 
 //
 // MRU maintains a list of 'Most Recently Used' strings in the registry
-// 
+//
 
-#ifndef MRU_H__
-#define MRU_H__
+#ifndef MRU_H
+#define MRU_H
 
 #pragma once
 #include "stdhdrs.h"
-#include <winsock2.h>
-#include <windows.h>
-#include <tchar.h>
+
 #include "VNCOptions.h"
 
-class MRU  
+#include <WinSock2.h>
+
+#include <Windows.h>
+
+#include <tchar.h>
+
+#include <array>
+
+class MRU
 {
 public:
-
     // Create an MRU and initialise it from the key.
     // Key created if not existant.
 
-    MRU(LPTSTR keyname, unsigned int maxnum = 8);
+    explicit MRU(LPTSTR keyname, unsigned int maxnum = 8U);
 
     // Add the item specified at the front of the list
     // Move it there if not already. If this makes the
@@ -50,22 +55,23 @@ public:
     // Remove the item with the given index.
     // If this is greater than NumItems()-1 it will be ignored.
     void RemoveItem(int index);
-	void SetPos(LPTSTR txt, int x, int y, int w, int h);
-	int Get_x(LPTSTR txt);
-	int Get_y(LPTSTR txt);
-	int Get_w(LPTSTR txt);
-	int Get_h(LPTSTR txt);
+    void SetPos(LPTSTR txt, int x, int y, int w, int h);
+    int Get_x(LPTSTR txt);
+    int Get_y(LPTSTR txt);
+    int Get_w(LPTSTR txt);
+    int Get_h(LPTSTR txt);
 
-	virtual ~MRU();
+    virtual ~MRU();
 
 private:
-	void ReadIndex();
+    void ReadIndex();
 
-    TCHAR m_index[257] = {};  // allow a bit of workspace beyond maximum of 26
+    std::array<TCHAR, 257U> m_index{}; // allow a bit of workspace beyond maximum of 26
     unsigned int m_maxnum;
     TCHAR m_optionfile[MAX_PATH];
+
 protected:
-	void WriteIndex();
+    void WriteIndex();
 };
 
 #endif

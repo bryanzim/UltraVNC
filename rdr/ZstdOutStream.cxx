@@ -20,18 +20,18 @@ enum { DEFAULT_BUF_SIZE = 16384 };
 
 
 // adzm - 2010-07 - Custom compression level
-ZstdOutStream::ZstdOutStream(OutStream* os, int bufSize_, int compressionLevel)
+ZstdOutStream::ZstdOutStream(OutStream* os, int bufSize_, [[maybe_unused]] int compressionLevel)
   : underlying(os), bufSize(bufSize_ ? bufSize_ : DEFAULT_BUF_SIZE), offset(0)
 {
   zstds = ZSTD_createCStream();
-  unsigned int inSize = ZSTD_CStreamInSize();
-  unsigned int outSize = ZSTD_CStreamOutSize();
-  bufSize = inSize > outSize ? inSize : outSize;
+  unsigned int inSize = static_cast<unsigned int>(ZSTD_CStreamInSize());
+  unsigned int outSize = static_cast<unsigned int>(ZSTD_CStreamOutSize());
+  bufSize = inSize > outSize ? static_cast<int>(inSize) : static_cast<int>(outSize);
   bufSize = bufSize_ > bufSize ? bufSize_ : bufSize;
   ZSTD_initCStream(zstds, ZSTD_CLEVEL_DEFAULT);
   outBuffer = new ZSTD_outBuffer;
   inBuffer = new ZSTD_inBuffer;
-  ptr = start = new U8[bufSize];
+  ptr = start = new U8[static_cast<unsigned long long>(bufSize)];
   end = start + bufSize;
 }
 
@@ -50,14 +50,14 @@ void ZstdOutStream::setUnderlying(OutStream* os)
 
 int ZstdOutStream::length()
 {
-  return (int)(offset + ptr - start);
+  return static_cast<int>((offset + ptr - start));
 }
 
 
 void ZstdOutStream::flush()
 {	
 	inBuffer->src = start;
-	inBuffer->size = ptr - start;
+	inBuffer->size = static_cast<size_t>(ptr - start);
 	inBuffer->pos = 0;
 	unsigned int rc = 0;
 
@@ -65,28 +65,28 @@ void ZstdOutStream::flush()
 		do {
 			underlying->check(1);
 			outBuffer->dst = underlying->getptr();
-			outBuffer->size = underlying->getend() - underlying->getptr();
+			outBuffer->size = static_cast<size_t>(underlying->getend() - underlying->getptr());
 			outBuffer->pos = 0;
 
-			rc = ZSTD_compressStream2(zstds, outBuffer, inBuffer, ZSTD_e_flush);
+			rc = static_cast<unsigned int>(ZSTD_compressStream2(zstds, outBuffer, inBuffer, ZSTD_e_flush));
 			if (ZSTD_isError(rc)) {
 				auto error = ZSTD_getErrorName(rc);
 				throw Exception(error);
 			}
-			inBuffer->src = (U8*)inBuffer->src + inBuffer->pos;
+			inBuffer->src = const_cast<U8*>(reinterpret_cast<const U8 *>(inBuffer->src)) + inBuffer->pos;
 			inBuffer->size -= inBuffer->pos;
 			inBuffer->pos = 0;
-			outBuffer->dst = (U8*)outBuffer->dst + outBuffer->pos;
+			outBuffer->dst = reinterpret_cast<U8*>(outBuffer->dst) + outBuffer->pos;
 			outBuffer->size -= outBuffer->pos;
 			outBuffer->pos = 0;
 
-			underlying->setptr((U8*)outBuffer->dst);
+			underlying->setptr(reinterpret_cast<U8*>(outBuffer->dst));
 		} while (outBuffer->size == 0);
 	}
 
 	if (rc != 0)
 		__debugbreak();	
-	offset += (int)(ptr - start);
+	offset += static_cast<int>((ptr - start));
 	ptr = start;
 }
 
@@ -98,13 +98,13 @@ int ZstdOutStream::overrun(int itemSize, int nItems)
 
 	while (end - ptr < itemSize) {
 		inBuffer->src = start;
-		inBuffer->size = ptr - start;
+		inBuffer->size = static_cast<size_t>(ptr - start);
 		inBuffer->pos = 0;
 
 		do {
 			underlying->check(1);
 			outBuffer->dst = underlying->getptr();
-			outBuffer->size = underlying->getend() - underlying->getptr();
+			outBuffer->size = static_cast<size_t>(underlying->getend() - underlying->getptr());
 			outBuffer->pos = 0;
 
 			auto rc = ZSTD_compressStream(zstds, outBuffer, inBuffer);
@@ -112,30 +112,30 @@ int ZstdOutStream::overrun(int itemSize, int nItems)
 				auto error = ZSTD_getErrorName(rc);
 				throw Exception(error);
 			}
-			inBuffer->src = (U8*)inBuffer->src + inBuffer->pos;
+			inBuffer->src = const_cast<U8*>(reinterpret_cast<const U8 *>(inBuffer->src)) + inBuffer->pos;
 			inBuffer->size -= inBuffer->pos;
 			inBuffer->pos = 0;
-			outBuffer->dst = (U8*)outBuffer->dst + outBuffer->pos;
+			outBuffer->dst = reinterpret_cast<U8*>(outBuffer->dst) + outBuffer->pos;
 			outBuffer->size -= outBuffer->pos;
 			outBuffer->pos = 0;
 
-			underlying->setptr((U8*)outBuffer->dst);
+			underlying->setptr(reinterpret_cast<U8*>(outBuffer->dst));
 		} while (outBuffer->size == 0);
 		// output buffer not full
 		if (inBuffer->size == 0) {
-			offset += (int)(ptr - start);
+			offset += static_cast<int>((ptr - start));
 			ptr = start;
 		}
 		else {
 			// but didn't consume all the data?  try shifting what's left to the
 			// start of the buffer.
 			fprintf(stderr, "z out buf not full, but in data not consumed\n");
-			memmove(start, inBuffer->src, ptr - (U8*)inBuffer->src);
-			offset += (int)((U8*)inBuffer->src - start);
-			ptr -= (U8*)inBuffer->src - start;
+			memmove(start, inBuffer->src, ptr - const_cast<U8*>(reinterpret_cast<const U8 *>(inBuffer->src)));
+			offset += static_cast<int>(((U8*)inBuffer->src - start));
+			ptr -= const_cast<U8*>(reinterpret_cast<const U8 *>(inBuffer->src)) - start;
 		}
 	}
 	if (itemSize * nItems > end - ptr)
-		nItems = (int)((end - ptr) / itemSize);
+		nItems = static_cast<int>(((end - ptr) / itemSize));
 	return nItems;
 }

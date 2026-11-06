@@ -23,36 +23,38 @@
 // It also creates the vncSockConnect
 // servers, which respectively allow connections via sockets
 // and via the ORB interface
-extern bool			fShutdownOrdered;
+extern bool fShutdownOrdered;
 class vncServer;
 class VirtualDisplay;
 
-#if (!defined(_WINVNC_VNCSERVER))
-#define _WINVNC_VNCSERVER
+#if (!defined(WINVNC_VNCSERVER))
+#define WINVNC_VNCSERVER
 
 // Custom
-#include "vncsockconnect.h"
-#include "vnchttpconnect.h"
-#include "vncclient.h"
-#include "rfbRegion.h"
-#include "vncpasswd.h"
-
 // Includes
 #include "stdhdrs.h"
-#include <omnithread.h>
-#include <list>
-#include <thread>
-#include <string>
-#include <memory>
 
 // adzm - 2010-07 - Extended clipboard
 #include "common/Clipboard.h"
+#include "rfbRegion.h"
+#include "vncclient.h"
+#include "vnchttpconnect.h"
+#include "vncpasswd.h"
+#include "vncsockconnect.h"
 
+#include <omnithread.h>
+
+#include <array>
+#include <list>
+#include <memory>
+#include <string>
+#include <thread>
 // Define a datatype to handle lists of windows we wish to notify
-typedef std::list<HWND> vncNotifyList;
+
+using vncNotifyList = std::list<HWND>;
 
 // Some important constants;
-const int MAX_CLIENTS = 128;
+const int MAX_CLIENTS{ 128 };
 
 // The vncServer class itself
 
@@ -61,309 +63,318 @@ class CloudThread;
 class vncServer
 {
 public:
+    friend class vncClientThread;
+    HANDLE m_impersonationtoken;
 
-	friend class vncClientThread;
-	HANDLE m_impersonationtoken;
+    // Constructor/destructor
+    explicit vncServer();
+    ~vncServer();
 
-	// Constructor/destructor
-	vncServer();
-	~vncServer();
+    char code[18U]{};
+    char* generateCode();
 
-	char code[18]{};
-	char* generateCode();
+    // Client handling functions
+    virtual vncClientId AddClient(VSocket* socket, BOOL auth, BOOL shared, BOOL outgoing);
+    virtual vncClientId AddClient(VSocket* socket, BOOL auth, BOOL shared, rfbProtocolVersionMsg* protocolMsg, BOOL outgoing);
+    virtual vncClientId AddClient(VSocket* socket, BOOL auth, BOOL shared, int capability, rfbProtocolVersionMsg* protocolMsg,
+                                  BOOL outgoing);
+    virtual vncClientId AddClient(VSocket* socket, BOOL auth, BOOL shared, int capability, rfbProtocolVersionMsg* protocolMsg,
+                                  VString szRepeaterID, VString szHost, VCard port, BOOL outgoing);
 
-	// Client handling functions
-	virtual vncClientId AddClient(VSocket *socket, BOOL auth, BOOL shared, BOOL outgoing);
-	virtual vncClientId AddClient(VSocket *socket, BOOL auth, BOOL shared, rfbProtocolVersionMsg *protocolMsg, BOOL outgoing);
-	virtual vncClientId AddClient(VSocket *socket,
-		BOOL auth, BOOL shared, int capability,rfbProtocolVersionMsg *protocolMsg, BOOL outgoing);
-	virtual vncClientId AddClient(VSocket *socket,
-		BOOL auth, BOOL shared, int capability,rfbProtocolVersionMsg *protocolMsg, VString szRepeaterID, VString szHost, VCard port, BOOL outgoing);
+    virtual BOOL Authenticated(vncClientId client);
+    virtual void KillClient(vncClientId client);
+    virtual void KillClient(LPSTR szClientName);     // sf@2002
+    virtual void TextChatClient(LPSTR szClientName); // sf@2002
+    bool IsUltraVNCViewer();
+    bool AreThereMultipleViewers();
+    bool singleExtendRequested();
 
-	virtual BOOL Authenticated(vncClientId client);
-	virtual void KillClient(vncClientId client);
-	virtual void KillClient(LPSTR szClientName); // sf@2002
-	virtual void TextChatClient(LPSTR szClientName); // sf@2002
-	bool IsUltraVNCViewer();
-	bool AreThereMultipleViewers();
-	bool singleExtendRequested();
+    virtual UINT AuthClientCount();
+    virtual UINT UnauthClientCount();
+    // Count of authenticated clients whose socket actually has the DSM plugin
+    // transform enabled. Distinct from AuthClientCount(), which counts ALL
+    // authenticated clients including ones that bypass DSM via
+    // AllowLoopbackWithoutDSM. Used to guard non-multithreaded DSM plugins
+    // against concurrent use without spuriously rejecting/affecting clients
+    // that aren't using the plugin at all.
+    virtual UINT DSMActiveClientCount();
 
-	virtual UINT AuthClientCount();
-	virtual UINT UnauthClientCount();
-	// Count of authenticated clients whose socket actually has the DSM plugin
-	// transform enabled. Distinct from AuthClientCount(), which counts ALL
-	// authenticated clients including ones that bypass DSM via
-	// AllowLoopbackWithoutDSM. Used to guard non-multithreaded DSM plugins
-	// against concurrent use without spuriously rejecting/affecting clients
-	// that aren't using the plugin at all.
-	virtual UINT DSMActiveClientCount();
+    virtual void KillAuthClients();
+    virtual void ListAuthClients(HWND hListBox);
+    virtual void WaitUntilAuthEmpty();
 
-	virtual void KillAuthClients();
-	virtual void ListAuthClients(HWND hListBox);
-	virtual void WaitUntilAuthEmpty();
+    virtual void KillUnauthClients();
+    virtual void ListUnauthClients(HWND hListBox); // adzm 2009-07-05
+    virtual void WaitUntilUnauthEmpty();
 
-	virtual void KillUnauthClients();
-	virtual void ListUnauthClients(HWND hListBox); // adzm 2009-07-05
-	virtual void WaitUntilUnauthEmpty();
+    // Are any clients ready to send updates?
+    virtual BOOL UpdateWanted();
 
-	// Are any clients ready to send updates?
-	virtual BOOL UpdateWanted();
+    // Has at least one client had a remote event?
+    virtual BOOL RemoteEventReceived();
 
-	// Has at least one client had a remote event?
-	virtual BOOL RemoteEventReceived();
+    // Client info retrieval/setup
+    virtual vncClient* GetClient(vncClientId clientid);
+    virtual vncClientList ClientList();
 
-	// Client info retrieval/setup
-	virtual vncClient* GetClient(vncClientId clientid);
-	virtual vncClientList ClientList();
+    virtual void SetCapability(vncClientId client, int capability);
 
-	virtual void SetCapability(vncClientId client, int capability);
+    virtual int GetCapability(vncClientId client);
+    virtual const char* GetClientNameName(vncClientId client);
 
-	virtual int GetCapability(vncClientId client);
-	virtual const char* GetClientNameName(vncClientId client);
+    // Let a client remove itself
+    virtual void RemoveClient(vncClientId client);
 
-	// Let a client remove itself
-	virtual void RemoveClient(vncClientId client);
+    // Connect/disconnect notification
+    virtual BOOL AddNotify(HWND hwnd);
+    virtual BOOL RemNotify(HWND hwnd);
 
-	// Connect/disconnect notification
-	virtual BOOL AddNotify(HWND hwnd);
-	virtual BOOL RemNotify(HWND hwnd);
+    virtual vncDesktop* GetDesktopPointer() { return m_desktop; }
+    virtual void SetNewSWSize(long w, long h, BOOL desktop);
+    virtual void SetBufferOffset(int x, int y);
+    virtual void SetScreenOffset(int x, int y, bool single_display); //never locked
+    virtual void InitialUpdate(bool value);
+    short getOldestViewer();
+    UINT getNumberViewers();
 
-	virtual vncDesktop* GetDesktopPointer() {return m_desktop;}
-	virtual void SetNewSWSize(long w,long h,BOOL desktop);
-	virtual void SetBufferOffset(int x,int y);
-	virtual void SetScreenOffset(int x,int y, bool single_display); //never locked
-	virtual void InitialUpdate(bool value);
-	short getOldestViewer();
-	UINT getNumberViewers();
+    virtual BOOL All_clients_initialalized();
+    virtual BOOL AnyClientSupportsResize();
+    void initialCapture_done();
 
-	virtual BOOL All_clients_initialalized();
-	virtual BOOL AnyClientSupportsResize();
-	void initialCapture_done();
+    // Lock to protect the client list from concurrency - lock when reading/updating client list
+    omni_mutex m_clientsLock;
+    omni_mutex m_clientsLockBlackList;
+    omni_mutex m_clientsLock_notifyList;
 
-	// Lock to protect the client list from concurrency - lock when reading/updating client list
-	omni_mutex			m_clientsLock;
-	omni_mutex			m_clientsLockBlackList;
-	omni_mutex			m_clientsLock_notifyList;
+    UINT m_port;
+    UINT m_port_http; // TightVNC 1.2.7
+    int m_autocapt;
 
-	UINT				m_port;
-	UINT				m_port_http; // TightVNC 1.2.7
-	int					m_autocapt;
-
-	virtual void ShutdownServer();
-	HANDLE retryThreadHandle;
+    virtual void ShutdownServer();
+    HANDLE retryThreadHandle;
 
 protected:
-	// Send a notification message
-	
+    // Send a notification message
+
 
 public:
-	int AutoReconnect_counter;
-	virtual void DoNotify(UINT message, WPARAM wparam, LPARAM lparam);
-	// Update handling, used by the screen server
-	virtual rfb::UpdateTracker &GetUpdateTracker() {return m_update_tracker;};
-	virtual void UpdateMouse();
-	// adzm - 2010-07 - Extended clipboard
-	//virtual void UpdateClipText(const char* text);
-	virtual void UpdateClipTextEx(HWND hwndOwner, vncClient* excludeClient = NULL);
-	virtual void UpdatePalette(bool lock);
-	virtual void UpdateLocalFormat(bool lock);
+    int AutoReconnect_counter;
+    virtual void DoNotify(UINT message, WPARAM wparam, LPARAM lparam);
+    // Update handling, used by the screen server
+    virtual rfb::UpdateTracker& GetUpdateTracker() { return m_update_tracker; }
+    virtual void UpdateMouse();
+    // adzm - 2010-07 - Extended clipboard
+    //virtual void UpdateClipText(const char* text);
+    virtual void UpdateClipTextEx(HWND hwndOwner, vncClient* excludeClient = nullptr);
+    virtual void UpdatePalette(bool lock);
+    virtual void UpdateLocalFormat(bool lock);
 
-	virtual void Driver(BOOL enable);
+    virtual void Driver(BOOL enable);
 
-	BOOL DriverWanted;
-	BOOL HookWanted;
-	BOOL DriverWantedSet;
+    BOOL DriverWanted;
+    BOOL HookWanted;
+    BOOL DriverWantedSet;
 
-	virtual void Hook(BOOL enable);
-	virtual void SetHookings();
+    virtual void Hook(BOOL enable);
+    virtual void SetHookings();
 
-	// Client manipulation of the clipboard
-	virtual void UpdateLocalClipText(LPSTR text);
-	// adzm - 2010-07 - Extended clipboard
-	virtual void UpdateLocalClipTextEx(ExtendedClipboardDataMessage& extendedClipboardDataMessage, vncClient* sourceClient);
+    // Client manipulation of the clipboard
+    virtual void UpdateLocalClipText(LPSTR text);
+    // adzm - 2010-07 - Extended clipboard
+    virtual void UpdateLocalClipTextEx(ExtendedClipboardDataMessage& extendedClipboardDataMessage, vncClient* sourceClient);
 
-	virtual void SetName(const char * name);
-	virtual void SetPorts(const UINT port_rfb, const UINT port_http);	
-	virtual void KillSockConnect();
-	virtual void SetAutoPortSelect(const BOOL autoport);
-	virtual void EnableRemoteInputs(BOOL enable);
-	virtual void EnableJapInput(BOOL enable);
-	virtual void ForceCursorShape(BOOL enable);
-	virtual void EnableUnicodeInput(BOOL enable);
+    virtual void SetName(const char* name);
+    virtual void SetPorts(const UINT port_rfb, const UINT port_http);
+    virtual void KillSockConnect();
+    virtual void SetAutoPortSelect(const BOOL autoport);
+    virtual void EnableRemoteInputs(BOOL enable);
+    virtual void EnableJapInput(BOOL enable);
+    virtual void ForceCursorShape(BOOL enable);
+    virtual void EnableUnicodeInput(BOOL enable);
 
-	// General connection handling
+    // General connection handling
 
-	// Socket connection handling
-	virtual BOOL EnableConnections(BOOL on);
-	virtual BOOL SockConnected();
-	virtual BOOL SetLoopbackOnly(BOOL loopbackOnly);
-	//virtual BOOL LoopbackOnly();
+    // Socket connection handling
+    virtual BOOL EnableConnections(BOOL on);
+    virtual BOOL SockConnected();
+    virtual BOOL SetLoopbackOnly(BOOL loopbackOnly);
+    //virtual BOOL LoopbackOnly();
 
-	void SetSendExtraMouse(BOOL i_fSendExtraMouse);
-	BOOL SendExtraMouse();
+    void SetSendExtraMouse(BOOL i_fSendExtraMouse);
+    BOOL SendExtraMouse();
 
-	// Tray icon disposition
-	virtual void SetNoScreensaver(BOOL NoScreensaver);
+    // Tray icon disposition
+    virtual void SetNoScreensaver(BOOL NoScreensaver);
 
-	// HTTP daemon handling
-	virtual BOOL EnableHTTPConnect(BOOL enable);
+    // HTTP daemon handling
+    virtual BOOL EnableHTTPConnect(BOOL enable);
 
-	virtual void GetScreenInfo(int &width, int &height, int &depth);
+    virtual void GetScreenInfo(int& width, int& height, int& depth);
 
-	// Handling of per-client connection authorisation
-	virtual void SetAuthHosts(const char *hostlist);
-	virtual char *AuthHosts();
-	enum AcceptQueryReject {aqrAccept, aqrQuery, aqrReject};
-	virtual AcceptQueryReject VerifyHost(const char *hostname);
+    // Handling of per-client connection authorisation
+    virtual void SetAuthHosts(const char* hostlist);
+    virtual char* AuthHosts();
+    enum AcceptQueryReject
+    {
+        aqrAccept,
+        aqrQuery,
+        aqrReject
+    };
+    virtual AcceptQueryReject VerifyHost(const char* hostname);
 
-	// Blacklisting of machines which fail connection attempts too often
-	// Such machines will fail VerifyHost for a short period
-	virtual void AddAuthHostsBlacklist(const char *machine);
-	virtual void RemAuthHostsBlacklist(const char *machine);
+    // Blacklisting of machines which fail connection attempts too often
+    // Such machines will fail VerifyHost for a short period
+    virtual void AddAuthHostsBlacklist(const char* machine);
+    virtual void RemAuthHostsBlacklist(const char* machine);
 
-	virtual UINT QueryAccept();
-	virtual UINT QueryAcceptForSave();
-	virtual UINT QueryAcceptLocked();
+    virtual UINT QueryAccept();
+    virtual UINT QueryAcceptForSave();
+    virtual UINT QueryAcceptLocked();
 
-	// sf@2002 - DSM Plugin
-	virtual BOOL SetDSMPlugin(BOOL fForceReload);
-	virtual CDSMPlugin* GetDSMPluginPointer() { return m_pDSMPlugin;};
+    // sf@2002 - DSM Plugin
+    virtual BOOL SetDSMPlugin(BOOL fForceReload);
+    virtual CDSMPlugin* GetDSMPluginPointer() { return m_pDSMPlugin; }
 
-	// sf@2002 - Cursor handling
-	virtual void EnableXRichCursor(BOOL fEnable);
-	virtual BOOL IsXRichCursorEnabled() {return m_fXRichCursor;}; 
+    // sf@2002 - Cursor handling
+    virtual void EnableXRichCursor(BOOL fEnable);
+    virtual BOOL IsXRichCursorEnabled() { return m_fXRichCursor; }
 
-	// sf@2002
-	virtual void DisableCacheForAllClients();
-	virtual bool IsThereASlowClient();
-	virtual bool IsThereAUltraEncodingClient();
-	virtual bool IsThereAUltra2EncodingClient();
-	virtual bool IsEncoderSet();
-	virtual bool IsThereFileTransBusy();
+    // sf@2002
+    virtual void DisableCacheForAllClients();
+    virtual bool IsThereASlowClient();
+    virtual bool IsThereAUltraEncodingClient();
+    virtual bool IsThereAUltra2EncodingClient();
+    virtual bool IsEncoderSet();
+    virtual bool IsThereFileTransBusy();
 
 
-	// sf@2003 - AutoReconnect
-	virtual BOOL AutoReconnect()
-	{
-		if (fShutdownOrdered) return false;
-		return m_fAutoReconnect;
-	};
-	virtual BOOL IdReconnect(){return m_fIdReconnect;};
-	virtual UINT AutoReconnectPort(){return m_AutoReconnectPort;};
-	virtual char* AutoReconnectAdr(){return m_szAutoReconnectAdr;}
-	virtual char* AutoReconnectId(){return m_szAutoReconnectId;}
-	virtual void AutoReconnect(BOOL fEnabled){m_fAutoReconnect = fEnabled;};
-	virtual void IdReconnect(BOOL fEnabled){m_fIdReconnect = fEnabled;};
-	virtual void AutoReconnectPort(UINT nPort){m_AutoReconnectPort = nPort;};
-	virtual void AutoReconnectAdr(char* szAdr){strcpy_s(m_szAutoReconnectAdr,255, szAdr);}
-	virtual void AutoReconnectId(char* szId){strcpy_s(m_szAutoReconnectId,MAX_PATH, szId);}
-	virtual void AutoConnectRetry( );
-	void actualRetryThread();
-	VSocket *retrysock;
+    // sf@2003 - AutoReconnect
+    virtual BOOL AutoReconnect()
+    {
+        if (fShutdownOrdered)
+        {
+            return false;
+        }
+        return m_fAutoReconnect;
+    }
+    virtual BOOL IdReconnect() { return m_fIdReconnect; }
+    virtual UINT AutoReconnectPort() { return m_AutoReconnectPort; }
+    virtual char* AutoReconnectAdr() { return m_szAutoReconnectAdr.data(); }
+    virtual char* AutoReconnectId() { return m_szAutoReconnectId.data(); }
+    virtual void AutoReconnect(const BOOL fEnabled) { m_fAutoReconnect = fEnabled; }
+    virtual void IdReconnect(const BOOL fEnabled) { m_fIdReconnect = fEnabled; }
+    virtual void AutoReconnectPort(const UINT nPort) { m_AutoReconnectPort = nPort; }
+    virtual void AutoReconnectAdr(char* const szAdr) { ::strcpy_s(m_szAutoReconnectAdr.data(), 255, szAdr); }
+    virtual void AutoReconnectId(char* const szId) { ::strcpy_s(m_szAutoReconnectId.data(), m_szAutoReconnectId.size(), szId); }
+    virtual void AutoConnectRetry();
+    void actualRetryThread();
+    VSocket* retrysock;
 
-	virtual void Clear_Update_Tracker();
-	virtual void UpdateCursorShape();
+    virtual void Clear_Update_Tracker();
+    virtual void UpdateCursorShape();
 
-	bool IsClient(vncClient* pClient);
+    bool IsClient(vncClient* pClient);
 
     void NotifyClients_StateChange(CARD32 state, CARD32 value);
 
-	void TriggerUpdate();
-	void SetHasMouse();
+    void TriggerUpdate();
+    void SetHasMouse();
 
-	bool OS_Shutdown;
-	void StopReconnectAll();
-	char* getInfoMsg();
-	int m_virtualDisplaySupported;
-	VirtualDisplay *virtualDisplay;
+    bool OS_Shutdown;
+    void StopReconnectAll();
+    char* getInfoMsg();
+    int m_virtualDisplaySupported;
+    VirtualDisplay* virtualDisplay;
 
 protected:
-	// The vncServer UpdateTracker class
-	// Behaves like a standard UpdateTracker, but propagates update
-	// information to active clients' trackers
+    // The vncServer UpdateTracker class
+    // Behaves like a standard UpdateTracker, but propagates update
+    // information to active clients' trackers
 
-	class ServerUpdateTracker : public rfb::UpdateTracker {
-	public:
-		ServerUpdateTracker() : m_server(0) {};
+    class ServerUpdateTracker : public rfb::UpdateTracker
+    {
+    public:
+        explicit ServerUpdateTracker() : m_server{ nullptr } {}
 
-		virtual void init(vncServer *server) {m_server=server;};
+        virtual void init(vncServer* server) { m_server = server; }
 
-		virtual void add_changed(const rfb::Region2D &region);
-		virtual void add_cached(const rfb::Region2D &region);
-		virtual void add_copied(const rfb::Region2D &dest, const rfb::Point &delta);
-	protected:
-		vncServer *m_server;
-	};
+        virtual void add_changed(const rfb::Region2D& region);
+        virtual void add_cached(const rfb::Region2D& region);
+        virtual void add_copied(const rfb::Region2D& dest, const rfb::Point& delta);
 
-	friend class ServerUpdateTracker;
+    protected:
+        vncServer* m_server;
+    };
 
-	ServerUpdateTracker	m_update_tracker;
+    friend class ServerUpdateTracker;
 
-	// Internal stuffs
+    ServerUpdateTracker m_update_tracker;
+
+    // Internal stuffs
 protected:
-	static void*	pThis;
+    static void* pThis;
 
-	// Connection servers
-	vncSockConnect		*m_socketConn;
-	vncHTTPConnect		*m_httpConn;
-	vncHTTPConnect		*m_httpsConn;
-	BOOL				m_enableHttpConn;
+    // Connection servers
+    vncSockConnect* m_socketConn;
+    vncHTTPConnect* m_httpConn;
+    vncHTTPConnect* m_httpsConn;
+    BOOL m_enableHttpConn;
 
 
-	// The desktop handler
-	vncDesktop			*m_desktop;
-	// Name of this desktop
-	char				*m_name;
+    // The desktop handler
+    vncDesktop* m_desktop;
+    // Name of this desktop
+    char* m_name;
 
-	// Blacklist structures
-	struct BlacklistEntry {
-		BlacklistEntry *_next;
-		char *_machineName;
-		LARGE_INTEGER _lastRefTime;
-		UINT _failureCount;
-		BOOL _blocked;
-	};
-	BlacklistEntry		*m_blacklist;
-	
-	// The client lists - list of clients being authorised and ones
-	// already authorised
-	vncClientList		m_unauthClients;
-	vncClientList		m_authClients;
-	vncClient			*m_clientmap[MAX_CLIENTS];
-	vncClientId			m_nextid;
+    // Blacklist structures
+    struct BlacklistEntry
+    {
+        BlacklistEntry* _next;
+        char* _machineName;
+        LARGE_INTEGER _lastRefTime;
+        UINT _failureCount;
+        BOOL _blocked;
+    };
+    BlacklistEntry* m_blacklist;
 
-	omni_mutex			m_desktopLock;
-	// Signal set when a client removes itself
-	omni_condition		*m_clientquitsig;
-	// Set of windows to send notifications to
-	vncNotifyList		m_notifyList;
+    // The client lists - list of clients being authorised and ones
+    // already authorised
+    vncClientList m_unauthClients;
+    vncClientList m_authClients;
+    vncClient* m_clientmap[MAX_CLIENTS];
+    vncClientId m_nextid;
 
-	// Modif sf@2002
+    omni_mutex m_desktopLock;
+    // Signal set when a client removes itself
+    omni_condition* m_clientquitsig;
+    // Set of windows to send notifications to
+    vncNotifyList m_notifyList;
 
-	// Modif sf@2002 - v1.1.x
+    // Modif sf@2002
 
-	// sf@2002 - DSMPlugin
-	CDSMPlugin *m_pDSMPlugin;
+    // Modif sf@2002 - v1.1.x
 
-	// sf@2002 - Cursor handling
-	BOOL m_fXRichCursor; 
+    // sf@2002 - DSMPlugin
+    CDSMPlugin* m_pDSMPlugin;
 
-	// sf@2003 - AutoReconnect
-	BOOL m_fAutoReconnect;
-	BOOL m_fIdReconnect;
-	UINT m_AutoReconnectPort;
-	char m_szAutoReconnectAdr[255];
-	char m_szAutoReconnectId[MAX_PATH];
+    // sf@2002 - Cursor handling
+    BOOL m_fXRichCursor;
 
-	HINSTANCE   hWtsLib;
+    // sf@2003 - AutoReconnect
+    BOOL m_fAutoReconnect;
+    BOOL m_fIdReconnect;
+    UINT m_AutoReconnectPort;
+    std::array<char, 255U> m_szAutoReconnectAdr;
+    std::array<char, MAX_PATH> m_szAutoReconnectId;
 
-	DWORD startTime;
+    HINSTANCE hWtsLib;
+
+    DWORD startTime;
     BOOL m_fSendExtraMouse;
-	bool KillAuthClientsBuzy;	
-	BOOL sethook;
-	BOOL m_pendingDSMPlugin;
-	CloudThread* cloudThread;
-	
+    bool KillAuthClientsBuzy;
+    BOOL sethook;
+    BOOL m_pendingDSMPlugin;
+    CloudThread* cloudThread;
 };
 
 #endif

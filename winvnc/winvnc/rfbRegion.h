@@ -14,9 +14,9 @@
 
 #ifdef USE_X11_REGIONS
 #include "rfbRegion_X11.h"
+
 #else
 
 #include "rfbRegion_win32.h"
-
 
 #endif // X11

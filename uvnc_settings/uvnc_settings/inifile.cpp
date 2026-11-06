@@ -10,115 +10,115 @@
 
 
 #include "stdafx.h"
+
 #include "inifile.h"
+
+#include <array>
+#include <cstdio>
+#include <cstring>
 
 IniFile::IniFile()
 {
-char WORKDIR[MAX_PATH];
-	if (GetModuleFileName(NULL, WORKDIR, MAX_PATH))
-		{
-		char* p = strrchr(WORKDIR, '\\');
-		if (p == NULL) return;
-		*p = '\0';
-		}
-	strcpy(myInifile,"");
-	strcat(myInifile,WORKDIR);//set the directory
-	strcat(myInifile,"\\");
-	strcat(myInifile,INIFILE_NAME);
+    std::array<char, MAX_PATH> WORKDIR;
+    if (::GetModuleFileName(nullptr, WORKDIR.data(), static_cast<DWORD>(WORKDIR.size())))
+    {
+        char* p = std::strrchr(WORKDIR.data(), '\\');
+        if (p == nullptr)
+        {
+            return;
+        }
+        *p = '\0';
+    }
+    ::strcpy_s(myInifile.data(), myInifile.size(), WORKDIR.data());
+    ::strcat_s(myInifile.data(), myInifile.size(), "\\");
+    ::strcat_s(myInifile.data(), myInifile.size(), INIFILE_NAME);
 }
 
-void
-IniFile::IniFileSetSecure()
+void IniFile::IniFileSetSecure()
 {
-char WORKDIR[MAX_PATH];
-	if (GetModuleFileName(NULL, WORKDIR, MAX_PATH))
-		{
-		char* p = strrchr(WORKDIR, '\\');
-		if (p == NULL) return;
-		*p = '\0';
-		}
-	strcpy(myInifile,"");
-	strcat(myInifile,WORKDIR);//set the directory
-	strcat(myInifile,"\\");
-	strcat(myInifile,INIFILE_NAME);
+    std::array<char, MAX_PATH> WORKDIR;
+    if (::GetModuleFileName(nullptr, WORKDIR.data(), static_cast<DWORD>(WORKDIR.size())))
+    {
+        char* p = std::strrchr(WORKDIR.data(), '\\');
+        if (p == nullptr)
+        {
+            return;
+        }
+        *p = '\0';
+    }
+    ::strcpy_s(myInifile.data(), myInifile.size(), WORKDIR.data());
+    ::strcat_s(myInifile.data(), myInifile.size(), "\\");
+    ::strcat_s(myInifile.data(), myInifile.size(), INIFILE_NAME);
 }
 
-void
-IniFile::IniFileSetTemp(char *lpCmdLine)
-{	
-	strcpy(myInifile,lpCmdLine);
-}
+void IniFile::IniFileSetTemp(const char* const lpCmdLine) { ::strcpy_s(myInifile.data(), myInifile.size(), lpCmdLine); }
 
-IniFile::~IniFile()
+IniFile::~IniFile() {}
+
+bool IniFile::WriteString(const char* const key1, const char* const key2, const char* const value)
 {
+    //vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifile);
+    return (FALSE != ::WritePrivateProfileString(key1, key2, value, myInifile.data()));
 }
 
-bool
-IniFile::WriteString(char *key1, char *key2,char *value)
+bool IniFile::WriteInt(const char* const key1, const char* const key2, const int value)
 {
-	//vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifile); 
-	return (FALSE != WritePrivateProfileString(key1,key2, value,myInifile));
+    std::array<char, 32U> buf;
+    std::snprintf(buf.data(), buf.size(), "%d", value);
+    //vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifile);
+    int result = ::WritePrivateProfileString(key1, key2, buf.data(), myInifile.data());
+    if (result == 0)
+    {
+        return false;
+    }
+    return true;
 }
 
-bool 
-IniFile::WriteInt(char *key1, char *key2,int value)
+int IniFile::ReadInt(const char* const key1, const char* const key2, const int Defaultvalue)
 {
-	char       buf[32];
-	wsprintf(buf, "%d", value);
-	//vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifile);
-	int result=WritePrivateProfileString(key1,key2, buf,myInifile);
-	if (result==0) return false;
-	return true;
+    //vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifile);
+    return static_cast<int>(::GetPrivateProfileInt(key1, key2, Defaultvalue, myInifile.data()));
 }
 
-int
-IniFile::ReadInt(char *key1, char *key2,int Defaultvalue)
+void IniFile::ReadString(const char* const key1, const char* const key2, char* const value, const int valuesize)
 {
-	//vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifile);
-	return GetPrivateProfileInt(key1, key2, Defaultvalue, myInifile);
+    //vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifile);
+    ::GetPrivateProfileString(key1, key2, "", value, static_cast<DWORD>(valuesize), myInifile.data());
 }
 
-void 
-IniFile::ReadString(char *key1, char *key2,char *value,int valuesize)
+void IniFile::ReadPassword(char* const value, [[maybe_unused]] const int valuesize)
 {
-	//vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifile);
-	GetPrivateProfileString(key1,key2, "",value,valuesize,myInifile);
+    //int size=ReadInt("UltraVNC", "passwdsize",0);
+    //vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifilePasswd);
+    ::GetPrivateProfileStruct("UltraVNC", "passwd", value, 8, myInifile.data());
 }
 
-void 
-IniFile::ReadPassword(char *value,int valuesize)
+bool IniFile::WritePassword(char* const value)
 {
-	//int size=ReadInt("UltraVNC", "passwdsize",0);
-	//vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifilePasswd);
-	GetPrivateProfileStruct("UltraVNC","passwd",value,8,myInifile);
+    //WriteInt("UltraVNC", "passwdsize",sizeof(value));
+    //vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifile);
+    return (FALSE != ::WritePrivateProfileStruct("UltraVNC", "passwd", value, 8, myInifile.data()));
 }
 
-bool
-IniFile::WritePassword(char *value)
-{
-		//WriteInt("UltraVNC", "passwdsize",sizeof(value));
-		//vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifile);
-		return (FALSE != WritePrivateProfileStruct("UltraVNC","passwd", value,8,myInifile));
-}
-
-void //PGM
-IniFile::ReadPassword2(char *value,int valuesize) //PGM
-{ //PGM
-	GetPrivateProfileStruct("UltraVNC","passwd2",value,8,myInifile); //PGM
+void                                                                     //PGM
+IniFile::ReadPassword2(char* const value, [[maybe_unused]] const int valuesize)           //PGM
+{                                                                        //PGM
+    ::GetPrivateProfileStruct("UltraVNC", "passwd2", value, 8, myInifile.data()); //PGM
 } //PGM
 
-bool //PGM
-IniFile::WritePassword2(char *value) //PGM
-{ //PGM
-		return (FALSE != WritePrivateProfileStruct("UltraVNC","passwd2", value,8,myInifile)); //PGM
+bool                                                                                         //PGM
+IniFile::WritePassword2(char* const value)                                                   //PGM
+{                                                                                            //PGM
+    return (FALSE != ::WritePrivateProfileStruct("UltraVNC", "passwd2", value, 8, myInifile.data())); //PGM
 } //PGM
 
 bool IniFile::IsWritable()
 {
-    bool writable = WriteInt("Permissions", "isWritable",1);
+    bool writable = WriteInt("Permissions", "isWritable", 1);
     if (writable)
-        WritePrivateProfileSection("Permissions", "", myInifile);
+    {
+        ::WritePrivateProfileSection("Permissions", "", myInifile.data());
+    }
 
     return writable;
 }
-

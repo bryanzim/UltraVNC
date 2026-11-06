@@ -12,58 +12,46 @@
 
 /* translate.h - prototypes of functions in translate.cpp */
 
-#ifndef TRANSLATE_H__
-#define TRANSLATE_H__
+#ifndef TRANSLATE_H
+#define TRANSLATE_H
 
 #include "stdhdrs.h"
+
 #include "rfb.h"
 #include "vncmemcpy.h"
-
 // Translate function prototype!
-typedef void (*rfbTranslateFnType)(char *table, rfbPixelFormat *in,
-				   rfbPixelFormat *out,
-				   char *iptr, char *optr,
-				   int bytesBetweenInputLines,
-				   int width, int height);
+
+typedef void (*rfbTranslateFnType)(char* table, rfbPixelFormat* in, rfbPixelFormat* out, char* iptr, char* optr,
+                                   int bytesBetweenInputLines, int width, int height);
 
 // Init function prototype!
-typedef void (*rfbInitTableFnType)(char **table, rfbPixelFormat *in,
-				   rfbPixelFormat *out);
+typedef void (*rfbInitTableFnType)(char** table, rfbPixelFormat* in, rfbPixelFormat* out);
 
 
 // External translation stuff
-extern void rfbTranslateNone(char *table, rfbPixelFormat *in,
-			     rfbPixelFormat *out,
-			     char *iptr, char *optr,
-			     int bytesBetweenInputLines,
-			     int width, int height);
+extern void rfbTranslateNone(char* table, rfbPixelFormat* in, rfbPixelFormat* out, char* iptr, char* optr,
+                             int bytesBetweenInputLines, int width, int height);
 
 extern HDC GetDcMirror();
 
 // Macro to compare pixel formats.
-#define PF_EQ(x,y)												\
-	((x.bitsPerPixel == y.bitsPerPixel) &&						\
-	 (x.depth == y.depth) &&									\
-	 (x.trueColour == y.trueColour) &&							\
-	 ((x.bigEndian == y.bigEndian) || (x.bitsPerPixel == 8)) &&	\
-	 (!x.trueColour || ((x.redMax == y.redMax) &&				\
-			   (x.greenMax == y.greenMax) &&					\
-			   (x.blueMax == y.blueMax) &&						\
-			   (x.redShift == y.redShift) &&					\
-			   (x.greenShift == y.greenShift) &&				\
-			   (x.blueShift == y.blueShift))))
+#define PF_EQ(x, y)                                                                                                                \
+    ((x.bitsPerPixel == y.bitsPerPixel) && (x.depth == y.depth) && (x.trueColour == y.trueColour) &&                               \
+     ((x.bigEndian == y.bigEndian) || (x.bitsPerPixel == 8)) &&                                                                    \
+     (!x.trueColour || ((x.redMax == y.redMax) && (x.greenMax == y.greenMax) && (x.blueMax == y.blueMax) &&                        \
+                        (x.redShift == y.redShift) && (x.greenShift == y.greenShift) && (x.blueShift == y.blueShift))))
 
 // Translation functions themselves
 extern rfbInitTableFnType rfbInitTrueColourSingleTableFns[];
 extern rfbInitTableFnType rfbInitColourMapSingleTableFns[];
 extern rfbInitTableFnType rfbInitTrueColourRGBTablesFns[];
-extern rfbTranslateFnType rfbTranslateWithSingleTableFns[3][3];
-extern rfbTranslateFnType rfbTranslateWithRGBTablesFns[3][3];
+extern rfbTranslateFnType rfbTranslateWithSingleTableFns[3U][3U];
+extern rfbTranslateFnType rfbTranslateWithRGBTablesFns[3U][3U];
 /*
 extern Bool rfbSetTranslateFunction(rfbClientPtr cl);
 extern void rfbSetClientColourMaps(int firstColour, int nColours);
 extern Bool rfbSetClientColourMap(rfbClientPtr cl, int firstColour,
-				  int nColours);
+                  int nColours);
 */
 
 #endif

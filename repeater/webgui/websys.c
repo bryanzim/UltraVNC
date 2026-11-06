@@ -50,7 +50,7 @@ WI_NOBLOCKSOCK(long sock)
    int   err;
    int   option = TRUE;
 
-   err = ioctlsocket((int)sock, FIONBIO, (u_long *)&option);
+   err = ioctlsocket((SOCKET)(sock), (long)(FIONBIO), (u_long *)&option);
    return(err);
 }
 
