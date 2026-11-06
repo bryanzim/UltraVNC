@@ -37,7 +37,7 @@ BOOL CALLBACK DlgProcCON(const HWND hwnd, const UINT uMsg, const WPARAM wParam, 
     case WM_INITDIALOG: {
         initdone4 = false;
         BOOL queryEnabled = (QuerySetting == 4);
-        ::SendMessage(::GetDlgItem(hwnd, IDQUERY), BM_SETCHECK, queryEnabled, 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDQUERY), BM_SETCHECK, static_cast<WPARAM>(queryEnabled), 0);
         ::EnableWindow(::GetDlgItem(hwnd, IDQUERYTIMEOUT), queryEnabled);
         ::EnableWindow(::GetDlgItem(hwnd, IDC_DREFUSE), queryEnabled);
         ::EnableWindow(::GetDlgItem(hwnd, IDC_DRefuseOnly), queryEnabled);
@@ -46,11 +46,11 @@ BOOL CALLBACK DlgProcCON(const HWND hwnd, const UINT uMsg, const WPARAM wParam, 
         ::EnableWindow(::GetDlgItem(hwnd, IDC_AUTHHOST), queryEnabled);
         ::EnableWindow(::GetDlgItem(hwnd, IDC_QMESG), queryEnabled);
 
-        ::SendMessage(::GetDlgItem(hwnd, IDC_QNOLOGON), BM_SETCHECK, QueryIfNoLogon, 0);
-        ::SetDlgItemInt(hwnd, IDQUERYTIMEOUT, QueryTimeout, FALSE);
-        ::SetDlgItemInt(hwnd, IDC_IDLETIME, IdleTimeout, FALSE);
-        ::SetDlgItemInt(hwnd, IDC_IDLETIMEINPUT, IdleInputTimeout, FALSE);
-        ::SetDlgItemInt(hwnd, IDC_KINTERVAL, keepAliveInterval, FALSE);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_QNOLOGON), BM_SETCHECK, static_cast<WPARAM>(QueryIfNoLogon), 0);
+        ::SetDlgItemInt(hwnd, IDQUERYTIMEOUT, static_cast<UINT>(QueryTimeout), FALSE);
+        ::SetDlgItemInt(hwnd, IDC_IDLETIME, static_cast<UINT>(IdleTimeout), FALSE);
+        ::SetDlgItemInt(hwnd, IDC_IDLETIMEINPUT, static_cast<UINT>(IdleInputTimeout), FALSE);
+        ::SetDlgItemInt(hwnd, IDC_KINTERVAL, static_cast<UINT>(keepAliveInterval), FALSE);
         ::SetDlgItemText(hwnd, IDC_AUTHHOST, authhosts.data());
         ::SetDlgItemText(hwnd, IDC_QMESG, accept_reject_mesg.data());
 
@@ -68,7 +68,7 @@ BOOL CALLBACK DlgProcCON(const HWND hwnd, const UINT uMsg, const WPARAM wParam, 
             break;
         default:
             hQuerySetting = ::GetDlgItem(hwnd, IDC_DREFUSE);
-        };
+        }
         ::SendMessage(hQuerySetting, BM_SETCHECK, TRUE, 0);
 
         HWND hLockSetting;
@@ -82,7 +82,7 @@ BOOL CALLBACK DlgProcCON(const HWND hwnd, const UINT uMsg, const WPARAM wParam, 
             break;
         default:
             hLockSetting = ::GetDlgItem(hwnd, IDC_LOCKSETTING_NOTHING);
-        };
+        }
         ::SendMessage(hLockSetting, BM_SETCHECK, TRUE, 0);
 
         HWND hmvSetting;
@@ -100,7 +100,7 @@ BOOL CALLBACK DlgProcCON(const HWND hwnd, const UINT uMsg, const WPARAM wParam, 
         case 3:
             hmvSetting = ::GetDlgItem(hwnd, IDC_MV4);
             break;
-        };
+        }
         ::SendMessage(hmvSetting, BM_SETCHECK, TRUE, 0);
 
 
@@ -122,7 +122,7 @@ BOOL CALLBACK DlgProcCON(const HWND hwnd, const UINT uMsg, const WPARAM wParam, 
                 QuerySetting = 2;
             }
             BOOL queryEnabled = (QuerySetting == 4);
-            ::SendMessage(::GetDlgItem(hwnd, IDQUERY), BM_SETCHECK, queryEnabled, 0);
+            ::SendMessage(::GetDlgItem(hwnd, IDQUERY), BM_SETCHECK, static_cast<WPARAM>(queryEnabled), 0);
             ::EnableWindow(::GetDlgItem(hwnd, IDQUERYTIMEOUT), queryEnabled);
             ::EnableWindow(::GetDlgItem(hwnd, IDC_DREFUSE), queryEnabled);
             ::EnableWindow(::GetDlgItem(hwnd, IDC_DRefuseOnly), queryEnabled);
@@ -141,13 +141,13 @@ BOOL CALLBACK DlgProcCON(const HWND hwnd, const UINT uMsg, const WPARAM wParam, 
                 std::strcpy(link.data(), "https://uvnc.com/webhelp/");
                 std::strcat(link.data(), "connections");
                 std::strcat(link.data(), ".html");
-                ::ShellExecute(::GetDesktopWindow(), "open", link.data(), "", 0, SW_SHOWNORMAL);
+                ::ShellExecute(::GetDesktopWindow(), "open", link.data(), "", nullptr, SW_SHOWNORMAL);
             }
             break;
         case IDOK: {
             BOOL ok1;
-            QueryTimeout = ::GetDlgItemInt(hwnd, IDQUERYTIMEOUT, &ok1, TRUE);
-            QueryIfNoLogon = (LONG)::SendDlgItemMessage(hwnd, IDC_QNOLOGON, BM_GETCHECK, 0, 0);
+            QueryTimeout = static_cast<LONG>(::GetDlgItemInt(hwnd, IDQUERYTIMEOUT, &ok1, TRUE));
+            QueryIfNoLogon = static_cast<LONG>(::SendDlgItemMessage(hwnd, IDC_QNOLOGON, BM_GETCHECK, 0, 0));
             ::GetDlgItemText(hwnd, IDC_AUTHHOST, authhosts.data(), 150);
             ::GetDlgItemText(hwnd, IDC_QMESG, accept_reject_mesg.data(), 512);
 
@@ -193,9 +193,9 @@ BOOL CALLBACK DlgProcCON(const HWND hwnd, const UINT uMsg, const WPARAM wParam, 
             {
                 ConnectPriority = 3;
             }
-            IdleTimeout = ::GetDlgItemInt(hwnd, IDC_IDLETIME, &ok1, TRUE);
-            IdleInputTimeout = ::GetDlgItemInt(hwnd, IDC_IDLETIMEINPUT, &ok1, TRUE);
-            keepAliveInterval = ::GetDlgItemInt(hwnd, IDC_KINTERVAL, &ok1, TRUE);
+            IdleTimeout = static_cast<LONG>(::GetDlgItemInt(hwnd, IDC_IDLETIME, &ok1, TRUE));
+            IdleInputTimeout = static_cast<LONG>(::GetDlgItemInt(hwnd, IDC_IDLETIMEINPUT, &ok1, TRUE));
+            keepAliveInterval = static_cast<LONG>(::GetDlgItemInt(hwnd, IDC_KINTERVAL, &ok1, TRUE));
         }
         break;
         case IDCANCEL:

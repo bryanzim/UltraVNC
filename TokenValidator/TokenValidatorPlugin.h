@@ -21,7 +21,7 @@
 #ifndef TOKEN_VALIDATOR_PLUGIN_H
 #define TOKEN_VALIDATOR_PLUGIN_H
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <cstddef>
 

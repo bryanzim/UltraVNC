@@ -16,7 +16,7 @@
 #include "winvnc.h"
 
 #include <newdev.h>
-#include <versionhelpers.h>
+#include <VersionHelpers.h>
 
 #include <array>
 #include <cstring>
@@ -28,7 +28,7 @@ VOID WINAPI CreationCallback(const _In_ HSWDEVICE hSwDevice, const _In_ HRESULT 
                              const _In_opt_ PCWSTR pszDeviceInstanceId)
 
 {
-    HANDLE hEvent = *(HANDLE*)pContext;
+    HANDLE hEvent = *reinterpret_cast<HANDLE*>(pContext);
 
     ::SetEvent(hEvent);
     UNREFERENCED_PARAMETER(hSwDevice);
@@ -49,8 +49,8 @@ BOOL GetVersion2(OSVERSIONINFOEX* const os)
     hMod = ::LoadLibrary(TEXT("ntdll.dll"));
     if (hMod)
     {
-        func = (RtlGetVersion_FUNC)::GetProcAddress(hMod, "RtlGetVersion");
-        if (func == 0)
+        func = reinterpret_cast<RtlGetVersion_FUNC>(::GetProcAddress(hMod, "RtlGetVersion"));
+        if (func == nullptr)
         {
             ::FreeLibrary(hMod);
             return FALSE;
@@ -66,10 +66,10 @@ BOOL GetVersion2(OSVERSIONINFOEX* const os)
         os->dwOSVersionInfoSize = sizeof(*os);
         sizeof(os->szCSDVersion);
         WCHAR* src = osw->szCSDVersion;
-        unsigned char* dtc = (unsigned char*)os->szCSDVersion;
+        unsigned char* dtc = reinterpret_cast<unsigned char*>(os->szCSDVersion);
         while (*src)
         {
-            *dtc++ = (unsigned char)*src++;
+            *dtc++ = static_cast<unsigned char>(*src++);
         }
         *dtc = '\0';
 #endif
@@ -95,7 +95,7 @@ VirtualDisplay::VirtualDisplay()
     dd.cb = sizeof(dd);
     DWORD dev{ 0U };
 
-    while (EnumDisplayDevices(0, dev, &dd, 0))
+    while (EnumDisplayDevices(nullptr, dev, &dd, 0))
     {
         if (!(dd.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER) && (dd.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP))
         {
@@ -137,22 +137,22 @@ VirtualDisplay::VirtualDisplay()
     SwDeviceCloseUVNC = nullptr;
     if (hdll)
     {
-        SwDeviceCreateUVNC = (PSwDeviceCreate)::GetProcAddress(hdll, "SwDeviceCreate");
-        SwDeviceCloseUVNC = (PSwDeviceClose)::GetProcAddress(hdll, "SwDeviceClose");
+        SwDeviceCreateUVNC = reinterpret_cast<PSwDeviceCreate>(::GetProcAddress(hdll, "SwDeviceCreate"));
+        SwDeviceCloseUVNC = reinterpret_cast<PSwDeviceClose>(::GetProcAddress(hdll, "SwDeviceClose"));
     }
 
     hFileMap = ::CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, sizeof(SUPPORTEDMONITORS), g_szIPC);
     if (hFileMap)
     {
-        ::SetSecurityInfo(hFileMap, SE_KERNEL_OBJECT, DACL_SECURITY_INFORMATION, 0, 0, (PACL) nullptr, nullptr);
+        ::SetSecurityInfo(hFileMap, SE_KERNEL_OBJECT, DACL_SECURITY_INFORMATION, nullptr, nullptr, static_cast<PACL>(nullptr), nullptr);
         FileView = ::MapViewOfFile(hFileMap, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
-        pbuff = (SUPPORTEDMONITORS*)FileView;
+        pbuff = reinterpret_cast<SUPPORTEDMONITORS*>(FileView);
     }
     if (!pbuff)
     {
         if (FileView)
         {
-            ::UnmapViewOfFile((LPVOID)FileView);
+            ::UnmapViewOfFile(reinterpret_cast<LPVOID>(FileView));
         }
         FileView = nullptr;
         return;
@@ -258,7 +258,7 @@ VirtualDisplay::~VirtualDisplay()
     disconnectAllDisplays();
     if (FileView)
     {
-        ::UnmapViewOfFile((LPVOID)FileView);
+        ::UnmapViewOfFile(reinterpret_cast<LPVOID>(FileView));
     }
     if (hFileMap)
     {
@@ -328,7 +328,7 @@ void VirtualDisplay::realMonitors(map<pair<int, int>, pair<int, int>> resolution
         while (resIter != diplayInfoList.end())
         {
             DEVMODE dm = (*resIter).dm;
-            if (used[counter] == true)
+            if (used[static_cast<unsigned long long>(counter)] == true)
             {
                 ++resIter;
                 ++counter;
@@ -336,23 +336,23 @@ void VirtualDisplay::realMonitors(map<pair<int, int>, pair<int, int>> resolution
             }
             if ((dm.dmPosition.x == 0) && (dm.dmPosition.y == 0) && (x == 0) && (y == 0))
             {
-                dm.dmPelsHeight = h;
-                dm.dmPelsWidth = w;
+                dm.dmPelsHeight = static_cast<DWORD>(h);
+                dm.dmPelsWidth = static_cast<DWORD>(w);
                 dm.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT;
                 ::ChangeDisplaySettingsEx((*resIter).devicenaam.data(), &dm, nullptr, (CDS_UPDATEREGISTRY | CDS_NORESET), nullptr);
-                used[counter] = true;
+                used[static_cast<unsigned long long>(counter)] = true;
                 restoreNeeded = true;
                 break;
-                ;
+                
             }
             else
             {
                 dm.dmPosition.x = x;
                 dm.dmPosition.y = y;
-                dm.dmPelsHeight = h;
-                dm.dmPelsWidth = w;
+                dm.dmPelsHeight = static_cast<DWORD>(h);
+                dm.dmPelsWidth = static_cast<DWORD>(w);
                 ::ChangeDisplaySettingsEx((*resIter).devicenaam.data(), &dm, nullptr, (CDS_UPDATEREGISTRY | CDS_NORESET), nullptr);
-                used[counter] = true;
+                used[static_cast<unsigned long long>(counter)] = true;
                 restoreNeeded = true;
                 break;
             }
@@ -583,7 +583,7 @@ bool VirtualDisplay::InstallDriver(const bool fromCommandline)
         DiInstallDriverAFn diInstallDriverA = nullptr;
         if (hModule)
         {
-            diInstallDriverA = (DiInstallDriverAFn)::GetProcAddress(hModule, "DiInstallDriverA");
+            diInstallDriverA = reinterpret_cast<DiInstallDriverAFn>(::GetProcAddress(hModule, "DiInstallDriverA"));
             if (diInstallDriverA)
             {
                 BOOL status = diInstallDriverA(nullptr, szdriverPath.data(), 0 /*DIIRFLAG_FORCE_INF*/, restart.get());
@@ -592,7 +592,7 @@ bool VirtualDisplay::InstallDriver(const bool fromCommandline)
                 if (status == 0)
                 {
                     ::FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                                   nullptr, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0,
+                                   nullptr, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPSTR>(&messageBuffer), 0,
                                    nullptr);
                     vnclog.Print(LL_INTERR, VNCLOG("InstallDriver failed %s \n"), messageBuffer);
                     if (fromCommandline)
@@ -645,7 +645,7 @@ void VirtualDisplay::recordDisplayNames()
     displayList.clear();
 
     DWORD dev{ 0U };
-    while (EnumDisplayDevices(0, dev, &dd, 0))
+    while (EnumDisplayDevices(nullptr, dev, &dd, 0))
     {
         if (!(dd.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER) && (dd.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP))
         {
@@ -700,7 +700,7 @@ void VirtualDisplay::getSetDisplayName(char* const gdiDeviceName)
     while (!found && (times < 10))
     {
         DWORD dev{ 0U };
-        while (EnumDisplayDevices(0, dev, &dd, 0))
+        while (EnumDisplayDevices(nullptr, dev, &dd, 0))
         {
             if (!(dd.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER) && (dd.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP))
             {
@@ -757,8 +757,8 @@ void VirtualDisplay::changeDisplaySize(const int w, int h, char gdiDeviceName[25
     {
         return;
     }
-    dm.dmPelsHeight = h;
-    dm.dmPelsWidth = w;
+    dm.dmPelsHeight = static_cast<DWORD>(h);
+    dm.dmPelsWidth = static_cast<DWORD>(w);
     ::ChangeDisplaySettingsEx(gdiDeviceName, &dm, nullptr, (CDS_UPDATEREGISTRY | CDS_NORESET), nullptr);
 }
 

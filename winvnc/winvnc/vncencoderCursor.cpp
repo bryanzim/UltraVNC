@@ -45,7 +45,7 @@ static DWORD GetAccessibilityCursorSize()
     if (::RegOpenKeyEx(HKEY_CURRENT_USER, "Control Panel\\Cursors", 0, KEY_READ, &hKey) == ERROR_SUCCESS)
     {
         DWORD dataSize = sizeof(DWORD);
-        RegQueryValueEx(hKey, "CursorBaseSize", nullptr, nullptr, (LPBYTE)&cursorBaseSize, &dataSize);
+        RegQueryValueEx(hKey, "CursorBaseSize", nullptr, nullptr, reinterpret_cast<LPBYTE>(&cursorBaseSize), &dataSize);
         ::RegCloseKey(hKey);
     }
 
@@ -56,7 +56,7 @@ static DWORD GetAccessibilityCursorSize()
         {
             DWORD cursorSizeMultiplier{ 1U };
             DWORD dataSize = sizeof(DWORD);
-            if (RegQueryValueEx(hKey, "CursorSize", nullptr, nullptr, (LPBYTE)&cursorSizeMultiplier, &dataSize) == ERROR_SUCCESS)
+            if (RegQueryValueEx(hKey, "CursorSize", nullptr, nullptr, reinterpret_cast<LPBYTE>(&cursorSizeMultiplier), &dataSize) == ERROR_SUCCESS)
             {
                 // CursorSize is a multiplier (1-15), convert to pixel size
                 if (cursorSizeMultiplier > 1)
@@ -89,7 +89,7 @@ BOOL vncEncoder::SendEmptyCursorShape(VSocket* const outConn)
         hdr.encoding = Swap32IfLE(rfbEncodingRichCursor);
     }
 
-    return outConn->SendExactQueue((char*)&hdr, sizeof(hdr));
+    return outConn->SendExactQueue(reinterpret_cast<char*>(&hdr), sizeof(hdr));
 }
 
 static BOOL IsMagentaLikePixel(BYTE* const pixel, const int bytes_pixel)
@@ -103,7 +103,7 @@ static BOOL IsMagentaLikePixel(BYTE* const pixel, const int bytes_pixel)
     }
     if (bytes_pixel == 2)
     {
-        WORD pixel16 = *(WORD*)pixel;
+        WORD pixel16 = *reinterpret_cast<WORD*>(pixel);
         return ((pixel16 == 0xF81F) || (pixel16 == 0x7C1F));
     }
     return FALSE;
@@ -184,7 +184,7 @@ BOOL vncEncoder::SendCursorShape(VSocket* const outConn, vncDesktop* const deskt
     {
         isColorCursor = TRUE;
         // Get color bitmap dimensions before deleting - needed for enlarged accessibility cursors
-        ::GetObject(IconInfo.hbmColor, sizeof(BITMAP), (LPVOID)&bmColor);
+        ::GetObject(IconInfo.hbmColor, sizeof(BITMAP), reinterpret_cast<LPVOID>(&bmColor));
         ::DeleteObject(IconInfo.hbmColor);
     }
     if (IconInfo.hbmMask == nullptr)
@@ -195,7 +195,7 @@ BOOL vncEncoder::SendCursorShape(VSocket* const outConn, vncDesktop* const deskt
 
     // Check bitmap info for the cursor
     BITMAP bmMask;
-    if (!::GetObject(IconInfo.hbmMask, sizeof(BITMAP), (LPVOID)&bmMask))
+    if (!::GetObject(IconInfo.hbmMask, sizeof(BITMAP), reinterpret_cast<LPVOID>(&bmMask)))
     {
         vnclog.Print(LL_INTINFO, VNCLOG("GetObject() for bitmap failed.\n"));
         ::DeleteObject(IconInfo.hbmMask);
@@ -224,15 +224,15 @@ BOOL vncEncoder::SendCursorShape(VSocket* const outConn, vncDesktop* const deskt
     }
 
     // Check for Windows accessibility cursor scaling (cached to avoid registry reads)
-    int xHotspot = IconInfo.xHotspot;
-    int yHotspot = IconInfo.yHotspot;
+    int xHotspot = static_cast<int>(IconInfo.xHotspot);
+    int yHotspot = static_cast<int>(IconInfo.yHotspot);
     DWORD cursorBaseSize = GetAccessibilityCursorSize();
 
     // If cursor base size is larger than default, scale the cursor
     if ((cursorBaseSize > 32) && (width == 32) && (height == 32))
     {
-        width = cursorBaseSize;
-        height = cursorBaseSize;
+        width = static_cast<int>(cursorBaseSize);
+        height = static_cast<int>(cursorBaseSize);
         // Scale hotspot proportionally
         xHotspot = (IconInfo.xHotspot * cursorBaseSize) / 32;
         yHotspot = (IconInfo.yHotspot * cursorBaseSize) / 32;
@@ -240,7 +240,7 @@ BOOL vncEncoder::SendCursorShape(VSocket* const outConn, vncDesktop* const deskt
 
     // Get monochrome bitmap data for cursor
     // NOTE: they say we should use GetDIBits() instead of GetBitmapBits().
-    BYTE* mbits = new BYTE[bmMask.bmWidthBytes * bmMask.bmHeight];
+    BYTE* mbits = new BYTE[static_cast<unsigned long long>(bmMask.bmWidthBytes * bmMask.bmHeight)];
     if (mbits == nullptr)
     {
         ::DeleteObject(IconInfo.hbmMask);
@@ -267,13 +267,13 @@ BOOL vncEncoder::SendCursorShape(VSocket* const outConn, vncDesktop* const deskt
     {
         // Allocate a new mask buffer for the enlarged cursor dimensions
         int newMaskWidthBytes = (width + 7) / 8;
-        workMbits = new BYTE[newMaskWidthBytes * height];
+        workMbits = new BYTE[static_cast<unsigned long long>(newMaskWidthBytes * height)];
         if (workMbits == nullptr)
         {
             delete[] mbits;
             return FALSE;
         }
-        std::memset(workMbits, 0, newMaskWidthBytes * height); // Start with all transparent
+        std::memset(workMbits, 0, static_cast<size_t>(newMaskWidthBytes * height)); // Start with all transparent
         workMaskWidthBytes = newMaskWidthBytes;
     }
 
@@ -288,12 +288,12 @@ BOOL vncEncoder::SendCursorShape(VSocket* const outConn, vncDesktop* const deskt
         // Calculate cbits size with DWORD-aligned row stride
         int bytes_pixel = m_localformat.bitsPerPixel / 8;
         int cbits_row = width * bytes_pixel;
-        while (cbits_row % sizeof(DWORD))
+        while (static_cast<unsigned long long>(cbits_row) % sizeof(DWORD))
         {
             ++cbits_row;
         }
         const int cbits_size = cbits_row * height;
-        BYTE* cbits = new BYTE[cbits_size];
+        BYTE* cbits = new BYTE[static_cast<unsigned long long>(cbits_size)];
         if (cbits == nullptr)
         {
             if (needsGeneratedMask)
@@ -321,7 +321,7 @@ BOOL vncEncoder::SendCursorShape(VSocket* const outConn, vncDesktop* const deskt
             // Mask bit 1 = visible pixel, bit 0 = transparent
             const int bytes_pixelInner = m_localformat.bitsPerPixel / 8;
             int bytes_row = width * bytes_pixelInner;
-            while (bytes_row % sizeof(DWORD))
+            while (static_cast<unsigned long long>(bytes_row) % sizeof(DWORD))
             {
                 ++bytes_row;
             }
@@ -352,7 +352,7 @@ BOOL vncEncoder::SendCursorShape(VSocket* const outConn, vncDesktop* const deskt
                     }
                     else if (bytes_pixelInner == 2)
                     {
-                        const WORD pixel16 = *(WORD*)pixel;
+                        const WORD pixel16 = *reinterpret_cast<WORD*>(pixel);
                         isMagenta = ((pixel16 == 0xF81F) || (pixel16 == 0x7C1F));
                     }
 
@@ -365,7 +365,7 @@ BOOL vncEncoder::SendCursorShape(VSocket* const outConn, vncDesktop* const deskt
                     else
                     {
                         // Transparent - clear color to black
-                        std::memset(pixel, 0, bytes_pixelInner);
+                        std::memset(pixel, 0, static_cast<size_t>(bytes_pixelInner));
                     }
                     if ((bitmask >>= 1) == 0)
                     {
@@ -411,8 +411,8 @@ BOOL vncEncoder::SendXCursorShape(VSocket* const outConn, BYTE* mask, const int 
     const int maskRowSize = (width + 7) / 8;
     int maskSize = maskRowSize * height;
 
-    if (!outConn->SendExactQueue((char*)&hdr, sizeof(hdr)) || !outConn->SendExactQueue((char*)colors.data(), 6) ||
-        !outConn->SendExactQueue((char*)&mask[maskSize], maskSize) || !outConn->SendExactQueue((char*)mask, maskSize))
+    if (!outConn->SendExactQueue(reinterpret_cast<char*>(&hdr), sizeof(hdr)) || !outConn->SendExactQueue(reinterpret_cast<char*>(colors.data()), 6) ||
+        !outConn->SendExactQueue(reinterpret_cast<char*>(&mask[maskSize]), static_cast<VCard>(maskSize)) || !outConn->SendExactQueue(reinterpret_cast<char*>(mask), static_cast<VCard>(maskSize)))
     {
         return FALSE;
     }
@@ -431,21 +431,21 @@ BOOL vncEncoder::SendRichCursorShape(VSocket* const outConn, BYTE* const mbits, 
 
     // Cet cursor image in local pixel format
     int srcbuf_rowsize = width * (m_localformat.bitsPerPixel / 8);
-    while (srcbuf_rowsize % sizeof(DWORD))
+    while (static_cast<unsigned long long>(srcbuf_rowsize) % sizeof(DWORD))
     {
         ++srcbuf_rowsize;
     } // Actually, this should never happen
 
     // Translate image to client pixel format
     int dstbuf_size = width * height * (m_remoteformat.bitsPerPixel / 8);
-    BYTE* dstbuf = new BYTE[dstbuf_size];
+    BYTE* dstbuf = new BYTE[static_cast<unsigned long long>(dstbuf_size)];
     Translate(cbits, dstbuf, width, height, srcbuf_rowsize);
 
     // Send the data
     const int mask_rowsize = (width + 7) / 8;
     int mask_size = mask_rowsize * height;
-    if (!outConn->SendExactQueue((char*)&hdr, sizeof(hdr)) || !outConn->SendExactQueue((char*)dstbuf, dstbuf_size) ||
-        !outConn->SendExactQueue((char*)mbits, mask_size))
+    if (!outConn->SendExactQueue(reinterpret_cast<char*>(&hdr), sizeof(hdr)) || !outConn->SendExactQueue(reinterpret_cast<char*>(dstbuf), static_cast<VCard>(dstbuf_size)) ||
+        !outConn->SendExactQueue(reinterpret_cast<char*>(mbits), static_cast<VCard>(mask_size)))
     {
         delete[] dstbuf;
         return FALSE;
@@ -496,7 +496,7 @@ void vncEncoder::FixCursorMask(BYTE* const mbits, BYTE* cbits, const int width, 
         // as the hand, Busy and Working in Background pointers.
         int bytes_pixel = m_localformat.bitsPerPixel / 8;
         int bytes_row = width * bytes_pixel;
-        while (bytes_row % sizeof(DWORD))
+        while (static_cast<unsigned long long>(bytes_row) % sizeof(DWORD))
         {
             ++bytes_row;
         }
@@ -515,7 +515,7 @@ void vncEncoder::FixCursorMask(BYTE* const mbits, BYTE* cbits, const int width, 
                 {
                     // Transparent - clear mask bit and set color to black
                     mbits[y * packed_width_bytes + x / 8] &= ~bitmask;
-                    std::memset(pixel, 0, bytes_pixel);
+                    std::memset(pixel, 0, static_cast<size_t>(bytes_pixel));
                 }
                 else
                 {
@@ -536,7 +536,7 @@ void vncEncoder::FixCursorMask(BYTE* const mbits, BYTE* cbits, const int width, 
         // The mask is already inverted above, just need to handle XOR pixels
         int bytes_pixel = m_localformat.bitsPerPixel / 8;
         int bytes_row = width * bytes_pixel;
-        while (bytes_row % sizeof(DWORD))
+        while (static_cast<unsigned long long>(bytes_row) % sizeof(DWORD))
         {
             ++bytes_row;
         }
@@ -578,5 +578,5 @@ void vncEncoder::FixCursorMask(BYTE* const mbits, BYTE* cbits, const int width, 
 inline void vncEncoder::Translate(BYTE* const source, BYTE* const dest, const int w, const int h, const int bytesPerRow)
 {
     // Call the translation function
-    (*m_transfunc)(m_transtable, &m_localformat, &m_transformat, (char*)source, (char*)dest, bytesPerRow, w, h);
+    (*m_transfunc)(m_transtable, &m_localformat, &m_transformat, reinterpret_cast<char*>(source), reinterpret_cast<char*>(dest), bytesPerRow, w, h);
 }

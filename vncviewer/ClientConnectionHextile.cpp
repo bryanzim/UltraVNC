@@ -57,7 +57,7 @@ void ClientConnection::ReadHextileRect(rfbFramebufferUpdateRectHeader* const pfb
                 if (ry + rh - y < 16)                                                                                              \
                     h = ry + rh - y;                                                                                               \
                                                                                                                                    \
-                ReadExact((char*)&subencoding, 1);                                                                                 \
+                ReadExact(reinterpret_cast<char*>(&subencoding), 1);                                                                                 \
                                                                                                                                    \
                 if (subencoding & rfbHextileRaw)                                                                                   \
                 {                                                                                                                  \
@@ -73,13 +73,13 @@ void ClientConnection::ReadHextileRect(rfbFramebufferUpdateRectHeader* const pfb
                                                                                                                                    \
                 if (subencoding & rfbHextileBackgroundSpecified)                                                                   \
                 {                                                                                                                  \
-                    ReadExact((char*)&bg, (bpp / 8));                                                                              \
+                    ReadExact(reinterpret_cast<char*>(&bg), (bpp / 8));                                                                              \
                 }                                                                                                                  \
-                FillSolidRect_ultra(x, y, w, h, m_myFormat.bitsPerPixel, (BYTE*)&bg);                                              \
+                FillSolidRect_ultra(x, y, w, h, m_myFormat.bitsPerPixel, reinterpret_cast<BYTE*>(&bg));                                              \
                                                                                                                                    \
                 if (subencoding & rfbHextileForegroundSpecified)                                                                   \
                 {                                                                                                                  \
-                    ReadExact((char*)&fg, (bpp / 8));                                                                              \
+                    ReadExact(reinterpret_cast<char*>(&fg), (bpp / 8));                                                                              \
                 }                                                                                                                  \
                                                                                                                                    \
                 if (!(subencoding & rfbHextileAnySubrects))                                                                        \
@@ -87,9 +87,9 @@ void ClientConnection::ReadHextileRect(rfbFramebufferUpdateRectHeader* const pfb
                     continue;                                                                                                      \
                 }                                                                                                                  \
                                                                                                                                    \
-                ReadExact((char*)&nSubrects, 1);                                                                                   \
+                ReadExact(reinterpret_cast<char*>(&nSubrects), 1);                                                                                   \
                                                                                                                                    \
-                ptr = (CARD8*)m_netbuf;                                                                                            \
+                ptr = reinterpret_cast<CARD8*>(m_netbuf);                                                                                            \
                                                                                                                                    \
                 if (subencoding & rfbHextileSubrectsColoured)                                                                      \
                 {                                                                                                                  \
@@ -109,7 +109,7 @@ void ClientConnection::ReadHextileRect(rfbFramebufferUpdateRectHeader* const pfb
                         sy = *ptr++ & 0x0f;                                                                                        \
                         sw = (*ptr >> 4) + 1;                                                                                      \
                         sh = (*ptr++ & 0x0f) + 1;                                                                                  \
-                        FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, (BYTE*)&fg);                          \
+                        FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, reinterpret_cast<BYTE*>(&fg));                          \
                     }                                                                                                              \
                 }                                                                                                                  \
                 else                                                                                                               \
@@ -127,7 +127,7 @@ void ClientConnection::ReadHextileRect(rfbFramebufferUpdateRectHeader* const pfb
                         sy = *ptr++ & 0x0f;                                                                                        \
                         sw = (*ptr >> 4) + 1;                                                                                      \
                         sh = (*ptr++ & 0x0f) + 1;                                                                                  \
-                        FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, (BYTE*)&fg);                          \
+                        FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, reinterpret_cast<BYTE*>(&fg));                          \
                     }                                                                                                              \
                 }                                                                                                                  \
                 /*Sleep(0);*/                                                                                                      \

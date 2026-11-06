@@ -40,10 +40,10 @@ static char* log_txt(void)
     {
         len += curr->len + 2;
     } /* +2 for trailing '\r\n' */
-    buff = (char*)std::malloc(len + 1); /* +1 for trailing '\0' */
+    buff = reinterpret_cast<char*>(std::malloc(static_cast<size_t>(len + 1))); /* +1 for trailing '\0' */
     for (curr = head; curr; curr = curr->next)
     {
-        std::memcpy(buff + ptr, curr->txt.data(), curr->len);
+        std::memcpy(buff + ptr, curr->txt.data(), static_cast<size_t>(curr->len));
         ptr += curr->len;
         if (curr->next)
         {
@@ -89,7 +89,7 @@ void win_log(char* const line)
     static int log_len{ 0 };
     char* txt;
     len = static_cast<int>(std::strlen(line));
-    curr = (LIST*)std::malloc(sizeof(struct LIST) + len);
+    curr = reinterpret_cast<LIST*>(std::malloc(sizeof(struct LIST) + static_cast<unsigned long long>(len)));
     curr->len = len;
     std::strcpy(curr->txt.data(), line);
     curr->next = nullptr;

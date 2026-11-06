@@ -89,19 +89,19 @@ wi_init()
    wi_sin.sin_family = AF_INET;
    wi_sin.sin_addr.s_addr = htonl(INADDR_ANY);
    wi_sin.sin_port = htons((u_short)saved_portHTTP);
-   error = bind(wi_listen, (struct sockaddr*)&wi_sin, 
+   error = bind((SOCKET)(wi_listen), (struct sockaddr*)&wi_sin, 
       sizeof(struct sockaddr_in));
    if(error)
    {
-	  closesocket(wi_listen);
+	  closesocket((SOCKET)(wi_listen));
       dprintf("Error %d binding web server\n", error);
       return WIE_SOCKET;
    }
 
-   error = listen(wi_listen, 15);
+   error = listen((SOCKET)(wi_listen), 15);
    if (error)
    {
-	  closesocket(wi_listen);
+	  closesocket((SOCKET)(wi_listen));
       dprintf("Error %d starting listen\n", error);
       return WIE_SOCKET;
    }   
@@ -214,9 +214,9 @@ another_state:
          /* See if there is data to read */
          if(FD_ISSET(sess->ws_socket, &sel_recv))
          {
-            error = recv(sess->ws_socket, 
+            error = recv((SOCKET)(sess->ws_socket), 
                sess->ws_rxbuf + sess->ws_rxsize,
-               sizeof(sess->ws_rxbuf) - sess->ws_rxsize, 0);
+               (int)(sizeof(sess->ws_rxbuf) - sess->ws_rxsize), 0);
 			//if FD_ISSET=true then there is date unless remote closed connection
 			// recv()==0 indicate a remote session taht's closed.
             if(error <= 0)
@@ -227,7 +227,7 @@ another_state:
                return WIE_SOCKET;
             }
             sess->ws_rxsize += error;
-            sess->ws_last = cticks;
+            sess->ws_last = (wi_sec)(cticks);
          }
 		 if(sess->ws_rxsize>=WI_RXBUFSIZE)
 		 {
@@ -250,9 +250,9 @@ another_state:
 
       case WI_POSTRX:
          /* See if there is more to read */
-         error = recv(sess->ws_socket, 
+         error = recv((SOCKET)(sess->ws_socket), 
             sess->ws_rxbuf + sess->ws_rxsize,
-            sizeof(sess->ws_rxbuf) - sess->ws_rxsize, 0);
+            (int)(sizeof(sess->ws_rxbuf) - sess->ws_rxsize), 0);
 
          if(error < 0)
          {
@@ -267,7 +267,7 @@ another_state:
             }
          }
          sess->ws_rxsize += error;
-         sess->ws_last = cticks;
+         sess->ws_last = (wi_sec)(cticks);
 
          /* If we have all the content, parse the name/value pairs. 
           * We check for ContentLength field or socket closed 
@@ -289,7 +289,7 @@ another_state:
                   break;
                }
                sess->ws_state = WI_CONTENT;
-               sess->ws_last = cticks;
+               sess->ws_last = (wi_sec)(cticks);
             }
          }
          if(sess->ws_state != WI_POSTRX)
@@ -360,7 +360,7 @@ wi_sockaccept()
    int         error;
 
    sasize = sizeof(struct sockaddr_in);
-   newsock = (socktype)(accept(wi_listen, (struct sockaddr * )&sa, &sasize));
+   newsock = (socktype)(accept((SOCKET)(wi_listen), (struct sockaddr * )&sa, &sasize));
    if (newsock==-1)
    {
 	   DWORD aa= GetLastError();
@@ -388,15 +388,15 @@ wi_sockaccept()
           */
          memset(&local, 0, sizeof(local));
          slen = sizeof(local);
-         if( getsockname(newsock, (struct sockaddr *)&local, &slen) < 0) 
+         if( getsockname((SOCKET)(newsock), (struct sockaddr *)&local, &slen) < 0) 
          {
-             closesocket(newsock);
+             closesocket((SOCKET)(newsock));
              return -1;
          }
 
          if(sa.sin_addr.s_addr != local.sin_addr.s_addr)
          {
-            closesocket(newsock);
+            closesocket((SOCKET)(newsock));
             return 0;   /* not an error */
          }
       }
@@ -420,7 +420,7 @@ wi_sockaccept()
          sesscount++;
       if(sesscount >= WI_MAX_SESSIONS)
       {
-         closesocket(newsock);
+         closesocket((SOCKET)(newsock));
          return 0;   /* not an error, just drop */
       }
    }
@@ -473,13 +473,13 @@ wi_parseheader( wi_sess * sess )
    sess->ws_data = rxend + 4;
 
    /* extract the basic http comand */
-   cmd = sess->ws_rxbuf[0];
+   cmd = (u_long)(sess->ws_rxbuf[0]);
    cmd <<= 8;
-   cmd |= sess->ws_rxbuf[1];
+   cmd |= (u_long)(sess->ws_rxbuf[1]);
    cmd <<= 8;
-   cmd |= sess->ws_rxbuf[2];
+   cmd |= (u_long)(sess->ws_rxbuf[2]);
    cmd <<= 8;
-   cmd |= sess->ws_rxbuf[3];
+   cmd |= (u_long)(sess->ws_rxbuf[3]);
 
    switch(cmd)
    {
@@ -747,8 +747,8 @@ wi_readfile(struct wi_sess_s * sess)
 
 
 readmore:
-   toread = sizeof(fi->wf_data) - fi->wf_inbuf;
-   len = wi_fread( &fi->wf_data[fi->wf_inbuf], 1, toread, fi );
+   toread = (int)(sizeof(fi->wf_data) - fi->wf_inbuf);
+   len = wi_fread( &fi->wf_data[fi->wf_inbuf], 1, (unsigned int)(toread), fi );
 
    if(len <= 0)
    {
@@ -763,7 +763,7 @@ readmore:
          goto readdone;
    }
 
-   sess->ws_last = cticks;
+   sess->ws_last = (wi_sec)(cticks);
    fi->wf_inbuf += len;
 
    /* fast path for binary files. We've read first buffer from file
@@ -880,7 +880,7 @@ wi_sockwrite(wi_sess * sess)
    {
       txbuf = sess->ws_txbufs;
       tosend = txbuf->tb_total - txbuf->tb_done;
-      error = send(sess->ws_socket, &txbuf->tb_data[txbuf->tb_done], tosend, 0);
+      error = send((SOCKET)(sess->ws_socket), &txbuf->tb_data[txbuf->tb_done], tosend, 0);
       if(error != tosend)
       {
          error = errno;
@@ -897,7 +897,7 @@ wi_sockwrite(wi_sess * sess)
       sess->ws_txbufs = txbuf->tb_next;
       txbuf->tb_next = NULL;
       wi_txfree(txbuf);
-      sess->ws_last = cticks;
+      sess->ws_last = (wi_sec)(cticks);
    }
 
    /* fall to here when all txbufs are sent. */
@@ -923,7 +923,7 @@ wi_redirect(wi_sess * sess, char * filename)
 
    sess->ws_referer = sess->ws_uri;
    sess->ws_uri = filename;
-   sess->ws_last = cticks;
+   sess->ws_last = (wi_sec)(cticks);
 
    /* unlink the completed form file fron the session */
    sess->ws_filelist = sess->ws_filelist->wf_next;

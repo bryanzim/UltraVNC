@@ -42,7 +42,7 @@ int _tmain(const int argc, TCHAR* argv[])
                 }
                 else if ((::_tcsicmp(argv[2U], _T("/o")) == 0) || (::_tcsicmp(argv[2U], _T("-o")) == 0))
                 {
-                    ;
+                    
                 } //override
                 else
                 {

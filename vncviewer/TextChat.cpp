@@ -15,13 +15,13 @@
 
 #include "common/win32_helpers.h"
 #include "Exception.h"
-#include "richedit.h"
+#include "Richedit.h"
 #include "UltraVNCHelperFunctions.h"
 #include "vncviewer.h"
 
 #include <rdr/Exception.h>
 
-#include <commctrl.h>
+#include <CommCtrl.h>
 
 #include <array>
 #include <cstring>
@@ -202,7 +202,7 @@ void TextChat::SetTextFormat(const bool bBold, const bool bItalic, const long nS
         cf.yHeight = nSize;       // set size in points
         ::wcscpy_s(cf.szFaceName, 32, szFaceName);
 
-        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
+        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_SETCHARFORMAT, SCF_SELECTION, reinterpret_cast<LPARAM>(&cf));
     }
 }
 
@@ -213,13 +213,13 @@ void TextChat::SetTextFormat(const bool bBold, const bool bItalic, const long nS
 void TextChat::ProcessTextChatMsg()
 {
     rfbTextChatMsg tcm;
-    m_pCC->ReadExact(((char*)&tcm) + m_pCC->m_nTO, sz_rfbTextChatMsg - m_pCC->m_nTO);
+    m_pCC->ReadExact((reinterpret_cast<char*>(&tcm)) + m_pCC->m_nTO, sz_rfbTextChatMsg - m_pCC->m_nTO);
     UINT len = Swap32IfLE(tcm.length);
 
     if (len == CHAT_OPEN)
     {
         // Open Text Chat Dialog
-        ::PostMessage(m_pCC->m_hwndMain, WM_SYSCOMMAND, ID_TEXTCHAT, (LPARAM)0L);
+        ::PostMessage(m_pCC->m_hwndMain, WM_SYSCOMMAND, ID_TEXTCHAT, static_cast<LPARAM>(0L));
         return;
     }
     else if (len == CHAT_CLOSE)
@@ -260,7 +260,7 @@ void TextChat::ProcessTextChatMsg()
         {
             char* raw = new char[len + 1];
             raw[len] = 0;
-            m_pCC->ReadExact(raw, len);
+            m_pCC->ReadExact(raw, static_cast<int>(len));
 
             std::memset(m_szRemoteText, 0, TEXTMAXSIZE * sizeof(wchar_t));
             UINT assumed = m_pCC->m_supportsUnicodeTextChat ? CP_UTF8 : CP_ACP;
@@ -290,8 +290,8 @@ void TextChat::SendTextChatRequest(const int nMsg)
     rfbTextChatMsg tcm;
     std::memset(&tcm, 0, sizeof(rfbTextChatMsg));
     tcm.type = rfbTextChat;
-    tcm.length = Swap32IfLE(nMsg);
-    m_pCC->WriteExact((char*)&tcm, sz_rfbTextChatMsg, rfbTextChat);
+    tcm.length = static_cast<unsigned int>(Swap32IfLE(nMsg));
+    m_pCC->WriteExact(reinterpret_cast<char*>(&tcm), sz_rfbTextChatMsg, rfbTextChat);
     return;
 }
 
@@ -307,7 +307,7 @@ void TextChat::PrintMessage(const wchar_t* const szMessage, const wchar_t* const
     lpG.flags = GTL_NUMBYTES;
     lpG.codepage = CP_UTF8;
 
-    int nLen = static_cast<int>(::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_GETTEXTLENGTHEX, (WPARAM)&lpG, 0L));
+    int nLen = static_cast<int>(::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_GETTEXTLENGTHEX, reinterpret_cast<WPARAM>(&lpG), 0L));
     if (nLen + 32 > TEXTMAXSIZE)
     {
         ::SetDlgItemTextW(m_hDlg, IDC_CHATAREA_EDIT,
@@ -324,11 +324,11 @@ void TextChat::PrintMessage(const wchar_t* const szMessage, const wchar_t* const
         {
             return;
         }
-        utf8[n] = 0;
+        utf8[static_cast<unsigned long long>(n)] = 0;
         SETTEXTEX st;
         st.flags = ST_SELECTION;
         st.codepage = CP_UTF8;
-        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_SETTEXTEX, (WPARAM)&st, (LPARAM)utf8.data());
+        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_SETTEXTEX, reinterpret_cast<WPARAM>(&st), reinterpret_cast<LPARAM>(utf8.data()));
     };
 
     // Todo: test if chat text + sender + message > TEXTMAXSIZE -> Modulo display
@@ -336,7 +336,7 @@ void TextChat::PrintMessage(const wchar_t* const szMessage, const wchar_t* const
     {
         cr.cpMax = nLen;
         cr.cpMin = cr.cpMax;
-        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_EXSETSEL, 0, (LPARAM)&cr);
+        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_EXSETSEL, 0, reinterpret_cast<LPARAM>(&cr));
 
         // [v1.0.2-jp1 fix]
         SetTextFormat(false, false, 0x75, L"MS Shell Dlg 2", dwColor);
@@ -345,12 +345,12 @@ void TextChat::PrintMessage(const wchar_t* const szMessage, const wchar_t* const
         InsertWide(m_szTextBoxBuffer);
     }
 
-    nLen = static_cast<int>(::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_GETTEXTLENGTHEX, (WPARAM)&lpG, 0L));
+    nLen = static_cast<int>(::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_GETTEXTLENGTHEX, reinterpret_cast<WPARAM>(&lpG), 0L));
     if (szMessage != nullptr) //print the sender's message
     {
         cr.cpMax = nLen;
         cr.cpMin = cr.cpMax;
-        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_EXSETSEL, 0, (LPARAM)&cr);
+        ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, EM_EXSETSEL, 0, reinterpret_cast<LPARAM>(&cr));
 
         // [v1.0.2-jp1 fix]
         SetTextFormat(false, false, 0x75, L"MS Shell Dlg 2", dwColor != GREY ? BLACK : GREY);
@@ -366,8 +366,8 @@ void TextChat::PrintMessage(const wchar_t* const szMessage, const wchar_t* const
     si.cbSize = sizeof(SCROLLINFO);
     si.fMask = SIF_RANGE | SIF_PAGE;
     ::GetScrollInfo(::GetDlgItem(m_hDlg, IDC_CHATAREA_EDIT), SB_VERT, &si);
-    si.nPos = si.nMax - maximum(si.nPage - 1, 0);
-    ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, WM_VSCROLL, MAKELONG(SB_THUMBPOSITION, si.nPos), 0L); // Scroll down the ch
+    si.nPos = static_cast<int>(si.nMax - maximum(si.nPage - 1, 0));
+    ::SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, WM_VSCROLL, static_cast<WPARAM>(MAKELONG(SB_THUMBPOSITION, si.nPos)), 0L); // Scroll down the ch
 
     // This line does the bottom scrolling correctly under Windows NT4, Windows 2000, Windows XP...
     // SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, WM_VSCROLL, SB_BOTTOM, 0L);
@@ -408,12 +408,12 @@ void TextChat::SendLocalText(void)
     rfbTextChatMsg tcm;
     std::memset(&tcm, 0, sizeof(rfbTextChatMsg));
     tcm.type = rfbTextChat;
-    tcm.length = Swap32IfLE((CARD32)sendLen);
+    tcm.length = Swap32IfLE(static_cast<CARD32>(sendLen));
     //adzm 2010-09
-    m_pCC->WriteExactQueue((char*)&tcm, sz_rfbTextChatMsg, rfbTextChat);
+    m_pCC->WriteExactQueue(reinterpret_cast<char*>(&tcm), sz_rfbTextChatMsg, rfbTextChat);
     if (sendLen > 0)
     {
-        m_pCC->WriteExact((char*)sendBytes.data(), sendLen);
+        m_pCC->WriteExact(reinterpret_cast<char*>(sendBytes.data()), sendLen);
     }
 
     //and we clear the input box
@@ -427,8 +427,8 @@ void TextChat::SendLocalText(void)
 int TextChat::DoDialog()
 {
     extern HINSTANCE m_hInstResDLL;
-    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_TEXTCHAT_DLG), nullptr, (DLGPROC)TextChatDlgProc,
-                          (LONG_PTR)this));
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_TEXTCHAT_DLG), nullptr, reinterpret_cast<DLGPROC>(TextChatDlgProc),
+                          reinterpret_cast<LONG_PTR>(this)));
 }
 
 
@@ -518,10 +518,10 @@ BOOL CALLBACK TextChat::TextChatDlgProc(HWND hWnd, const UINT uMsg, const WPARAM
 
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hWnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         helper::SafeSetWindowUserData(hWnd, lParam);
-        TextChat* _thisInner = (TextChat*)lParam;
+        TextChat* _thisInner = reinterpret_cast<TextChat*>(lParam);
         if ((_thisInner->m_szLocalText == nullptr) || (_thisInner->m_szRemoteText == nullptr))
         {
             ::EndDialog(hWnd, FALSE);
@@ -589,8 +589,8 @@ BOOL CALLBACK TextChat::TextChatDlgProc(HWND hWnd, const UINT uMsg, const WPARAM
         si.cbSize = sizeof(SCROLLINFO);
         si.fMask = SIF_RANGE | SIF_PAGE;
         ::GetScrollInfo(::GetDlgItem(hWnd, IDC_CHATAREA_EDIT), SB_VERT, &si);
-        si.nPos = si.nMax - maximum(si.nPage - 1, 0);
-        ::SendDlgItemMessage(hWnd, IDC_CHATAREA_EDIT, WM_VSCROLL, MAKELONG(SB_THUMBPOSITION, si.nPos), 0L);
+        si.nPos = static_cast<int>(si.nMax - maximum(si.nPage - 1, 0));
+        ::SendDlgItemMessage(hWnd, IDC_CHATAREA_EDIT, WM_VSCROLL, static_cast<WPARAM>(MAKELONG(SB_THUMBPOSITION, si.nPos)), 0L);
         // This line does the bottom scrolling correctly under Windows NT4, Windows 2000, Windows XP...
         // SendDlgItemMessage(m_hDlg, IDC_CHATAREA_EDIT, WM_VSCROLL, SB_BOTTOM, 0L);
 
@@ -603,7 +603,7 @@ BOOL CALLBACK TextChat::TextChatDlgProc(HWND hWnd, const UINT uMsg, const WPARAM
 
         // [v1.0.2-jp1 fix] SUBCLASS Split bar
         pDefSBProc = helper::SafeGetWindowProc(::GetDlgItem(hWnd, IDC_STATIC_SPLIT));
-        helper::SafeSetWindowProc(::GetDlgItem(hWnd, IDC_STATIC_SPLIT), (LONG_PTR)SBProc);
+        helper::SafeSetWindowProc(::GetDlgItem(hWnd, IDC_STATIC_SPLIT), reinterpret_cast<LONG_PTR>(SBProc));
 
         return TRUE;
     }
@@ -670,7 +670,7 @@ BOOL CALLBACK TextChat::TextChatDlgProc(HWND hWnd, const UINT uMsg, const WPARAM
     // [v1.0.2-jp1 fix-->]
     case WM_SIZING:
         LPRECT lprc;
-        lprc = (LPRECT)lParam;
+        lprc = reinterpret_cast<LPRECT>(lParam);
         switch (wParam)
         {
         case WMSZ_TOPLEFT:
@@ -833,5 +833,5 @@ LRESULT CALLBACK SBProc(const HWND hWnd, const UINT uMsg, const WPARAM wParam, c
         break;
     }
 
-    return ::CallWindowProc((WNDPROC)pDefSBProc, hWnd, uMsg, wParam, lParam);
+    return ::CallWindowProc(reinterpret_cast<WNDPROC>(pDefSBProc), hWnd, uMsg, wParam, lParam);
 }

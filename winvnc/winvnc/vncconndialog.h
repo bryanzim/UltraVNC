@@ -12,8 +12,8 @@
 
 class vncConnDialog;
 
-#if (!defined(_WINVNC_VNCCONNDIALOG))
-#define _WINVNC_VNCCONNDIALOG
+#if (!defined(WINVNC_VNCCONNDIALOG))
+#define WINVNC_VNCCONNDIALOG
 
 #pragma once
 

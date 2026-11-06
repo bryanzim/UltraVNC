@@ -7,8 +7,8 @@
 // SPDX-FileCopyrightText: Copyright (C) 2002-2026 UltraVNC Team Members. All Rights Reserved.
 //
 
-#ifndef VIEWERBOUNDS_H__
-#define VIEWERBOUNDS_H__
+#ifndef VIEWERBOUNDS_H
+#define VIEWERBOUNDS_H
 
 #include <stddef.h>
 #include <type_traits>

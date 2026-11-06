@@ -148,7 +148,7 @@ namespace ScramSha256
             return false;
         }
 
-        std::uint32_t iters = (std::uint32_t)std::strtoul(text.substr(0, p1).c_str(), nullptr, 10);
+        std::uint32_t iters = static_cast<std::uint32_t>(std::strtoul(text.substr(0, p1).c_str(), nullptr, 10));
         std::vector<std::uint8_t> salt, sk, svk;
         if ((iters < 4096) || (iters > 1000000) || !Base64::Decode(text.substr(p1 + 1, p2 - p1 - 1), salt) ||
             !Base64::Decode(text.substr(p2 + 1, p3 - p2 - 1), sk) || !Base64::Decode(text.substr(p3 + 1), svk))
@@ -177,7 +177,7 @@ namespace ScramSha256
     bool ServerParseClientFirst(const std::vector<std::uint8_t>& in, std::string& outUser, std::string& outClientFirstBare,
                                 std::string& outClientNonce, std::string& outGs2Header, CbFlag& outCbFlag)
     {
-        std::string msg((const char*)in.data(), in.size());
+        std::string msg(reinterpret_cast<const char*>(in.data()), in.size());
         // GS2 header: "n,," or "y,," or "p=cb-type,,"
         if (msg.size() < 4)
         {
@@ -234,7 +234,7 @@ namespace ScramSha256
                            const std::string& serverFirst, const std::string& fullNonce, const std::string& gs2Header,
                            const std::vector<std::uint8_t>& cbData, std::string& outServerFinal)
     {
-        std::string msg((const char*)in.data(), in.size());
+        std::string msg(reinterpret_cast<const char*>(in.data()), in.size());
         // client-final-without-proof = everything before ",p=..."
         std::size_t ppos = msg.rfind(",p=");
         if (ppos == std::string::npos)
@@ -278,7 +278,7 @@ namespace ScramSha256
         }
         for (int i{ 0 }; i < 32; ++i)
         {
-            clientKey[i] = proof[i] ^ clientSig[i];
+            clientKey[static_cast<unsigned long long>(i)] = proof[static_cast<unsigned long long>(i)] ^ clientSig[static_cast<unsigned long long>(i)];
         }
         if (!BcryptHelp::Sha256(clientKey.data(), 32, check.data()) || (std::memcmp(check.data(), v.storedKey.data(), 32) != 0))
         {
@@ -326,7 +326,7 @@ namespace ScramSha256
                      const std::string& clientNonce, const std::string& gs2Header, const std::vector<std::uint8_t>& cbData,
                      std::string& outMsg, std::vector<std::uint8_t>& outExpectedServerSig)
     {
-        std::string sf((const char*)serverFirst.data(), serverFirst.size());
+        std::string sf(reinterpret_cast<const char*>(serverFirst.data()), serverFirst.size());
         std::string nonce, saltB64, iterStr;
         if (!GetAttr(sf, 'r', nonce) || !GetAttr(sf, 's', saltB64) || !GetAttr(sf, 'i', iterStr))
         {
@@ -342,7 +342,7 @@ namespace ScramSha256
         {
             return false;
         }
-        std::uint32_t iters = (std::uint32_t)std::strtoul(iterStr.c_str(), nullptr, 10);
+        std::uint32_t iters = static_cast<std::uint32_t>(std::strtoul(iterStr.c_str(), nullptr, 10));
         if ((iters < 4096) || (iters > 1000000))
         {
             return false;
@@ -368,7 +368,7 @@ namespace ScramSha256
         }
         for (int i{ 0 }; i < 32; ++i)
         {
-            proof[i] = clientKey[i] ^ clientSig[i];
+            proof[static_cast<unsigned long long>(i)] = clientKey[static_cast<unsigned long long>(i)] ^ clientSig[static_cast<unsigned long long>(i)];
         }
 
         std::array<std::uint8_t, 32U> serverKey;
@@ -385,7 +385,7 @@ namespace ScramSha256
 
     bool ClientVerifyServerFinal(const std::vector<std::uint8_t>& serverFinal, const std::uint8_t expectedSig[32U])
     {
-        std::string msg((const char*)serverFinal.data(), serverFinal.size());
+        std::string msg(reinterpret_cast<const char*>(serverFinal.data()), serverFinal.size());
         std::string v;
         if (!GetAttr(msg, 'v', v))
         {

@@ -12,8 +12,8 @@
 
 /* translate.h - prototypes of functions in translate.cpp */
 
-#ifndef TRANSLATE_H__
-#define TRANSLATE_H__
+#ifndef TRANSLATE_H
+#define TRANSLATE_H
 
 #include "stdhdrs.h"
 

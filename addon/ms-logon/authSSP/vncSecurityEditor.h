@@ -22,10 +22,10 @@
 #define AUTHSSP_API __declspec(dllimport)
 #endif
 
-#include <windows.h>
+#include <Windows.h>
 
-#include <aclapi.h>
-#include <aclui.h>
+#include <AclAPI.h>
+#include <AclUI.h>
 
 #include <stdio.h>
 
@@ -35,7 +35,7 @@ struct vncSecurityInfo : ISecurityInformation
     const wchar_t* const m_pszObjectName;
     const wchar_t* const m_pszPageTitle;
 
-    explicit vncSecurityInfo(const wchar_t* pszObjectName, const wchar_t* pszPageTitle = 0)
+    explicit vncSecurityInfo(const wchar_t* pszObjectName, const wchar_t* pszPageTitle = nullptr)
         : m_cRefs{ 0 }, m_pszObjectName(pszObjectName), m_pszPageTitle(pszPageTitle)
     {
     }

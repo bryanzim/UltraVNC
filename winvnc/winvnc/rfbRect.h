@@ -12,11 +12,11 @@
 
 // rfb::Rect and rfb::Point structures
 
-#ifndef __RFB_RECT_INCLUDED__
-#define __RFB_RECT_INCLUDED__
+#ifndef RFB_RECT_INCLUDED
+#define RFB_RECT_INCLUDED
 
 #ifdef WIN32
-#include <windows.h>
+#include <Windows.h>
 
 #endif
 
@@ -103,7 +103,7 @@ namespace rfb
         }
         bool enclosed_by(const Rect& r) const
         { return (tl.x >= r.tl.x) && (tl.y >= r.tl.y) && (br.x <= r.br.x) && (br.y <= r.br.y); }
-        unsigned int area() const { return is_empty() ? 0 : width() * height(); }
+        unsigned int area() const { return is_empty() ? 0 : static_cast<unsigned int>(width() * height()); }
         inline int width() const { return br.x - tl.x; }
         inline int height() const { return br.y - tl.y; }
         Point tl;
@@ -116,4 +116,4 @@ namespace rfb
     using RectVector = std::vector<Rect>;
 }
 
-#endif // __RFB_RECT_INCLUDED__
+#endif // RFB_RECT_INCLUDED

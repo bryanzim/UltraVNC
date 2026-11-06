@@ -104,14 +104,14 @@ HMODULE LoadSecurityDll()
     __try
     {
 
-        fn._AcceptSecurityContext = (ACCEPT_SECURITY_CONTEXT_FN)::GetProcAddress(hModule, "AcceptSecurityContext");
+        fn._AcceptSecurityContext = reinterpret_cast<ACCEPT_SECURITY_CONTEXT_FN>(::GetProcAddress(hModule, "AcceptSecurityContext"));
         if (!fn._AcceptSecurityContext)
         {
             __leave;
         }
 
 #ifdef UNICODE
-        fn._AcquireCredentialsHandle = (ACQUIRE_CREDENTIALS_HANDLE_FN)::GetProcAddress(hModule, "AcquireCredentialsHandleW");
+        fn._AcquireCredentialsHandle = reinterpret_cast<ACQUIRE_CREDENTIALS_HANDLE_FN>(::GetProcAddress(hModule, "AcquireCredentialsHandleW"));
 #else
         fn._AcquireCredentialsHandle = (ACQUIRE_CREDENTIALS_HANDLE_FN)::GetProcAddress(hModule, "AcquireCredentialsHandleA");
 #endif
@@ -123,32 +123,32 @@ HMODULE LoadSecurityDll()
         // CompleteAuthToken, ImpersonateSecurityContext and RevertSecurityContext
         // are not present on Windows 9x Secur32.dll
         // Do not check for the availablity of the functions if it is NULL;
-        fn._CompleteAuthToken = (COMPLETE_AUTH_TOKEN_FN)::GetProcAddress(hModule, "CompleteAuthToken");
+        fn._CompleteAuthToken = reinterpret_cast<COMPLETE_AUTH_TOKEN_FN>(::GetProcAddress(hModule, "CompleteAuthToken"));
 
-        fn._ImpersonateSecurityContext = (IMPERSONATE_SECURITY_CONTEXT_FN)::GetProcAddress(hModule, "ImpersonateSecurityContext");
+        fn._ImpersonateSecurityContext = reinterpret_cast<IMPERSONATE_SECURITY_CONTEXT_FN>(::GetProcAddress(hModule, "ImpersonateSecurityContext"));
 
-        fn._RevertSecurityContext = (REVERT_SECURITY_CONTEXT_FN)::GetProcAddress(hModule, "RevertSecurityContext");
+        fn._RevertSecurityContext = reinterpret_cast<REVERT_SECURITY_CONTEXT_FN>(::GetProcAddress(hModule, "RevertSecurityContext"));
 
-        fn._DeleteSecurityContext = (DELETE_SECURITY_CONTEXT_FN)::GetProcAddress(hModule, "DeleteSecurityContext");
+        fn._DeleteSecurityContext = reinterpret_cast<DELETE_SECURITY_CONTEXT_FN>(::GetProcAddress(hModule, "DeleteSecurityContext"));
         if (!fn._DeleteSecurityContext)
         {
             __leave;
         }
 
-        fn._FreeContextBuffer = (FREE_CONTEXT_BUFFER_FN)::GetProcAddress(hModule, "FreeContextBuffer");
+        fn._FreeContextBuffer = reinterpret_cast<FREE_CONTEXT_BUFFER_FN>(::GetProcAddress(hModule, "FreeContextBuffer"));
         if (!fn._FreeContextBuffer)
         {
             __leave;
         }
 
-        fn._FreeCredentialsHandle = (FREE_CREDENTIALS_HANDLE_FN)::GetProcAddress(hModule, "FreeCredentialsHandle");
+        fn._FreeCredentialsHandle = reinterpret_cast<FREE_CREDENTIALS_HANDLE_FN>(::GetProcAddress(hModule, "FreeCredentialsHandle"));
         if (!fn._FreeCredentialsHandle)
         {
             __leave;
         }
 
 #ifdef UNICODE
-        fn._InitializeSecurityContext = (INITIALIZE_SECURITY_CONTEXT_FN)::GetProcAddress(hModule, "InitializeSecurityContextW");
+        fn._InitializeSecurityContext = reinterpret_cast<INITIALIZE_SECURITY_CONTEXT_FN>(::GetProcAddress(hModule, "InitializeSecurityContextW"));
 #else
         fn._InitializeSecurityContext = (INITIALIZE_SECURITY_CONTEXT_FN)::GetProcAddress(hModule, "InitializeSecurityContextA");
 #endif
@@ -158,7 +158,7 @@ HMODULE LoadSecurityDll()
         }
 
 #ifdef UNICODE
-        fn._QuerySecurityPackageInfo = (QUERY_SECURITY_PACKAGE_INFO_FN)::GetProcAddress(hModule, "QuerySecurityPackageInfoW");
+        fn._QuerySecurityPackageInfo = reinterpret_cast<QUERY_SECURITY_PACKAGE_INFO_FN>(::GetProcAddress(hModule, "QuerySecurityPackageInfoW"));
 #else
         fn._QuerySecurityPackageInfo = (QUERY_SECURITY_PACKAGE_INFO_FN)::GetProcAddress(hModule, "QuerySecurityPackageInfoA");
 #endif
@@ -210,7 +210,7 @@ BOOL GenClientContext(PAUTH_SEQ pAS, const PSEC_WINNT_AUTH_IDENTITY pAuthIdentit
 
     if (!pAS->fInitialized)
     {
-        ss = fn._AcquireCredentialsHandle(nullptr, (SEC_WCHAR*)L"NTLM", SECPKG_CRED_OUTBOUND, nullptr, pAuthIdentity, nullptr,
+        ss = fn._AcquireCredentialsHandle(nullptr, const_cast<SEC_WCHAR*>(reinterpret_cast<const SEC_WCHAR *>(L"NTLM")), SECPKG_CRED_OUTBOUND, nullptr, pAuthIdentity, nullptr,
                                           nullptr, &pAS->hcred, &tsExpiry);
         if (ss < 0)
         {
@@ -312,7 +312,7 @@ BOOL GenServerContext(PAUTH_SEQ pAS, const PVOID pIn, const DWORD cbIn, const PV
     if (!pAS->fInitialized)
     {
 
-        ss = fn._AcquireCredentialsHandle(nullptr, (SEC_WCHAR*)L"NTLM", SECPKG_CRED_INBOUND, nullptr, nullptr, nullptr, nullptr,
+        ss = fn._AcquireCredentialsHandle(nullptr, const_cast<SEC_WCHAR*>(reinterpret_cast<const SEC_WCHAR *>(L"NTLM")), SECPKG_CRED_INBOUND, nullptr, nullptr, nullptr, nullptr,
                                           &pAS->hcred, &tsExpiry);
         if (ss < 0)
         {

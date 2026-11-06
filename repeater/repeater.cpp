@@ -36,7 +36,7 @@ void LogStats(const int code, const long recv, const long send)
         ::strcat_s(szFileName.data(), szFileName.size(), ".txt");
     }
 
-    if ((f = std::fopen((LPCSTR)szFileName.data(), "a")) != nullptr)
+    if ((f = std::fopen(reinterpret_cast<LPCSTR>(szFileName.data()), "a")) != nullptr)
     {
         std::array<char, 100U> msg;
         std::array<char, 5U> buf;
@@ -83,7 +83,7 @@ void LogStats_server(const int code, const int nummer)
         ::strcat_s(szFileName.data(), szFileName.size(), "server_access.txt");
     }
 
-    if ((f = std::fopen((LPCSTR)szFileName.data(), "a")) != nullptr)
+    if ((f = std::fopen(reinterpret_cast<LPCSTR>(szFileName.data()), "a")) != nullptr)
     {
         std::array<char, 100U> msg;
         std::array<char, 5U> buf;
@@ -127,7 +127,7 @@ void LogStats_viewer(const int code, const int nummer)
         ::strcat_s(szFileName.data(), szFileName.size(), "viewer_access.txt");
     }
 
-    if ((f = std::fopen((LPCSTR)szFileName.data(), "a")) != nullptr)
+    if ((f = std::fopen(reinterpret_cast<LPCSTR>(szFileName.data()), "a")) != nullptr)
     {
         std::array<char, 100U> msg;
         std::array<char, 5U> buf;
@@ -171,7 +171,7 @@ void LogStats_access(char* const start, char* const stop, const int code, const 
         ::strcat_s(szFileName.data(), szFileName.size(), "connections.txt");
     }
 
-    if ((f = std::fopen((LPCSTR)szFileName.data(), "a")) != nullptr)
+    if ((f = std::fopen(reinterpret_cast<LPCSTR>(szFileName.data()), "a")) != nullptr)
     {
         std::fprintf(f, "%s;%s;%i;%s;%s;%u\n", start, stop, code, Viewers[viewer].hostname, Servers[server].hostname, bytes);
         std::fclose(f);
@@ -218,7 +218,7 @@ void report_bytes(char* const prefix, char* buf, int len)
     debug("%s", prefix);
     while (0 < len)
     {
-        std::fprintf(stderr, " %02x", *(unsigned char*)buf);
+        std::fprintf(stderr, " %02x", *reinterpret_cast<unsigned char*>(buf));
         ++buf;
         --len;
     }

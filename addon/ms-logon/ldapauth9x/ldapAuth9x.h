@@ -21,10 +21,10 @@
 #define LDAPAUTH9X_API __declspec(dllimport)
 #endif
 
-#include <windows.h>
+#include <Windows.h>
 
-#include <activeds.h>
-#include <Dsgetdc.h>
+#include <ActiveDS.h>
+#include <DsGetDC.h>
 #include <objbase.h>
 #include <sddl.h>
 #include <tchar.h>

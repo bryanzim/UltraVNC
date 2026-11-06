@@ -47,7 +47,7 @@ void vncSetAuth::Show(const BOOL show)
         {
             // [v1.0.2-jp1 fix] Load resouce from dll
             //DialogBoxParam(hAppInstance,
-            ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_MSLOGON), nullptr, (DLGPROC)DialogProc, (LONG_PTR)this);
+            ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_MSLOGON), nullptr, reinterpret_cast<DLGPROC>(DialogProc), reinterpret_cast<LONG_PTR>(this));
         }
     }
 }
@@ -63,13 +63,13 @@ BOOL CALLBACK vncSetAuth::DialogProc(const HWND hwnd, const UINT uMsg, const WPA
 
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_WINVNC));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         // Retrieve the Dialog box parameter and use it as a pointer
         // to the calling vncProperties object
         helper::SafeSetWindowUserData(hwnd, lParam);
 
-        _this = (vncSetAuth*)lParam;
+        _this = reinterpret_cast<vncSetAuth*>(lParam);
         ::SetDlgItemText(hwnd, IDC_GROUP1, settings->getGroup1());
         ::SetDlgItemText(hwnd, IDC_GROUP2, settings->getGroup2());
         ::SetDlgItemText(hwnd, IDC_GROUP3, settings->getGroup3());
@@ -182,9 +182,9 @@ BOOL CALLBACK vncSetAuth::DialogProc(const HWND hwnd, const UINT uMsg, const WPA
             settings->setLocdom1(locdom1);
             settings->setLocdom2(locdom2);
             settings->setLocdom3(locdom2);
-            ::GetDlgItemText(hwnd, IDC_GROUP1, (LPSTR)settings->getGroup1(), 240);
-            ::GetDlgItemText(hwnd, IDC_GROUP2, (LPSTR)settings->getGroup2(), 240);
-            ::GetDlgItemText(hwnd, IDC_GROUP3, (LPSTR)settings->getGroup3(), 240);
+            ::GetDlgItemText(hwnd, IDC_GROUP1, reinterpret_cast<LPSTR>(settings->getGroup1()), 240);
+            ::GetDlgItemText(hwnd, IDC_GROUP2, reinterpret_cast<LPSTR>(settings->getGroup2()), 240);
+            ::GetDlgItemText(hwnd, IDC_GROUP3, reinterpret_cast<LPSTR>(settings->getGroup3()), 240);
 
             settings->save();
 

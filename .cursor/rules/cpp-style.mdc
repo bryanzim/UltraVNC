@@ -25,7 +25,7 @@ Apply these rules to new and edited first-party C++. Do not restyle third-party 
 - Prefer `using` to `typedef`. Leave a `typedef` that is part of a C API.
 - Prefer `nullptr` to `NULL`.
 - Parenthesize each operand of `&&` and `||` when that operand is a comparison or another compound expression: `(index > 0U) && (index < count)`.
-- Group includes, with one blank line between groups, and sort each group lexicographically. An implementation file starts with its associated header. Then other project headers, then external non-OS headers, then OS headers, then C and C++ standard headers. Project headers use quotes. Every other header uses angle brackets. Keep every OS header in one guard chain: `#ifdef` for the first operating system and `#elif defined(...)` for each other operating system that has headers. Inside the Windows branch, include `<winsock2.h>` before `<Windows.h>`.
+- Group includes, with one blank line between groups, and sort each group lexicographically. An implementation file starts with its associated header. Then other project headers, then external non-OS headers, then OS headers, then C and C++ standard headers. Project headers use quotes. Every other header uses angle brackets. Keep every OS header in one guard chain: `#ifdef` for the first operating system and `#elif defined(...)` for each other operating system that has headers. Inside the Windows branch, include `<WinSock2.h>` before `<Windows.h>`. The SDK header names are case-sensitive on disk.
 
 ```cpp
 #include "Widget.h"
@@ -37,7 +37,7 @@ Apply these rules to new and edited first-party C++. Do not restyle third-party 
 #include <gtest/gtest.h>
 
 #ifdef _WIN32
-#include <winsock2.h>
+#include <WinSock2.h>
 #include <Windows.h>
 #elif defined(__linux__)
 #include <sys/socket.h>

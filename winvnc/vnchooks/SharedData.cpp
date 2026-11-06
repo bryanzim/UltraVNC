@@ -18,7 +18,7 @@
 #pragma option -zRSHSEG
 #pragma option -zTSHCLASS
 
-#include <windows.h>
+#include <Windows.h>
 
 DWORD vnc_thread_id{ 0U };
 UINT UpdateRectMessage{ 0U };

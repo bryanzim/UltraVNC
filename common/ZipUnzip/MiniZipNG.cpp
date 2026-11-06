@@ -283,7 +283,7 @@ bool CMiniZipNG::AddFileToZip(void* const zip_writer, const LPCWSTR szFilePath, 
         ULARGE_INTEGER ull;
         ull.LowPart = attr.ftLastWriteTime.dwLowDateTime;
         ull.HighPart = attr.ftLastWriteTime.dwHighDateTime;
-        file_info.modified_date = (time_t)((ull.QuadPart / 10000000ULL) - 11644473600ULL);
+        file_info.modified_date = static_cast<time_t>(((ull.QuadPart / 10000000ULL) - 11644473600ULL));
     }
 
     // Open entry in zip
@@ -312,7 +312,7 @@ bool CMiniZipNG::AddFileToZip(void* const zip_writer, const LPCWSTR szFilePath, 
 
     while (::ReadFile(hFile, buffer.data(), BUFFER_SIZE, &dwRead, nullptr) && (dwRead > 0))
     {
-        if (mz_zip_writer_entry_write(zip_writer, buffer.data(), dwRead) != dwRead)
+        if (mz_zip_writer_entry_write(zip_writer, buffer.data(), static_cast<int32_t>(dwRead)) != dwRead)
         {
             bSuccess = false;
             break;
@@ -534,7 +534,7 @@ bool CMiniZipNG::UnZipDirectory(LPCWSTR szExtractPath, const LPCWSTR szZipPath)
                 bytes_read = mz_zip_reader_entry_read(zip_reader, buffer.data(), BUFFER_SIZE);
                 if (bytes_read > 0)
                 {
-                    if (!::WriteFile(hFile, buffer.data(), bytes_read, &dwWritten, nullptr) ||
+                    if (!::WriteFile(hFile, buffer.data(), static_cast<DWORD>(bytes_read), &dwWritten, nullptr) ||
                         (dwWritten != static_cast<DWORD>(bytes_read)))
                     {
                         bWriteOk = false;

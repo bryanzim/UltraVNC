@@ -34,11 +34,11 @@
 #endif
 #define VC_EXTRALEAN
 #define NOMINMAX
-#include <winsock2.h>
+#include <WinSock2.h>
 #include <ws2ipdef.h>
-#include <ws2tcpip.h>
+#include <WS2tcpip.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <crtdbg.h>
 #include <io.h>

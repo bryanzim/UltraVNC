@@ -9,8 +9,8 @@
 //
 
 
-#ifndef VNCVIEWERAPP_H__
-#define VNCVIEWERAPP_H__
+#ifndef VNCVIEWERAPP_H
+#define VNCVIEWERAPP_H
 
 #pragma once
 

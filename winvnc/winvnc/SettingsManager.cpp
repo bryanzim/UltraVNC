@@ -17,9 +17,9 @@
 #include <common/rfb.h>
 
 #include <direct.h>
-#include <shlobj.h>
+#include <ShlObj.h>
 #include <tchar.h>
-#include <userenv.h>
+#include <UserEnv.h>
 #include <VersionHelpers.h>
 
 #include <array>
@@ -82,7 +82,7 @@ void SettingsManager::setRunningFromExternalService(const BOOL fEnabled) { m_pre
 #pragma comment(lib, "advapi32.lib")
 
 #include <sddl.h>
-#include <wtsapi32.h>
+#include <WtsApi32.h>
 
 bool SettingsManager::IsDesktopUserAdmin()
 {
@@ -368,7 +368,7 @@ void SettingsManager::load()
     m_pref_EnableTLS = iniFile.ReadInt("admin", "EnableTLS", m_pref_EnableTLS);
     m_pref_TLSPort = iniFile.ReadInt("admin", "TLSPort", m_pref_TLSPort);
     iniFile.ReadString("admin", "TLSCertThumbprint", m_pref_TLSCertThumbprint.data(), sizeof(m_pref_TLSCertThumbprint));
-    m_pref_TLSCertKeyBits = iniFile.ReadInt("admin", "TLSCertKeyBits", m_pref_TLSCertKeyBits);
+    m_pref_TLSCertKeyBits = static_cast<DWORD>(iniFile.ReadInt("admin", "TLSCertKeyBits", m_pref_TLSCertKeyBits));
     m_pref_EnableVeNCryptTLS = iniFile.ReadInt("admin", "EnableVeNCryptTLS", m_pref_EnableVeNCryptTLS);
     m_pref_VeNCryptAllowPlainAuth = iniFile.ReadInt("admin", "VeNCryptAllowPlainAuth", m_pref_VeNCryptAllowPlainAuth);
     m_pref_VeNCryptAllowLegacyAuth = iniFile.ReadInt("admin", "VeNCryptAllowLegacyAuth", m_pref_VeNCryptAllowLegacyAuth);
@@ -392,9 +392,9 @@ void SettingsManager::load()
 #else
                     "TokenValidator32.dll";
 #endif
-                if ((lastSlash + 1 - modulePath.data()) + std::strlen(dllName) < MAX_PATH)
+                if ((static_cast<size_t>(lastSlash + 1 - modulePath.data())) + std::strlen(dllName) < MAX_PATH)
                 {
-                    ::strcpy_s(lastSlash + 1, MAX_PATH - (lastSlash + 1 - modulePath.data()), dllName);
+                    ::strcpy_s(lastSlash + 1, static_cast<rsize_t>(MAX_PATH - (lastSlash + 1 - modulePath.data())), dllName);
                     if (::GetFileAttributesA(modulePath.data()) != INVALID_FILE_ATTRIBUTES)
                     {
                         ::strcpy_s(m_pref_VeNCryptTokenDLLPath.data(), m_pref_VeNCryptTokenDLLPath.size(), modulePath.data());
@@ -414,19 +414,19 @@ void SettingsManager::load()
     m_pref_AutoPortSelect = iniFile.ReadInt("admin", "AutoPortSelect", m_pref_AutoPortSelect);
     m_pref_PortNumber = iniFile.ReadInt("admin", "PortNumber", m_pref_PortNumber);
     m_pref_HttpPortNumber = iniFile.ReadInt("admin", "HTTPPortNumber", DISPLAY_TO_HPORT(PORT_TO_DISPLAY(m_pref_PortNumber)));
-    m_pref_IdleTimeout = iniFile.ReadInt("admin", "IdleTimeout", m_pref_IdleTimeout);
-    m_pref_QuerySetting = iniFile.ReadInt("admin", "QuerySetting", m_pref_QuerySetting);
-    m_pref_QueryTimeout = iniFile.ReadInt("admin", "QueryTimeout", m_pref_QueryTimeout);
-    m_pref_QueryDisableTime = iniFile.ReadInt("admin", "QueryDisableTime", m_pref_QueryDisableTime);
-    m_pref_QueryAccept = iniFile.ReadInt("admin", "QueryAccept", m_pref_QueryAccept);
-    m_pref_MaxViewerSetting = iniFile.ReadInt("admin", "MaxViewerSetting", m_pref_MaxViewerSetting);
-    m_pref_MaxViewers = iniFile.ReadInt("admin", "MaxViewers", m_pref_MaxViewers);
+    m_pref_IdleTimeout = static_cast<UINT>(iniFile.ReadInt("admin", "IdleTimeout", m_pref_IdleTimeout));
+    m_pref_QuerySetting = static_cast<UINT>(iniFile.ReadInt("admin", "QuerySetting", m_pref_QuerySetting));
+    m_pref_QueryTimeout = static_cast<UINT>(iniFile.ReadInt("admin", "QueryTimeout", m_pref_QueryTimeout));
+    m_pref_QueryDisableTime = static_cast<UINT>(iniFile.ReadInt("admin", "QueryDisableTime", m_pref_QueryDisableTime));
+    m_pref_QueryAccept = static_cast<UINT>(iniFile.ReadInt("admin", "QueryAccept", m_pref_QueryAccept));
+    m_pref_MaxViewerSetting = static_cast<UINT>(iniFile.ReadInt("admin", "MaxViewerSetting", m_pref_MaxViewerSetting));
+    m_pref_MaxViewers = static_cast<UINT>(iniFile.ReadInt("admin", "MaxViewers", m_pref_MaxViewers));
     m_pref_Collabo = iniFile.ReadInt("admin", "Collabo", m_pref_Collabo);
     m_pref_Frame = iniFile.ReadInt("admin", "Frame", m_pref_Frame);
     m_pref_Notification = iniFile.ReadInt("admin", "Notification", m_pref_Notification);
     m_pref_OSD = iniFile.ReadInt("admin", "OSD", m_pref_OSD);
     m_pref_NotificationSelection = iniFile.ReadInt("admin", "NotificationSelection", m_pref_NotificationSelection);
-    m_pref_QueryIfNoLogon = iniFile.ReadInt("admin", "QueryIfNoLogon", m_pref_QueryIfNoLogon);
+    m_pref_QueryIfNoLogon = static_cast<UINT>(iniFile.ReadInt("admin", "QueryIfNoLogon", m_pref_QueryIfNoLogon));
     std::memset(m_pref_passwd.data(), 0, sizeof(m_pref_passwd));
     std::memset(m_pref_passwdViewOnly.data(), 0, sizeof(m_pref_passwdViewOnly));
     iniFile.ReadPassword(m_pref_passwd.data(), static_cast<int>(m_pref_passwd.size()));
@@ -445,7 +445,7 @@ void SettingsManager::load()
     }
     m_pref_EnableWin8Helper = iniFile.ReadInt("admin", "EnableWin8Helper", m_pref_EnableWin8Helper);
     m_pref_clearconsole = iniFile.ReadInt("admin", "clearconsole", m_pref_clearconsole);
-    G_SENDBUFFER_EX = iniFile.ReadInt("admin", "sendbuffer", G_SENDBUFFER_EX);
+    G_SENDBUFFER_EX = static_cast<unsigned int>(iniFile.ReadInt("admin", "sendbuffer", G_SENDBUFFER_EX));
     ::_tcscpy_s(m_pref_group1.data(), m_pref_group1.size(), "VNCACCESS");
     iniFile.ReadString("admin_auth", "group1", m_pref_group1.data(), 150);
     ::_tcscpy_s(m_pref_group2.data(), m_pref_group2.size(), "Administrators");
@@ -553,23 +553,23 @@ void SettingsManager::save()
     }
     iniFile.WriteInt("admin", "InputsEnabled", m_pref_EnableRemoteInputs);
     iniFile.WriteInt("admin", "LocalInputsDisabled", m_pref_DisableLocalInputs);
-    iniFile.WriteInt("admin", "IdleTimeout", m_pref_IdleTimeout);
+    iniFile.WriteInt("admin", "IdleTimeout", static_cast<int>(m_pref_IdleTimeout));
     iniFile.WriteInt("admin", "EnableJapInput", m_pref_EnableJapInput);
     iniFile.WriteInt("admin", "ForceCursorShape", m_pref_ForceCursorShape);
     iniFile.WriteInt("admin", "EnableUnicodeInput", m_pref_EnableUnicodeInput);
     iniFile.WriteInt("admin", "EnableWin8Helper", m_pref_EnableWin8Helper);
-    iniFile.WriteInt("admin", "QuerySetting", m_pref_QuerySetting);
-    iniFile.WriteInt("admin", "QueryTimeout", m_pref_QueryTimeout);
-    iniFile.WriteInt("admin", "QueryDisableTime", m_pref_QueryDisableTime);
-    iniFile.WriteInt("admin", "QueryAccept", m_pref_QueryAccept);
-    iniFile.WriteInt("admin", "MaxViewerSetting", m_pref_MaxViewerSetting);
-    iniFile.WriteInt("admin", "MaxViewers", m_pref_MaxViewers);
+    iniFile.WriteInt("admin", "QuerySetting", static_cast<int>(m_pref_QuerySetting));
+    iniFile.WriteInt("admin", "QueryTimeout", static_cast<int>(m_pref_QueryTimeout));
+    iniFile.WriteInt("admin", "QueryDisableTime", static_cast<int>(m_pref_QueryDisableTime));
+    iniFile.WriteInt("admin", "QueryAccept", static_cast<int>(m_pref_QueryAccept));
+    iniFile.WriteInt("admin", "MaxViewerSetting", static_cast<int>(m_pref_MaxViewerSetting));
+    iniFile.WriteInt("admin", "MaxViewers", static_cast<int>(m_pref_MaxViewers));
     iniFile.WriteInt("admin", "Collabo", m_pref_Collabo);
     iniFile.WriteInt("admin", "Frame", m_pref_Frame);
     iniFile.WriteInt("admin", "Notification", m_pref_Notification);
     iniFile.WriteInt("admin", "OSD", m_pref_OSD);
     iniFile.WriteInt("admin", "NotificationSelection", m_pref_NotificationSelection);
-    iniFile.WriteInt("admin", "QueryIfNoLogon", m_pref_QueryIfNoLogon);
+    iniFile.WriteInt("admin", "QueryIfNoLogon", static_cast<int>(m_pref_QueryIfNoLogon));
     iniFile.WriteInt("admin", "LockSetting", m_pref_LockSettings);
     iniFile.WriteInt("admin", "RemoveWallpaper", m_pref_RemoveWallpaper);
     iniFile.WriteInt("admin", "RemoveEffects", m_pref_RemoveEffects);
@@ -640,7 +640,7 @@ void SettingsManager::setkeepAliveInterval(const int secs)
     }
 }
 
-void SettingsManager::setIdleTimeout(const int secs) { m_pref_IdleTimeout = secs; }
+void SettingsManager::setIdleTimeout(const int secs) { m_pref_IdleTimeout = static_cast<UINT>(secs); }
 
 void SettingsManager::setIdleInputTimeout(const int secs) { m_pref_IdleInputTimeout = secs; }
 static bool notset{ false };
@@ -656,7 +656,7 @@ bool SettingsManager::IsRunninAsAdministrator()
 
 #include "resource.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 extern HINSTANCE hInstResDLL;
 char password[1024U] = "";
@@ -667,10 +667,10 @@ INT_PTR CALLBACK PasswordDlgProc(const HWND hDlg, const UINT message, const WPAR
     {
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_WINVNC));
-        ::SendMessage(hDlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hDlg, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hDlg, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
     }
-        return (INT_PTR)TRUE;
+        return static_cast<INT_PTR>(TRUE);
 
     case WM_COMMAND:
         if (LOWORD(wParam) == IDOK)
@@ -680,17 +680,17 @@ INT_PTR CALLBACK PasswordDlgProc(const HWND hDlg, const UINT message, const WPAR
 
             // Close the dialog with OK
             ::EndDialog(hDlg, IDOK);
-            return (INT_PTR)TRUE;
+            return static_cast<INT_PTR>(TRUE);
         }
         else if (LOWORD(wParam) == IDCANCEL)
         {
             // Close the dialog with Cancel
             ::EndDialog(hDlg, IDCANCEL);
-            return (INT_PTR)TRUE;
+            return static_cast<INT_PTR>(TRUE);
         }
         break;
     }
-    return (INT_PTR)FALSE;
+    return static_cast<INT_PTR>(FALSE);
 }
 
 bool SettingsManager::checkAdminPassword()

@@ -9,8 +9,8 @@
 //
 
 
-#ifndef CLIENTCONNECTION_H__
-#define CLIENTCONNECTION_H__
+#ifndef CLIENTCONNECTION_H
+#define CLIENTCONNECTION_H
 
 #pragma once
 
@@ -53,7 +53,7 @@ extern "C" {
 #include "FullScreenTitleBar.h" //Added by: Lars Werner (http://lars.werner.no)
 //#include "bmpflasher.h"
 #include "MRU.h"
-#include "shellscalingapi.h"
+#include "ShellScalingApi.h"
 #include "TextChat.h" // sf@2002
 #include "WheelInput.h"
 
@@ -200,7 +200,7 @@ public:
     bool SetSendTimeout(int msecs = -1);
     bool SetRecvTimeout(int msecs = -1);
 
-    int IsDormant() { return m_dormant; };
+    int IsDormant() { return m_dormant; }
 
     void SendKeyEvent(CARD32 key, bool down);
     // Types the LOCAL clipboard on the remote machine as Unicode key events
@@ -355,7 +355,7 @@ private:
         {
             return (::GetTickCount() - dwLastSentMouseMove) <
                    (bMouseKeyDown ? (dwMinimumMouseMoveInterval / 2) : dwMinimumMouseMoveInterval);
-        };
+        }
     };
     PendingMouseMove m_PendingMouseMove;
     int initialupdate_counter;
@@ -573,7 +573,7 @@ private:
         [[maybe_unused]] COLORREF oldbgcol = ::SetBkColor(m_hBitmapDC, color);
         // This is the call MFC uses for FillSolidRect. Who am I to argue?
         ::ExtTextOut(m_hBitmapDC, 0, 0, ETO_OPAQUE, pRect, nullptr, 0, nullptr);
-    };
+    }
     inline void FillSolidRect(const int x, const int y, const int w, const int h, const COLORREF color)
     {
         RECT r;
@@ -582,14 +582,14 @@ private:
         r.top = y;
         r.bottom = y + h;
         FillSolidRect(&r, color);
-    };
+    }
     inline void FillSolidRect_ultra(const int x, const int y, const int w, const int h, const int bpp, BYTE* const color)
     {
         if (m_DIBbits)
         {
-            SolidColor(w, h, x, y, bpp / 8, (BYTE*)color, (BYTE*)m_DIBbits, m_si.framebufferWidth);
+            SolidColor(w, h, x, y, bpp / 8, reinterpret_cast<BYTE*>(color), reinterpret_cast<BYTE*>(m_DIBbits), m_si.framebufferWidth);
         }
-    };
+    }
 
 
     // how many other windows are owned by this process?
@@ -946,7 +946,7 @@ public:
 class PaletteSelector
 {
 public:
-    PaletteSelector(HDC hdc, HPALETTE hpal) : m_hOldPal{ 0 }, m_hdc{ 0 }
+    PaletteSelector(HDC hdc, HPALETTE hpal) : m_hOldPal{ nullptr }, m_hdc{ nullptr }
     {
         m_hdc = hdc;
         if (hpal)
@@ -976,7 +976,7 @@ public:
         m_hwnd = hwnd;
     }
     ~TempDC() { ::ReleaseDC(m_hwnd, m_hdc); }
-    operator HDC() { return m_hdc; };
+    operator HDC() { return m_hdc; }
     HDC m_hdc;
     HWND m_hwnd;
 };
@@ -994,30 +994,30 @@ public:
     [[maybe_unused]] CARD16 bm = m_myFormat.blueMax;
 
 #define COLOR_FROM_PIXEL8_ADDRESS(p)                                                                                               \
-    (PALETTERGB(static_cast<int>((((*(CARD8*)(p) >> rs) & rm) * 255 / rm)),                                                        \
-                static_cast<int>((((*(CARD8*)(p) >> gs) & gm) * 255 / gm)),                                                        \
-                static_cast<int>((((*(CARD8*)(p) >> bs) & bm) * 255 / bm))))
+    (PALETTERGB(static_cast<int>((((*reinterpret_cast<CARD8*>((p)) >> rs) & rm) * 255 / rm)),                                                        \
+                static_cast<int>((((*reinterpret_cast<CARD8*>((p)) >> gs) & gm) * 255 / gm)),                                                        \
+                static_cast<int>((((*reinterpret_cast<CARD8*>((p)) >> bs) & bm) * 255 / bm))))
 
 #define COLOR_FROM_PIXEL16_ADDRESS(p)                                                                                              \
-    (PALETTERGB(static_cast<int>((((*(CARD16*)(p) >> rs) & rm) * 255 / rm)),                                                       \
-                static_cast<int>((((*(CARD16*)(p) >> gs) & gm) * 255 / gm)),                                                       \
-                static_cast<int>((((*(CARD16*)(p) >> bs) & bm) * 255 / bm))))
+    (PALETTERGB(static_cast<int>((((*reinterpret_cast<CARD16*>((p)) >> rs) & rm) * 255 / rm)),                                                       \
+                static_cast<int>((((*reinterpret_cast<CARD16*>((p)) >> gs) & gm) * 255 / gm)),                                                       \
+                static_cast<int>((((*reinterpret_cast<CARD16*>((p)) >> bs) & bm) * 255 / bm))))
 
 #define COLOR_FROM_PIXEL24_ADDRESS(p)                                                                                              \
-    (PALETTERGB(static_cast<int>((((CARD8*)(p))[0U])), static_cast<int>((((CARD8*)(p))[1U])),                                      \
-                static_cast<int>((((CARD8*)(p))[2U]))))
+    (PALETTERGB(static_cast<int>(((reinterpret_cast<CARD8*>((p)))[0U])), static_cast<int>(((reinterpret_cast<CARD8*>((p)))[1U])),                                      \
+                static_cast<int>(((reinterpret_cast<CARD8*>((p)))[2U]))))
 
 #define COLOR_FROM_PIXEL32_ADDRESS(p)                                                                                              \
-    (PALETTERGB(static_cast<int>((((*(CARD32*)(p) >> rs) & rm) * 255 / rm)),                                                       \
-                static_cast<int>((((*(CARD32*)(p) >> gs) & gm) * 255 / gm)),                                                       \
-                static_cast<int>((((*(CARD32*)(p) >> bs) & bm) * 255 / bm))))
+    (PALETTERGB(static_cast<int>((((*reinterpret_cast<CARD32*>((p)) >> rs) & rm) * 255 / rm)),                                                       \
+                static_cast<int>((((*reinterpret_cast<CARD32*>((p)) >> gs) & gm) * 255 / gm)),                                                       \
+                static_cast<int>((((*reinterpret_cast<CARD32*>((p)) >> bs) & bm) * 255 / bm))))
 
 #define SETPIXEL(b, x, y, c) SetPixelV((b), (x), (y), (c))
 
 #define SETPIXELS(buffer, bpp, x, y, w, h)                                                                                         \
     {                                                                                                                              \
         if (m_DIBbits)                                                                                                             \
-            ConvertAll(w, h, x, y, bpp / 8, (BYTE*)buffer, (BYTE*)m_DIBbits, m_si.framebufferWidth, m_si.framebufferHeight);       \
+            ConvertAll(w, h, x, y, bpp / 8, reinterpret_cast<BYTE*>(buffer), reinterpret_cast<BYTE*>(m_DIBbits), m_si.framebufferWidth, m_si.framebufferHeight);       \
     }
 
 
@@ -1025,7 +1025,7 @@ public:
 #define SETPIXELS_NOCONV(buffer, x, y, w, h)                                                                                       \
     {                                                                                                                              \
         if (m_DIBbits)                                                                                                             \
-            ConvertPixels_to_bpp_from_32_batch(x, y, w, h, m_myFormat.bitsPerPixel / 8, (BYTE*)buffer, (BYTE*)m_DIBbits,           \
+            ConvertPixels_to_bpp_from_32_batch(x, y, w, h, m_myFormat.bitsPerPixel / 8, reinterpret_cast<BYTE*>(buffer), reinterpret_cast<BYTE*>(m_DIBbits),           \
                                                m_si.framebufferWidth, m_si.framebufferHeight);                                     \
     }
 
@@ -1044,7 +1044,7 @@ public:
                 {                                                                                                                  \
                     pix = *p;                                                                                                      \
                     if (m_DIBbits)                                                                                                 \
-                        ConvertPixel(j, k, bpp / 8, (BYTE*)p, (BYTE*)m_DIBbits, m_si.framebufferWidth);                            \
+                        ConvertPixel(j, k, bpp / 8, reinterpret_cast<BYTE*>(p), static_cast<BYTE*>(m_DIBbits), m_si.framebufferWidth);                            \
                     ++p;                                                                                                           \
                     ++aantal;                                                                                                      \
                 }                                                                                                                  \
@@ -1066,13 +1066,13 @@ public:
                     if (result)													\
                         {														\
                         pix = *p;												\
-                        if (m_DIBbits)ConvertPixel(j,k,bpp/8,(BYTE*)p,(BYTE*)m_DIBbits,m_si.framebufferWidth);\
+                        if (m_DIBbits)ConvertPixel(j,k,bpp/8,reinterpret_cast<BYTE*>(p),static_cast<BYTE*>(m_DIBbits),m_si.framebufferWidth);\
                         p++;													\
                         }														\
                     else														\
                         {														\
                         pix = *pc;												\
-                        if (m_DIBbits)ConvertPixel(j,k,bpp/8,(BYTE*)pc,(BYTE*)m_DIBbits,m_si.framebufferWidth);\
+                        if (m_DIBbits)ConvertPixel(j,k,bpp/8,reinterpret_cast<BYTE*>(pc),static_cast<BYTE*>(m_DIBbits),m_si.framebufferWidth);\
                         }														\
                     i++;														\
             }																	\
@@ -1092,12 +1092,12 @@ public:
                     if (result)												\
                         {														\
                         pix = *pc2;												\
-                        if (m_DIBbits)ConvertPixel(j,k,bpp/8,(BYTE*)pc2,(BYTE*)m_DIBbits,m_si.framebufferWidth);\
+                        if (m_DIBbits)ConvertPixel(j,k,bpp/8,reinterpret_cast<BYTE*>(pc2),static_cast<BYTE*>(m_DIBbits),m_si.framebufferWidth);\
                         }														\
                     else														\
                         {														\
                         pix = *pc;												\
-                        if (m_DIBbits)ConvertPixel(j,k,bpp/8,(BYTE*)pc,(BYTE*)m_DIBbits,m_si.framebufferWidth);\
+                        if (m_DIBbits)ConvertPixel(j,k,bpp/8,reinterpret_cast<BYTE*>(pc),static_cast<BYTE*>(m_DIBbits),m_si.framebufferWidth);\
                         }														\
                     i++;														\
             }																	\
@@ -1112,7 +1112,7 @@ public:
         for (int k = y; k < y+h; k++) {											\
             for (int j = x; j < x+w; j++) {										\
                         pix = *pc;												\
-                        if (m_DIBbits)ConvertPixel(j,k,bpp/8,(BYTE*)pc,(BYTE*)m_DIBbits,m_si.framebufferWidth);\
+                        if (m_DIBbits)ConvertPixel(j,k,bpp/8,reinterpret_cast<BYTE*>(pc),static_cast<BYTE*>(m_DIBbits),m_si.framebufferWidth);\
                     i++;														\
             }																	\
         }																		\

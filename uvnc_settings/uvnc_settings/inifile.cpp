@@ -77,13 +77,13 @@ bool IniFile::WriteInt(const char* const key1, const char* const key2, const int
 int IniFile::ReadInt(const char* const key1, const char* const key2, const int Defaultvalue)
 {
     //vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifile);
-    return ::GetPrivateProfileInt(key1, key2, Defaultvalue, myInifile.data());
+    return static_cast<int>(::GetPrivateProfileInt(key1, key2, Defaultvalue, myInifile.data()));
 }
 
 void IniFile::ReadString(const char* const key1, const char* const key2, char* const value, const int valuesize)
 {
     //vnclog.Print(LL_INTERR, VNCLOG("%s \n"),myInifile);
-    ::GetPrivateProfileString(key1, key2, "", value, valuesize, myInifile.data());
+    ::GetPrivateProfileString(key1, key2, "", value, static_cast<DWORD>(valuesize), myInifile.data());
 }
 
 void IniFile::ReadPassword(char* const value, [[maybe_unused]] const int valuesize)

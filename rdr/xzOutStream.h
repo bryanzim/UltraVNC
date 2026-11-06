@@ -15,8 +15,8 @@
 // with zlib on the fly.
 //
 #ifdef _XZ
-#ifndef __RDR_xzOutStream_H__
-#define __RDR_xzOutStream_H__
+#ifndef RDR_xzOutStream_H
+#define RDR_xzOutStream_H
 
 #include "OutStream.h"
 
@@ -43,7 +43,7 @@ namespace rdr
 
     public:
         // adzm - 2010-07 - Custom compression level
-        explicit xzOutStream(OutStream* os = 0, int bufSize = 0);
+        explicit xzOutStream(OutStream* os = nullptr, int bufSize = 0);
         virtual ~xzOutStream();
 
         void SetCompressLevel(int compression);

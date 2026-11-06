@@ -140,14 +140,14 @@ BOOL InitMultipleMonitorStubs(void)
     }
 
     if ((hUser32 = ::GetModuleHandle(TEXT("USER32"))) &&
-        (*(FARPROC*)& g_pfnGetSystemMetrics = ::GetProcAddress(hUser32, "GetSystemMetrics")) &&
-        (*(FARPROC*)& g_pfnMonitorFromWindow = ::GetProcAddress(hUser32, "MonitorFromWindow")) &&
-        (*(FARPROC*)& g_pfnMonitorFromRect = ::GetProcAddress(hUser32, "MonitorFromRect")) &&
-        (*(FARPROC*)& g_pfnMonitorFromPoint = ::GetProcAddress(hUser32, "MonitorFromPoint")) &&
-        (*(FARPROC*)& g_pfnEnumDisplayMonitors = ::GetProcAddress(hUser32, "EnumDisplayMonitors")) &&
+        (*reinterpret_cast<FARPROC*>(& g_pfnGetSystemMetrics) = ::GetProcAddress(hUser32, "GetSystemMetrics")) &&
+        (*reinterpret_cast<FARPROC*>(& g_pfnMonitorFromWindow) = ::GetProcAddress(hUser32, "MonitorFromWindow")) &&
+        (*reinterpret_cast<FARPROC*>(& g_pfnMonitorFromRect) = ::GetProcAddress(hUser32, "MonitorFromRect")) &&
+        (*reinterpret_cast<FARPROC*>(& g_pfnMonitorFromPoint) = ::GetProcAddress(hUser32, "MonitorFromPoint")) &&
+        (*reinterpret_cast<FARPROC*>(& g_pfnEnumDisplayMonitors) = ::GetProcAddress(hUser32, "EnumDisplayMonitors")) &&
 #ifdef UNICODE
-        (*(FARPROC*)& g_pfnGetMonitorInfo = ::GetProcAddress(hUser32, "GetMonitorInfoW")) &&
-        (*(FARPROC*)& g_pfnEnumDisplayDevices = ::GetProcAddress(hUser32, "EnumDisplayDevicesW")) &&
+        (*reinterpret_cast<FARPROC*>(& g_pfnGetMonitorInfo) = ::GetProcAddress(hUser32, "GetMonitorInfoW")) &&
+        (*reinterpret_cast<FARPROC*>(& g_pfnEnumDisplayDevices) = ::GetProcAddress(hUser32, "EnumDisplayDevicesW")) &&
 #else
         (*(FARPROC*)& g_pfnGetMonitorInfo = ::GetProcAddress(hUser32, "GetMonitorInfoA")) &&
         (*(FARPROC*)& g_pfnEnumDisplayDevices = ::GetProcAddress(hUser32, "EnumDisplayDevicesA")) &&
@@ -214,7 +214,7 @@ HMONITOR WINAPI xMonitorFromRect(const LPCRECT lprcScreenCoords, const UINT uFla
 {
     if (InitMultipleMonitorStubs())
     {
-        return g_pfnMonitorFromRect(lprcScreenCoords, uFlags);
+        return g_pfnMonitorFromRect(lprcScreenCoords, static_cast<BOOL>(uFlags));
     }
 
     if ((uFlags & (MONITOR_DEFAULTTOPRIMARY | MONITOR_DEFAULTTONEAREST)) ||
@@ -233,7 +233,7 @@ HMONITOR WINAPI xMonitorFromWindow(const HWND hWnd, const UINT uFlags)
 
     if (InitMultipleMonitorStubs())
     {
-        return g_pfnMonitorFromWindow(hWnd, uFlags);
+        return g_pfnMonitorFromWindow(hWnd, static_cast<BOOL>(uFlags));
     }
 
     if (uFlags & (MONITOR_DEFAULTTOPRIMARY | MONITOR_DEFAULTTONEAREST))
@@ -253,7 +253,7 @@ HMONITOR WINAPI xMonitorFromPoint(const POINT ptScreenCoords, const UINT uFlags)
 {
     if (InitMultipleMonitorStubs())
     {
-        return g_pfnMonitorFromPoint(ptScreenCoords, uFlags);
+        return g_pfnMonitorFromPoint(ptScreenCoords, static_cast<BOOL>(uFlags));
     }
 
     if ((uFlags & (MONITOR_DEFAULTTOPRIMARY | MONITOR_DEFAULTTONEAREST)) ||
@@ -287,7 +287,7 @@ BOOL WINAPI xGetMonitorInfo(const HMONITOR hMonitor, LPMONITORINFO lpMonitorInfo
 
         if (lpMonitorInfo->cbSize >= sizeof(MONITORINFOEX))
         {
-            ::lstrcpy(((MONITORINFOEX*)lpMonitorInfo)->szDevice, TEXT("DISPLAY"));
+            ::lstrcpy((reinterpret_cast<MONITORINFOEX*>(lpMonitorInfo))->szDevice, TEXT("DISPLAY"));
         }
 
         return TRUE;
@@ -328,7 +328,7 @@ BOOL WINAPI xEnumDisplayMonitors(const HDC hdc, const LPCRECT lprcIntersect, con
         switch (::GetClipBox(hdc, &rcClip))
         {
         default:
-            ::MapWindowPoints(nullptr, hWnd, (LPPOINT)&rcLimit, 2);
+            ::MapWindowPoints(nullptr, hWnd, reinterpret_cast<LPPOINT>(&rcLimit), 2);
             if (::IntersectRect(&rcCallback, &rcClip, &rcLimit))
             {
                 break;

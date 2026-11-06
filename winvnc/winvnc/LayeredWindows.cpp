@@ -14,16 +14,16 @@
 #include <array>
 #include <cstring>
 
-#if !defined(AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_)
-#define AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_
+#if !defined(AFX_STDAFX_H_A9DB83DB_A9FD_11D0_BFD1_444553540000_INCLUDED)
+#define AFX_STDAFX_H_A9DB83DB_A9FD_11D0_BFD1_444553540000_INCLUDED
 #if _MSC_VER > 1000
 #endif                      // _MSC_VER > 1000
 #define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
-#endif // !defined(AFX_STDAFX_H__A9DB83DB_A9FD_11D0_BFD1_444553540000__INCLUDED_)
+#endif // !defined(AFX_STDAFX_H_A9DB83DB_A9FD_11D0_BFD1_444553540000_INCLUDED)
 #include "stdhdrs.h"
 
 #include "LayeredWindows.h"
@@ -76,33 +76,33 @@ HBITMAP LayeredWindows::DoGetBkGndBitmap2([[maybe_unused]] IN CONST UINT uBmpRes
             char* p = std::strrchr(WORKDIR.data(), '\\');
             if (p == nullptr)
             {
-                return 0;
+                return nullptr;
             }
             *p = '\0';
         }
         ::strcpy_s(mycommand.data(), mycommand.size(), WORKDIR.data());
         ::strcat_s(mycommand.data(), mycommand.size(), "\\background.bmp");
 
-        hbmBkGnd = (HBITMAP)::LoadImage(nullptr, mycommand.data(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+        hbmBkGnd = reinterpret_cast<HBITMAP>(::LoadImage(nullptr, mycommand.data(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
         if (hbmBkGnd == nullptr)
         {
             hbmBkGnd =
-                (HBITMAP)::LoadImage(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDB_LOGO64), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+                reinterpret_cast<HBITMAP>(::LoadImage(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDB_LOGO64), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
         }
         BITMAPINFOHEADER h2;
         h2.biSize = sizeof(h2);
         h2.biBitCount = 0;
         HDC hxdc = ::CreateDC("DISPLAY", nullptr, nullptr, nullptr);
-        ::GetDIBits(hxdc, hbmBkGnd, 0, 0, nullptr, (BITMAPINFO*)&h2, DIB_RGB_COLORS);
+        ::GetDIBits(hxdc, hbmBkGnd, 0, 0, nullptr, reinterpret_cast<BITMAPINFO*>(&h2), DIB_RGB_COLORS);
         wd = h2.biWidth;
         ht = h2.biHeight;
         ::DeleteDC(hxdc);
         if (nullptr == hbmBkGnd)
         {
-            hbmBkGnd = (HBITMAP)-1;
+            hbmBkGnd = reinterpret_cast<HBITMAP>(-1);
         }
     }
-    return (hbmBkGnd == (HBITMAP)-1) ? nullptr : hbmBkGnd;
+    return (hbmBkGnd == reinterpret_cast<HBITMAP>(-1)) ? nullptr : hbmBkGnd;
 }
 
 
@@ -158,11 +158,11 @@ LRESULT CALLBACK LayeredWindows::WndProc(const HWND hwndIn, const UINT uMsg, con
         }
 
     case WM_ERASEBKGND:
-        DoSDKEraseBkGnd2((HDC)wParam, RGB(0, 0, 0));
+        DoSDKEraseBkGnd2(reinterpret_cast<HDC>(wParam), RGB(0, 0, 0));
         return true;
     case WM_CTLCOLORSTATIC:
-        ::SetBkMode((HDC)wParam, TRANSPARENT);
-        return (LONG_PTR)::GetStockObject(NULL_BRUSH);
+        ::SetBkMode(reinterpret_cast<HDC>(wParam), TRANSPARENT);
+        return reinterpret_cast<LONG_PTR>(::GetStockObject(NULL_BRUSH));
     case WM_DESTROY:
         ::KillTimer(hwndIn, 100);
         ::PostQuitMessage(0);
@@ -186,7 +186,7 @@ bool LayeredWindows::create_black_window(void)
     wndClass.hIcon = ::LoadIcon(nullptr, IDI_APPLICATION);
     wndClass.hIconSm = nullptr;
     wndClass.hCursor = ::LoadCursor(nullptr, IDC_ARROW);
-    wndClass.hbrBackground = (HBRUSH)::GetStockObject(GRAY_BRUSH);
+    wndClass.hbrBackground = reinterpret_cast<HBRUSH>(::GetStockObject(GRAY_BRUSH));
     wndClass.lpszMenuName = nullptr;
     wndClass.lpszClassName = "blackscreen";
     ::RegisterClassEx(&wndClass);
@@ -197,26 +197,26 @@ bool LayeredWindows::create_black_window(void)
     clientRect.right = GetSystemMetrics(SM_CXSCREEN);
     clientRect.bottom = GetSystemMetrics(SM_CYSCREEN);
 
-    UINT x(GetSystemMetrics(SM_XVIRTUALSCREEN));
-    UINT y(GetSystemMetrics(SM_YVIRTUALSCREEN));
-    UINT cx(GetSystemMetrics(SM_CXVIRTUALSCREEN));
-    UINT cy(GetSystemMetrics(SM_CYVIRTUALSCREEN));
+    UINT x(static_cast<UINT>(GetSystemMetrics(SM_XVIRTUALSCREEN)));
+    UINT y(static_cast<UINT>(GetSystemMetrics(SM_YVIRTUALSCREEN)));
+    UINT cx(static_cast<UINT>(GetSystemMetrics(SM_CXVIRTUALSCREEN)));
+    UINT cy(static_cast<UINT>(GetSystemMetrics(SM_CYVIRTUALSCREEN)));
 
-    clientRect.left = x;
-    clientRect.top = y;
-    clientRect.right = x + cx;
-    clientRect.bottom = y + cy;
+    clientRect.left = static_cast<LONG>(x);
+    clientRect.top = static_cast<LONG>(y);
+    clientRect.right = static_cast<LONG>(x + cx);
+    clientRect.bottom = static_cast<LONG>(y + cy);
 
     ::AdjustWindowRect(&clientRect, WS_CAPTION, FALSE);
     hwnd = ::CreateWindowEx(WS_EX_TOOLWINDOW, "blackscreen", "blackscreen", WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER,
-                          CW_USEDEFAULT, CW_USEDEFAULT, cx, cy, nullptr, nullptr, hInst, nullptr);
+                          CW_USEDEFAULT, CW_USEDEFAULT, static_cast<int>(cx), static_cast<int>(cy), nullptr, nullptr, hInst, nullptr);
     typedef DWORD(WINAPI * PSLWA)(HWND, DWORD, BYTE, DWORD);
 
     PSLWA pSetLayeredWindowAttributes = nullptr;
     HMODULE hDLL = ::LoadLibrary("user32");
     if (hDLL)
     {
-        pSetLayeredWindowAttributes = (PSLWA)::GetProcAddress(hDLL, "SetLayeredWindowAttributes");
+        pSetLayeredWindowAttributes = reinterpret_cast<PSLWA>(::GetProcAddress(hDLL, "SetLayeredWindowAttributes"));
     }
 
 #ifndef _X64
@@ -245,7 +245,7 @@ bool LayeredWindows::create_black_window(void)
     {
         pSetLayeredWindowAttributes(hwnd, RGB(255, 255, 255), 255, LWA_ALPHA);
     }
-    ::SetWindowPos(hwnd, HWND_TOPMOST, x, y, cx, cy, SWP_FRAMECHANGED | SWP_NOACTIVATE);
+    ::SetWindowPos(hwnd, HWND_TOPMOST, static_cast<int>(x), static_cast<int>(y), static_cast<int>(cx), static_cast<int>(cy), SWP_FRAMECHANGED | SWP_NOACTIVATE);
     if (VNC_OSVersion::getInstance()->OS_WIN10_TRANS)
     {
         ::SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE);
@@ -272,7 +272,7 @@ DWORD WINAPI LayeredWindows::BlackWindow([[maybe_unused]] const LPVOID lpParam)
 
     create_black_window();
     MSG msg;
-    while (::GetMessage(&msg, 0, 0, 0) != 0)
+    while (::GetMessage(&msg, nullptr, 0, 0) != 0)
     {
         ::TranslateMessage(&msg);
         ::DispatchMessage(&msg);
@@ -350,7 +350,7 @@ DWORD WINAPI LayeredWindows::BorderWindow([[maybe_unused]] const LPVOID lpParam)
 
     create_border_window(rect);
     MSG msg;
-    while (::GetMessage(&msg, 0, 0, 0) != 0)
+    while (::GetMessage(&msg, nullptr, 0, 0) != 0)
     {
         ::TranslateMessage(&msg);
         ::DispatchMessage(&msg);
@@ -391,7 +391,7 @@ bool LayeredWindows::create_border_window(const RECT rectIn)
     HMODULE hDLL = ::LoadLibrary("user32");
     if (hDLL)
     {
-        pSetLayeredWindowAttributes = (PSLWA)::GetProcAddress(hDLL, "SetLayeredWindowAttributes");
+        pSetLayeredWindowAttributes = reinterpret_cast<PSLWA>(::GetProcAddress(hDLL, "SetLayeredWindowAttributes"));
     }
 
 #ifndef _X64
@@ -441,19 +441,19 @@ bool LayeredWindows::SetBlankMonitor(const bool enabled, const bool blankMonitor
         {
             if (enabled)
             {
-                ::SendMessage(hwndIn, WM_SYSCOMMAND, SC_MONITORPOWER, (LPARAM)2);
+                ::SendMessage(hwndIn, WM_SYSCOMMAND, SC_MONITORPOWER, static_cast<LPARAM>(2));
                 screen_in_powersave = true;
             }
             else
             {
-                ::SendMessage(hwndIn, WM_SYSCOMMAND, SC_MONITORPOWER, (LPARAM)-1);
+                ::SendMessage(hwndIn, WM_SYSCOMMAND, SC_MONITORPOWER, static_cast<LPARAM>(-1));
                 screen_in_powersave = false;
                 //win8 require mouse move
                 mouse_event(MOUSEEVENTF_MOVE, 0, 1, 0, 0);
                 ::Sleep(40);
                 mouse_event(MOUSEEVENTF_MOVE, 0, static_cast<DWORD>(-1), 0, 0);
                 //Just in case video driver state was changed
-                HWND Blackhnd = ::FindWindow(("blackscreen"), 0);
+                HWND Blackhnd = ::FindWindow(("blackscreen"), nullptr);
                 if (Blackhnd)
                 {
                     ::PostMessage(Blackhnd, WM_CLOSE, 0, 0);
@@ -482,7 +482,7 @@ bool LayeredWindows::SetBlankMonitor(const bool enabled, const bool blankMonitor
             }
             else
             {
-                HWND Blackhnd = ::FindWindow(("blackscreen"), 0);
+                HWND Blackhnd = ::FindWindow(("blackscreen"), nullptr);
                 if (Blackhnd)
                 {
                     ::PostMessage(Blackhnd, WM_CLOSE, 0, 0);
@@ -512,7 +512,7 @@ void LayeredWindows::SetBorderWindow(const bool enabled, const RECT rectIn, char
     }
     else
     {
-        HWND Blackhnd = ::FindWindow(("borderscreen"), 0);
+        HWND Blackhnd = ::FindWindow(("borderscreen"), nullptr);
         if (Blackhnd)
         {
             ::PostMessage(Blackhnd, WM_CLOSE, 0, 0);

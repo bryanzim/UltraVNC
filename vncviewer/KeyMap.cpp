@@ -102,7 +102,7 @@ void KeyMap::Reset()
 
     for (int ii{ 0 }; ii < (sizeof(downUnicode) / sizeof(WCHAR)); ++ii)
     {
-        downUnicode[ii] = 0;
+        downUnicode[static_cast<unsigned long long>(ii)] = 0;
     }
 }
 
@@ -225,7 +225,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Latin-2, 3, 4, 8 & 9 and UCS Latin Extended-A & B
     for (i = 0, j = 0x01a1; i < (sizeof(keysym_to_unicode_1a1_1ff) / sizeof(short)); ++i, ++j)
     {
-        ksLatinExtMap[j] = ucs = (WCHAR)keysym_to_unicode_1a1_1ff[i];
+        ksLatinExtMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_1a1_1ff[i]);
         if (IsUCSLatinExtAB(ucs))
         {
             ucsLatinExtABMap[ucs] = j;
@@ -237,7 +237,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     }
     for (i = 0, j = 0x02a1; i < (sizeof(keysym_to_unicode_2a1_2fe) / sizeof(short)); ++i, ++j)
     {
-        ksLatinExtMap[j] = ucs = (WCHAR)keysym_to_unicode_1a1_1ff[i];
+        ksLatinExtMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_1a1_1ff[i]);
         if (IsUCSLatinExtAB(ucs))
         {
             ucsLatinExtABMap[ucs] = j;
@@ -249,7 +249,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     }
     for (i = 0, j = 0x03a2; i < (sizeof(keysym_to_unicode_3a2_3fe) / sizeof(short)); ++i, ++j)
     {
-        ksLatinExtMap[j] = ucs = (WCHAR)keysym_to_unicode_1a1_1ff[i];
+        ksLatinExtMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_1a1_1ff[i]);
         if (IsUCSLatinExtAB(ucs))
         {
             ucsLatinExtABMap[ucs] = j;
@@ -261,7 +261,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     }
     for (i = 0, j = 0x12a1; i < (sizeof(keysym_to_unicode_12a1_12fe) / sizeof(short)); ++i, ++j)
     {
-        ksLatinExtMap[j] = ucs = (WCHAR)keysym_to_unicode_1a1_1ff[i];
+        ksLatinExtMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_1a1_1ff[i]);
         if (IsUCSLatinExtAB(ucs))
         {
             ucsLatinExtABMap[ucs] = j;
@@ -273,7 +273,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     }
     for (i = 0, j = 0x13bc; i < (sizeof(keysym_to_unicode_13bc_13be) / sizeof(short)); ++i, ++j)
     {
-        ksLatinExtMap[j] = ucs = (WCHAR)keysym_to_unicode_1a1_1ff[i];
+        ksLatinExtMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_1a1_1ff[i]);
         if (IsUCSLatinExtAB(ucs))
         {
             ucsLatinExtABMap[ucs] = j;
@@ -287,7 +287,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Katakana and UCS Katakana, CJK Symbols and Punctuation
     for (i = 0, j = 0x04a1; i < (sizeof(keysym_to_unicode_4a1_4df) / sizeof(short)); ++i, ++j)
     {
-        ksKatakanaMap[j] = ucs = (WCHAR)keysym_to_unicode_4a1_4df[i];
+        ksKatakanaMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_4a1_4df[i]);
         if (IsUCSKatakana(ucs))
         {
             ucsKatakanaMap[ucs] = j;
@@ -305,7 +305,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Arabic and UCS Arabic
     for (i = 0, j = 0x0590; i < (sizeof(keysym_to_unicode_590_5fe) / sizeof(short)); ++i, ++j)
     {
-        ksArabicMap[j] = ucs = (WCHAR)keysym_to_unicode_590_5fe[i];
+        ksArabicMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_590_5fe[i]);
         if (IsUCSArabic(ucs))
         {
             ucsArabicMap[ucs] = j;
@@ -319,7 +319,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Cyrillic and UCS Cyrillic
     for (i = 0, j = 0x0680; i < (sizeof(keysym_to_unicode_680_6ff) / sizeof(short)); ++i, ++j)
     {
-        ksCyrillicMap[j] = ucs = (WCHAR)keysym_to_unicode_680_6ff[i];
+        ksCyrillicMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_680_6ff[i]);
         if (IsUCSCyrillic(ucs))
         {
             ucsCyrillicMap[ucs] = j;
@@ -333,7 +333,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Greek and UCS Greek and Coptic
     for (i = 0, j = 0x07a1; i < (sizeof(keysym_to_unicode_7a1_7f9) / sizeof(short)); ++i, ++j)
     {
-        ksGreekMap[j] = ucs = (WCHAR)keysym_to_unicode_7a1_7f9[i];
+        ksGreekMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_7a1_7f9[i]);
         if (IsUCSGreek_Coptic(ucs))
         {
             ucsGreek_CopticMap[ucs] = j;
@@ -347,7 +347,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Technical and UCS Others
     for (i = 0, j = 0x08a4; i < (sizeof(keysym_to_unicode_8a4_8fe) / sizeof(short)); ++i, ++j)
     {
-        ksTechnicalMap[j] = ucs = (WCHAR)keysym_to_unicode_8a4_8fe[i];
+        ksTechnicalMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_8a4_8fe[i]);
         if (ucs && (ucsOthersMap.find(ucs) != ucsOthersMap.end()))
         {
             ucsOthersMap[ucs] = j;
@@ -357,7 +357,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Special and UCS Others
     for (i = 0, j = 0x09df; i < (sizeof(keysym_to_unicode_9df_9f8) / sizeof(short)); ++i, ++j)
     {
-        ksSpecialMap[j] = ucs = (WCHAR)keysym_to_unicode_aa1_afe[i];
+        ksSpecialMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_aa1_afe[i]);
         if (ucs && (ucsOthersMap.find(ucs) != ucsOthersMap.end()))
         {
             ucsOthersMap[ucs] = j;
@@ -367,7 +367,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Publishing and UCS Others
     for (i = 0, j = 0x0aa1; i < (sizeof(keysym_to_unicode_aa1_afe) / sizeof(short)); ++i, ++j)
     {
-        ksPublishingMap[j] = ucs = (WCHAR)keysym_to_unicode_aa1_afe[i];
+        ksPublishingMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_aa1_afe[i]);
         if (ucs && (ucsOthersMap.find(ucs) != ucsOthersMap.end()))
         {
             ucsOthersMap[ucs] = j;
@@ -377,7 +377,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Hebrew and UCS Hebrew, General Punctuation
     for (i = 0, j = 0x0cdf; i < (sizeof(keysym_to_unicode_cdf_cfa) / sizeof(short)); ++i, ++j)
     {
-        ksHebrewMap[j] = ucs = (WCHAR)keysym_to_unicode_cdf_cfa[i];
+        ksHebrewMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_cdf_cfa[i]);
         if (IsUCSHebrew(ucs))
         {
             ucsHebrewMap[ucs] = j;
@@ -395,7 +395,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Thai and UCS Thai
     for (i = 0, j = 0x0da1; i < (sizeof(keysym_to_unicode_da1_df9) / sizeof(short)); ++i, ++j)
     {
-        ksThaiMap[j] = ucs = (WCHAR)keysym_to_unicode_da1_df9[i];
+        ksThaiMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_da1_df9[i]);
         if (IsUCSThai(ucs))
         {
             ucsThaiMap[ucs] = j;
@@ -409,7 +409,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Korean and UCS Hangul Jamo
     for (i = 0, j = 0x0ea0; i < (sizeof(keysym_to_unicode_ea0_eff) / sizeof(short)); ++i, ++j)
     {
-        ksKoreanMap[j] = ucs = (WCHAR)keysym_to_unicode_ea0_eff[i];
+        ksKoreanMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_ea0_eff[i]);
         if (IsUCSHangulJamo(ucs))
         {
             ucsHangulJamoMap[ucs] = j;
@@ -423,7 +423,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Armenian and UCS Armenian, General Punctuation
     for (i = 0, j = 0x14a1; i < (sizeof(keysym_to_unicode_14a1_14ff) / sizeof(short)); ++i, ++j)
     {
-        ksArmenianMap[j] = ucs = (WCHAR)keysym_to_unicode_14a1_14ff[i];
+        ksArmenianMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_14a1_14ff[i]);
         if (IsUCSArmenian(ucs))
         {
             ucsArmenianMap[ucs] = j;
@@ -441,7 +441,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Georgian and UCS Georgian
     for (i = 0, j = 0x15d0; i < (sizeof(keysym_to_unicode_15d0_15f6) / sizeof(short)); ++i, ++j)
     {
-        ksGeorgianMap[j] = ucs = (WCHAR)keysym_to_unicode_15d0_15f6[i];
+        ksGeorgianMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_15d0_15f6[i]);
         if (IsUCSGeorgian(ucs))
         {
             ucsGeorgianMap[ucs] = j;
@@ -455,7 +455,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Azeri and UCS Others
     for (i = 0, j = 0x16a0; i < (sizeof(keysym_to_unicode_16a0_16f6) / sizeof(short)); ++i, ++j)
     {
-        ksAzeriMap[j] = ucs = (WCHAR)keysym_to_unicode_16a0_16f6[i];
+        ksAzeriMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_16a0_16f6[i]);
         if (IsUCSLatinExtAdd(ucs))
         {
             ucsLatinExtAddMap[ucs] = j;
@@ -469,7 +469,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Vietnamese and UCS Latin Extended Additional, Latin Extended-A & B
     for (i = 0, j = 0x1e9f; i < (sizeof(keysym_to_unicode_1e9f_1eff) / sizeof(short)); ++i, ++j)
     {
-        ksVietnameseMap[j] = ucs = (WCHAR)keysym_to_unicode_1e9f_1eff[i];
+        ksVietnameseMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_1e9f_1eff[i]);
         if (IsUCSLatinExtAdd(ucs))
         {
             ucsLatinExtAddMap[ucs] = j;
@@ -487,7 +487,7 @@ void KeyMap::BuildUCS2KS_Map(void)
     // Building map for KeySym Currency and UCS Currency Symbols
     for (i = 0, j = 0x20a0; i < (sizeof(keysym_to_unicode_20a0_20ac) / sizeof(short)); ++i, ++j)
     {
-        ksCurrencyMap[j] = ucs = (WCHAR)keysym_to_unicode_20a0_20ac[i];
+        ksCurrencyMap[j] = ucs = static_cast<WCHAR>(keysym_to_unicode_20a0_20ac[i]);
         if (IsUCSCurrSym(ucs))
         {
             ucsCurrSymMap[ucs] = j;
@@ -509,7 +509,7 @@ CARD32 KeyMap::UCS2X(const WCHAR UnicodeChar)
         // If the key is printable Latin-1 character
         // Latin-1 in UCS and X KeySym are exactly the same code
         vnclog.Print(8, _T("  0x%04x (Latin-1 '%c'): "), UnicodeChar, UnicodeChar);
-        XChar = (CARD32)(UnicodeChar & 0xffff);
+        XChar = static_cast<CARD32>((UnicodeChar & 0xffff));
     }
     else if (UnicodeChar < 255)
     {
@@ -721,7 +721,7 @@ CARD32 KeyMap::UCS2X(const WCHAR UnicodeChar)
         //   defining new KeySym (Unicode KeySym):
         //   KeySym = ((UCS & 0xffffff) | 0x01000000)
         // Since Windows only support UCS-16 so we can have this formula:
-        XChar = (((CARD32)UnicodeChar) & 0xffff) | 0x01000000;
+        XChar = ((static_cast<CARD32>(UnicodeChar)) & 0xffff) | 0x01000000;
     }
 
     return XChar;

@@ -37,7 +37,7 @@ public:
         m_type = type;
         m_caption = _strdup(caption);
         m_title = _strdup(title);
-    };
+    }
     virtual ~vncTimedMsgBoxThread()
     {
         if (m_caption != nullptr)
@@ -48,7 +48,7 @@ public:
         {
             std::free(m_title);
         }
-    };
+    }
     virtual void run(void* const)
     {
         // Create the desired dialog box
@@ -57,7 +57,7 @@ public:
             return;
         }
         MessageBoxSecure(nullptr, m_caption, m_title, m_type | MB_OK | MB_SETFOREGROUND | MB_SERVICE_NOTIFICATION);
-    };
+    }
     char* m_caption;
     char* m_title;
     UINT m_type;

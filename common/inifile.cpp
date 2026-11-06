@@ -60,13 +60,13 @@ bool IniFile::WriteInt(const char* const key1, const char* const key2, const int
 int IniFile::ReadInt(const char* const key1, const char* const key2, const int Defaultvalue)
 {
     //vnclog.Print(LL_INTERR, VNCLOG("%s \n"),strIniFile);
-    return ::GetPrivateProfileInt(key1, key2, Defaultvalue, strIniFile.data());
+    return static_cast<int>(::GetPrivateProfileInt(key1, key2, Defaultvalue, strIniFile.data()));
 }
 
 void IniFile::ReadString(const char* const key1, const char* const key2, char* const value, const int valuesize)
 {
     //vnclog.Print(LL_INTERR, VNCLOG("%s \n"),strIniFile);
-    ::GetPrivateProfileString(key1, key2, "", value, valuesize, strIniFile.data());
+    ::GetPrivateProfileString(key1, key2, "", value, static_cast<DWORD>(valuesize), strIniFile.data());
 }
 
 void IniFile::ReadPassword(char* const value, const int valuesize)
@@ -107,7 +107,7 @@ bool IniFile::IsWritable()
 }
 
 void IniFile::ReadHash(char* const value, const int valuesize)
-{ ::GetPrivateProfileStruct("UltraVNC", "hash", value, valuesize, strIniFile.data()); }
+{ ::GetPrivateProfileStruct("UltraVNC", "hash", value, static_cast<UINT>(valuesize), strIniFile.data()); }
 
 bool IniFile::WriteHash(char* const value, const int valuesize)
-{ return (FALSE != ::WritePrivateProfileStruct("UltraVNC", "hash", value, valuesize, strIniFile.data())); }
+{ return (FALSE != ::WritePrivateProfileStruct("UltraVNC", "hash", value, static_cast<UINT>(valuesize), strIniFile.data())); }

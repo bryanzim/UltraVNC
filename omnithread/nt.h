@@ -34,10 +34,10 @@
 // OMNI thread implementation classes for NT threads.
 //
 
-#ifndef __omnithread_nt_h_
-#define __omnithread_nt_h_
+#ifndef omnithread_nt_h
+#define omnithread_nt_h
 
-#include <windows.h>
+#include <Windows.h>
 
 #ifndef __BCPLUSPLUS__
 #define OMNI_THREAD_WRAPPER unsigned __stdcall omni_thread_wrapper(LPVOID ptr)

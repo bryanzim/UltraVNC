@@ -14,7 +14,7 @@
 
 #include "./winvnc/resource.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <array>
 #include <cstdlib>

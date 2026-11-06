@@ -10,9 +10,9 @@
 
 
 #pragma once
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <common/VersionHelpers.h>
 
@@ -56,11 +56,11 @@ class ScreenCapture
 {
 public:
     explicit ScreenCapture();
-    virtual ~ScreenCapture() { ; }
+    virtual ~ScreenCapture() {  }
     PCHAR getFramebuffer() { return pFramebuffer; }
     PCHANGES_BUF getChangeBuffer() { return pChangebuf; }
-    int getPreviousCounter() { return oldAantal; }
-    void setPreviousCounter(const int oldAantalIn) { this->oldAantal = oldAantalIn; }
+    int getPreviousCounter() { return static_cast<int>(oldAantal); }
+    void setPreviousCounter(const int oldAantalIn) { this->oldAantal = static_cast<ULONG>(oldAantalIn); }
     void setBlocked(const bool blockedIn) { this->blocked = blockedIn; }
     bool getBlocked() { return blocked; }
 

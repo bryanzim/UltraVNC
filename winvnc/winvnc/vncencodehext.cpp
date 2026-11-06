@@ -62,15 +62,15 @@ UINT vncEncodeHexT::EncodeRect(BYTE* const source, BYTE* const dest, const rfb::
     rect.br.x = (rect_IN.br.x < 0) ? 0 : rect_IN.br.x;
     rect.br.y = (rect_IN.br.y < 0) ? 0 : rect_IN.br.y;
 
-    const UINT rectW = rect.br.x - rect.tl.x;
-    const UINT rectH = rect.br.y - rect.tl.y;
+    const UINT rectW = static_cast<UINT>(rect.br.x - rect.tl.x);
+    const UINT rectH = static_cast<UINT>(rect.br.y - rect.tl.y);
 
     // Create the rectangle header
-    rfbFramebufferUpdateRectHeader* surh = (rfbFramebufferUpdateRectHeader*)dest;
-    surh->r.x = (CARD16)(rect.tl.x - monitor_Offsetx);
-    surh->r.y = (CARD16)(rect.tl.y - monitor_Offsety);
-    surh->r.w = (CARD16)(rectW);
-    surh->r.h = (CARD16)(rectH);
+    rfbFramebufferUpdateRectHeader* surh = reinterpret_cast<rfbFramebufferUpdateRectHeader*>(dest);
+    surh->r.x = static_cast<CARD16>((rect.tl.x - monitor_Offsetx));
+    surh->r.y = static_cast<CARD16>((rect.tl.y - monitor_Offsety));
+    surh->r.w = static_cast<CARD16>((rectW));
+    surh->r.h = static_cast<CARD16>((rectH));
     surh->r.x = Swap16IfLE(surh->r.x);
     surh->r.y = Swap16IfLE(surh->r.y);
     surh->r.w = Swap16IfLE(surh->r.w);
@@ -82,13 +82,13 @@ UINT vncEncodeHexT::EncodeRect(BYTE* const source, BYTE* const dest, const rfb::
     {
     case 8:
         return sz_rfbFramebufferUpdateRectHeader +
-               EncodeHextiles8(source, dest + sz_rfbFramebufferUpdateRectHeader, rect.tl.x, rect.tl.y, rectW, rectH);
+               EncodeHextiles8(source, dest + sz_rfbFramebufferUpdateRectHeader, rect.tl.x, rect.tl.y, static_cast<int>(rectW), static_cast<int>(rectH));
     case 16:
         return sz_rfbFramebufferUpdateRectHeader +
-               EncodeHextiles16(source, dest + sz_rfbFramebufferUpdateRectHeader, rect.tl.x, rect.tl.y, rectW, rectH);
+               EncodeHextiles16(source, dest + sz_rfbFramebufferUpdateRectHeader, rect.tl.x, rect.tl.y, static_cast<int>(rectW), static_cast<int>(rectH));
     case 32:
         return sz_rfbFramebufferUpdateRectHeader +
-               EncodeHextiles32(source, dest + sz_rfbFramebufferUpdateRectHeader, rect.tl.x, rect.tl.y, rectW, rectH);
+               EncodeHextiles32(source, dest + sz_rfbFramebufferUpdateRectHeader, rect.tl.x, rect.tl.y, static_cast<int>(rectW), static_cast<int>(rectH));
     }
 
     return vncEncoder::EncodeRect(source, dest, rect);
@@ -139,7 +139,7 @@ UINT vncEncodeHexT::EncodeRect(BYTE* const source, BYTE* const dest, const rfb::
                 hexrect.tl.y = y;                                                                                                  \
                 hexrect.br.x = x + w;                                                                                              \
                 hexrect.br.y = y + h;                                                                                              \
-                Translate(source, (BYTE*)&clientPixelData, hexrect);                                                               \
+                Translate(source, reinterpret_cast<BYTE*>(&clientPixelData), hexrect);                                                               \
                                                                                                                                    \
                 rectoffset = destoffset;                                                                                           \
                 dest[rectoffset] = 0;                                                                                              \
@@ -186,9 +186,9 @@ UINT vncEncodeHexT::EncodeRect(BYTE* const source, BYTE* const dest, const rfb::
                     destoffset = rectoffset;                                                                                       \
                     dest[destoffset++] = rfbHextileRaw;                                                                            \
                                                                                                                                    \
-                    Translate(source, (BYTE*)&clientPixelData, hexrect);                                                           \
+                    Translate(source, reinterpret_cast<BYTE*>(&clientPixelData), hexrect);                                                           \
                                                                                                                                    \
-                    std::memcpy(dest + destoffset, (char*)clientPixelData, w * h * (bpp / 8));                                     \
+                    std::memcpy(dest + destoffset, reinterpret_cast<char*>(clientPixelData), w * h * (bpp / 8));                                     \
                                                                                                                                    \
                     destoffset += w * h * (bpp / 8);                                                                               \
                 }                                                                                                                  \

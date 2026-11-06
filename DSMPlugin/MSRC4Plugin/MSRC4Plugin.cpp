@@ -34,7 +34,7 @@
 
 #include "logging.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <tchar.h>
 #include <wincrypt.h> // Windows crypto api

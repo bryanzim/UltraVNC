@@ -15,8 +15,8 @@
 // decompressing with zlib on the fly.
 //
 #ifdef _XZ
-#ifndef __RDR_xzInStream_H__
-#define __RDR_xzInStream_H__
+#ifndef RDR_xzInStream_H
+#define RDR_xzInStream_H
 
 #pragma once
 

@@ -11,9 +11,9 @@
 
 #include "CpuUsage.h"
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <tchar.h>
 
@@ -47,7 +47,7 @@ CProcessorUsage::CProcessorUsage()
     HMODULE hModule = ::GetModuleHandle(_T("kernel32.dll"));
     if (hModule)
     {
-        s_pfnGetSystemTimes = (pfnGetSystemTimes)::GetProcAddress(hModule, "GetSystemTimes");
+        s_pfnGetSystemTimes = reinterpret_cast<pfnGetSystemTimes>(::GetProcAddress(hModule, "GetSystemTimes"));
     }
 
     if (!s_pfnGetSystemTimes)
@@ -55,7 +55,7 @@ CProcessorUsage::CProcessorUsage()
         hModule = ::GetModuleHandle(_T("ntdll.dll"));
         if (hModule)
         {
-            s_pfnNtQuerySystemInformation = (pfnNtQuerySystemInformation)::GetProcAddress(hModule, "NtQuerySystemInformation");
+            s_pfnNtQuerySystemInformation = reinterpret_cast<pfnNtQuerySystemInformation>(::GetProcAddress(hModule, "NtQuerySystemInformation"));
             if (s_pfnNtQuerySystemInformation)
             {
                 PROC_PERF_INFO tmp;
@@ -86,7 +86,7 @@ void CProcessorUsage::GetSysTimes(__int64& idleTime, __int64& kernelTime, __int6
 {
     if (s_pfnGetSystemTimes)
     {
-        s_pfnGetSystemTimes((LPFILETIME)&idleTime, (LPFILETIME)&kernelTime, (LPFILETIME)&userTime);
+        s_pfnGetSystemTimes(reinterpret_cast<LPFILETIME>(&idleTime), reinterpret_cast<LPFILETIME>(&kernelTime), reinterpret_cast<LPFILETIME>(&userTime));
     }
     else
     {
@@ -143,15 +143,15 @@ short CProcessorUsage::GetUsage()
     __int64 kernelTimeProcess;
     __int64 userTimeProcess;
 
-    ::GetSystemTimeAsFileTime((LPFILETIME)&time);
+    ::GetSystemTimeAsFileTime(reinterpret_cast<LPFILETIME>(&time));
 
     if (!sTime)
     {
         GetSysTimes(idleTime, kernelTime, userTime);
         FILETIME createTime;
         FILETIME exitTime;
-        ::GetProcessTimes(::GetCurrentProcess(), &createTime, &exitTime, (LPFILETIME)&kernelTimeProcess,
-                          (LPFILETIME)&userTimeProcess);
+        ::GetProcessTimes(::GetCurrentProcess(), &createTime, &exitTime, reinterpret_cast<LPFILETIME>(&kernelTimeProcess),
+                          reinterpret_cast<LPFILETIME>(&userTimeProcess));
 
         s_time = time;
         s_idleTime = idleTime;
@@ -184,7 +184,7 @@ short CProcessorUsage::GetUsage()
 
     FILETIME createTime;
     FILETIME exitTime;
-    ::GetProcessTimes(::GetCurrentProcess(), &createTime, &exitTime, (LPFILETIME)&kernelTimeProcess, (LPFILETIME)&userTimeProcess);
+    ::GetProcessTimes(::GetCurrentProcess(), &createTime, &exitTime, reinterpret_cast<LPFILETIME>(&kernelTimeProcess), reinterpret_cast<LPFILETIME>(&userTimeProcess));
 
     int cpu;
     int cpuProcess;
@@ -211,8 +211,8 @@ short CProcessorUsage::GetUsage()
     s_userTime = userTime;
     s_kernelTimeProcess = kernelTimeProcess;
     s_userTimeProcess = userTimeProcess;
-    s_cpu[s_index] = cpu;
-    s_cpuProcess[s_index] = cpuProcess;
+    s_cpu[static_cast<unsigned long long>(s_index)] = cpu;
+    s_cpuProcess[static_cast<unsigned long long>(s_index)] = cpuProcess;
     ++s_index;
     s_index %= 5;
 
@@ -227,13 +227,13 @@ short CProcessorUsage::GetUsage()
     int i;
     for (i = 0; i < s_count; ++i)
     {
-        cpu += s_cpu[i];
+        cpu += s_cpu[static_cast<unsigned long long>(i)];
     }
 
     cpuProcess = 0;
     for (i = 0; i < s_count; ++i)
     {
-        cpuProcess += s_cpuProcess[i];
+        cpuProcess += s_cpuProcess[static_cast<unsigned long long>(i)];
     }
 
     cpu /= s_count;

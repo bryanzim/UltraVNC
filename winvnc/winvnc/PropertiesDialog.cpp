@@ -24,14 +24,14 @@
 #include "vncconndialog.h"
 #include "vncmenu.h"
 #include "vncOSVersion.h"
-#include "vncServer.h"
+#include "vncserver.h"
 #include "winvnc.h"
 
-#include <commctrl.h>
+#include <CommCtrl.h>
 #include <commdlg.h>
 #include <cryptuiapi.h>
-#include <shlobj.h>
-#include <shlwapi.h>
+#include <ShlObj.h>
+#include <Shlwapi.h>
 #include <windowsx.h>
 
 #include <array>
@@ -93,10 +93,10 @@ static INT_PTR CALLBACK SelectCertDlgProc(const HWND hwnd, const UINT msg, const
         HWND hList = ::GetDlgItem(hwnd, IDC_SELECT_CERT_LIST);
         for (std::size_t i{ 0U }; i < data->entries.size(); ++i)
         {
-            int idx = static_cast<int>(::SendMessageA(hList, LB_ADDSTRING, 0, (LPARAM)data->entries[i].display.c_str()));
+            int idx = static_cast<int>(::SendMessageA(hList, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(data->entries[i].display.c_str())));
             if (idx != LB_ERR)
             {
-                ::SendMessage(hList, LB_SETITEMDATA, idx, (LPARAM)i);
+                ::SendMessage(hList, LB_SETITEMDATA, static_cast<WPARAM>(idx), static_cast<LPARAM>(i));
             }
         }
         if (!data->entries.empty())
@@ -113,7 +113,7 @@ static INT_PTR CALLBACK SelectCertDlgProc(const HWND hwnd, const UINT msg, const
             int sel = static_cast<int>(::SendMessage(hList, LB_GETCURSEL, 0, 0));
             if ((sel != LB_ERR) && data)
             {
-                LPARAM itemData = ::SendMessage(hList, LB_GETITEMDATA, sel, 0);
+                LPARAM itemData = ::SendMessage(hList, LB_GETITEMDATA, static_cast<WPARAM>(sel), 0);
                 std::size_t idx = static_cast<std::size_t>(itemData);
                 if ((idx < data->entries.size()) &&
                     CertThumbprintHex(data->entries[idx].ctx, data->outThumbprint, sizeof(data->outThumbprint)))
@@ -197,7 +197,7 @@ static void SelectCertificateToEdit(const HWND hwnd, const int editId)
         return;
     }
 
-    if ((::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_SELECT_CERT), hwnd, (DLGPROC)SelectCertDlgProc, (LONG_PTR)&data) ==
+    if ((::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_SELECT_CERT), hwnd, reinterpret_cast<DLGPROC>(SelectCertDlgProc), reinterpret_cast<LONG_PTR>(&data)) ==
          IDOK) &&
         data.ok)
     {
@@ -220,7 +220,7 @@ static DWORD SelectedSelfSignedKeyBits(const HWND hwnd)
     if (HWND hBits = ::GetDlgItem(hwnd, IDC_VENCRYPT_KEYBITS))
     {
         const LRESULT sel = ::SendMessage(hBits, CB_GETCURSEL, 0, 0);
-        if ((sel >= 0) && (sel < (LRESULT)(sizeof(kSelfSignedKeyBits) / sizeof(kSelfSignedKeyBits[0U]))))
+        if ((sel >= 0) && (sel < static_cast<LRESULT>((sizeof(kSelfSignedKeyBits) / sizeof(kSelfSignedKeyBits[0U])))))
         {
             keyBits = kSelfSignedKeyBits[sel];
         }
@@ -350,14 +350,14 @@ static bool ValidatorHasManagementUi(const HWND hwnd)
     }
 
     bool has{ false };
-    TV_GET_CAPABILITIES caps = (TV_GET_CAPABILITIES)::GetProcAddress(hMod, "tv_get_capabilities");
+    TV_GET_CAPABILITIES caps = reinterpret_cast<TV_GET_CAPABILITIES>(::GetProcAddress(hMod, "tv_get_capabilities"));
     if (caps)
     {
         has = (caps() & TV_CAP_MANAGEMENT_UI) != 0;
     }
     else
     {
-        TV_HAS_MANAGEMENT_UI hasUi = (TV_HAS_MANAGEMENT_UI)::GetProcAddress(hMod, "tv_has_management_ui");
+        TV_HAS_MANAGEMENT_UI hasUi = reinterpret_cast<TV_HAS_MANAGEMENT_UI>(::GetProcAddress(hMod, "tv_has_management_ui"));
         has = (hasUi && hasUi()) || (::GetProcAddress(hMod, "tv_show_management_ui") != nullptr);
     }
     ::FreeLibrary(hMod);
@@ -419,7 +419,7 @@ namespace
                 }
                 if ((v >= 0) && (v < 1024))
                 {
-                    allowed[v] = true;
+                    allowed[static_cast<unsigned long long>(v)] = true;
                     any = true;
                 }
                 p = end;
@@ -587,12 +587,12 @@ BOOL CALLBACK PropertiesDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM w
     PropertiesDialog* _this;
     if (uMsg == WM_INITDIALOG)
     {
-        _this = (PropertiesDialog*)lParam;
+        _this = reinterpret_cast<PropertiesDialog*>(lParam);
         helper::SafeSetWindowUserData(hwnd, lParam);
     }
     else
     {
-        _this = (PropertiesDialog*)helper::SafeGetWindowUserData<PropertiesDialog>(hwnd);
+        _this = reinterpret_cast<PropertiesDialog*>(helper::SafeGetWindowUserData<PropertiesDialog>(hwnd));
     }
 
     switch (uMsg)
@@ -635,8 +635,8 @@ bool PropertiesDialog::InitDialog(const HWND hwnd)
     ::EnableWindow(::GetDlgItem(hwnd, IDC_APPLY), false);
     ::SetForegroundWindow(hwnd);
     HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_WINVNC));
-    ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-    ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+    ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+    ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
 
     const long lTitleBufSize{ 256 };
     std::array<char, lTitleBufSize> szTitle;
@@ -711,23 +711,23 @@ bool PropertiesDialog::InitDialog(const HWND hwnd)
     }
 
     hTabAuthentication =
-        ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_AUTHENTICATION), hwnd, (DLGPROC)DlgProc, (LONG_PTR)this);
-    hTabIncoming = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Incoming), hwnd, (DLGPROC)DlgProc, (LONG_PTR)this);
-    hTabInput = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_input_FT), hwnd, (DLGPROC)DlgProc, (LONG_PTR)this);
-    hTabMisc = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Misc), hwnd, (DLGPROC)DlgProc, (LONG_PTR)this);
+        ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_AUTHENTICATION), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabIncoming = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Incoming), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabInput = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_input_FT), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabMisc = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Misc), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
     hTabNotifications =
-        ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Notifications), hwnd, (DLGPROC)DlgProc, (LONG_PTR)this);
-    hTabNetwork = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Network), hwnd, (DLGPROC)DlgProc, (LONG_PTR)this);
-    hTabRules = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Rules), hwnd, (DLGPROC)DlgProc, (LONG_PTR)this);
-    hTabCapture = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_capture), hwnd, (DLGPROC)DlgProc, (LONG_PTR)this);
-    hTabLog = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Log), hwnd, (DLGPROC)DlgProc, (LONG_PTR)this);
-    hTabTLS = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_TLS), hwnd, (DLGPROC)DlgProc, (LONG_PTR)this);
+        ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Notifications), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabNetwork = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Network), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabRules = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Rules), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabCapture = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_capture), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabLog = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Log), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabTLS = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_TLS), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
     hTabAdministration =
-        ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_administration), hwnd, (DLGPROC)DlgProc, (LONG_PTR)this);
-    hTabService = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Service), hwnd, (DLGPROC)DlgProc, (LONG_PTR)this);
+        ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_administration), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
+    hTabService = ::CreateDialogParam(hInstResDLL, MAKEINTRESOURCE(IDD_FORM_Service), hwnd, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this));
     RECT rc;
     ::GetWindowRect(hTabControl, &rc);
-    ::MapWindowPoints(nullptr, hwnd, (POINT*)&rc, 2);
+    ::MapWindowPoints(nullptr, hwnd, reinterpret_cast<POINT*>(&rc), 2);
     TabCtrl_AdjustRect(hTabControl, FALSE, &rc);
     ::SetWindowPos(hTabAuthentication, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_SHOWWINDOW);
     ::SetWindowPos(hTabIncoming, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_HIDEWINDOW);
@@ -745,7 +745,7 @@ bool PropertiesDialog::InitDialog(const HWND hwnd)
 };
 int PropertiesDialog::HandleNotify([[maybe_unused]] const HWND hwndDlg, [[maybe_unused]] const WPARAM wParam, const LPARAM lParam)
 {
-    LPNMHDR pn = (LPNMHDR)lParam;
+    LPNMHDR pn = reinterpret_cast<LPNMHDR>(lParam);
     switch (pn->code)
     {
     case TCN_SELCHANGE:
@@ -886,31 +886,31 @@ BOOL CALLBACK DlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, con
     PropertiesDialog* _this;
     if (uMsg == WM_INITDIALOG)
     {
-        _this = (PropertiesDialog*)lParam;
+        _this = reinterpret_cast<PropertiesDialog*>(lParam);
         helper::SafeSetWindowUserData(hwnd, lParam);
     }
     else
     {
-        _this = (PropertiesDialog*)helper::SafeGetWindowUserData<PropertiesDialog>(hwnd);
+        _this = reinterpret_cast<PropertiesDialog*>(helper::SafeGetWindowUserData<PropertiesDialog>(hwnd));
     }
 
     switch (uMsg)
     {
     case WM_INITDIALOG: {
-        _this = (PropertiesDialog*)lParam;
+        _this = reinterpret_cast<PropertiesDialog*>(lParam);
         return _this->DlgInitDialog(hwnd);
     }
     case WM_CTLCOLORDLG:
-        return static_cast<BOOL>((INT_PTR)::GetStockObject(WHITE_BRUSH));
+        return static_cast<BOOL>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
     case WM_CTLCOLORSTATIC: {
-        HDC hdcStatic = (HDC)wParam;
+        HDC hdcStatic = reinterpret_cast<HDC>(wParam);
         ::SetTextColor(hdcStatic, RGB(0, 0, 0));
         ::SetBkMode(hdcStatic, TRANSPARENT);
         return static_cast<LONG>(reinterpret_cast<INT_PTR>(::GetStockObject(WHITE_BRUSH)));
     }
     case WM_NOTIFY: {
         [[maybe_unused]] const int a{ 0 };
-        LPNMHDR nmhdr = (LPNMHDR)lParam;
+        LPNMHDR nmhdr = reinterpret_cast<LPNMHDR>(lParam);
         if (nmhdr->idFrom == IDC_SLIDERFPS)
         {
             int fps = static_cast<int>(::SendMessage(::GetDlgItem(hwnd, IDC_SLIDERFPS), TBM_GETPOS, 0, 0L));
@@ -935,7 +935,7 @@ BOOL CALLBACK DlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, con
             const int count = static_cast<int>(::SendMessage(hCombo, CB_GETCOUNT, 0, 0));
             for (int i{ 0 }; i < count; ++i)
             {
-                wchar_t* langCode = (wchar_t*)::SendMessage(hCombo, CB_GETITEMDATA, i, 0);
+                wchar_t* langCode = reinterpret_cast<wchar_t*>(::SendMessage(hCombo, CB_GETITEMDATA, i, 0));
                 if (langCode)
                 {
                     std::free(langCode);
@@ -944,7 +944,7 @@ BOOL CALLBACK DlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, con
         }
         break;
     }
-    return (INT_PTR)FALSE;
+    return static_cast<INT_PTR>(FALSE);
 }
 bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
 {
@@ -972,16 +972,16 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
     if (::GetDlgItem(hwnd, IDC_CONNECT_SOCK))
     {
         ::SetFocus(::GetDlgItem(hwnd, IDC_CONNECT_SOCK));
-        ::SendMessage(::GetDlgItem(hwnd, IDC_CONNECT_SOCK), BM_SETCHECK, bConnectSock, 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_CONNECT_SOCK), BM_SETCHECK, static_cast<WPARAM>(bConnectSock), 0);
     }
 
     // Set display/ports settings
     BOOL bConnectHttp = settings->getHTTPConnect();
     BOOL bAutoPort = settings->getAutoPortSelect();
-    UINT port_rfb = settings->getPortNumber();
-    UINT port_http = settings->getHttpPortNumber();
-    int d1 = PORT_TO_DISPLAY(port_rfb);
-    const int d2 = HPORT_TO_DISPLAY(port_http);
+    UINT port_rfb = static_cast<UINT>(settings->getPortNumber());
+    UINT port_http = static_cast<UINT>(settings->getHttpPortNumber());
+    int d1 = static_cast<int>(PORT_TO_DISPLAY(port_rfb));
+    const int d2 = static_cast<int>(HPORT_TO_DISPLAY(port_http));
     BOOL bValidDisplay = ((d1 == d2) && (d1 >= 0) && (d1 <= 99));
 
     if (::GetDlgItem(hwnd, IDC_CHANGEPASSWORDADMIN))
@@ -1009,7 +1009,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
 
     if (::GetDlgItem(hwnd, IDC_CONNECT_HTTP))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_CONNECT_HTTP), BM_SETCHECK, settings->getHTTPConnect(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_CONNECT_HTTP), BM_SETCHECK, static_cast<WPARAM>(settings->getHTTPConnect()), 0);
         ::EnableWindow(::GetDlgItem(hwnd, IDC_TLS), bConnectHttp);
         ::EnableWindow(::GetDlgItem(hwnd, IDC_STATIC_HTTPPORT), bConnectHttp);
         ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTHTTP), bConnectHttp);
@@ -1018,7 +1018,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
     if (::GetDlgItem(hwnd, IDC_TLS))
     {
         BOOL bTLS = settings->getEnableTLS();
-        ::SendMessage(::GetDlgItem(hwnd, IDC_TLS), BM_SETCHECK, bTLS, 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_TLS), BM_SETCHECK, static_cast<WPARAM>(bTLS), 0);
         if (::GetDlgItem(hwnd, IDC_PORTHTTP))
         {
             ::ShowWindow(::GetDlgItem(hwnd, IDC_PORTHTTP), bTLS ? SW_HIDE : SW_SHOW);
@@ -1028,24 +1028,24 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
             ::ShowWindow(::GetDlgItem(hwnd, IDC_PORTHTTPS), bTLS ? SW_SHOW : SW_HIDE);
             if (bTLS)
             {
-                ::SetDlgItemInt(hwnd, IDC_PORTHTTPS, settings->getTLSPort(), FALSE);
+                ::SetDlgItemInt(hwnd, IDC_PORTHTTPS, static_cast<UINT>(settings->getTLSPort()), FALSE);
             }
         }
     }
 
     if (::GetDlgItem(hwnd, IDC_FILETRANSFER))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_FILETRANSFER), BM_SETCHECK, settings->getEnableFileTransfer(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_FILETRANSFER), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableFileTransfer()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_FTUSERIMPERSONATION_CHECK))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_FTUSERIMPERSONATION_CHECK), BM_SETCHECK, settings->getFTUserImpersonation(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_FTUSERIMPERSONATION_CHECK), BM_SETCHECK, static_cast<WPARAM>(settings->getFTUserImpersonation()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_BLANK))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_BLANK), BM_SETCHECK, settings->getEnableBlankMonitor(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_BLANK), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableBlankMonitor()), 0);
         if (!VNC_OSVersion::getInstance()->OS_WIN10_TRANS && VNC_OSVersion::getInstance()->OS_WIN10)
         {
             ::SetDlgItemText(hwnd, IDC_BLANK, "Enable Blank Monitor on Viewer Request require Min Win10 build 19041 ");
@@ -1058,43 +1058,43 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
 
     if (::GetDlgItem(hwnd, IDC_BLANK2))
     { //PGM
-        ::SendMessage(::GetDlgItem(hwnd, IDC_BLANK2), BM_SETCHECK, settings->getBlankInputsOnly(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_BLANK2), BM_SETCHECK, static_cast<WPARAM>(settings->getBlankInputsOnly()), 0);
     } //PGM
 
     if (::GetDlgItem(hwnd, IDC_ALLOWLOOPBACK))
     {
         BOOL fLoopback = settings->getAllowLoopback();
-        ::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWLOOPBACK), BM_SETCHECK, fLoopback, 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ALLOWLOOPBACK), BM_SETCHECK, static_cast<WPARAM>(fLoopback), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_IPV6))
     {
         BOOL fIPV6 = settings->getIPV6();
-        ::SendMessage(::GetDlgItem(hwnd, IDC_IPV6), BM_SETCHECK, fIPV6, 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_IPV6), BM_SETCHECK, static_cast<WPARAM>(fIPV6), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_LOOPBACKONLY))
     {
         BOOL fLoopbackonly = settings->getLoopbackOnly();
-        ::SendMessage(::GetDlgItem(hwnd, IDC_LOOPBACKONLY), BM_SETCHECK, fLoopbackonly, 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_LOOPBACKONLY), BM_SETCHECK, static_cast<WPARAM>(fLoopbackonly), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_DISABLETRAY))
     {
         BOOL fTrayicon = settings->getDisableTrayIcon();
-        ::SendMessage(::GetDlgItem(hwnd, IDC_DISABLETRAY), BM_SETCHECK, fTrayicon, 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_DISABLETRAY), BM_SETCHECK, static_cast<WPARAM>(fTrayicon), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_RDPMODE))
     {
         BOOL frdpmode = settings->getRdpmode();
-        ::SendMessage(::GetDlgItem(hwnd, IDC_RDPMODE), BM_SETCHECK, frdpmode, 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_RDPMODE), BM_SETCHECK, static_cast<WPARAM>(frdpmode), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_NOSCREENSAVER))
     {
         BOOL fNoScrensaver = settings->getnoscreensaver();
-        ::SendMessage(::GetDlgItem(hwnd, IDC_NOSCREENSAVER), BM_SETCHECK, fNoScrensaver, 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_NOSCREENSAVER), BM_SETCHECK, static_cast<WPARAM>(fNoScrensaver), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_ALLOWSHUTDOWN))
@@ -1137,16 +1137,16 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
 
     if (::GetDlgItem(hwnd, IDC_SAVEPASSWORDSECURE))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_SAVEPASSWORDSECURE), BM_SETCHECK, settings->getSecure(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_SAVEPASSWORDSECURE), BM_SETCHECK, static_cast<WPARAM>(settings->getSecure()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_MSLOGON))
     {
         HWND hMSLogon = ::GetDlgItem(hwnd, IDC_MSLOGON_CHECKD);
-        ::SendMessage(hMSLogon, BM_SETCHECK, settings->getRequireMSLogon(), 0);
+        ::SendMessage(hMSLogon, BM_SETCHECK, static_cast<WPARAM>(settings->getRequireMSLogon()), 0);
 
         HWND hNewMSLogon = ::GetDlgItem(hwnd, IDC_NEW_MSLOGON);
-        ::SendMessage(hNewMSLogon, BM_SETCHECK, settings->getNewMSLogon(), 0);
+        ::SendMessage(hNewMSLogon, BM_SETCHECK, static_cast<WPARAM>(settings->getNewMSLogon()), 0);
 
         ::EnableWindow(::GetDlgItem(hwnd, IDC_NEW_MSLOGON), settings->getRequireMSLogon());
         ::EnableWindow(::GetDlgItem(hwnd, IDC_MSLOGON), settings->getRequireMSLogon());
@@ -1155,16 +1155,16 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
 
     if (::GetDlgItem(hwnd, IDC_REVERSEAUTH))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_REVERSEAUTH), BM_SETCHECK, settings->getReverseAuthRequired(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_REVERSEAUTH), BM_SETCHECK, static_cast<WPARAM>(settings->getReverseAuthRequired()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_CHECKBRIDGE))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_CHECKBRIDGE), BM_SETCHECK, settings->getUseBridge(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_CHECKBRIDGE), BM_SETCHECK, static_cast<WPARAM>(settings->getUseBridge()), 0);
     }
 
 
-    ::SetDlgItemInt(hwnd, IDC_SCALE, settings->getDefaultScale(), false);
+    ::SetDlgItemInt(hwnd, IDC_SCALE, static_cast<UINT>(settings->getDefaultScale()), false);
 
     // Remote input settings
     if (::GetDlgItem(hwnd, IDC_DISABLE_INPUTS))
@@ -1175,34 +1175,34 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
     // Local input settings
     if (::GetDlgItem(hwnd, IDC_DISABLE_LOCAL_INPUTS))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_DISABLE_LOCAL_INPUTS), BM_SETCHECK, settings->getDisableLocalInputs(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_DISABLE_LOCAL_INPUTS), BM_SETCHECK, static_cast<WPARAM>(settings->getDisableLocalInputs()), 0);
     }
 
     // japanese keybaord
     if (::GetDlgItem(hwnd, IDC_JAP_INPUTS))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_JAP_INPUTS), BM_SETCHECK, settings->getEnableJapInput(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_JAP_INPUTS), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableJapInput()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_FORCE_SHAPE))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_FORCE_SHAPE), BM_SETCHECK, settings->getForceCursorShape(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_FORCE_SHAPE), BM_SETCHECK, static_cast<WPARAM>(settings->getForceCursorShape()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_UNICODE_INPUTS))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_UNICODE_INPUTS), BM_SETCHECK, settings->getEnableUnicodeInput(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_UNICODE_INPUTS), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableUnicodeInput()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_WIN8_HELPER))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_WIN8_HELPER), BM_SETCHECK, settings->getEnableWin8Helper(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_WIN8_HELPER), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableWin8Helper()), 0);
     }
 
     // Remove the wallpaper
     if (::GetDlgItem(hwnd, IDC_REMOVE_WALLPAPER))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_REMOVE_WALLPAPER), BM_SETCHECK, settings->getRemoveWallpaper(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_REMOVE_WALLPAPER), BM_SETCHECK, static_cast<WPARAM>(settings->getRemoveWallpaper()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_LOCKSETTING_LOCK))
@@ -1218,7 +1218,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
             break;
         default:
             hLockSetting = ::GetDlgItem(hwnd, IDC_LOCKSETTING_NOTHING);
-        };
+        }
         ::SendMessage(hLockSetting, BM_SETCHECK, TRUE, 0);
     }
 
@@ -1233,13 +1233,13 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
         default:
             hNotificationSelection = ::GetDlgItem(hwnd, IDC_RADIONOTIFICATIONON);
             break;
-        };
+        }
         ::SendMessage(hNotificationSelection, BM_SETCHECK, TRUE, 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_MV1))
     {
-        HWND hmvSetting = 0;
+        HWND hmvSetting = nullptr;
         switch (settings->getConnectPriority())
         {
         case 0:
@@ -1254,7 +1254,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
         case 3:
             hmvSetting = ::GetDlgItem(hwnd, IDC_MV4);
             break;
-        };
+        }
         ::SendMessage(hmvSetting, BM_SETCHECK, TRUE, 0);
     }
 
@@ -1271,34 +1271,34 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
             break;
         default:
             hMaxViewerSetting = ::GetDlgItem(hwnd, IDC_MAXREFUSE);
-        };
+        }
         ::SendMessage(hMaxViewerSetting, BM_SETCHECK, TRUE, 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_COLLABO))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_COLLABO), BM_SETCHECK, settings->getCollabo(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_COLLABO), BM_SETCHECK, static_cast<WPARAM>(settings->getCollabo()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_FRAME))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_FRAME), BM_SETCHECK, settings->getFrame(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_FRAME), BM_SETCHECK, static_cast<WPARAM>(settings->getFrame()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_NOTIFOCATION))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_NOTIFOCATION), BM_SETCHECK, settings->getNotification(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_NOTIFOCATION), BM_SETCHECK, static_cast<WPARAM>(settings->getNotification()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_OSD))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_OSD), BM_SETCHECK, settings->getOSD(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_OSD), BM_SETCHECK, static_cast<WPARAM>(settings->getOSD()), 0);
     }
 
     std::array<char, 128U> maxviewersChar{};
     UINT maxviewers = settings->getMaxViewers();
     ::sprintf_s(maxviewersChar.data(), maxviewersChar.size(), "%d", static_cast<int>(maxviewers));
-    ::SetDlgItemText(hwnd, IDC_MAXVIEWERS, (const char*)maxviewersChar.data());
+    ::SetDlgItemText(hwnd, IDC_MAXVIEWERS, reinterpret_cast<const char*>(maxviewersChar.data()));
 
     if (::GetDlgItem(hwnd, IDC_PLUGINS_COMBO))
     {
@@ -1307,12 +1307,12 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
 #ifndef SC_20
         if (!nPlugins)
         {
-            ::SendMessage(hPlugins, CB_ADDSTRING, 0, (LPARAM)sz_ID_NO_PLUGIN_DETECT.data());
+            ::SendMessage(hPlugins, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(sz_ID_NO_PLUGIN_DETECT.data()));
             ::SendMessage(hPlugins, CB_SETCURSEL, 0, 0);
         }
         else
         {
-            ::SendMessage(hPlugins, CB_SELECTSTRING, 0, (LPARAM)settings->getSzDSMPlugin());
+            ::SendMessage(hPlugins, CB_SELECTSTRING, 0, reinterpret_cast<LPARAM>(settings->getSzDSMPlugin()));
         }
 #else
         ::SendMessage(hPlugins, CB_ADDSTRING, 0, (LPARAM)settings->getSzDSMPlugin());
@@ -1328,7 +1328,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
         std::array<TCHAR, MAX_PATH> szPluginDefault{"No Plugin detected..."};
         ::GetDlgItemText(hwnd, IDC_PLUGINS_COMBO, szPlugin.data(), static_cast<int>(szPlugin.size()));
         bool pluginset = (std::strcmp(szPlugin.data(), szPluginDefault.data()) != 0) && (std::strlen(szPlugin.data()) > 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_SETCHECK, settings->getUseDSMPlugin(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_SETCHECK, static_cast<WPARAM>(settings->getUseDSMPlugin()), 0);
         ::EnableWindow(::GetDlgItem(hwnd, IDC_PLUGIN_BUTTON),
                      (((m_server == nullptr) || (m_server->AuthClientCount() == 0))
                           ? (::SendMessage(::GetDlgItem(hwnd, IDC_PLUGIN_CHECK), BM_GETCHECK, 0, 0) == BST_CHECKED) && pluginset
@@ -1348,7 +1348,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
         }
         else
         {
-            QueryAccept = settings->getQueryAccept();
+            QueryAccept = static_cast<int>(settings->getQueryAccept());
         }
 
         switch (QueryAccept)
@@ -1364,7 +1364,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
             break;
         default:
             hQuerySetting = ::GetDlgItem(hwnd, IDC_DREFUSE);
-        };
+        }
         ::SendMessage(hQuerySetting, BM_SETCHECK, TRUE, 0);
     }
 
@@ -1372,7 +1372,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
 
     if (::GetDlgItem(hwnd, IDQUERY))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDQUERY), BM_SETCHECK, queryEnabled, 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDQUERY), BM_SETCHECK, static_cast<WPARAM>(queryEnabled), 0);
     }
     if (::GetDlgItem(hwnd, IDQUERYTIMEOUT))
     {
@@ -1380,7 +1380,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
         std::array<char, 128U> timeout{};
         UINT t = settings->getQueryTimeout();
         ::sprintf_s(timeout.data(), timeout.size(), "%d", static_cast<int>(t));
-        ::SetDlgItemText(hwnd, IDQUERYTIMEOUT, (const char*)timeout.data());
+        ::SetDlgItemText(hwnd, IDQUERYTIMEOUT, reinterpret_cast<const char*>(timeout.data()));
     }
     if (::GetDlgItem(hwnd, IDC_QUERYDISABLETIME))
     {
@@ -1388,7 +1388,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
         std::array<char, 128U> disableTime{};
         UINT tt = settings->getQueryDisableTime();
         ::sprintf_s(disableTime.data(), disableTime.size(), "%d", static_cast<int>(tt));
-        ::SetDlgItemText(hwnd, IDC_QUERYDISABLETIME, (const char*)disableTime.data());
+        ::SetDlgItemText(hwnd, IDC_QUERYDISABLETIME, reinterpret_cast<const char*>(disableTime.data()));
     }
     if (::GetDlgItem(hwnd, IDC_DREFUSE))
     {
@@ -1427,7 +1427,7 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
     if (::GetDlgItem(hwnd, IDC_SLIDERFPS))
     {
         HWND slider = ::GetDlgItem(hwnd, IDC_SLIDERFPS);
-        ::SendMessage(slider, TBM_SETRANGE, (WPARAM)1, (LPARAM)MAKELONG(5, 60));
+        ::SendMessage(slider, TBM_SETRANGE, static_cast<WPARAM>(1), static_cast<LPARAM>(MAKELONG(5, 60)));
         ::SendMessage(slider, TBM_SETTICFREQ, 1, 10);
         ::SendMessage(slider, TBM_SETPOS, true, settings->getMaxFPS());
         if (settings->getddEngine())
@@ -1483,48 +1483,48 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
     }
     if (::GetDlgItem(hwnd, IDC_MAXCPU))
     {
-        ::SetDlgItemInt(hwnd, IDC_MAXCPU, settings->getMaxCpu(), false);
+        ::SetDlgItemInt(hwnd, IDC_MAXCPU, static_cast<UINT>(settings->getMaxCpu()), false);
     }
 
     if (::GetDlgItem(hwnd, IDC_TURBOMODE))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_TURBOMODE), BM_SETCHECK, settings->getTurboMode(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_TURBOMODE), BM_SETCHECK, static_cast<WPARAM>(settings->getTurboMode()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_DRIVER))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_DRIVER), BM_SETCHECK, settings->getDriver(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_DRIVER), BM_SETCHECK, static_cast<WPARAM>(settings->getDriver()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_HOOK))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_HOOK), BM_SETCHECK, settings->getHook(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_HOOK), BM_SETCHECK, static_cast<WPARAM>(settings->getHook()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_POLL_FULLSCREEN))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_FULLSCREEN), BM_SETCHECK, settings->getPollFullScreen(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_FULLSCREEN), BM_SETCHECK, static_cast<WPARAM>(settings->getPollFullScreen()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_POLL_FOREGROUND))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_FOREGROUND), BM_SETCHECK, settings->getPollForeground(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_FOREGROUND), BM_SETCHECK, static_cast<WPARAM>(settings->getPollForeground()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR), BM_SETCHECK, settings->getPollUnderCursor(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_POLL_UNDER_CURSOR), BM_SETCHECK, static_cast<WPARAM>(settings->getPollUnderCursor()), 0);
     }
 
     if (::GetDlgItem(hwnd, IDC_CONSOLE_ONLY))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_CONSOLE_ONLY), BM_SETCHECK, settings->getPollConsoleOnly(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_CONSOLE_ONLY), BM_SETCHECK, static_cast<WPARAM>(settings->getPollConsoleOnly()), 0);
         ::EnableWindow(::GetDlgItem(hwnd, IDC_CONSOLE_ONLY), (settings->getPollUnderCursor() || settings->getPollForeground()));
     }
 
     if (::GetDlgItem(hwnd, IDC_ONEVENT_ONLY))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_ONEVENT_ONLY), BM_SETCHECK, settings->getPollOnEventOnly(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ONEVENT_ONLY), BM_SETCHECK, static_cast<WPARAM>(settings->getPollOnEventOnly()), 0);
         ::EnableWindow(::GetDlgItem(hwnd, IDC_ONEVENT_ONLY), (settings->getPollUnderCursor() || settings->getPollForeground()));
     }
 
@@ -1547,11 +1547,11 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
     }
     if (::GetDlgItem(hwnd, IDC_IDLETIMEINPUT))
     {
-        ::SetDlgItemInt(hwnd, IDC_IDLETIMEINPUT, settings->getIdleInputTimeout(), FALSE);
+        ::SetDlgItemInt(hwnd, IDC_IDLETIMEINPUT, static_cast<UINT>(settings->getIdleInputTimeout()), FALSE);
     }
     if (::GetDlgItem(hwnd, IDC_KINTERVAL))
     {
-        ::SetDlgItemInt(hwnd, IDC_KINTERVAL, settings->getkeepAliveInterval(), FALSE);
+        ::SetDlgItemInt(hwnd, IDC_KINTERVAL, static_cast<UINT>(settings->getkeepAliveInterval()), FALSE);
     }
 
     if (::GetDlgItem(hwnd, IDC_AUTHREQUIRED))
@@ -1579,11 +1579,11 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
 
     if (::GetDlgItem(hwnd, IDC_PRIM))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_PRIM), BM_SETCHECK, settings->getPrimary(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_PRIM), BM_SETCHECK, static_cast<WPARAM>(settings->getPrimary()), 0);
     }
     if (::GetDlgItem(hwnd, IDC_SEC))
     {
-        ::SendMessage(::GetDlgItem(hwnd, IDC_SEC), BM_SETCHECK, settings->getSecondary(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_SEC), BM_SETCHECK, static_cast<WPARAM>(settings->getSecondary()), 0);
     }
 
     // Initialize language combobox by scanning languages folder for DLLs
@@ -1593,8 +1593,8 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
         ::SendMessage(hCombo, CB_RESETCONTENT, 0, 0);
 
         // Add English as default (always available, no DLL needed)
-        int idx = static_cast<int>(::SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)L"English"));
-        ::SendMessage(hCombo, CB_SETITEMDATA, idx, (LPARAM)_wcsdup(L"en"));
+        int idx = static_cast<int>(::SendMessageW(hCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"English")));
+        ::SendMessage(hCombo, CB_SETITEMDATA, static_cast<WPARAM>(idx), reinterpret_cast<LPARAM>(_wcsdup(L"en")));
 
         // Get exe path to find languages folder (use Unicode for proper international support)
         std::array<wchar_t, MAX_PATH> exePathW;
@@ -1644,15 +1644,15 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
                         if (::LoadStringW(hLangDll, IDS_LANGUAGE_NAME, displayNameW.data(), static_cast<int>(displayNameW.size())) > 0)
                         {
                             // Successfully loaded language name from DLL
-                            idx = static_cast<int>(::SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)displayNameW.data()));
-                            ::SendMessage(hCombo, CB_SETITEMDATA, idx, (LPARAM)_wcsdup(langCodeW.data()));
+                            idx = static_cast<int>(::SendMessageW(hCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(displayNameW.data())));
+                            ::SendMessage(hCombo, CB_SETITEMDATA, static_cast<WPARAM>(idx), reinterpret_cast<LPARAM>(_wcsdup(langCodeW.data())));
                         }
                         else
                         {
                             // Fallback: use language code if string not found
                             ::swprintf_s(displayNameW.data(), displayNameW.size(), L"Language (%s)", langCodeW.data());
-                            idx = static_cast<int>(::SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)displayNameW.data()));
-                            ::SendMessage(hCombo, CB_SETITEMDATA, idx, (LPARAM)_wcsdup(langCodeW.data()));
+                            idx = static_cast<int>(::SendMessageW(hCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(displayNameW.data())));
+                            ::SendMessage(hCombo, CB_SETITEMDATA, static_cast<WPARAM>(idx), reinterpret_cast<LPARAM>(_wcsdup(langCodeW.data())));
                         }
                         ::FreeLibrary(hLangDll);
                     }
@@ -1660,8 +1660,8 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
                     {
                         // DLL couldn't be loaded, use code as fallback
                         ::swprintf_s(displayNameW.data(), displayNameW.size(), L"Language (%s)", langCodeW.data());
-                        idx = static_cast<int>(::SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)displayNameW.data()));
-                        ::SendMessage(hCombo, CB_SETITEMDATA, idx, (LPARAM)_wcsdup(langCodeW.data()));
+                        idx = static_cast<int>(::SendMessageW(hCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(displayNameW.data())));
+                        ::SendMessage(hCombo, CB_SETITEMDATA, static_cast<WPARAM>(idx), reinterpret_cast<LPARAM>(_wcsdup(langCodeW.data())));
                     }
                 }
             } while (::FindNextFileW(hFind, &findDataW));
@@ -1676,10 +1676,10 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
         const int count = static_cast<int>(::SendMessage(hCombo, CB_GETCOUNT, 0, 0));
         for (int i{ 0 }; i < count; ++i)
         {
-            wchar_t* langCodeW = (wchar_t*)::SendMessage(hCombo, CB_GETITEMDATA, i, 0);
+            wchar_t* langCodeW = reinterpret_cast<wchar_t*>(::SendMessage(hCombo, CB_GETITEMDATA, i, 0));
             if (langCodeW && (::_wcsicmp(langCodeW, currentLangW.data()) == 0))
             {
-                ::SendMessage(hCombo, CB_SETCURSEL, i, 0);
+                ::SendMessage(hCombo, CB_SETCURSEL, static_cast<WPARAM>(i), 0);
                 break;
             }
         }
@@ -1693,18 +1693,18 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
     // SSL/TLS tab
     if (::GetDlgItem(hwnd, IDC_TLS_NOVNC_PORT))
     {
-        ::SetDlgItemInt(hwnd, IDC_TLS_NOVNC_PORT, settings->getTLSPort(), FALSE);
+        ::SetDlgItemInt(hwnd, IDC_TLS_NOVNC_PORT, static_cast<UINT>(settings->getTLSPort()), FALSE);
         ::SetDlgItemText(hwnd, IDC_TLS_THUMBPRINT, settings->getTLSCertThumbprint());
     }
     if (::GetDlgItem(hwnd, IDC_VENCRYPT_ENABLE))
     {
         BOOL bVeNCrypt = settings->getEnableVeNCryptTLS();
-        ::SendMessage(::GetDlgItem(hwnd, IDC_VENCRYPT_ENABLE), BM_SETCHECK, bVeNCrypt, 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_PLAIN), BM_SETCHECK, settings->getVeNCryptAllowPlainAuth(), 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_VENCRYPT_REQUIRE_PLUS), BM_SETCHECK, settings->getVeNCryptRequireChannelBinding(), 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_LEGACY), BM_SETCHECK, settings->getVeNCryptAllowLegacyAuth(), 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_ENABLE_RA2), BM_SETCHECK, settings->getEnableRA2(), 0);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_ENABLE_RA2NE), BM_SETCHECK, settings->getEnableRA2ne(), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_VENCRYPT_ENABLE), BM_SETCHECK, static_cast<WPARAM>(bVeNCrypt), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_PLAIN), BM_SETCHECK, static_cast<WPARAM>(settings->getVeNCryptAllowPlainAuth()), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_VENCRYPT_REQUIRE_PLUS), BM_SETCHECK, static_cast<WPARAM>(settings->getVeNCryptRequireChannelBinding()), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_LEGACY), BM_SETCHECK, static_cast<WPARAM>(settings->getVeNCryptAllowLegacyAuth()), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ENABLE_RA2), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableRA2()), 0);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ENABLE_RA2NE), BM_SETCHECK, static_cast<WPARAM>(settings->getEnableRA2ne()), 0);
         ::SetDlgItemText(hwnd, IDC_VENCRYPT_THUMBPRINT, settings->getVeNCryptTLSCertThumbprint());
         ::SetDlgItemText(hwnd, IDC_VENCRYPT_DLLPATH, settings->getVeNCryptTokenDLLPath());
         if (HWND hBits = ::GetDlgItem(hwnd, IDC_VENCRYPT_KEYBITS))
@@ -1715,13 +1715,13 @@ bool PropertiesDialog::DlgInitDialog(const HWND hwnd)
             {
                 std::array<char, 8U> buf;
                 ::sprintf_s(buf.data(), buf.size(), "%u", kSelfSignedKeyBits[i]);
-                ::SendMessageA(hBits, CB_ADDSTRING, 0, (LPARAM)buf.data());
+                ::SendMessageA(hBits, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(buf.data()));
                 if (kSelfSignedKeyBits[i] == settings->getTLSCertKeyBits())
                 {
                     sel = i;
                 }
             }
-            ::SendMessage(hBits, CB_SETCURSEL, sel, 0);
+            ::SendMessage(hBits, CB_SETCURSEL, static_cast<WPARAM>(sel), 0);
         }
         ::EnableWindow(::GetDlgItem(hwnd, IDC_VENCRYPT_ALLOW_PLAIN), bVeNCrypt);
         UpdateCertControlAvailability(hwnd, bVeNCrypt);
@@ -1813,7 +1813,7 @@ void PropertiesDialog::ShowImpersonateDialog()
     {
         if (!::ImpersonateLoggedOnUser(hPToken))
         {
-            iImpersonateResult = ::GetLastError();
+            iImpersonateResult = static_cast<int>(::GetLastError());
         }
     }
 
@@ -1830,7 +1830,7 @@ void PropertiesDialog::ShowImpersonateDialog()
     {
 
         int result = static_cast<int>(::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_PROPERTIESDIALOG), nullptr,
-                                                     (DLGPROC)PropertiesDlgProc, (LONG_PTR)this));
+                                                     reinterpret_cast<DLGPROC>(PropertiesDlgProc), reinterpret_cast<LONG_PTR>(this)));
         vnclog.Print(LL_INTINFO, VNCLOG("dialog result = %d\n"), result);
         if (result == -1)
         {
@@ -1888,7 +1888,7 @@ int PropertiesDialog::ShowDialog(const bool standaloneIn)
 {
     this->standalone = standaloneIn;
     const int result = static_cast<int>(::DialogBoxParam(hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_PROPERTIESDIALOG), nullptr,
-                                      (DLGPROC)PropertiesDlgProc, (LONG_PTR)this));
+                                      reinterpret_cast<DLGPROC>(PropertiesDlgProc), reinterpret_cast<LONG_PTR>(this)));
     // Apply settings to the running server so DSM plugin changes take effect
     // immediately without requiring a restart.
     UpdateServer();
@@ -1933,7 +1933,7 @@ void PropertiesDialog::UpdateServer()
     m_server->SetAutoPortSelect(settings->getAutoPortSelect());
     if (!settings->getAutoPortSelect())
     {
-        m_server->SetPorts(settings->getPortNumber(), settings->getHttpPortNumber());
+        m_server->SetPorts(static_cast<UINT>(settings->getPortNumber()), static_cast<UINT>(settings->getHttpPortNumber()));
     }
 
     m_server->EnableConnections(settings->getEnableConnections());
@@ -1959,7 +1959,7 @@ void PropertiesDialog::UpdateServer()
     m_server->SetAutoPortSelect(settings->getAutoPortSelect());
     if (!settings->getAutoPortSelect())
     {
-        m_server->SetPorts(settings->getPortNumber(), settings->getHttpPortNumber());
+        m_server->SetPorts(static_cast<UINT>(settings->getPortNumber()), static_cast<UINT>(settings->getHttpPortNumber()));
     }
 
     m_server->EnableConnections(settings->getEnableConnections());
@@ -1997,7 +1997,7 @@ int PropertiesDialog::ListPlugins(const HWND hComboBox)
 
     while (fRet != 0)
     {
-        ::SendMessage(hComboBox, CB_ADDSTRING, 0, (LPARAM)(fd.cFileName));
+        ::SendMessage(hComboBox, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>((fd.cFileName)));
         ++nFiles;
         fRet = ::FindNextFile(ff, &fd);
     }
@@ -2216,7 +2216,7 @@ bool PropertiesDialog::onCommand(int command, const HWND hwnd, const int subcomm
             ::ShowWindow(::GetDlgItem(hwnd, IDC_PORTHTTPS), bTLS ? SW_SHOW : SW_HIDE);
             if (bTLS)
             {
-                ::SetDlgItemInt(hwnd, IDC_PORTHTTPS, settings->getTLSPort(), FALSE);
+                ::SetDlgItemInt(hwnd, IDC_PORTHTTPS, static_cast<UINT>(settings->getTLSPort()), FALSE);
             }
         }
         UpdateWebClientTlsAvailability(hwnd, hTabTLS);
@@ -2298,8 +2298,8 @@ bool PropertiesDialog::onCommand(int command, const HWND hwnd, const int subcomm
         typedef int(__cdecl * TV_HAS_MANAGEMENT_UI)(void);
         typedef int(__cdecl * TV_SHOW_MANAGEMENT_UI)(HWND);
 
-        TV_HAS_MANAGEMENT_UI hasUi = (TV_HAS_MANAGEMENT_UI)::GetProcAddress(hMod, "tv_has_management_ui");
-        TV_SHOW_MANAGEMENT_UI showUi = (TV_SHOW_MANAGEMENT_UI)::GetProcAddress(hMod, "tv_show_management_ui");
+        TV_HAS_MANAGEMENT_UI hasUi = reinterpret_cast<TV_HAS_MANAGEMENT_UI>(::GetProcAddress(hMod, "tv_has_management_ui"));
+        TV_SHOW_MANAGEMENT_UI showUi = reinterpret_cast<TV_SHOW_MANAGEMENT_UI>(::GetProcAddress(hMod, "tv_show_management_ui"));
 
         if (!hasUi || !showUi || !hasUi())
         {
@@ -2364,11 +2364,11 @@ bool PropertiesDialog::onCommand(int command, const HWND hwnd, const int subcomm
         ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTRFB), TRUE);
         ::EnableWindow(::GetDlgItem(hwnd, IDC_PORTHTTP), bConnectHttp);
 
-        ::SetDlgItemInt(hwnd, IDC_PORTRFB, settings->getPortNumber(), FALSE);
-        ::SetDlgItemInt(hwnd, IDC_PORTHTTP, settings->getHttpPortNumber(), FALSE);
+        ::SetDlgItemInt(hwnd, IDC_PORTRFB, static_cast<UINT>(settings->getPortNumber()), FALSE);
+        ::SetDlgItemInt(hwnd, IDC_PORTHTTP, static_cast<UINT>(settings->getHttpPortNumber()), FALSE);
 
         ::SetFocus(::GetDlgItem(hwnd, IDC_PORTRFB));
-        ::SendDlgItemMessage(hwnd, IDC_PORTRFB, EM_SETSEL, 0, (LPARAM)-1);
+        ::SendDlgItemMessage(hwnd, IDC_PORTRFB, EM_SETSEL, 0, static_cast<LPARAM>(-1));
     }
         return TRUE;
 
@@ -2451,7 +2451,7 @@ bool PropertiesDialog::onCommand(int command, const HWND hwnd, const int subcomm
 
             std::array<char, MAX_PATH + 32> dir;
             std::array<char, MAX_PATH> exe_file_name;
-            ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+            ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
             ::sprintf_s(dir.data(), dir.size(), "\"%s\" -securityeditorhelper", exe_file_name.data());
 
             STARTUPINFO StartUPInfo;
@@ -2769,7 +2769,7 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
         int sel = static_cast<int>(::SendMessage(hCombo, CB_GETCURSEL, 0, 0));
         if (sel >= 0)
         {
-            wchar_t* langCodeW = (wchar_t*)::SendMessage(hCombo, CB_GETITEMDATA, sel, 0);
+            wchar_t* langCodeW = reinterpret_cast<wchar_t*>(::SendMessage(hCombo, CB_GETITEMDATA, sel, 0));
             if (langCodeW)
             {
                 std::array<char, 32U> langCodeA{ 0 };
@@ -2781,7 +2781,7 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
 
     if (::GetDlgItem(hwnd, IDC_MAXCPU))
     {
-        int maxcpu = ::GetDlgItemInt(hwnd, IDC_MAXCPU, nullptr, FALSE);
+        int maxcpu = static_cast<int>(::GetDlgItemInt(hwnd, IDC_MAXCPU, nullptr, FALSE));
         settings->setMaxCpu(maxcpu);
     }
 
@@ -2895,7 +2895,7 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
     if (::GetDlgItem(hwnd, IDC_EDIT_PATH))
     {
         std::array<char, 512U> path;
-        int lenpath = ::GetDlgItemText(hwnd, IDC_EDIT_PATH, (LPSTR)path.data(), 512);
+        int lenpath = static_cast<int>(::GetDlgItemText(hwnd, IDC_EDIT_PATH, static_cast<LPSTR>(path.data()), 512));
         if (lenpath != 0)
         {
             vnclog.SetPath(path.data());
@@ -2970,8 +2970,8 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
                 {
                     m_server->SetPorts(port_rfb, port_http);
                 }
-                settings->setPortNumber(port_rfb);
-                settings->setHttpPortNumber(port_http);
+                settings->setPortNumber(static_cast<LONG>(port_rfb));
+                settings->setHttpPortNumber(static_cast<LONG>(port_http));
             }
         }
     }
@@ -3011,7 +3011,7 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
             UINT tlsPort = ::GetDlgItemInt(hwnd, IDC_PORTHTTPS, &ok, FALSE);
             if (ok)
             {
-                settings->setTLSPort(tlsPort);
+                settings->setTLSPort(static_cast<LONG>(tlsPort));
             }
         }
     }
@@ -3023,7 +3023,7 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
         UINT tlsPort = ::GetDlgItemInt(hwnd, IDC_TLS_NOVNC_PORT, &ok, FALSE);
         if (ok)
         {
-            settings->setTLSPort(tlsPort);
+            settings->setTLSPort(static_cast<LONG>(tlsPort));
         }
         std::array<char, 64U> thumb{};
         ::GetDlgItemText(hwnd, IDC_TLS_THUMBPRINT, thumb.data(), sizeof(thumb));
@@ -3044,7 +3044,7 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
         if (HWND hBits = ::GetDlgItem(hwnd, IDC_VENCRYPT_KEYBITS))
         {
             const LRESULT sel = ::SendMessage(hBits, CB_GETCURSEL, 0, 0);
-            if ((sel >= 0) && (sel < (LRESULT)(sizeof(kSelfSignedKeyBits) / sizeof(kSelfSignedKeyBits[0U]))))
+            if ((sel >= 0) && (sel < static_cast<LRESULT>((sizeof(kSelfSignedKeyBits) / sizeof(kSelfSignedKeyBits[0U])))))
             {
                 settings->setTLSCertKeyBits(kSelfSignedKeyBits[sel]);
             }
@@ -3186,19 +3186,19 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
     if (::GetDlgItem(hwnd, IDC_IDLETIME))
     {
         std::array<char, 256U> timeout;
-        ::GetDlgItemText(hwnd, IDC_IDLETIME, (LPSTR)timeout.data(), 600);
+        ::GetDlgItemText(hwnd, IDC_IDLETIME, reinterpret_cast<LPSTR>(timeout.data()), 600);
         settings->setIdleTimeout(atoi(timeout.data()));
     }
     if (::GetDlgItem(hwnd, IDC_IDLETIMEINPUT))
     {
         std::array<char, 256U> timeout;
-        ::GetDlgItemText(hwnd, IDC_IDLETIMEINPUT, (LPSTR)timeout.data(), 600);
+        ::GetDlgItemText(hwnd, IDC_IDLETIMEINPUT, reinterpret_cast<LPSTR>(timeout.data()), 600);
         settings->setIdleInputTimeout(atoi(timeout.data()));
     }
     if (::GetDlgItem(hwnd, IDC_KINTERVAL))
     {
         std::array<char, 256U> timeout;
-        ::GetDlgItemText(hwnd, IDC_KINTERVAL, (LPSTR)timeout.data(), 600);
+        ::GetDlgItemText(hwnd, IDC_KINTERVAL, reinterpret_cast<LPSTR>(timeout.data()), 600);
         settings->setkeepAliveInterval(atoi(timeout.data()));
     }
 
@@ -3206,18 +3206,18 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
     {
         std::array<char, 256U> maxViewerChar;
         ::strcpy_s(maxViewerChar.data(), maxViewerChar.size(), "128");
-        if (::GetDlgItemText(hwnd, IDC_MAXVIEWERS, (LPSTR)maxViewerChar.data(), 256) == 0)
+        if (::GetDlgItemText(hwnd, IDC_MAXVIEWERS, reinterpret_cast<LPSTR>(maxViewerChar.data()), 256) == 0)
         {
             int value = atoi(maxViewerChar.data());
             if (value > 128)
             {
                 value = 128;
             }
-            settings->setMaxViewers(value);
+            settings->setMaxViewers(static_cast<UINT>(value));
         }
         else
         {
-            settings->setMaxViewers(atoi(maxViewerChar.data()));
+            settings->setMaxViewers(static_cast<UINT>(atoi(maxViewerChar.data())));
         }
     }
 
@@ -3291,39 +3291,39 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
 
     if (::GetDlgItem(hwnd, IDC_ALLOWLOOPBACK))
     {
-        settings->setAllowLoopback(::IsDlgButtonChecked(hwnd, IDC_ALLOWLOOPBACK));
+        settings->setAllowLoopback(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_ALLOWLOOPBACK)));
     }
 
     if (::GetDlgItem(hwnd, IDC_IPV6))
     {
-        settings->setIPV6(::IsDlgButtonChecked(hwnd, IDC_IPV6));
+        settings->setIPV6(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_IPV6)));
     }
 
     if (::GetDlgItem(hwnd, IDC_LOOPBACKONLY))
     {
         if (m_server)
         {
-            m_server->SetLoopbackOnly(::IsDlgButtonChecked(hwnd, IDC_LOOPBACKONLY));
+            m_server->SetLoopbackOnly(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_LOOPBACKONLY)));
         }
-        settings->setLoopbackOnly(::IsDlgButtonChecked(hwnd, IDC_LOOPBACKONLY));
+        settings->setLoopbackOnly(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_LOOPBACKONLY)));
     }
 
     if (::GetDlgItem(hwnd, IDC_DISABLETRAY))
     {
-        settings->setDisableTrayIcon(::IsDlgButtonChecked(hwnd, IDC_DISABLETRAY));
+        settings->setDisableTrayIcon(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_DISABLETRAY)));
     }
 
     if (::GetDlgItem(hwnd, IDC_RDPMODE))
     {
-        settings->setRdpmode(::IsDlgButtonChecked(hwnd, IDC_RDPMODE));
+        settings->setRdpmode(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_RDPMODE)));
     }
 
     if (::GetDlgItem(hwnd, IDC_NOSCREENSAVER))
     {
-        settings->setNoScreensaver(::IsDlgButtonChecked(hwnd, IDC_NOSCREENSAVER));
+        settings->setNoScreensaver(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_NOSCREENSAVER)));
         if (m_server)
         {
-            m_server->SetNoScreensaver(::IsDlgButtonChecked(hwnd, IDC_NOSCREENSAVER));
+            m_server->SetNoScreensaver(static_cast<BOOL>(::IsDlgButtonChecked(hwnd, IDC_NOSCREENSAVER)));
         }
     }
 
@@ -3385,7 +3385,7 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
 
     if (::GetDlgItem(hwnd, IDC_SCALE))
     {
-        int nDScale = ::GetDlgItemInt(hwnd, IDC_SCALE, nullptr, FALSE);
+        int nDScale = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SCALE, nullptr, FALSE));
         if ((nDScale < 1) || (nDScale > 9))
         {
             nDScale = 1;
@@ -3417,13 +3417,13 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
     {
         std::array<char, 256U> timeout;
         ::strcpy_s(timeout.data(), timeout.size(), "5");
-        if (::GetDlgItemText(hwnd, IDQUERYTIMEOUT, (LPSTR)timeout.data(), 256) == 0)
+        if (::GetDlgItemText(hwnd, IDQUERYTIMEOUT, reinterpret_cast<LPSTR>(timeout.data()), 256) == 0)
         {
-            settings->setQueryTimeout(atoi(timeout.data()));
+            settings->setQueryTimeout(static_cast<UINT>(atoi(timeout.data())));
         }
         else
         {
-            settings->setQueryTimeout(atoi(timeout.data()));
+            settings->setQueryTimeout(static_cast<UINT>(atoi(timeout.data())));
         }
     }
 
@@ -3431,13 +3431,13 @@ void PropertiesDialog::onTabsAPPLY(const HWND hwnd)
     {
         std::array<char, 256U> disabletime;
         ::strcpy_s(disabletime.data(), disabletime.size(), "5");
-        if (::GetDlgItemText(hwnd, IDC_QUERYDISABLETIME, (LPSTR)disabletime.data(), 256) == 0)
+        if (::GetDlgItemText(hwnd, IDC_QUERYDISABLETIME, reinterpret_cast<LPSTR>(disabletime.data()), 256) == 0)
         {
-            settings->setQueryDisableTime(atoi(disabletime.data()));
+            settings->setQueryDisableTime(static_cast<UINT>(atoi(disabletime.data())));
         }
         else
         {
-            settings->setQueryDisableTime(atoi(disabletime.data()));
+            settings->setQueryDisableTime(static_cast<UINT>(atoi(disabletime.data())));
         }
     }
 
@@ -3485,10 +3485,10 @@ void PropertiesDialog::InitPortSettings(const HWND hwnd)
     BOOL bConnectSockIn = m_server ? m_server->SockConnected() : false;
     BOOL bConnectHttp = settings->getHTTPConnect();
     BOOL bAutoPort = settings->getAutoPortSelect();
-    UINT port_rfb = settings->getPortNumber();
-    UINT port_http = settings->getHttpPortNumber();
-    int d1 = PORT_TO_DISPLAY(port_rfb);
-    const int d2 = HPORT_TO_DISPLAY(port_http);
+    UINT port_rfb = static_cast<UINT>(settings->getPortNumber());
+    UINT port_http = static_cast<UINT>(settings->getHttpPortNumber());
+    int d1 = static_cast<int>(PORT_TO_DISPLAY(port_rfb));
+    const int d2 = static_cast<int>(HPORT_TO_DISPLAY(port_http));
     BOOL bValidDisplay = ((d1 == d2) && (d1 >= 0) && (d1 <= 99));
 
     if (::GetDlgItem(hwnd, IDC_PORTNO_AUTO))

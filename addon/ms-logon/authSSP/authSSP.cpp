@@ -31,7 +31,7 @@ BOOL CUPSD2(const char* const domainuser, const char* const password, const PSEC
             const PDWORD pdwAccessGranted) // returns bitmask with accessrights
 {
     std::array<char, MAXLEN> domain;
-    const char* user = 0;
+    const char* user = nullptr;
     domain[0U] = '\0';
     std::array<TCHAR, MAXLEN> user2;
     std::array<TCHAR, MAXLEN> domain2;
@@ -89,7 +89,7 @@ BOOL WINAPI SSPLogonUser(const LPTSTR szDomain, const LPTSTR szUser, const LPTST
         }
 
         // Get max token size
-        fn._QuerySecurityPackageInfo((SEC_WCHAR*)L"NTLM", &pSPI);
+        fn._QuerySecurityPackageInfo(const_cast<SEC_WCHAR*>(reinterpret_cast<const SEC_WCHAR *>(L"NTLM")), &pSPI);
         cbMaxToken = pSPI->cbMaxToken;
 
         // Allocate buffers for client and server messages
@@ -101,12 +101,12 @@ BOOL WINAPI SSPLogonUser(const LPTSTR szDomain, const LPTSTR szUser, const LPTST
         // but I found no MS documentation for this 'feature'.
         ::ZeroMemory(&ai, sizeof(ai));
 #if defined(UNICODE) || defined(_UNICODE)
-        ai.Domain = (unsigned short*)szDomain;
-        ai.DomainLength = ::lstrlen(szDomain);
-        ai.User = (unsigned short*)szUser;
-        ai.UserLength = ::lstrlen(szUser);
-        ai.Password = (unsigned short*)szPassword;
-        ai.PasswordLength = ::lstrlen(szPassword);
+        ai.Domain = reinterpret_cast<unsigned short*>(szDomain);
+        ai.DomainLength = static_cast<unsigned long>(::lstrlen(szDomain));
+        ai.User = reinterpret_cast<unsigned short*>(szUser);
+        ai.UserLength = static_cast<unsigned long>(::lstrlen(szUser));
+        ai.Password = reinterpret_cast<unsigned short*>(szPassword);
+        ai.PasswordLength = static_cast<unsigned long>(::lstrlen(szPassword));
         ai.Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;
 #else
         ai.Domain = (unsigned char*)szDomain;
@@ -265,7 +265,7 @@ const char* SplitString(const char* const input, const char separator, char* con
         l = static_cast<int>((tail - input));
         // get rid of separator
         tail = tail + 1;
-        ::strncpy_s(head, sizeHead, input, l);
+        ::strncpy_s(head, static_cast<rsize_t>(sizeHead), input, static_cast<rsize_t>(l));
         head[l] = '\0';
     }
     else
@@ -296,7 +296,7 @@ bool IsImpersonationAllowed()
             !::GetTokenInformation(hToken, TokenPrivileges, nullptr, 0, &dwReturnLength) &&
             (::GetLastError() == ERROR_INSUFFICIENT_BUFFER))
         {
-            ptp = (TOKEN_PRIVILEGES*)::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, dwReturnLength);
+            ptp = reinterpret_cast<TOKEN_PRIVILEGES*>(::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, dwReturnLength));
             if (::GetTokenInformation(hToken, TokenPrivileges, ptp, dwReturnLength, &dwReturnLength))
             {
                 for (unsigned int i{ 0U }; i < ptp->PrivilegeCount; ++i)
@@ -341,7 +341,7 @@ bool QualifyName(const TCHAR* const user, LPTSTR DomName)
         {
             __leave;
         }
-        if (!(pSid = (PSID)::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, cbSid)))
+        if (!(pSid = reinterpret_cast<PSID>(::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, cbSid))))
         {
             __leave;
         }

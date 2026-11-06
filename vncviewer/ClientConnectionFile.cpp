@@ -45,7 +45,7 @@ void ofnInit()
 {
     static TCHAR filter[] = _T("VNC files (*.vnc)\0*.vnc\0")
                             _T("All files (*.*)\0*.*\0");
-    std::memset((void*)&ofn, 0, sizeof(OPENFILENAME));
+    std::memset(reinterpret_cast<void*>(&ofn), 0, sizeof(OPENFILENAME));
 
     // sf@2002 v1.1.1 - OPENFILENAME is Plateforme dependent !
     // Under Windows NT4, the dialog box wouldn't appear if we don't use OPENFILENAME_SIZE_VERSION_400
@@ -112,7 +112,7 @@ void ClientConnection::SaveConnection()
     {
         for (int i{ 0 }; i < MAXPWLEN; ++i)
         {
-            ::sprintf_s(buf.data() + i * 2, 32 - i * 2, "%02x", static_cast<unsigned int>(m_encPasswd[i]));
+            ::sprintf_s(buf.data() + i * 2, static_cast<size_t>(32 - i * 2), "%02x", static_cast<unsigned int>(m_encPasswd[static_cast<unsigned long long>(i)]));
         }
     }
     else
@@ -204,7 +204,7 @@ int ClientConnection::LoadConnection(const wchar_t* fname, const bool fFromDialo
     if (!defaultOption)
     {
         ::GetPrivateProfileString(_T("connection"), _T("host"), _T(""), m_host.data(), static_cast<DWORD>(m_host.size()), fname);
-        if ((m_port = ::GetPrivateProfileInt(_T("connection"), _T("port"), 0, fname)) == 0)
+        if ((m_port = static_cast<int>(::GetPrivateProfileInt(_T("connection"), _T("port"), 0, fname))) == 0)
         {
             return -1;
         }
@@ -215,8 +215,8 @@ int ClientConnection::LoadConnection(const wchar_t* fname, const bool fFromDialo
         m_port = -1;
     }
     ::GetPrivateProfileString(_T("connection"), _T("proxyhost"), _T(""), m_proxyhost.data(), static_cast<DWORD>(m_proxyhost.size()), fname);
-    m_proxyport = ::GetPrivateProfileInt(_T("connection"), _T("proxyport"), 0, fname);
-    m_connectionType = (ConnectionType)::GetPrivateProfileInt(_T("options"), _T("UseProxy"), DIRECT_TCP, fname);
+    m_proxyport = static_cast<int>(::GetPrivateProfileInt(_T("connection"), _T("proxyport"), 0, fname));
+    m_connectionType = static_cast<ConnectionType>(::GetPrivateProfileInt(_T("options"), _T("UseProxy"), DIRECT_TCP, fname));
 
     // Password stored as hex string, use Unicode API for correct filename handling
     std::array<wchar_t, 32U> bufW;
@@ -229,7 +229,7 @@ int ClientConnection::LoadConnection(const wchar_t* fname, const bool fFromDialo
         {
             int x{ 0 };
             sscanf_s(buf.data() + i * 2, "%2x", &x);
-            m_encPasswd[i] = static_cast<unsigned char>(x);
+            m_encPasswd[static_cast<unsigned long long>(i)] = static_cast<unsigned char>(x);
         }
     }
 

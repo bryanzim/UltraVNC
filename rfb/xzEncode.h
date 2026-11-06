@@ -118,7 +118,7 @@ public:
 
             index[i] = static_cast<rdr::U8>(size);
             key[i] = pix;
-            palette[size] = pix;
+            palette[static_cast<unsigned long long>(size)] = pix;
         }
         ++size;
     }
@@ -172,9 +172,9 @@ void XZ_ENCODE(int x, int y, int w, int h, [[maybe_unused]] rdr::OutStream* cons
                 tw = x + w - tx;
             }
 
-            GET_IMAGE_INTO_BUF(tx, ty, tw, th, buf);
+            GET_IMAGE_INTO_BUF(tx, ty, tw, th, buf)
 
-            XZ_ENCODE_TILE((PIXEL_T*)buf, tw, th, xzos);
+            XZ_ENCODE_TILE(reinterpret_cast<PIXEL_T*>(buf), tw, th, xzos);
         }
     }
 }
@@ -285,7 +285,7 @@ void XZ_ENCODE_TILE(PIXEL_T* const data, const int w, const int h, rdr::OutStrea
 
     for (int i{ 0 }; i < ph.size; ++i)
     {
-        os->WRITE_PIXEL(static_cast<rdr::U8>(ph.palette[i]));
+        os->WRITE_PIXEL(static_cast<rdr::U8>(ph.palette[static_cast<unsigned long long>(i)]));
     }
 
     if (useRle)

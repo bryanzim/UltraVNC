@@ -16,10 +16,10 @@
 #include "common/win32_helpers.h"
 #include "vncviewer.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <gdiplus.h>
-#include <shlobj.h>
+#include <ShlObj.h>
 
 #include <array>
 #include <cstddef>
@@ -49,22 +49,22 @@ TCHAR* BrowseFolder(TCHAR* const saved_path, const HWND hwnd)
 
     const TCHAR* path_param = saved_path;
 
-    BROWSEINFO bi{ 0 };
+    BROWSEINFO bi{ nullptr };
     bi.lpszTitle = _T("Browse for folder...");
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
     bi.lpfn = BrowseCallbackProc;
-    bi.lParam = (LPARAM)path_param;
+    bi.lParam = reinterpret_cast<LPARAM>(path_param);
     bi.hwndOwner = hwnd;
 
     LPITEMIDLIST pidl = ::SHBrowseForFolder(&bi);
 
-    if (pidl != 0)
+    if (pidl != nullptr)
     {
         //get the name of the folder and put it in path
         ::SHGetPathFromIDList(pidl, path.data());
 
         //free memory used
-        IMalloc* imalloc = 0;
+        IMalloc* imalloc = nullptr;
         if (SUCCEEDED(::SHGetMalloc(&imalloc)))
         {
             imalloc->Free(pidl);
@@ -198,7 +198,7 @@ int Snapshot::GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
     {
         return -1;
     } // Failure
-    pImageCodecInfo = (ImageCodecInfo*)(std::malloc(size));
+    pImageCodecInfo = reinterpret_cast<ImageCodecInfo*>((std::malloc(size)));
     if (pImageCodecInfo == nullptr)
     {
         return -1;
@@ -210,7 +210,7 @@ int Snapshot::GetEncoderClsid(const WCHAR* format, CLSID* pClsid)
         {
             *pClsid = pImageCodecInfo[j].Clsid;
             std::free(pImageCodecInfo);
-            return j; // Success
+            return static_cast<int>(j); // Success
         }
     }
     std::free(pImageCodecInfo);
@@ -230,7 +230,7 @@ int Snapshot::DoDialogSnapshot(TCHAR folder[MAX_PATH], TCHAR prefix[56U])
     extern HINSTANCE m_hInstResDLL;
     ::_tcscpy_s(m_folder.data(), m_folder.size(), folder);
     ::_tcscpy_s(m_prefix, prefix);
-    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_SAVEIMAGE), nullptr, (DLGPROC)DlgProc, (LONG_PTR)this));
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_SAVEIMAGE), nullptr, reinterpret_cast<DLGPROC>(DlgProc), reinterpret_cast<LONG_PTR>(this)));
 }
 
 BOOL CALLBACK Snapshot::DlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
@@ -242,12 +242,12 @@ BOOL CALLBACK Snapshot::DlgProc(const HWND hwnd, const UINT uMsg, const WPARAM w
 
     case WM_INITDIALOG: {
         helper::SafeSetWindowUserData(hwnd, lParam);
-        _this = (Snapshot*)lParam;
+        _this = reinterpret_cast<Snapshot*>(lParam);
         ::SetDlgItemText(hwnd, IDC_FOLDER, _this->m_folder.data());
         ::SetDlgItemText(hwnd, IDC_PREFIX, _this->m_prefix);
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         return TRUE;
     }
     case WM_COMMAND:

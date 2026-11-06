@@ -11,8 +11,8 @@
 
 #include "stdhdrs.h"
 
-#if !defined(_WINVNC_LOGON)
-#define _WINVNC_LOGON
+#if !defined(WINVNC_LOGON)
+#define WINVNC_LOGON
 #pragma once
 class vncLogonThread : public omni_thread
 {

@@ -14,8 +14,8 @@
 // A MemOutStream grows as needed when data is written to it.
 //
 
-#ifndef __RDR_MEMOUTSTREAM_H__
-#define __RDR_MEMOUTSTREAM_H__
+#ifndef RDR_MEMOUTSTREAM_H
+#define RDR_MEMOUTSTREAM_H
 
 #include "OutStream.h"
 
@@ -30,7 +30,7 @@ namespace rdr
     public:
         explicit MemOutStream(const int len = 1024)
         {
-            start = ptr = new U8[len];
+            start = ptr = new U8[static_cast<unsigned long long>(len)];
             end = start + len;
         }
 
@@ -39,17 +39,17 @@ namespace rdr
         void writeBytes(const void* const data, const int length)
         {
             check(length);
-            std::memcpy(ptr, data, length);
+            std::memcpy(ptr, data, static_cast<size_t>(length));
             ptr += length;
         }
 
         [[nodiscard]] int length() { return static_cast<int>((ptr - start)); }
-        void clear() { ptr = start; };
+        void clear() { ptr = start; }
         void reposition(const int pos) { ptr = start + pos; }
 
         // data() returns a pointer to the buffer.
 
-        const void* data() { return (const void*)start; }
+        const void* data() { return reinterpret_cast<const void*>(start); }
 
     private:
         // overrun() either doubles the buffer or adds enough space for nItems of
@@ -63,8 +63,8 @@ namespace rdr
                 len = static_cast<int>(((end - start) * 2));
             }
 
-            U8* newStart = new U8[len];
-            std::memcpy(newStart, start, ptr - start);
+            U8* newStart = new U8[static_cast<unsigned long long>(len)];
+            std::memcpy(newStart, start, static_cast<size_t>(ptr - start));
             ptr = newStart + (ptr - start);
             delete[] start;
             start = newStart;

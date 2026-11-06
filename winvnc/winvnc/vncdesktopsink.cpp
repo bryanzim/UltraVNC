@@ -122,7 +122,7 @@ void vncDesktop::StartInitWindowthread()
 
 DWORD WINAPI InitWindowThread(const LPVOID lpParam)
 {
-    vncDesktop* mydesk = (vncDesktop*)lpParam;
+    vncDesktop* mydesk = reinterpret_cast<vncDesktop*>(lpParam);
     //if (mydesk->m_server->Win8HelperEnabled())
     //keybd_initialize();
     mydesk->InitWindow();
@@ -140,7 +140,7 @@ LRESULT CALLBACK DesktopWndProc(const HWND hwnd, const UINT iMsg, const WPARAM w
 #ifndef _X64
     vncDesktop* _this = (vncDesktop*)::GetWindowLong(hwnd, GWL_USERDATA);
 #else
-    vncDesktop* _this = (vncDesktop*)::GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    vncDesktop* _this = reinterpret_cast<vncDesktop*>(::GetWindowLongPtr(hwnd, GWLP_USERDATA));
 #endif
     /*#ifdef _DEBUG
                                         OutputDevMessage("Message %i",iMsg );
@@ -335,14 +335,14 @@ LRESULT CALLBACK DesktopWndProc(const HWND hwnd, const UINT iMsg, const WPARAM w
         return ::DefWindowProc(hwnd, iMsg, wParam, lParam);
 
     case WM_COPYDATA: {
-        PCOPYDATASTRUCT pMyCDS = (PCOPYDATASTRUCT)lParam;
+        PCOPYDATASTRUCT pMyCDS = reinterpret_cast<PCOPYDATASTRUCT>(lParam);
         if (pMyCDS->dwData == 112233)
         {
             DWORD mysize = pMyCDS->cbData;
             std::array<char, 1024U> mytext;
             char* myptr;
             char split[4U][6U];
-            ::strcpy_s(mytext.data(), mytext.size(), (LPCSTR)pMyCDS->lpData);
+            ::strcpy_s(mytext.data(), mytext.size(), reinterpret_cast<LPCSTR>(pMyCDS->lpData));
             myptr = mytext.data();
             for (DWORD j{ 0U }; j < (mysize / 20); ++j)
             {
@@ -437,9 +437,9 @@ LRESULT CALLBACK DesktopWndProc(const HWND hwnd, const UINT iMsg, const WPARAM w
 
     case WM_CHANGECBCHAIN:
         // The clipboard chain has changed - check our nextviewer handle
-        if ((HWND)wParam == _this->m_hnextviewer)
+        if (reinterpret_cast<HWND>(wParam) == _this->m_hnextviewer)
         {
-            _this->m_hnextviewer = (HWND)lParam;
+            _this->m_hnextviewer = reinterpret_cast<HWND>(lParam);
         }
         else if (_this->m_hnextviewer != nullptr)
         {
@@ -538,8 +538,8 @@ BOOL vncDesktop::InitWindow()
         wndclass.hInstance = hAppInstance;
         wndclass.hIcon = nullptr;
         wndclass.hCursor = nullptr;
-        wndclass.hbrBackground = (HBRUSH)::GetStockObject(WHITE_BRUSH);
-        wndclass.lpszMenuName = (const char*)nullptr;
+        wndclass.hbrBackground = reinterpret_cast<HBRUSH>(::GetStockObject(WHITE_BRUSH));
+        wndclass.lpszMenuName = static_cast<const char*>(nullptr);
         wndclass.lpszClassName = szDesktopSink;
         wndclass.hIconSm = nullptr;
 
@@ -565,7 +565,7 @@ BOOL vncDesktop::InitWindow()
     }
     ::SetTimer(m_hwnd, 1001, 1000, nullptr);
     // Set the "this" pointer for the window
-    helper::SafeSetWindowUserData(m_hwnd, (LONG_PTR)this);
+    helper::SafeSetWindowUserData(m_hwnd, reinterpret_cast<LONG_PTR>(this));
 
     // Enable clipboard hooking
     // adzm - 2010-07 - Fix clipboard hangs
@@ -602,17 +602,17 @@ BOOL vncDesktop::InitWindow()
     hSCModule = ::LoadLibrary(szCurrentDirSC.data()); //TOFIX resource leak
     if (hModuleVNCHook)
     {
-        UnSetHooks = (UnSetHooksFn)::GetProcAddress(hModuleVNCHook, "UnSetHooks");
-        SetMouseFilterHook = (SetMouseFilterHookFn)::GetProcAddress(hModuleVNCHook, "SetMouseFilterHook");
-        SetKeyboardFilterHook = (SetKeyboardFilterHookFn)::GetProcAddress(hModuleVNCHook, "SetKeyboardFilterHook");
-        SetHooks = (SetHooksFn)::GetProcAddress(hModuleVNCHook, "SetHooks");
+        UnSetHooks = reinterpret_cast<UnSetHooksFn>(::GetProcAddress(hModuleVNCHook, "UnSetHooks"));
+        SetMouseFilterHook = reinterpret_cast<SetMouseFilterHookFn>(::GetProcAddress(hModuleVNCHook, "SetMouseFilterHook"));
+        SetKeyboardFilterHook = reinterpret_cast<SetKeyboardFilterHookFn>(::GetProcAddress(hModuleVNCHook, "SetKeyboardFilterHook"));
+        SetHooks = reinterpret_cast<SetHooksFn>(::GetProcAddress(hModuleVNCHook, "SetHooks"));
     }
     if (hSCModule)
     {
-        UnSetHook = (UnSetHookFn)::GetProcAddress(hSCModule, "UnSetHook");
-        SetHook = (SetHookFn)::GetProcAddress(hSCModule, "SetHook");
-        SetMouseFilterHooks = (SetMouseFilterHookFn)::GetProcAddress(hSCModule, "SetMouseFilterHook");
-        SetKeyboardFilterHooks = (SetKeyboardFilterHookFn)::GetProcAddress(hSCModule, "SetKeyboardFilterHook");
+        UnSetHook = reinterpret_cast<UnSetHookFn>(::GetProcAddress(hSCModule, "UnSetHook"));
+        SetHook = reinterpret_cast<SetHookFn>(::GetProcAddress(hSCModule, "SetHook"));
+        SetMouseFilterHooks = reinterpret_cast<SetMouseFilterHookFn>(::GetProcAddress(hSCModule, "SetMouseFilterHook"));
+        SetKeyboardFilterHooks = reinterpret_cast<SetKeyboardFilterHookFn>(::GetProcAddress(hSCModule, "SetKeyboardFilterHook"));
     }
 
     ///////////////////////////////////////////////
@@ -642,8 +642,8 @@ BOOL vncDesktop::InitWindow()
                 if (can_be_hooked)
                 {
                     rfb::Rect rect;
-                    rect.tl = rfb::Point((SHORT)LOWORD(msg.wParam), (SHORT)HIWORD(msg.wParam));
-                    rect.br = rfb::Point((SHORT)LOWORD(msg.lParam), (SHORT)HIWORD(msg.lParam));
+                    rect.tl = rfb::Point(static_cast<SHORT>(LOWORD(msg.wParam)), static_cast<SHORT>(HIWORD(msg.wParam)));
+                    rect.br = rfb::Point(static_cast<SHORT>(LOWORD(msg.lParam)), static_cast<SHORT>(HIWORD(msg.lParam)));
                     //Buffer coordinates
                     rect.tl.x -= m_ScreenOffsetx;
                     rect.br.x -= m_ScreenOffsetx;
@@ -666,7 +666,7 @@ BOOL vncDesktop::InitWindow()
             {
                 if (can_be_hooked)
                 {
-                    SetCursor((HCURSOR)msg.wParam);
+                    SetCursor(reinterpret_cast<HCURSOR>(msg.wParam));
                     ::SetEvent(trigger_events[2U]);
                 }
             }

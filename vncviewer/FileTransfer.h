@@ -9,8 +9,8 @@
 //
 
 
-#ifndef FILETRANSFER_H__
-#define FILETRANSFER_H__
+#ifndef FILETRANSFER_H
+#define FILETRANSFER_H
 #pragma once
 
 #include "common/ZipUnzip/MiniZipNG.h"
@@ -247,4 +247,4 @@ private:
     std::array<char, MAX_PATH * 3> szRemoteFileNameRequested;
 };
 
-#endif // FILETRANSFER_H__
+#endif // FILETRANSFER_H

@@ -11,8 +11,8 @@
 //
 
 
-#ifndef KEYMAP_H__
-#define KEYMAP_H__
+#ifndef KEYMAP_H
+#define KEYMAP_H
 
 #include "rfb.h"
 

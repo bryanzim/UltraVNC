@@ -37,23 +37,23 @@ bool ClientTimerReconnect{ false };
 bool allowMultipleInstances{ false };
 extern HINSTANCE hInstResDLL;
 
-void Open_homepage() { ::ShellExecute(0, "open", "https://uvnc.com/", 0, 0, 1); }
+void Open_homepage() { ::ShellExecute(nullptr, "open", "https://uvnc.com/", nullptr, nullptr, 1); }
 
-void Open_forum() { ::ShellExecute(0, "open", "https://forum.uvnc.com/", 0, 0, 1); }
+void Open_forum() { ::ShellExecute(nullptr, "open", "https://forum.uvnc.com/", nullptr, nullptr, 1); }
 
-void Open_github() { ::ShellExecute(0, "open", "https://github.com/ultravnc", 0, 0, 1); }
+void Open_github() { ::ShellExecute(nullptr, "open", "https://github.com/ultravnc", nullptr, nullptr, 1); }
 
-void Open_mastodon() { ::ShellExecute(0, "open", "https://mastodon.social/@ultravnc", 0, 0, 1); }
+void Open_mastodon() { ::ShellExecute(nullptr, "open", "https://mastodon.social/@ultravnc", nullptr, nullptr, 1); }
 
-void Open_bluesky() { ::ShellExecute(0, "open", "https://bsky.app/profile/ultravnc.bsky.social", 0, 0, 1); }
+void Open_bluesky() { ::ShellExecute(nullptr, "open", "https://bsky.app/profile/ultravnc.bsky.social", nullptr, nullptr, 1); }
 
-void Open_facebook() { ::ShellExecute(0, "open", "https://www.facebook.com/ultravnc1", 0, 0, 1); }
+void Open_facebook() { ::ShellExecute(nullptr, "open", "https://www.facebook.com/ultravnc1", nullptr, nullptr, 1); }
 
-void Open_xtwitter() { ::ShellExecute(0, "open", "https://x.com/ultravnc1", 0, 0, 1); }
+void Open_xtwitter() { ::ShellExecute(nullptr, "open", "https://x.com/ultravnc1", nullptr, nullptr, 1); }
 
-void Open_reddit() { ::ShellExecute(0, "open", "https://www.reddit.com/r/ultravnc", 0, 0, 1); }
+void Open_reddit() { ::ShellExecute(nullptr, "open", "https://www.reddit.com/r/ultravnc", nullptr, nullptr, 1); }
 
-void Open_openhub() { ::ShellExecute(0, "open", "https://openhub.net/p/ultravnc", 0, 0, 1); }
+void Open_openhub() { ::ShellExecute(nullptr, "open", "https://openhub.net/p/ultravnc", nullptr, nullptr, 1); }
 
 #ifndef SC_20
 namespace serviceHelpers
@@ -61,7 +61,7 @@ namespace serviceHelpers
     void Set_stop_service_as_admin()
     {
         std::array<char, MAX_PATH> exe_file_name;
-        ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+        ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
         SHELLEXECUTEINFO shExecInfo{};
 
@@ -113,7 +113,7 @@ namespace serviceHelpers
     void Set_start_service_as_admin()
     {
         std::array<char, MAX_PATH> exe_file_name;
-        ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+        ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
         SHELLEXECUTEINFO shExecInfo{};
 
@@ -134,7 +134,7 @@ namespace serviceHelpers
     void Set_install_service_as_admin()
     {
         std::array<char, MAX_PATH> exe_file_name;
-        ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+        ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
         SHELLEXECUTEINFO shExecInfo{};
 
@@ -153,7 +153,7 @@ namespace serviceHelpers
     void Set_uninstall_service_as_admin()
     {
         std::array<char, MAX_PATH> exe_file_name;
-        ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+        ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
         SHELLEXECUTEINFO shExecInfo{};
 
@@ -172,7 +172,7 @@ namespace serviceHelpers
     void winvncSecurityEditorHelper_as_admin()
     {
         std::array<char, MAX_PATH> exe_file_name;
-        ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+        ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
 
         SHELLEXECUTEINFO shExecInfo{};
 
@@ -221,7 +221,7 @@ namespace serviceHelpers
         if (!bOK && (::GetLastError() == ERROR_MORE_DATA))
         {
             // allocate space per results from the first call
-            ENUM_SERVICE_STATUS* pServices = (ENUM_SERVICE_STATUS*)new UCHAR[dwBufferSize];
+            ENUM_SERVICE_STATUS* pServices = reinterpret_cast<ENUM_SERVICE_STATUS*>(new UCHAR[dwBufferSize]);
             if (pServices)
             {
                 // call EnumServicesStatus() the second time to actually get the services array
@@ -244,7 +244,7 @@ namespace serviceHelpers
                         if (!bOK && (::GetLastError() == ERROR_INSUFFICIENT_BUFFER))
                         {
                             // allocate space per results from the first call
-                            QUERY_SERVICE_CONFIG* pServiceConfig = (QUERY_SERVICE_CONFIG*)new UCHAR[dwBufferSize];
+                            QUERY_SERVICE_CONFIG* pServiceConfig = reinterpret_cast<QUERY_SERVICE_CONFIG*>(new UCHAR[dwBufferSize]);
                             if (pServiceConfig)
                             {
                                 // call EnumServicesStatus() the second time to actually get service config
@@ -262,7 +262,7 @@ namespace serviceHelpers
                                     }
                                 }
 
-                                delete[] (UCHAR*)pServiceConfig;
+                                delete[] reinterpret_cast<UCHAR*>(pServiceConfig);
                             }
                         }
 
@@ -270,7 +270,7 @@ namespace serviceHelpers
                     }
                 }
 
-                delete[] (UCHAR*)pServices;
+                delete[] reinterpret_cast<UCHAR*>(pServices);
             }
         }
 
@@ -298,21 +298,21 @@ DWORD MessageBoxSecure(const HWND hWnd, const LPCTSTR lpText, const LPCTSTR lpCa
             ::SetThreadDesktop(desktop);
             if (uType & MB_SERVICE_NOTIFICATION)
             {
-                retunvalue = ::MessageBox(hWnd, lpText, lpCaption, uType);
+                retunvalue = static_cast<DWORD>(::MessageBox(hWnd, lpText, lpCaption, uType));
             }
             else if (uType & MB_YESNO)
             {
                 BOOL bCheckboxChecked;
-                retunvalue = helper::yesnoUVNCMessageBox(hInstResDLL, hWnd, (char*)lpCaption, (char*)lpText, "YES", "NO", "",
+                retunvalue = helper::yesnoUVNCMessageBox(hInstResDLL, hWnd, const_cast<char*>(reinterpret_cast<const char *>(lpCaption)), const_cast<char*>(reinterpret_cast<const char *>(lpText)), "YES", "NO", "",
                                                          bCheckboxChecked);
             }
             else
             {
                 if (uType & MB_OK)
                 {
-                    uType &= ~MB_OK;
+                    uType &= static_cast<unsigned long>(~MB_OK);
                 }
-                retunvalue = helper::yesUVNCMessageBox(hInstResDLL, hWnd, (char*)lpText, (char*)lpCaption, uType);
+                retunvalue = helper::yesUVNCMessageBox(hInstResDLL, hWnd, const_cast<char*>(reinterpret_cast<const char *>(lpText)), const_cast<char*>(reinterpret_cast<const char *>(lpCaption)), static_cast<int>(uType));
             }
 
             ::SetThreadDesktop(old_desktop);
@@ -327,21 +327,21 @@ DWORD MessageBoxSecure(const HWND hWnd, const LPCTSTR lpText, const LPCTSTR lpCa
     {
         if (uType & MB_SERVICE_NOTIFICATION)
         {
-            retunvalue = ::MessageBox(hWnd, lpText, lpCaption, uType);
+            retunvalue = static_cast<DWORD>(::MessageBox(hWnd, lpText, lpCaption, uType));
         }
         else if (uType & MB_YESNO)
         {
             BOOL bCheckboxChecked;
             retunvalue =
-                helper::yesnoUVNCMessageBox(hInstResDLL, hWnd, (char*)lpCaption, (char*)lpText, "YES", "NO", "", bCheckboxChecked);
+                helper::yesnoUVNCMessageBox(hInstResDLL, hWnd, const_cast<char*>(reinterpret_cast<const char *>(lpCaption)), const_cast<char*>(reinterpret_cast<const char *>(lpText)), "YES", "NO", "", bCheckboxChecked);
         }
         else
         {
             if (uType & MB_OK)
             {
-                uType &= ~MB_OK;
+                uType &= static_cast<unsigned long>(~MB_OK);
             }
-            retunvalue = helper::yesUVNCMessageBox(hInstResDLL, hWnd, (char*)lpText, (char*)lpCaption, uType);
+            retunvalue = helper::yesUVNCMessageBox(hInstResDLL, hWnd, const_cast<char*>(reinterpret_cast<const char *>(lpText)), const_cast<char*>(reinterpret_cast<const char *>(lpCaption)), static_cast<int>(uType));
         }
     }
     return retunvalue;
@@ -525,14 +525,14 @@ namespace postHelper
         {
             aId = ::GlobalAddAtom(pszId);
         }
-        return (PostToWinVNC(MENU_AUTO_RECONNECT_MSG, 0, (LPARAM)aId));
+        return (PostToWinVNC(MENU_AUTO_RECONNECT_MSG, 0, static_cast<LPARAM>(aId)));
     }
 
     BOOL PostAddNewRepeaterClient()
     {
         // assumes the -repeater command line set the repeater global variable.
         // Post to the UltraVNC Server menu window (usually expected to fail at program startup)
-        if (!PostToWinVNC(MENU_ADD_CLIENT_MSG, (WPARAM)0xFFFFFFFF, (LPARAM)0xFFFFFFFF))
+        if (!PostToWinVNC(MENU_ADD_CLIENT_MSG, static_cast<WPARAM>(0xFFFFFFFF), static_cast<LPARAM>(0xFFFFFFFF)))
         {
             return FALSE;
         }
@@ -550,7 +550,7 @@ namespace postHelper
     BOOL PostAddNewClientInit(unsigned long ipaddress, const unsigned short port)
     {
         // Post to the UltraVNC Server menu window
-        if (!PostToWinVNC(MENU_ADD_CLIENT_MSG_INIT, (WPARAM)port, (LPARAM)ipaddress))
+        if (!PostToWinVNC(MENU_ADD_CLIENT_MSG_INIT, static_cast<WPARAM>(port), static_cast<LPARAM>(ipaddress)))
         {
             vnclog.Print(LL_INTERR, VNCLOG("PostAddNewClient failed\n"));
             if ((port == 1111) && (ipaddress == 1111))
@@ -566,7 +566,7 @@ namespace postHelper
     BOOL PostAddNewClient4(unsigned long ipaddress, const unsigned short port)
     {
         // Post to the UltraVNC Server menu window
-        if (!PostToWinVNC(MENU_ADD_CLIENT_MSG, (WPARAM)port, (LPARAM)ipaddress))
+        if (!PostToWinVNC(MENU_ADD_CLIENT_MSG, static_cast<WPARAM>(port), static_cast<LPARAM>(ipaddress)))
         {
             vnclog.Print(LL_INTERR, VNCLOG("PostAddNewClient failed\n"));
             if ((port == 1111) && (ipaddress == 1111))
@@ -582,7 +582,7 @@ namespace postHelper
     BOOL PostAddNewClientInit4(unsigned long ipaddress, const unsigned short port)
     {
         // Post to the UltraVNC Server menu window
-        if (!PostToWinVNC(MENU_ADD_CLIENT_MSG_INIT, (WPARAM)port, (LPARAM)ipaddress))
+        if (!PostToWinVNC(MENU_ADD_CLIENT_MSG_INIT, static_cast<WPARAM>(port), static_cast<LPARAM>(ipaddress)))
         {
             vnclog.Print(LL_INTERR, VNCLOG("PostAddNewClient failed\n"));
             if ((port == 1111) && (ipaddress == 1111))
@@ -598,7 +598,7 @@ namespace postHelper
         // Post to the UltraVNC Server menu window
         // We can not sen a IPv6 address with a LPARAM, so we fake the message by copying in a gloobal var.
         std::memcpy(&G_LPARAM_IN6, ipaddress, sizeof(in6_addr));
-        if (!PostToWinVNC(MENU_ADD_CLIENT6_MSG, (WPARAM)port, (LPARAM)ipaddress))
+        if (!PostToWinVNC(MENU_ADD_CLIENT6_MSG, static_cast<WPARAM>(port), reinterpret_cast<LPARAM>(ipaddress)))
         {
             return FALSE;
         }
@@ -610,7 +610,7 @@ namespace postHelper
         // Post to the UltraVNC Server menu window
         // We can not sen a IPv6 address with a LPARAM, so we fake the message by copying in a gloobal var.
         std::memcpy(&G_LPARAM_IN6, ipaddress, sizeof(in6_addr));
-        if (!PostToWinVNC(MENU_ADD_CLIENT6_MSG_INIT, (WPARAM)port, (LPARAM)ipaddress))
+        if (!PostToWinVNC(MENU_ADD_CLIENT6_MSG_INIT, static_cast<WPARAM>(port), reinterpret_cast<LPARAM>(ipaddress)))
         {
             return FALSE;
         }
@@ -620,7 +620,7 @@ namespace postHelper
     BOOL PostAddNewClient(unsigned long ipaddress, const unsigned short port)
     {
         // Post to the UltraVNC Server menu window
-        if (!PostToWinVNC(MENU_ADD_CLIENT_MSG, (WPARAM)port, (LPARAM)ipaddress))
+        if (!PostToWinVNC(MENU_ADD_CLIENT_MSG, static_cast<WPARAM>(port), static_cast<LPARAM>(ipaddress)))
         {
             vnclog.Print(LL_INTERR, VNCLOG("PostAddNewClient failed\n"));
             if ((port == 1111) && (ipaddress == 1111))
@@ -639,7 +639,7 @@ namespace postHelper
         {
             aId = ::GlobalAddAtom(pszId);
         }
-        return (PostToWinVNC(MENU_REPEATER_ID_MSG, 0, (LPARAM)aId));
+        return (PostToWinVNC(MENU_REPEATER_ID_MSG, 0, static_cast<LPARAM>(aId)));
     }
 
     BOOL PostToThisWinVNC(const UINT message, const WPARAM wParam, const LPARAM lParam)
@@ -788,7 +788,7 @@ namespace processHelper
         // token user
         TOKEN_USER* ptu;
         DWORD needed;
-        ptu = (TOKEN_USER*)aa.data(); //malloc( 16384 );
+        ptu = reinterpret_cast<TOKEN_USER*>(aa.data()); //malloc( 16384 );
         if (::GetTokenInformation(hPToken, TokenUser, ptu, 16384, &needed))
         {
             std::array<char, 64U> DomainName;
@@ -916,7 +916,7 @@ namespace processHelper
         // Query the service status
         SERVICE_STATUS_PROCESS serviceStatus;
         DWORD bytesNeeded;
-        if (::QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, (LPBYTE)&serviceStatus, sizeof(SERVICE_STATUS_PROCESS),
+        if (::QueryServiceStatusEx(hService, SC_STATUS_PROCESS_INFO, reinterpret_cast<LPBYTE>(&serviceStatus), sizeof(SERVICE_STATUS_PROCESS),
                                  &bytesNeeded))
         {
             if (serviceStatus.dwCurrentState == SERVICE_RUNNING)

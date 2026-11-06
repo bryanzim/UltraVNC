@@ -30,19 +30,19 @@ PACL vncAccessControl::GetACL(void)
 
         // Read the ACL value from the VNC registry key
         // First call to RegQueryValueEx just gets the buffer length.
-        if (RegQueryValueEx(hk, _T("ACL"), 0, 0, nullptr, &dwValueLength) != ERROR_SUCCESS)
+        if (RegQueryValueEx(hk, _T("ACL"), nullptr, nullptr, nullptr, &dwValueLength) != ERROR_SUCCESS)
         {
             __leave;
         }
         if (dwValueLength >= sizeof(ACL))
         {
-            pInitACL = (PACL)::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, dwValueLength);
+            pInitACL = reinterpret_cast<PACL>(::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, dwValueLength));
         }
         else
         {
             __leave;
         }
-        if (RegQueryValueEx(hk, _T("ACL"), 0, 0, (LPBYTE)pInitACL, &dwValueLength) != ERROR_SUCCESS)
+        if (RegQueryValueEx(hk, _T("ACL"), nullptr, nullptr, reinterpret_cast<LPBYTE>(pInitACL), &dwValueLength) != ERROR_SUCCESS)
         {
             __leave;
         }
@@ -74,11 +74,11 @@ vncAccessControl::GetSD()
     // If we can't retrieve a valid ACL we create an empty one (i.e. no access).
     if (!(pACL = GetACL()) || !::IsValidAcl(pACL))
     {
-        pACL = (PACL)::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(ACL));
+        pACL = reinterpret_cast<PACL>(::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(ACL)));
         // Initialize the new ACL.
         if (!::InitializeAcl(pACL, sizeof(ACL), ACL_REVISION))
         {
-            ; // Todo: Report an error.
+             // Todo: Report an error.
         }
     }
 
@@ -97,7 +97,7 @@ vncAccessControl::GetSD()
     }
     // Make SD self-relative and use LocalAlloc
     ::MakeSelfRelativeSD(pSD, nullptr, &dwBufferLength);
-    pSelfRelativeSD = (PSECURITY_DESCRIPTOR)::LocalAlloc(0, dwBufferLength);
+    pSelfRelativeSD = reinterpret_cast<PSECURITY_DESCRIPTOR>(::LocalAlloc(0, dwBufferLength));
     ::MakeSelfRelativeSD(pSD, pSelfRelativeSD, &dwBufferLength);
     FreeSD(pSD);
     return pSelfRelativeSD;
@@ -169,7 +169,7 @@ BOOL vncAccessControl::StoreACL(const PACL pACL)
             __leave;
         }
 
-        if (::RegSetValueEx(hk, _T("ACL"), 0, REG_BINARY, (LPBYTE)pACL, AclInfo.AclBytesInUse) != ERROR_SUCCESS)
+        if (::RegSetValueEx(hk, _T("ACL"), 0, REG_BINARY, reinterpret_cast<LPBYTE>(pACL), AclInfo.AclBytesInUse) != ERROR_SUCCESS)
         {
             __leave;
         }

@@ -11,8 +11,8 @@
 
 class vncEncodeUltra2;
 
-#if !defined(_WINVNC_EncodeULTRA2)
-#define _WINVNC_EncodeULTRA2
+#if !defined(WINVNC_EncodeULTRA2)
+#define WINVNC_EncodeULTRA2
 #pragma once
 #include "lzo/minilzo.h"
 #include "vncencoder.h"

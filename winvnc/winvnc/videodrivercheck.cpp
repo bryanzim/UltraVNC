@@ -9,9 +9,9 @@
 //
 
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include "Localization.h"
 #include "ScreenCapture.h"
@@ -83,7 +83,7 @@ BOOL GetDllProductVersion(char* const dllName, char* vBuffer, const int size)
 
     if (resultValue)
     {
-        ::strncpy_s(vBuffer, 512, (char*)lpBuffer, size);
+        ::strncpy_s(vBuffer, 512, reinterpret_cast<char*>(lpBuffer), static_cast<rsize_t>(size));
         delete[] versionInfo;
         return (TRUE);
     }
@@ -116,7 +116,7 @@ bool CheckVideoDriver(const bool Box)
     HMODULE hUser32 = ::LoadLibraryEx("USER32", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (hUser32)
     {
-        pd = (pEnumDisplayDevices)::GetProcAddress(hUser32, "EnumDisplayDevicesA");
+        pd = reinterpret_cast<pEnumDisplayDevices>(::GetProcAddress(hUser32, "EnumDisplayDevicesA"));
     }
     if (pd)
     {
@@ -128,9 +128,9 @@ bool CheckVideoDriver(const bool Box)
         INT devNum{ 0 };
         BOOL result;
         DriverFound = false;
-        while (result = (*pd)(nullptr, devNum, &dd, 0))
+        while (result = (*pd)(nullptr, static_cast<DWORD>(devNum), &dd, 0))
         {
-            if (std::strcmp((const char*)&dd.DeviceString[0U], driverName) == 0)
+            if (std::strcmp(reinterpret_cast<const char*>(&dd.DeviceString[0U]), driverName) == 0)
             {
                 DriverFound = true;
                 break;
@@ -166,7 +166,7 @@ bool CheckVideoDriver(const bool Box)
                 {
                     ::strcat_s(buf2.data(), buf2.size(), sz_ID_DRIVER_ACTIVE.data());
                     HDC testdc = nullptr;
-                    deviceName = (LPSTR)&dd.DeviceName[0U];
+                    deviceName = reinterpret_cast<LPSTR>(&dd.DeviceName[0U]);
                     testdc = ::CreateDC("DISPLAY", deviceName, nullptr, nullptr);
                     if (testdc)
                     {

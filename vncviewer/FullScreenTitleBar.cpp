@@ -45,7 +45,7 @@ extern Log vnclog;
 #include "UltraVNCHelperFunctions.h"
 #include "VNCOptions.h"
 
-#include <commctrl.h>
+#include <CommCtrl.h>
 
 #include <array>
 
@@ -235,8 +235,8 @@ void CTitleBar::CreateDisplay()
     wndclass.hInstance = hInstance;
     wndclass.hIcon = nullptr;
     wndclass.hCursor = ::LoadCursor(nullptr, IDC_ARROW);
-    wndclass.hbrBackground = (HBRUSH)::GetStockObject(WHITE_BRUSH);
-    wndclass.lpszMenuName = (const TCHAR*)nullptr;
+    wndclass.hbrBackground = reinterpret_cast<HBRUSH>(::GetStockObject(WHITE_BRUSH));
+    wndclass.lpszMenuName = static_cast<const TCHAR*>(nullptr);
     wndclass.lpszClassName = _T("FSTITLEBAR");
 
     ::RegisterClass(&wndclass);
@@ -260,7 +260,7 @@ void CTitleBar::CreateDisplay()
                           nullptr,  // Menu handle
                           hInstance, nullptr);
 
-    helper::SafeSetWindowUserData(m_hWnd, (LONG_PTR)this);
+    helper::SafeSetWindowUserData(m_hWnd, reinterpret_cast<LONG_PTR>(this));
     //Set region to window so it is non rectangular
     HRGN Range;
     std::array<POINT, 4U> Points;
@@ -278,51 +278,51 @@ void CTitleBar::CreateDisplay()
 
     //Close button
     Close = ::CreateWindow(_T("STATIC"), _T("Close"), WS_CHILD | WS_VISIBLE | SS_NOTIFY | SS_OWNERDRAW,
-                         tbWidth - tbRightSpace - tbcxPicture, tbTopSpace, tbcxPicture, tbcyPicture, m_hWnd, (HMENU)tbIDC_CLOSE,
+                         tbWidth - tbRightSpace - tbcxPicture, tbTopSpace, tbcxPicture, tbcyPicture, m_hWnd, reinterpret_cast<HMENU>(tbIDC_CLOSE),
                          hInstance, nullptr);
 
     //Maximize button
     Maximize = ::CreateWindow(_T("STATIC"), _T("Maximize"), WS_CHILD | WS_VISIBLE | SS_NOTIFY | SS_OWNERDRAW,
                             tbWidth - tbRightSpace - (tbcxPicture * 2) - (tbButtonSpace * 1), tbTopSpace, tbcxPicture, tbcyPicture,
-                            m_hWnd, (HMENU)tbIDC_MAXIMIZE, hInstance, nullptr);
+                            m_hWnd, reinterpret_cast<HMENU>(tbIDC_MAXIMIZE), hInstance, nullptr);
 
     //Minimize button
     Minimize = ::CreateWindow(_T("STATIC"), _T("Minimize"), WS_CHILD | WS_VISIBLE | SS_NOTIFY | SS_OWNERDRAW,
                             tbWidth - tbRightSpace - (tbcxPicture * 3) - (tbButtonSpace * 2), tbTopSpace, tbcxPicture, tbcyPicture,
-                            m_hWnd, (HMENU)tbIDC_MINIMIZE, hInstance, nullptr);
+                            m_hWnd, reinterpret_cast<HMENU>(tbIDC_MINIMIZE), hInstance, nullptr);
 
     Screen = ::CreateWindow(_T("STATIC"), _T("Screen"), WS_CHILD | WS_VISIBLE | SS_NOTIFY | SS_OWNERDRAW,
                           tbLeftSpace + (tbcxPicture * 1) + (tbButtonSpace * 1), tbTopSpace, tbcxPicture, tbcyPicture, m_hWnd,
-                          (HMENU)tbIDC_SCREEN, hInstance, nullptr);
+                          reinterpret_cast<HMENU>(tbIDC_SCREEN), hInstance, nullptr);
     CreateToolTipForRect(Screen, ScreenTip, _T("Scaling: Fit to screen, 1:1"));
 
     Photo = ::CreateWindow(_T("BUTTON"), _T("Photo"), WS_CHILD | WS_VISIBLE | BS_NOTIFY | BS_OWNERDRAW,
                          tbLeftSpace + (tbcxPicture * 2) + (tbButtonSpace * 2), tbTopSpace, tbcxPicture, tbcyPicture, m_hWnd,
-                         (HMENU)tbIDC_PHOTO, hInstance, nullptr);
+                         reinterpret_cast<HMENU>(tbIDC_PHOTO), hInstance, nullptr);
     CreateToolTipForRect(Photo, PhotoTip, _T("Screenshot, double click for settings"));
 
     SwitchMonitor = ::CreateWindow(_T("STATIC"), _T("SwitchMonitor"), WS_CHILD | WS_VISIBLE | SS_NOTIFY | SS_OWNERDRAW,
                                  tbLeftSpace + (tbcxPicture * 3) + (tbButtonSpace * 3), tbTopSpace, tbcxPicture, tbcyPicture,
-                                 m_hWnd, (HMENU)tbIDC_SWITCHMONITOR, hInstance, nullptr);
+                                 m_hWnd, reinterpret_cast<HMENU>(tbIDC_SWITCHMONITOR), hInstance, nullptr);
     CreateToolTipForRect(SwitchMonitor, SwitchMonitorTip, _T("Switch monitor"));
 
     Chat = ::CreateWindow(_T("STATIC"), _T("Chat"), WS_CHILD | WS_VISIBLE | SS_NOTIFY | SS_OWNERDRAW,
                         tbLeftSpace + (tbcxPicture * 4) + (tbButtonSpace * 4), tbTopSpace, tbcxPicture, tbcyPicture, m_hWnd,
-                        (HMENU)tbIDC_CHAT, hInstance, nullptr);
+                        reinterpret_cast<HMENU>(tbIDC_CHAT), hInstance, nullptr);
     CreateToolTipForRect(Chat, ChatTip, _T("Start Chat"));
 
     FT = ::CreateWindow(_T("STATIC"), _T("FT"), WS_CHILD | WS_VISIBLE | SS_NOTIFY | SS_OWNERDRAW,
                       tbLeftSpace + (tbcxPicture * 5) + (tbButtonSpace * 5), tbTopSpace, tbcxPicture, tbcyPicture, m_hWnd,
-                      (HMENU)tbIDC_FT, hInstance, nullptr);
+                      reinterpret_cast<HMENU>(tbIDC_FT), hInstance, nullptr);
     CreateToolTipForRect(FT, FTTip, _T("File Transfer"));
 
     //Pin button
     Pin = ::CreateWindow(_T("STATIC"), _T("Pin"), WS_CHILD | WS_VISIBLE | SS_NOTIFY | SS_OWNERDRAW, tbLeftSpace, tbTopSpace,
-                       tbcxPicture, tbcyPicture, m_hWnd, (HMENU)tbIDC_PIN, hInstance, nullptr);
+                       tbcxPicture, tbcyPicture, m_hWnd, reinterpret_cast<HMENU>(tbIDC_PIN), hInstance, nullptr);
 
 
     //Set the creation of the window
-    helper::SafeSetWindowUserData(m_hWnd, (LONG_PTR)this);
+    helper::SafeSetWindowUserData(m_hWnd, reinterpret_cast<LONG_PTR>(this));
 
     //Load pictures
     this->LoadPictures();
@@ -379,7 +379,7 @@ LRESULT CALLBACK CTitleBar::WndProc(const HWND hwnd, const UINT iMsg, const WPAR
         HDC hdcMem;
         LPDRAWITEMSTRUCT lpdis;
 
-        lpdis = (LPDRAWITEMSTRUCT)lParam;
+        lpdis = reinterpret_cast<LPDRAWITEMSTRUCT>(lParam);
         hdcMem = ::CreateCompatibleDC(lpdis->hDC);
         HGDIOBJ hbrOld = nullptr;
 
@@ -572,14 +572,14 @@ LRESULT CALLBACK CTitleBar::WndProc(const HWND hwnd, const UINT iMsg, const WPAR
                 {
                     HMENU Menu = ::LoadMenu(TitleBarThis->hInstance, MAKEINTRESOURCE(tbMENUID));
                     HMENU SubMenu = ::GetSubMenu(Menu, 0);
-                    ;
+                    
 
                     UINT Total{ 0U };
 
                     //Get the real number of entries (exluding seperators)
                     for (int i{ 0 }; i < ::GetMenuItemCount(SubMenu); ++i)
                     {
-                        int res = ::GetMenuString(SubMenu, i, nullptr, 0, MF_BYPOSITION);
+                        int res = ::GetMenuString(SubMenu, static_cast<UINT>(i), nullptr, 0, MF_BYPOSITION);
                         if (res != 0)
                         {
                             ++Total;
@@ -630,7 +630,7 @@ LRESULT CALLBACK CTitleBar::WndProc(const HWND hwnd, const UINT iMsg, const WPAR
     case WM_RBUTTONDOWN: {
         HMENU Menu = ::LoadMenu(TitleBarThis->hInstance, MAKEINTRESOURCE(tbMENUID));
         HMENU SubMenu = ::GetSubMenu(Menu, 0);
-        ;
+        
 
         POINT lpPoint;
         ::GetCursorPos(&lpPoint);
@@ -642,11 +642,11 @@ LRESULT CALLBACK CTitleBar::WndProc(const HWND hwnd, const UINT iMsg, const WPAR
         {
             std::array<TCHAR, MAX_PATH> Text;
             ::ZeroMemory(Text.data(), sizeof(Text));
-            int res = ::GetMenuString(SubMenu, i, Text.data(), static_cast<int>(Text.size()), MF_BYPOSITION);
+            int res = ::GetMenuString(SubMenu, static_cast<UINT>(i), Text.data(), static_cast<int>(Text.size()), MF_BYPOSITION);
 
             if (res != 0)
             {
-                ::ModifyMenu(SubMenu, i, MF_BYPOSITION, tbWMCOMMANDIDStart + Pos, Text.data());
+                ::ModifyMenu(SubMenu, static_cast<UINT>(i), MF_BYPOSITION, static_cast<UINT_PTR>(tbWMCOMMANDIDStart + Pos), Text.data());
                 ++Pos;
             }
         }
@@ -659,7 +659,7 @@ LRESULT CALLBACK CTitleBar::WndProc(const HWND hwnd, const UINT iMsg, const WPAR
             {
                 std::array<TCHAR, MAX_PATH> Text;
                 ::ZeroMemory(Text.data(), sizeof(Text));
-                int res = ::GetMenuString(SubMenu, i, Text.data(), static_cast<int>(Text.size()), MF_BYPOSITION);
+                int res = ::GetMenuString(SubMenu, static_cast<UINT>(i), Text.data(), static_cast<int>(Text.size()), MF_BYPOSITION);
 
                 if (res != 0)
                 {
@@ -667,7 +667,7 @@ LRESULT CALLBACK CTitleBar::WndProc(const HWND hwnd, const UINT iMsg, const WPAR
 
                     if (RealPos == Pos - 2)
                     {
-                        ::SetMenuDefaultItem(SubMenu, i, TRUE);
+                        ::SetMenuDefaultItem(SubMenu, static_cast<UINT>(i), TRUE);
                     }
                 }
             }
@@ -975,26 +975,26 @@ void CTitleBar::MoveToMonitor(const HMONITOR hMonitor)
     MonitorTop = mi.rcMonitor.top;
 
     // finally move the window.
-    ::SetWindowPos(m_hWnd, 0, x, y, tbWidth, tbHeigth, SWP_NOACTIVATE | SWP_NOZORDER);
+    ::SetWindowPos(m_hWnd, nullptr, x, y, tbWidth, tbHeigth, SWP_NOACTIVATE | SWP_NOZORDER);
 
     // DPI picture Pos/Size
-    ::SetWindowPos(Close, 0, tbWidth - tbRightSpace - tbcxPicture, tbTopSpace, tbcxPicture, tbcyPicture,
+    ::SetWindowPos(Close, nullptr, tbWidth - tbRightSpace - tbcxPicture, tbTopSpace, tbcxPicture, tbcyPicture,
                    SWP_NOACTIVATE | SWP_NOZORDER);
-    ::SetWindowPos(Maximize, 0, tbWidth - tbRightSpace - (tbcxPicture * 2) - (tbButtonSpace * 1), tbTopSpace, tbcxPicture,
+    ::SetWindowPos(Maximize, nullptr, tbWidth - tbRightSpace - (tbcxPicture * 2) - (tbButtonSpace * 1), tbTopSpace, tbcxPicture,
                    tbcyPicture, SWP_NOACTIVATE | SWP_NOZORDER);
-    ::SetWindowPos(Minimize, 0, tbWidth - tbRightSpace - (tbcxPicture * 3) - (tbButtonSpace * 2), tbTopSpace, tbcxPicture,
+    ::SetWindowPos(Minimize, nullptr, tbWidth - tbRightSpace - (tbcxPicture * 3) - (tbButtonSpace * 2), tbTopSpace, tbcxPicture,
                    tbcyPicture, SWP_NOACTIVATE | SWP_NOZORDER);
-    ::SetWindowPos(Screen, 0, tbLeftSpace + (tbcxPicture * 1) + (tbButtonSpace * 1), tbTopSpace, tbcxPicture, tbcyPicture,
+    ::SetWindowPos(Screen, nullptr, tbLeftSpace + (tbcxPicture * 1) + (tbButtonSpace * 1), tbTopSpace, tbcxPicture, tbcyPicture,
                    SWP_NOACTIVATE | SWP_NOZORDER);
-    ::SetWindowPos(Photo, 0, tbLeftSpace + (tbcxPicture * 2) + (tbButtonSpace * 2), tbTopSpace, tbcxPicture, tbcyPicture,
+    ::SetWindowPos(Photo, nullptr, tbLeftSpace + (tbcxPicture * 2) + (tbButtonSpace * 2), tbTopSpace, tbcxPicture, tbcyPicture,
                    SWP_NOACTIVATE | SWP_NOZORDER);
-    ::SetWindowPos(SwitchMonitor, 0, tbLeftSpace + (tbcxPicture * 3) + (tbButtonSpace * 3), tbTopSpace, tbcxPicture, tbcyPicture,
+    ::SetWindowPos(SwitchMonitor, nullptr, tbLeftSpace + (tbcxPicture * 3) + (tbButtonSpace * 3), tbTopSpace, tbcxPicture, tbcyPicture,
                    SWP_NOACTIVATE | SWP_NOZORDER);
-    ::SetWindowPos(Chat, 0, tbLeftSpace + (tbcxPicture * 4) + (tbButtonSpace * 4), tbTopSpace, tbcxPicture, tbcyPicture,
+    ::SetWindowPos(Chat, nullptr, tbLeftSpace + (tbcxPicture * 4) + (tbButtonSpace * 4), tbTopSpace, tbcxPicture, tbcyPicture,
                    SWP_NOACTIVATE | SWP_NOZORDER);
-    ::SetWindowPos(FT, 0, tbLeftSpace + (tbcxPicture * 5) + (tbButtonSpace * 5), tbTopSpace, tbcxPicture, tbcyPicture,
+    ::SetWindowPos(FT, nullptr, tbLeftSpace + (tbcxPicture * 5) + (tbButtonSpace * 5), tbTopSpace, tbcxPicture, tbcyPicture,
                    SWP_NOACTIVATE | SWP_NOZORDER);
-    ::SetWindowPos(Pin, 0, tbLeftSpace, tbTopSpace, tbcxPicture, tbcyPicture, SWP_NOACTIVATE | SWP_NOZORDER);
+    ::SetWindowPos(Pin, nullptr, tbLeftSpace, tbTopSpace, tbcxPicture, tbcyPicture, SWP_NOACTIVATE | SWP_NOZORDER);
 
     // after DPI change, Set region to window so it is non rectangular
     HRGN Range;
@@ -1024,6 +1024,6 @@ void CTitleBar::CreateToolTipForRect(const HWND hwndParent, HWND hwndTip, const 
     ti.hinst = hInstance;
     ti.lpszText = text;
     ::GetClientRect(hwndParent, &ti.rect);
-    ::SendMessage(hwndTip, TTM_ADDTOOL, 0, (LPARAM)(LPTOOLINFO)&ti);
+    ::SendMessage(hwndTip, TTM_ADDTOOL, 0, reinterpret_cast<LPARAM>(reinterpret_cast<LPTOOLINFO>(&ti)));
 }
 //***************************************************************************************

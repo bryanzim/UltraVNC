@@ -19,8 +19,8 @@
 
 class vncInstHandler;
 
-#if (!defined(_WINVNC_VNCINSTHANDLER))
-#define _WINVNC_VNCINSTHANDLER
+#if (!defined(WINVNC_VNCINSTHANDLER))
+#define WINVNC_VNCINSTHANDLER
 
 // Includes
 #include "stdhdrs.h"
@@ -37,4 +37,4 @@ public:
     HANDLE mutex;
 };
 
-#endif // _WINVNC_VNCINSTHANDLER
+#endif // WINVNC_VNCINSTHANDLER

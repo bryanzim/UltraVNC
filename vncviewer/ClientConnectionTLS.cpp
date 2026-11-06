@@ -31,10 +31,10 @@
 #include <winternl.h>
 
 #define SCHANNEL_USE_BLACKLISTS
-#include <commctrl.h>
+#include <CommCtrl.h>
 #include <cryptuiapi.h>
 #include <schannel.h>
-#include <shlwapi.h>
+#include <Shlwapi.h>
 #include <wincrypt.h>
 
 #include <cstdio>
@@ -55,7 +55,7 @@ struct DynBuffer
     BYTE* buffer;
     DWORD pos, size, capacity;
 
-    explicit DynBuffer() : buffer(0), pos{ 0 }, size{ 0 }, capacity{ 0 } {}
+    explicit DynBuffer() : buffer(nullptr), pos{ 0 }, size{ 0 }, capacity{ 0 } {}
     ~DynBuffer() { delete[] buffer; }
 
     BYTE* EnsureFree(const DWORD avail)
@@ -72,7 +72,7 @@ struct DynBuffer
         }
         if (size + avail > capacity)
         {
-            capacity = (size + avail + CapacityStep - 1) & -CapacityStep;
+            capacity = (size + avail + CapacityStep - 1) & static_cast<DWORD>(-CapacityStep);
             BYTE* prev = buffer;
             buffer = new BYTE[capacity];
             std::memcpy(buffer, prev, size);
@@ -85,9 +85,9 @@ struct DynBuffer
 
     inline BYTE* GetTail() { return buffer + size; }
 
-    inline int GetAvailable() { return maximum(size - pos, 0); }
+    inline int GetAvailable() { return maximum(static_cast<int>(size - pos), 0); }
 
-    inline int GetFree() { return maximum(capacity - size, 0); }
+    inline int GetFree() { return maximum(static_cast<int>(capacity - size), 0); }
 };
 
 // Schannel based TLS wrapper implemented as a "Sans I/O" protocol
@@ -122,8 +122,8 @@ struct TLSSession
         : state(StateNew), hostName{ nullptr }, isServer{ false }, pLocalCert{ nullptr }, pRemoteCert{ nullptr }, contextReq{ 0 },
           modernCredentials{ false }
     {
-        SecInvalidateHandle(&hCredentials);
-        SecInvalidateHandle(&hContext);
+        SecInvalidateHandle(&hCredentials)
+        SecInvalidateHandle(&hContext)
         inDesc.ulVersion = SECBUFFER_VERSION;
         inDesc.cBuffers = static_cast<unsigned long>(inBuffers.size());
         inDesc.pBuffers = inBuffers.data();
@@ -139,8 +139,8 @@ struct TLSSession
         std::memcpy(this, &from, sizeof(TLSSession));
         inDesc.pBuffers = inBuffers.data();
         outDesc.pBuffers = outBuffers.data();
-        SecInvalidateHandle(&from.hContext);
-        SecInvalidateHandle(&from.hCredentials);
+        SecInvalidateHandle(&from.hContext)
+        SecInvalidateHandle(&from.hCredentials)
         from.pLocalCert = from.pRemoteCert = nullptr;
     }
 
@@ -257,7 +257,7 @@ struct TLSSession
             {
                 inBuffers[0U].BufferType = SECBUFFER_TOKEN;
                 inBuffers[0U].pvBuffer = inbuf.GetHead();
-                inBuffers[0U].cbBuffer = inbuf.GetAvailable();
+                inBuffers[0U].cbBuffer = static_cast<unsigned long>(inbuf.GetAvailable());
                 pIn = &inDesc;
             }
             bool initialClientCall = !isServer && !SecIsValidHandle(&hContext) && (pIn == nullptr);
@@ -282,10 +282,10 @@ struct TLSSession
                 if (SecIsValidHandle(&hContext))
                 {
                     ::DeleteSecurityContext(&hContext);
-                    SecInvalidateHandle(&hContext);
+                    SecInvalidateHandle(&hContext)
                 }
                 ::FreeCredentialsHandle(&hCredentials);
-                SecInvalidateHandle(&hCredentials);
+                SecInvalidateHandle(&hCredentials)
                 SCHANNEL_CRED legacyCred{ 0 };
                 legacyCred.dwVersion = SCHANNEL_CRED_VERSION;
                 legacyCred.dwFlags = SCH_CRED_MANUAL_CRED_VALIDATION;
@@ -398,20 +398,20 @@ struct TLSSession
         {
             return SetLastError("Connection closed");
         }
-        int cnt = (nDataLen + tlsSizes.cbMaximumMessage - 1) / tlsSizes.cbMaximumMessage;
-        outbuf.EnsureFree(tlsSizes.cbHeader * cnt + nDataLen + tlsSizes.cbTrailer * cnt);
+        int cnt = static_cast<int>((nDataLen + tlsSizes.cbMaximumMessage - 1) / tlsSizes.cbMaximumMessage);
+        outbuf.EnsureFree(tlsSizes.cbHeader * static_cast<unsigned long>(cnt) + static_cast<unsigned long>(nDataLen) + tlsSizes.cbTrailer * static_cast<unsigned long>(cnt));
         for (int i{ 0 }; i < nDataLen; i += tlsSizes.cbMaximumMessage)
         {
             int size = minimum(nDataLen - i, static_cast<int>(tlsSizes.cbMaximumMessage));
-            BYTE* dst = outbuf.EnsureFree(tlsSizes.cbHeader + size + tlsSizes.cbTrailer);
+            BYTE* dst = outbuf.EnsureFree(tlsSizes.cbHeader + static_cast<unsigned long>(size) + tlsSizes.cbTrailer);
             outBuffers[0U].BufferType = SECBUFFER_STREAM_HEADER;
             outBuffers[0U].pvBuffer = dst;
             outBuffers[0U].cbBuffer = tlsSizes.cbHeader;
             dst += tlsSizes.cbHeader;
             outBuffers[1U].BufferType = SECBUFFER_DATA;
             outBuffers[1U].pvBuffer = dst;
-            outBuffers[1U].cbBuffer = size;
-            std::memcpy(dst, pDataBuffer + i, size);
+            outBuffers[1U].cbBuffer = static_cast<unsigned long>(size);
+            std::memcpy(dst, pDataBuffer + i, static_cast<size_t>(size));
             dst += size;
             outBuffers[2U].BufferType = SECBUFFER_STREAM_TRAILER;
             outBuffers[2U].pvBuffer = dst;
@@ -454,7 +454,7 @@ struct TLSSession
         {
             inBuffers[0U].BufferType = SECBUFFER_DATA;
             inBuffers[0U].pvBuffer = inbuf.GetHead();
-            inBuffers[0U].cbBuffer = inbuf.GetAvailable();
+            inBuffers[0U].cbBuffer = static_cast<unsigned long>(inbuf.GetAvailable());
             HRESULT hr = ::DecryptMessage(&hContext, &inDesc, 0, nullptr);
             if (hr == SEC_E_INCOMPLETE_MESSAGE)
             {
@@ -578,10 +578,10 @@ struct TLSSession
         HTTPSPolicyCallbackData httpsPolicy{ 0 };
 
         chainParams.cbSize = sizeof(chainParams);
-        if (!::CertGetCertificateChain(nullptr, pRemoteCert, nullptr, nullptr, &chainParams, CERT_CHAIN_REVOCATION_CHECK_CHAIN, 0,
+        if (!::CertGetCertificateChain(nullptr, pRemoteCert, nullptr, nullptr, &chainParams, CERT_CHAIN_REVOCATION_CHECK_CHAIN, nullptr,
                                      &pChainContext))
         {
-            SetLastError("CertGetCertificateChain failed", FACILITY_WIN32 | ::GetLastError());
+            SetLastError("CertGetCertificateChain failed", static_cast<HRESULT>(FACILITY_WIN32 | ::GetLastError()));
             goto Exit;
         }
         if (pChainContext->cChain == 0)
@@ -591,18 +591,18 @@ struct TLSSession
         }
         httpsPolicy.cbSize = sizeof(httpsPolicy);
         httpsPolicy.dwAuthType = (isServer ? AUTHTYPE_CLIENT : AUTHTYPE_SERVER);
-        httpsPolicy.pwszServerName = (isServer ? nullptr : (WCHAR*)host.c_str());
+        httpsPolicy.pwszServerName = (isServer ? nullptr : const_cast<WCHAR*>(reinterpret_cast<const WCHAR *>(host.c_str())));
         policyPara.cbSize = sizeof(policyPara);
         policyPara.pvExtraPolicyPara = &httpsPolicy;
         policyStatus.cbSize = sizeof(policyStatus);
         if (!::CertVerifyCertificateChainPolicy(CERT_CHAIN_POLICY_SSL, pChainContext, &policyPara, &policyStatus))
         {
-            SetLastError("CertVerifyCertificateChainPolicy failed", FACILITY_WIN32 | ::GetLastError());
+            SetLastError("CertVerifyCertificateChainPolicy failed", static_cast<HRESULT>(FACILITY_WIN32 | ::GetLastError()));
             goto Exit;
         }
         if (FAILED(policyStatus.dwError))
         {
-            SetLastError(nullptr, policyStatus.dwError);
+            SetLastError(nullptr, static_cast<HRESULT>(policyStatus.dwError));
             goto Exit;
         }
         isvalid = true;
@@ -697,13 +697,13 @@ private:
         if (hr != S_OK)
         {
             std::array<wchar_t, 1024U> wmsg;
-            ::FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, hr, 0, wmsg.data(), static_cast<DWORD>(wmsg.size()),
+            ::FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, static_cast<DWORD>(hr), 0, wmsg.data(), static_cast<DWORD>(wmsg.size()),
                            nullptr);
-            for (int i = static_cast<int>(std::wcslen(wmsg.data())) - 1; (i >= 0) && !wmsg[i + 1]; --i)
+            for (int i = static_cast<int>(std::wcslen(wmsg.data())) - 1; (i >= 0) && !wmsg[static_cast<unsigned long long>(i + 1)]; --i)
             {
-                if ((wmsg[i] == L'\r') || (wmsg[i] == L'\n') || (wmsg[i] == L'.'))
+                if ((wmsg[static_cast<unsigned long long>(i)] == L'\r') || (wmsg[static_cast<unsigned long long>(i)] == L'\n') || (wmsg[static_cast<unsigned long long>(i)] == L'.'))
                 {
-                    wmsg[i] = L'\0';
+                    wmsg[static_cast<unsigned long long>(i)] = L'\0';
                 }
             }
             std::array<char, 1024U> msg;
@@ -744,7 +744,7 @@ struct TLSPlugin : public IPlugin
         {
             SetLastError(session.lastError);
         }
-        *pnTransformedDataLen = encBuffer.size;
+        *pnTransformedDataLen = static_cast<int>(encBuffer.size);
         encBuffer.size = 0;
         return encBuffer.buffer;
     }
@@ -760,8 +760,8 @@ struct TLSPlugin : public IPlugin
                 return decBuffer.buffer; // anything non-NULL
             }
             *pnRestoredDataLen = 1;
-            BYTE* dst = decBuffer.EnsureFree(*pnRestoredDataLen);
-            decBuffer.size += *pnRestoredDataLen;
+            BYTE* dst = decBuffer.EnsureFree(static_cast<DWORD>(*pnRestoredDataLen));
+            decBuffer.size += static_cast<DWORD>(*pnRestoredDataLen);
             return dst;
         }
         if (decBuffer.GetAvailable() > 0)
@@ -771,7 +771,7 @@ struct TLSPlugin : public IPlugin
             {
                 SetLastError(session.lastError);
             }
-            if ((outBuffer.GetAvailable() > 0) && !connection.Write((char*)outBuffer.GetHead(), outBuffer.GetAvailable(), false))
+            if ((outBuffer.GetAvailable() > 0) && !connection.Write(reinterpret_cast<char*>(outBuffer.GetHead()), outBuffer.GetAvailable(), false))
             {
                 SetLastError("TLS handshake response could not be sent");
             }
@@ -779,8 +779,8 @@ struct TLSPlugin : public IPlugin
         if (decPlain.GetAvailable() >= wanted)
         {
             *pnRestoredDataLen = wanted;
-            std::memcpy(pTransBuffer, decPlain.GetHead(), wanted);
-            decPlain.pos += wanted;
+            std::memcpy(pTransBuffer, decPlain.GetHead(), static_cast<size_t>(wanted));
+            decPlain.pos += static_cast<DWORD>(wanted);
         }
         else
         {
@@ -814,10 +814,10 @@ struct ThumbHost
     {
         std::array<TCHAR, 64U> buf{ 0 };
         ::GetPrivateProfileString(ThumbprintSection, key, nullptr, buf.data(), static_cast<DWORD>(buf.size()), fname);
-        return ::_tcscmp((LPCTSTR)hex, buf.data()) == 0;
+        return ::_tcscmp(reinterpret_cast<LPCTSTR>(hex), buf.data()) == 0;
     }
 
-    void SaveThumbprint(char* const hex) { ::WritePrivateProfileString(ThumbprintSection, key, (LPCTSTR)hex, fname); }
+    void SaveThumbprint(char* const hex) { ::WritePrivateProfileString(ThumbprintSection, key, reinterpret_cast<LPCTSTR>(hex), fname); }
 };
 
 static bool GetCertificateThumbprint(const PCCERT_CONTEXT pCert, char* const hex, const int hexsize)
@@ -828,10 +828,10 @@ static bool GetCertificateThumbprint(const PCCERT_CONTEXT pCert, char* const hex
     {
         return false;
     }
-    std::snprintf(hex, hexsize, "%02x", thumb[0U]);
+    std::snprintf(hex, static_cast<size_t>(hexsize), "%02x", thumb[0U]);
     for (DWORD i{ 1U }; i < size; ++i)
     {
-        std::snprintf(hex + std::strlen(hex), hexsize - std::strlen(hex), "-%02x", thumb[i]);
+        std::snprintf(hex + std::strlen(hex), static_cast<size_t>(hexsize) - std::strlen(hex), "-%02x", thumb[i]);
     }
     return true;
 }
@@ -847,35 +847,35 @@ void ClientConnection::AuthVeNCrypt()
     };
 
     version = 0;
-    ReadExact((char*)&version, 2);
-    vnclog.Print(0, _T("AuthVeNCrypt: raw version bytes %02x %02x\n"), ((unsigned char*)&version)[0U],
-                 ((unsigned char*)&version)[1U]);
+    ReadExact(reinterpret_cast<char*>(&version), 2);
+    vnclog.Print(0, _T("AuthVeNCrypt: raw version bytes %02x %02x\n"), (reinterpret_cast<unsigned char*>(&version))[0U],
+                 (reinterpret_cast<unsigned char*>(&version))[1U]);
     version = Swap16IfLE(version);
     if (version >= 2)
     {
         version = Swap16IfLE(2);
-        WriteExact((char*)&version, 2);
+        WriteExact(reinterpret_cast<char*>(&version), 2);
     }
     else
     {
         version = 0;
-        WriteExact((char*)&version, 2);
+        WriteExact(reinterpret_cast<char*>(&version), 2);
         return SetLastError("Unsupported version");
     }
     temp = 0;
-    ReadExact((char*)&temp, 1);
+    ReadExact(reinterpret_cast<char*>(&temp), 1);
     if (temp)
     {
         return SetLastError("Server reported unsupported version");
     }
     size = 0;
-    ReadExact((char*)&size, 1);
+    ReadExact(reinterpret_cast<char*>(&size), 1);
     subType = -1;
     for (int i{ 0 }; i < size; ++i)
     {
-        ReadExact((char*)&temp, 4);
+        ReadExact(reinterpret_cast<char*>(&temp), 4);
         {
-            temp = Swap32IfLE(temp);
+            temp = static_cast<int>(Swap32IfLE(temp));
             // Prefer SASL subtypes (X509SASL > others) so an updated viewer
             // uses SCRAM(-PLUS) when the server offers it; servers that don't
             // list SASL keep the previous first-supported-wins behaviour.
@@ -911,8 +911,8 @@ void ClientConnection::AuthVeNCrypt()
         return SetLastError("No valid sub-type");
     }
     m_lastVeNCryptSubType = subType;
-    temp = Swap32IfLE(subType);
-    WriteExact((char*)&temp, 4);
+    temp = static_cast<int>(Swap32IfLE(subType));
+    WriteExact(reinterpret_cast<char*>(&temp), 4);
 
     // tls-server-end-point (RFC 5929) channel binding data, filled after the
     // TLS handshake when a certificate-bearing subtype was negotiated.
@@ -925,7 +925,7 @@ void ClientConnection::AuthVeNCrypt()
         // TLS/X509 subtypes. Read it with the normal connection timeout so a
         // delayed Ack cannot be mistaken for the first byte of a TLS record.
         temp = 0;
-        ReadExact((char*)&temp, 1);
+        ReadExact(reinterpret_cast<char*>(&temp), 1);
         if (temp != 1)
         {
             return SetLastError("Server unsupported sub-type");
@@ -944,7 +944,7 @@ void ClientConnection::AuthVeNCrypt()
             size = outbuf.GetAvailable();
             if (size > 0)
             {
-                WriteExact((char*)outbuf.GetHead(), size);
+                WriteExact(reinterpret_cast<char*>(outbuf.GetHead()), size);
                 outbuf.size = 0;
             }
             if (session.IsReady())
@@ -952,9 +952,9 @@ void ClientConnection::AuthVeNCrypt()
                 break;
             }
             size = 1;
-            inbuf.EnsureFree(size);
-            ReadExact((char*)inbuf.GetTail(), size);
-            inbuf.size += size;
+            inbuf.EnsureFree(static_cast<DWORD>(size));
+            ReadExact(reinterpret_cast<char*>(inbuf.GetTail()), size);
+            inbuf.size += static_cast<DWORD>(size);
         }
         if (!session.ValidateRemoteCertificate())
         {
@@ -1007,7 +1007,7 @@ void ClientConnection::AuthVeNCrypt()
                     size = outbuf.GetAvailable();
                     if (size > 0)
                     {
-                        WriteExact((char*)outbuf.GetHead(), size);
+                        WriteExact(reinterpret_cast<char*>(outbuf.GetHead()), size);
                         outbuf.size = 0;
                     }
                     QuietException_helper(L"Authentication cancelled");
@@ -1096,11 +1096,11 @@ void ClientConnection::AuthVeNCrypt()
             ::strcpy_s(_tlsPasswd.data(), 256, m_clearPasswd.data());
         }
         temp = static_cast<int>(std::strlen(_tlsUser.data()));
-        temp = Swap32IfLE(temp);
-        WriteExact((char*)&temp, 4);
+        temp = static_cast<int>(Swap32IfLE(temp));
+        WriteExact(reinterpret_cast<char*>(&temp), 4);
         temp = static_cast<int>(std::strlen(_tlsPasswd.data()));
-        temp = Swap32IfLE(temp);
-        WriteExact((char*)&temp, 4);
+        temp = static_cast<int>(Swap32IfLE(temp));
+        WriteExact(reinterpret_cast<char*>(&temp), 4);
         WriteExact(_tlsUser.data(), static_cast<int>(std::strlen(_tlsUser.data())));
         WriteExact(_tlsPasswd.data(), static_cast<int>(std::strlen(_tlsPasswd.data())));
     }
@@ -1146,13 +1146,13 @@ void ClientConnection::AuthVeNCrypt()
                                         uvncTokenProtoMinor,
                                         static_cast<std::uint8_t>((usedSessionToken ? uvncTokenAuthSession : uvncTokenAuthPrimary)),
                                         static_cast<std::uint8_t>(uvncTokenFlagRequestSession) };
-        WriteExact((char*)uvncHeader, sizeof(uvncHeader));
+        WriteExact(reinterpret_cast<char*>(uvncHeader), sizeof(uvncHeader));
         temp = static_cast<int>(std::strlen(_tlsUser.data()));
-        temp = Swap32IfLE(temp);
-        WriteExact((char*)&temp, 4);
+        temp = static_cast<int>(Swap32IfLE(temp));
+        WriteExact(reinterpret_cast<char*>(&temp), 4);
         temp = static_cast<int>(tokenLen);
-        temp = Swap32IfLE(temp);
-        WriteExact((char*)&temp, 4);
+        temp = static_cast<int>(Swap32IfLE(temp));
+        WriteExact(reinterpret_cast<char*>(&temp), 4);
         WriteExact(_tlsUser.data(), static_cast<int>(std::strlen(_tlsUser.data())));
         WriteExact(_tlsToken.data(), static_cast<int>(tokenLen));
 
@@ -1181,7 +1181,7 @@ namespace
         {
             try
             {
-                m_conn->WriteExact((char*)data, static_cast<int>(len));
+                m_conn->WriteExact(const_cast<char*>(reinterpret_cast<const char *>(data)), static_cast<int>(len));
             }
             catch (...)
             {
@@ -1193,7 +1193,7 @@ namespace
         {
             try
             {
-                m_conn->ReadExact((char*)data, static_cast<int>(len));
+                m_conn->ReadExact(reinterpret_cast<char*>(data), static_cast<int>(len));
             }
             catch (...)
             {

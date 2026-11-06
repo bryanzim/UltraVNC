@@ -81,7 +81,7 @@ std::array<BYTE, 4U> pbgcolor;
                 if (ry + rh - y < 16)                                                                                              \
                     h = ry + rh - y;                                                                                               \
                                                                                                                                    \
-                ReadExact((char*)&subencoding, 1);                                                                                 \
+                ReadExact(reinterpret_cast<char*>(&subencoding), 1);                                                                                 \
                                                                                                                                    \
                 if (subencoding & rfbHextileRaw)                                                                                   \
                 {                                                                                                                  \
@@ -97,11 +97,11 @@ std::array<BYTE, 4U> pbgcolor;
                                                                                                                                    \
                 if (subencoding & rfbHextileZlibRaw)                                                                               \
                 {                                                                                                                  \
-                    ReadExact((char*)&nCompData, 2);                                                                               \
+                    ReadExact(reinterpret_cast<char*>(&nCompData), 2);                                                                               \
                     nCompData = Swap16IfLE(nCompData);                                                                             \
                     CheckBufferSize(nCompData);                                                                                    \
                     ReadExact(m_netbuf, nCompData);                                                                                \
-                    if (zlibDecompress((unsigned char*)m_netbuf, m_zlibbuf, nCompData, ((w * h + 2) * (bpp / 8)), ultraVncZRaw,    \
+                    if (zlibDecompress(reinterpret_cast<unsigned char*>(m_netbuf), m_zlibbuf, nCompData, ((w * h + 2) * (bpp / 8)), ultraVncZRaw,    \
                                        zstd))                                                                                      \
                     {                                                                                                              \
                         SETPIXELS(m_zlibbuf, bpp, x, y, w, h);                                                                     \
@@ -111,12 +111,12 @@ std::array<BYTE, 4U> pbgcolor;
                                                                                                                                    \
                 if (subencoding & rfbHextileZlibHex)                                                                               \
                 {                                                                                                                  \
-                    ReadExact((char*)&nCompData, 2);                                                                               \
+                    ReadExact(reinterpret_cast<char*>(&nCompData), 2);                                                                               \
                     nCompData = Swap16IfLE(nCompData);                                                                             \
                     CheckBufferSize(nCompData);                                                                                    \
                     ReadExact(m_netbuf, nCompData);                                                                                \
                     unsigned int nDecompBytes{ 0U };                                                                               \
-                    if (zlibDecompress((unsigned char*)m_netbuf, m_zlibbuf, nCompData, ((w * h + 2) * (bpp / 8) + 20),             \
+                    if (zlibDecompress(reinterpret_cast<unsigned char*>(m_netbuf), m_zlibbuf, nCompData, ((w * h + 2) * (bpp / 8) + 20),             \
                                        ultraVncZEncoded, zstd, &nDecompBytes))                                                     \
                     {                                                                                                              \
                         HandleZlibHexSubencodingBuf##bpp(x, y, w, h, subencoding, m_zlibbuf, nDecompBytes);                        \
@@ -141,14 +141,14 @@ std::array<BYTE, 4U> pbgcolor;
                                                                                                                                    \
         if (subencoding & rfbHextileBackgroundSpecified)                                                                           \
         {                                                                                                                          \
-            ReadExact((char*)&bg, (bpp / 8));                                                                                      \
+            ReadExact(reinterpret_cast<char*>(&bg), (bpp / 8));                                                                                      \
             std::memcpy(pbgcolor.data(), &bg, bpp / 8);                                                                                   \
         }                                                                                                                          \
-        FillSolidRect_ultra(x, y, w, h, m_myFormat.bitsPerPixel, (BYTE*)pbgcolor.data());                                                 \
+        FillSolidRect_ultra(x, y, w, h, m_myFormat.bitsPerPixel, reinterpret_cast<BYTE*>(pbgcolor.data()));                                                 \
                                                                                                                                    \
         if (subencoding & rfbHextileForegroundSpecified)                                                                           \
         {                                                                                                                          \
-            ReadExact((char*)&fg, (bpp / 8));                                                                                      \
+            ReadExact(reinterpret_cast<char*>(&fg), (bpp / 8));                                                                                      \
             std::memcpy(pfgcolor.data(), &fg, bpp / 8);                                                                                   \
         }                                                                                                                          \
                                                                                                                                    \
@@ -157,16 +157,16 @@ std::array<BYTE, 4U> pbgcolor;
             return;                                                                                                                \
         }                                                                                                                          \
                                                                                                                                    \
-        ReadExact((char*)&nSubrects, 1);                                                                                           \
+        ReadExact(reinterpret_cast<char*>(&nSubrects), 1);                                                                                           \
                                                                                                                                    \
-        ptr = (CARD8*)m_netbuf;                                                                                                    \
+        ptr = reinterpret_cast<CARD8*>(m_netbuf);                                                                                                    \
                                                                                                                                    \
         if (subencoding & rfbHextileSubrectsColoured)                                                                              \
         {                                                                                                                          \
                                                                                                                                    \
             if (getBufferSize() < static_cast<UINT>((nSubrects * (2 + (bpp / 8)))))                                                \
                 CheckBufferSize(nSubrects * (2 + (bpp / 8)));                                                                      \
-            ptr = (CARD8*)m_netbuf;                                                                                                \
+            ptr = reinterpret_cast<CARD8*>(m_netbuf);                                                                                                \
             ReadExact(m_netbuf, nSubrects * (2 + (bpp / 8)));                                                                      \
                                                                                                                                    \
             for (i = 0; i < static_cast<int>(nSubrects); ++i)                                                                      \
@@ -177,14 +177,14 @@ std::array<BYTE, 4U> pbgcolor;
                 sy = *ptr++ & 0x0f;                                                                                                \
                 sw = (*ptr >> 4) + 1;                                                                                              \
                 sh = (*ptr++ & 0x0f) + 1;                                                                                          \
-                FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, (BYTE*)pfgcolor.data());                             \
+                FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, reinterpret_cast<BYTE*>(pfgcolor.data()));                             \
             }                                                                                                                      \
         }                                                                                                                          \
         else                                                                                                                       \
         {                                                                                                                          \
             if (getBufferSize() < static_cast<UINT>((nSubrects * 2)))                                                              \
                 CheckBufferSize(nSubrects * 2);                                                                                    \
-            ptr = (CARD8*)m_netbuf;                                                                                                \
+            ptr = reinterpret_cast<CARD8*>(m_netbuf);                                                                                                \
             ReadExact(m_netbuf, nSubrects * 2);                                                                                    \
                                                                                                                                    \
             for (i = 0; i < static_cast<int>(nSubrects); ++i)                                                                      \
@@ -193,7 +193,7 @@ std::array<BYTE, 4U> pbgcolor;
                 sy = *ptr++ & 0x0f;                                                                                                \
                 sw = (*ptr >> 4) + 1;                                                                                              \
                 sh = (*ptr++ & 0x0f) + 1;                                                                                          \
-                FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, (BYTE*)pfgcolor.data());                             \
+                FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, reinterpret_cast<BYTE*>(pfgcolor.data()));                             \
             }                                                                                                                      \
         }                                                                                                                          \
     }                                                                                                                              \
@@ -215,10 +215,10 @@ std::array<BYTE, 4U> pbgcolor;
                 return;                                                                                                            \
             bg = *((CARD##bpp*)(buffer + bufIndex));                                                                               \
             bufIndex += (bpp / 8);                                                                                                 \
-            /* ReadExact((char *)&bg, (bpp/8)); */                                                                                 \
+            /* ReadExact(reinterpret_cast<char *>(&bg), (bpp/8)); */                                                                                 \
             std::memcpy(pbgcolor.data(), &bg, bpp / 8);                                                                                   \
         }                                                                                                                          \
-        FillSolidRect_ultra(x, y, w, h, m_myFormat.bitsPerPixel, (BYTE*)pbgcolor.data());                                                 \
+        FillSolidRect_ultra(x, y, w, h, m_myFormat.bitsPerPixel, reinterpret_cast<BYTE*>(pbgcolor.data()));                                                 \
                                                                                                                                    \
         if (subencoding & rfbHextileForegroundSpecified)                                                                           \
         {                                                                                                                          \
@@ -226,7 +226,7 @@ std::array<BYTE, 4U> pbgcolor;
                 return;                                                                                                            \
             fg = *((CARD##bpp*)(buffer + bufIndex));                                                                               \
             bufIndex += (bpp / 8);                                                                                                 \
-            /* ReadExact((char *)&fg, (bpp/8)); */                                                                                 \
+            /* ReadExact(reinterpret_cast<char *>(&fg), (bpp/8)); */                                                                                 \
             std::memcpy(pfgcolor.data(), &fg, bpp / 8);                                                                                   \
         }                                                                                                                          \
                                                                                                                                    \
@@ -237,11 +237,11 @@ std::array<BYTE, 4U> pbgcolor;
                                                                                                                                    \
         if (bufLen - bufIndex < 1u)                                                                                                \
             return;                                                                                                                \
-        nSubrects = *((CARD8*)(buffer + bufIndex));                                                                                \
+        nSubrects = *(reinterpret_cast<CARD8*>((buffer + bufIndex)));                                                                                \
         bufIndex += 1;                                                                                                             \
-        /* ReadExact( (char *)&nSubrects, 1); */                                                                                   \
+        /* ReadExact( reinterpret_cast<char *>(&nSubrects), 1); */                                                                                   \
                                                                                                                                    \
-        ptr = (CARD8*)(buffer + bufIndex);                                                                                         \
+        ptr = reinterpret_cast<CARD8*>((buffer + bufIndex));                                                                                         \
                                                                                                                                    \
         if (subencoding & rfbHextileSubrectsColoured)                                                                              \
         {                                                                                                                          \
@@ -258,7 +258,7 @@ std::array<BYTE, 4U> pbgcolor;
                 sy = *ptr++ & 0x0f;                                                                                                \
                 sw = (*ptr >> 4) + 1;                                                                                              \
                 sh = (*ptr++ & 0x0f) + 1;                                                                                          \
-                FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, (BYTE*)pfgcolor.data());                             \
+                FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, reinterpret_cast<BYTE*>(pfgcolor.data()));                             \
             }                                                                                                                      \
         }                                                                                                                          \
         else                                                                                                                       \
@@ -273,7 +273,7 @@ std::array<BYTE, 4U> pbgcolor;
                 sy = *ptr++ & 0x0f;                                                                                                \
                 sw = (*ptr >> 4) + 1;                                                                                              \
                 sh = (*ptr++ & 0x0f) + 1;                                                                                          \
-                FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, (BYTE*)pfgcolor.data());                             \
+                FillSolidRect_ultra(x + sx, y + sy, sw, sh, m_myFormat.bitsPerPixel, reinterpret_cast<BYTE*>(pfgcolor.data()));                             \
             }                                                                                                                      \
         }                                                                                                                          \
     }

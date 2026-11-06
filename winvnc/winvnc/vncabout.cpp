@@ -57,7 +57,7 @@ char* GetVersionFromResource(char* const version)
                 {
                     ::CopyMemory(pResCopy, pRes, dwSize);
 
-                    if (::VerQueryValue(pResCopy, ("\\"), (LPVOID*)&lpFfi, &uLen))
+                    if (::VerQueryValue(pResCopy, ("\\"), reinterpret_cast<LPVOID*>(&lpFfi), &uLen))
                     {
                         if (lpFfi != nullptr)
                         {
@@ -100,14 +100,14 @@ DoGetBkGndBitmap(IN CONST UINT uBmpResId)
         hbmBkGnd = (HBITMAP)LoadImage( NULL, szFileName, IMAGE_BITMAP, 0, 0,
            LR_CREATEDIBSECTION | LR_DEFAULTSIZE | LR_LOADFROMFILE );*/
         hbmBkGnd =
-            (HBITMAP)::LoadImage(::GetModuleHandle(nullptr), MAKEINTRESOURCE(uBmpResId), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+            reinterpret_cast<HBITMAP>(::LoadImage(::GetModuleHandle(nullptr), MAKEINTRESOURCE(uBmpResId), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION));
 
         if (nullptr == hbmBkGnd)
         {
-            hbmBkGnd = (HBITMAP)-1;
+            hbmBkGnd = reinterpret_cast<HBITMAP>(-1);
         }
     }
-    return (hbmBkGnd == (HBITMAP)-1) ? nullptr : hbmBkGnd;
+    return (hbmBkGnd == reinterpret_cast<HBITMAP>(-1)) ? nullptr : hbmBkGnd;
 }
 BOOL DoSDKEraseBkGnd(IN CONST HDC hDC, IN CONST COLORREF crBkGndFill)
 {
@@ -186,7 +186,7 @@ void vncAbout::Show(const BOOL show)
         {
             //	[v1.0.2-jp1 fix]
             //DialogBoxParam(hAppInstance,
-            ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_ABOUT), nullptr, (DLGPROC)DialogProc, (LONG_PTR)this);
+            ::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_ABOUT), nullptr, reinterpret_cast<DLGPROC>(DialogProc), reinterpret_cast<LONG_PTR>(this));
         }
     }
 }
@@ -198,15 +198,15 @@ BOOL CALLBACK vncAbout::DialogProc(const HWND hwnd, const UINT uMsg, const WPARA
 #ifndef _X64
     vncAbout* _this = (vncAbout*)::GetWindowLong(hwnd, GWL_USERDATA);
 #else
-    vncAbout* _this = (vncAbout*)::GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    vncAbout* _this = reinterpret_cast<vncAbout*>(::GetWindowLongPtr(hwnd, GWLP_USERDATA));
 #endif
     switch (uMsg)
     {
 
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_WINVNC));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         // Retrieve the Dialog box parameter and use it as a pointer
         // to the calling vncProperties object
 #ifndef _X64
@@ -214,7 +214,7 @@ BOOL CALLBACK vncAbout::DialogProc(const HWND hwnd, const UINT uMsg, const WPARA
 #else
         ::SetWindowLongPtr(hwnd, GWLP_USERDATA, lParam);
 #endif
-        _this = (vncAbout*)lParam;
+        _this = reinterpret_cast<vncAbout*>(lParam);
 
         // Insert the build time information
         extern char buildtime[];
@@ -261,7 +261,7 @@ BOOL CALLBACK vncAbout::DialogProc(const HWND hwnd, const UINT uMsg, const WPARA
             return TRUE;
         }
     case IDC_WWW: {
-        ::ShellExecute(::GetDesktopWindow(), "open", "https://uvnc.com/", "", 0, SW_SHOWNORMAL);
+        ::ShellExecute(::GetDesktopWindow(), "open", "https://uvnc.com/", "", nullptr, SW_SHOWNORMAL);
         return TRUE;
     }
 

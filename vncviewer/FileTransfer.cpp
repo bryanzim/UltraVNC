@@ -39,8 +39,8 @@
 #include "ViewerBounds.h"
 #include "vncviewer.h"
 
-#include <commctrl.h>
-#include <shlobj.h>
+#include <CommCtrl.h>
+#include <ShlObj.h>
 
 #include <array>
 #include <cstddef>
@@ -59,7 +59,7 @@
 #include "Log.h"
 #include "UltraVNCHelperFunctions.h"
 
-#include <shlwapi.h>
+#include <Shlwapi.h>
 
 #include <algorithm>
 #include <limits>
@@ -198,7 +198,7 @@ static FileTransfer* g_FileTransferSingleton = nullptr;
 // so without volatile the timer thread can read a stale cached value.
 static volatile bool g_fHeadlessUpload{ false };
 
-HWND hFTWnd = 0;
+HWND hFTWnd = nullptr;
 static std::string make_temp_filename(const char* const szRemoteFileName)
 {
     // don't add prefix for directory transfers.
@@ -309,7 +309,7 @@ FileTransfer::FileTransfer(VNCviewerApp* const l_pApp, ClientConnection* pCC)
     m_hDestFile = INVALID_HANDLE_VALUE;
     m_fFileUploadRunning = false;
     m_fFileDownloadRunning = false;
-    hWnd = 0;
+    hWnd = nullptr;
     m_fFocusLocal = true;
     std::memset(m_szFTParamTitle.data(), 0, sizeof m_szFTParamTitle);
     std::memset(m_szFTParamComment.data(), 0, sizeof m_szFTParamComment);
@@ -357,8 +357,8 @@ FileTransfer::FileTransfer(VNCviewerApp* const l_pApp, ClientConnection* pCC)
 
     for (int i{ 0 }; i < 3; ++i)
     {
-        bSortDirectionsL[i] = false;
-        bSortDirectionsR[i] = false;
+        bSortDirectionsL[static_cast<unsigned long long>(i)] = false;
+        bSortDirectionsR[static_cast<unsigned long long>(i)] = false;
     }
     // 16 April 2008 jdp
     // load richedit so the path display can handly mbcs
@@ -413,7 +413,7 @@ void FileTransfer::InitFTTimer()
     }
 
     m_fSendFileChunk = false;
-    m_mmRes = timeSetEvent(10, 0, (LPTIMECALLBACK)fpTimer, (DWORD_PTR)this, TIME_PERIODIC);
+    m_mmRes = timeSetEvent(10, 0, reinterpret_cast<LPTIMECALLBACK>(fpTimer), reinterpret_cast<DWORD_PTR>(this), TIME_PERIODIC);
 #else
 
     if (m_timerID != 0xFFFFFFFF)
@@ -460,7 +460,7 @@ void CALLBACK FileTransfer::fpTimerProc([[maybe_unused]] const HWND hwnd, [[mayb
 void CALLBACK FileTransfer::fpTimer([[maybe_unused]] const UINT uID, [[maybe_unused]] const UINT uMsg, const DWORD_PTR dwUser, [[maybe_unused]] const DWORD_PTR dw1,
                                     [[maybe_unused]] const DWORD_PTR dw2)
 {
-    FileTransfer* ft = (FileTransfer*)dwUser;
+    FileTransfer* ft = reinterpret_cast<FileTransfer*>(dwUser);
 
     TimerCallback(ft);
 }
@@ -580,7 +580,7 @@ void FileTransfer::ProcessFileTransferMsg(void)
     m_pCC->m_nNetRectBufOffset = 0;
 
     rfbFileTransferMsg ft;
-    m_pCC->ReadExact(((char*)&ft) + m_pCC->m_nTO, sz_rfbFileTransferMsg - m_pCC->m_nTO);
+    m_pCC->ReadExact((reinterpret_cast<char*>(&ft)) + m_pCC->m_nTO, sz_rfbFileTransferMsg - m_pCC->m_nTO);
     if (!ViewerBounds::payload(Swap32IfLE(ft.length)))
     {
         throw ErrorException(L"File-transfer payload exceeds size limit.");
@@ -613,7 +613,7 @@ void FileTransfer::ProcessFileTransferMsg(void)
         // Strip the unicode flag to get the base content param
         const CARD16 rawParam = ft.contentParam;
         const bool fUnicodeEntry = (rawParam & rfbADirUnicode) != 0;
-        const CARD16 baseParam = rawParam & ~(CARD16)rfbADirUnicode;
+        const CARD16 baseParam = rawParam & ~static_cast<CARD16>(rfbADirUnicode);
         switch (baseParam)
         {
         // Response to a rfbRDrivesList request
@@ -676,7 +676,7 @@ void FileTransfer::ProcessFileTransferMsg(void)
     // The server can send the checksums of the destination file before sending a ack through
     // rfbFileAcceptHeader (only if the destination file already exists and is accessible)
     case rfbFileChecksums:
-        ReceiveDestinationFileChecksums(Swap32IfLE(ft.size), Swap32IfLE(ft.length));
+        ReceiveDestinationFileChecksums(static_cast<int>(Swap32IfLE(ft.size)), Swap32IfLE(ft.length));
         m_pCC->SetRecvTimeout();
         break;
 
@@ -685,7 +685,7 @@ void FileTransfer::ProcessFileTransferMsg(void)
     case rfbFileAcceptHeader:
         if (rfbFileTransferOfferRequested)
         {
-            SendFiles(Swap32IfLE(ft.size), Swap32IfLE(ft.length));
+            SendFiles(static_cast<long>(Swap32IfLE(ft.size)), Swap32IfLE(ft.length));
             rfbFileTransferOfferRequested = false;
         }
         break;
@@ -695,17 +695,17 @@ void FileTransfer::ProcessFileTransferMsg(void)
         switch (ft.contentParam)
         {
         case rfbADirCreate:
-            CreateRemoteDirectoryFeedback(Swap32IfLE(ft.size), Swap32IfLE(ft.length));
+            CreateRemoteDirectoryFeedback(static_cast<long>(Swap32IfLE(ft.size)), Swap32IfLE(ft.length));
             m_fFileCommandPending = false;
             break;
 
         case rfbAFileDelete:
-            DeleteRemoteFileFeedback(Swap32IfLE(ft.size), Swap32IfLE(ft.length));
+            DeleteRemoteFileFeedback(static_cast<long>(Swap32IfLE(ft.size)), Swap32IfLE(ft.length));
             m_fFileCommandPending = false;
             break;
 
         case rfbAFileRename:
-            RenameRemoteFileOrDirectoryFeedback(Swap32IfLE(ft.size), Swap32IfLE(ft.length));
+            RenameRemoteFileOrDirectoryFeedback(static_cast<long>(Swap32IfLE(ft.size)), Swap32IfLE(ft.length));
             m_fFileCommandPending = false;
             break;
         }
@@ -714,7 +714,7 @@ void FileTransfer::ProcessFileTransferMsg(void)
     // Should never be handled here but in the File Transfer Loop
     case rfbFilePacket:
         m_pCC->SetRecvTimeout();
-        ReceiveFileChunk(Swap32IfLE(ft.length), Swap32IfLE(ft.size));
+        ReceiveFileChunk(Swap32IfLE(ft.length), static_cast<int>(Swap32IfLE(ft.size)));
         // adzm 2010-09
         m_pCC->SendKeepAlive(false, true);
         break;
@@ -740,13 +740,13 @@ void FileTransfer::ProcessFileTransferMsg(void)
             m_nBlockSize = 4096;                              // Old packet size value...
             ::ShowWindow(::GetDlgItem(hWnd, IDC_RENAME_B), SW_HIDE);
 
-            TestPermission(Swap32IfLE(ft.size), 0);
+            TestPermission(static_cast<long>(Swap32IfLE(ft.size)), 0);
         }
         break;
 
     // New File Transfer handshaking/permission method (from RC19)
     case rfbFileTransferAccess:
-        TestPermission(Swap32IfLE(ft.size), ft.contentParam);
+        TestPermission(static_cast<long>(Swap32IfLE(ft.size)), ft.contentParam);
         break;
 
     default:
@@ -779,7 +779,7 @@ void FileTransfer::RequestPermission()
     // ft.contentParam = rfbFileTransferVersion;
     ft.length = 0;
     ft.size = 0;
-    m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+    m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
     return;
 }
 
@@ -794,7 +794,7 @@ void FileTransfer::StartFTSession()
     std::memset(&ft, 0, sizeof ft);
     ft.type = rfbFileTransfer;
     ft.contentType = rfbFileTransferSessionStart;
-    m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+    m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
 }
 
 void FileTransfer::EndFTSession()
@@ -808,7 +808,7 @@ void FileTransfer::EndFTSession()
     std::memset(&ft, 0, sizeof ft);
     ft.type = rfbFileTransfer;
     ft.contentType = rfbFileTransferSessionEnd;
-    m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+    m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
 }
 //
 // Free lParam (wstring*) memory for all items in a ListView, then clear it
@@ -817,11 +817,11 @@ void FileTransfer::EndFTSession()
 // Sort comparator: folders (display text starts with '[') before files, then alphabetical within each group
 static int CALLBACK FolderFirstSort(const LPARAM lParam1, const LPARAM lParam2, const LPARAM lParamSort)
 {
-    HWND hWndList = (HWND)lParamSort;
+    HWND hWndList = reinterpret_cast<HWND>(lParamSort);
     std::array<WCHAR, MAX_PATH + 4> sz1{ 0 };
     std::array<WCHAR, MAX_PATH + 4> sz2{ 0 };
-    ListView_GetItemText(hWndList, lParam1, 0, sz1.data(), static_cast<int>(sz1.size()));
-    ListView_GetItemText(hWndList, lParam2, 0, sz2.data(), static_cast<int>(sz2.size()));
+    ListView_GetItemText(hWndList, lParam1, 0, sz1.data(), static_cast<int>(sz1.size()))
+    ListView_GetItemText(hWndList, lParam2, 0, sz2.data(), static_cast<int>(sz2.size()))
     bool b1folder = (sz1[0U] == L'[');
     bool b2folder = (sz2[0U] == L'[');
     if (b1folder != b2folder)
@@ -841,9 +841,9 @@ static void FTListViewClear(const HWND hWndList)
         ItemW.mask = LVIF_PARAM;
         ItemW.iItem = i;
         ItemW.iSubItem = 0;
-        if (::SendMessageW(hWndList, LVM_GETITEMW, 0, (LPARAM)&ItemW))
+        if (::SendMessageW(hWndList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW)))
         {
-            std::wstring* p = reinterpret_cast<std::wstring*>(ItemW.lParam & ~(LPARAM)0x00000001);
+            std::wstring* p = reinterpret_cast<std::wstring*>(ItemW.lParam & ~static_cast<LPARAM>(0x00000001));
             delete p;
         }
     }
@@ -928,8 +928,8 @@ bool FileTransfer::RequestNextFile()
         ItemW.mask = LVIF_PARAM;
         ItemW.iItem = *m_iFile;
         ItemW.iSubItem = 0;
-        ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, (LPARAM)&ItemW);
-        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
+        ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
+        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~static_cast<LPARAM>(FT_LPARAM_UNREADABLE));
 
         // Check display text to determine if it's a directory (shown as "[ name ]")
         bool bIsDir{ false };
@@ -941,7 +941,7 @@ bool FileTransfer::RequestNextFile()
             _dii.iItem = *m_iFile;
             _dii.pszText = _disp.data();
             _dii.cchTextMax = MAX_PATH + 4;
-            ::SendMessageW(hWndRemoteList, LVM_GETITEMTEXTW, *m_iFile, (LPARAM)&_dii);
+            ::SendMessageW(hWndRemoteList, LVM_GETITEMTEXTW, static_cast<WPARAM>(*m_iFile), reinterpret_cast<LPARAM>(&_dii));
             if ((_disp[0U] == L'[') && (_disp[1U] == L' '))
             {
                 bIsDir = true;
@@ -1041,8 +1041,8 @@ bool FileTransfer::OfferNextFile()
         ItemW.mask = LVIF_PARAM;
         ItemW.iItem = *m_iFile;
         ItemW.iSubItem = 0;
-        ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, (LPARAM)&ItemW);
-        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
+        ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
+        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~static_cast<LPARAM>(FT_LPARAM_UNREADABLE));
 
         // Build full local path in Unicode
         std::array<WCHAR, MAX_PATH * 4> szSrcFileW;
@@ -1175,24 +1175,24 @@ void FileTransfer::GetFriendlyFileSizeString(__int64 Size, char* const szText, c
     {
         __int64 lRest = (Size % (1024 * 1024 * 1024));
         Size /= (1024 * 1024 * 1024);
-        ::_snprintf_s(szText, size, 256, "%u.%2.2lu Gb", static_cast<unsigned long>(Size),
+        ::_snprintf_s(szText, static_cast<size_t>(size), 256, "%u.%2.2lu Gb", static_cast<unsigned long>(Size),
                     static_cast<unsigned long>((lRest * 100 / 1024 / 1024 / 1024)));
     }
     else if (Size > (1024 * 1024))
     {
-        unsigned long lRest = (Size % (1024 * 1024));
+        unsigned long lRest = (static_cast<unsigned long>(Size % (1024 * 1024)));
         Size /= (1024 * 1024);
-        ::_snprintf_s(szText, size, 256, "%u.%2.2lu Mb", static_cast<unsigned long>(Size), lRest * 100 / 1024 / 1024);
+        ::_snprintf_s(szText, static_cast<size_t>(size), 256, "%u.%2.2lu Mb", static_cast<unsigned long>(Size), lRest * 100 / 1024 / 1024);
     }
     else if (Size > 1024)
     {
-        unsigned long lRest = Size % (1024);
+        unsigned long lRest = static_cast<unsigned long>(Size % (1024));
         Size /= 1024;
-        ::_snprintf_s(szText, size, 256, "%u.%2.2lu Kb", static_cast<unsigned long>(Size), lRest * 100 / 1024);
+        ::_snprintf_s(szText, static_cast<size_t>(size), 256, "%u.%2.2lu Kb", static_cast<unsigned long>(Size), lRest * 100 / 1024);
     }
     else
     {
-        ::_snprintf_s(szText, size, 256, "%u bytes", static_cast<unsigned long>(Size));
+        ::_snprintf_s(szText, static_cast<size_t>(size), 256, "%u bytes", static_cast<unsigned long>(Size));
     }
 }
 
@@ -1222,7 +1222,7 @@ bool FileTransfer::MyGetFileSize(const LPCWSTR szFilePath, ULARGE_INTEGER* const
 
     (*n2FileSize).LowPart = fdW.nFileSizeLow;
     (*n2FileSize).HighPart = fdW.nFileSizeHigh;
-    (*n2FileSize).QuadPart = (((__int64)fdW.nFileSizeHigh) << 32) + fdW.nFileSizeLow;
+    (*n2FileSize).QuadPart = static_cast<ULONGLONG>(((static_cast<__int64>(fdW.nFileSizeHigh)) << 32) + fdW.nFileSizeLow);
 
     return true;
 }
@@ -1245,7 +1245,7 @@ void FileTransfer::AddFileToFileList(const HWND hWndIn, const int nListId, WIN32
     }
     else
     {
-        ::MultiByteToWideChar(CP_ACP, 0, (LPCSTR)fd.cFileName, -1, szFileNameW.data(), MAX_PATH);
+        ::MultiByteToWideChar(CP_ACP, 0, reinterpret_cast<LPCSTR>(fd.cFileName), -1, szFileNameW.data(), MAX_PATH);
     }
 
     if ((((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) && std::wcscmp(szFileNameW.data(), L".")) ||
@@ -1268,8 +1268,8 @@ void FileTransfer::AddFileToFileList(const HWND hWndIn, const int nListId, WIN32
         ItemW.iImage = 0;
         ItemW.pszText = szDirNameW.data();
         // Store heap-allocated Unicode filename in lParam (freed when list is cleared)
-        ItemW.lParam = (LPARAM)(new std::wstring(szFileNameW.data()));
-        int nItem = static_cast<int>(::SendMessageW(hWndList, LVM_INSERTITEMW, 0, (LPARAM)&ItemW));
+        ItemW.lParam = reinterpret_cast<LPARAM>((new std::wstring(szFileNameW.data())));
+        int nItem = static_cast<int>(::SendMessageW(hWndList, LVM_INSERTITEMW, 0, reinterpret_cast<LPARAM>(&ItemW)));
 
         // Type subitem
         LVITEMW SubW;
@@ -1278,7 +1278,7 @@ void FileTransfer::AddFileToFileList(const HWND hWndIn, const int nListId, WIN32
         SubW.iItem = nItem;
         SubW.iSubItem = 1;
         SubW.pszText = L"Folder";
-        ::SendMessageW(hWndList, LVM_SETITEMW, 0, (LPARAM)&SubW);
+        ::SendMessageW(hWndList, LVM_SETITEMW, 0, reinterpret_cast<LPARAM>(&SubW));
 
         // For remote items: server sets dwReserved0=rfbFD_INACCESSIBLE when subfolder can't be read
         if (!fLocalSide && std::wcscmp(szFileNameW.data(), L"..") && (fd.dwReserved0 == rfbFD_INACCESSIBLE))
@@ -1288,9 +1288,9 @@ void FileTransfer::AddFileToFileList(const HWND hWndIn, const int nListId, WIN32
             flagItem.mask = LVIF_PARAM;
             flagItem.iItem = nItem;
             flagItem.iSubItem = 0;
-            ::SendMessageW(hWndList, LVM_GETITEMW, 0, (LPARAM)&flagItem);
+            ::SendMessageW(hWndList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&flagItem));
             flagItem.lParam |= FT_LPARAM_UNREADABLE;
-            ::SendMessageW(hWndList, LVM_SETITEMW, 0, (LPARAM)&flagItem);
+            ::SendMessageW(hWndList, LVM_SETITEMW, 0, reinterpret_cast<LPARAM>(&flagItem));
         }
 
         // Proactively check if local folder is accessible
@@ -1313,9 +1313,9 @@ void FileTransfer::AddFileToFileList(const HWND hWndIn, const int nListId, WIN32
                     flagItem.mask = LVIF_PARAM;
                     flagItem.iItem = nItem;
                     flagItem.iSubItem = 0;
-                    ::SendMessageW(hWndList, LVM_GETITEMW, 0, (LPARAM)&flagItem);
+                    ::SendMessageW(hWndList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&flagItem));
                     flagItem.lParam |= FT_LPARAM_UNREADABLE;
-                    ::SendMessageW(hWndList, LVM_SETITEMW, 0, (LPARAM)&flagItem);
+                    ::SendMessageW(hWndList, LVM_SETITEMW, 0, reinterpret_cast<LPARAM>(&flagItem));
                 }
                 else
                 {
@@ -1335,11 +1335,11 @@ void FileTransfer::AddFileToFileList(const HWND hWndIn, const int nListId, WIN32
         ItemW.iImage = 1;
         ItemW.pszText = szFileNameW.data();
         // Store heap-allocated Unicode filename in lParam (freed when list is cleared)
-        ItemW.lParam = (LPARAM)(new std::wstring(szFileNameW.data()));
-        const int nItem = static_cast<int>(::SendMessageW(hWndList, LVM_INSERTITEMW, 0, (LPARAM)&ItemW));
+        ItemW.lParam = reinterpret_cast<LPARAM>((new std::wstring(szFileNameW.data())));
+        const int nItem = static_cast<int>(::SendMessageW(hWndList, LVM_INSERTITEMW, 0, reinterpret_cast<LPARAM>(&ItemW)));
 
         // Size
-        __int64 Size = (((__int64)fd.nFileSizeHigh) << 32) + fd.nFileSizeLow;
+        __int64 Size = ((static_cast<__int64>(fd.nFileSizeHigh)) << 32) + fd.nFileSizeLow;
         std::array<char, 256U> szText;
         GetFriendlyFileSizeString(Size, szText.data(), 256);
         std::array<WCHAR, 256U> szTextW;
@@ -1351,7 +1351,7 @@ void FileTransfer::AddFileToFileList(const HWND hWndIn, const int nListId, WIN32
         SubW.iItem = nItem;
         SubW.iSubItem = 1;
         SubW.pszText = szTextW.data();
-        ::SendMessageW(hWndList, LVM_SETITEMW, 0, (LPARAM)&SubW);
+        ::SendMessageW(hWndList, LVM_SETITEMW, 0, reinterpret_cast<LPARAM>(&SubW));
 
         // Last Modif Time - display using OS locale format, store ISO prefix for correct sorting
         // Format stored: "YYYYMMDDHHMMSS|locale_date locale_time" - sort on full string, display after '|'
@@ -1369,7 +1369,7 @@ void FileTransfer::AddFileToFileList(const HWND hWndIn, const int nListId, WIN32
         SubW.mask = LVIF_TEXT;
         SubW.iSubItem = 2;
         SubW.pszText = szSortableW.data();
-        ::SendMessageW(hWndList, LVM_SETITEMW, 0, (LPARAM)&SubW);
+        ::SendMessageW(hWndList, LVM_SETITEMW, 0, reinterpret_cast<LPARAM>(&SubW));
     }
 }
 
@@ -1392,7 +1392,7 @@ void FileTransfer::HighlightTransferedFiles(const HWND hSrcList, const HWND hDst
 
         LVFINDINFO Info;
         Info.flags = LVFI_STRING;
-        Info.psz = (LPWSTR)szSelectedFile.data();
+        Info.psz = reinterpret_cast<LPWSTR>(szSelectedFile.data());
 
         for (m_iFile = m_FilesList.begin(); m_iFile != m_FilesList.end(); ++m_iFile)
         {
@@ -1404,7 +1404,7 @@ void FileTransfer::HighlightTransferedFiles(const HWND hSrcList, const HWND hDst
             int nTheIndex = ListView_FindItem(hDstList, -1, &Info);
             if (nTheIndex > -1)
             {
-                ListView_SetItemState(hDstList, nTheIndex, LVIS_SELECTED, LVIS_SELECTED);
+                ListView_SetItemState(hDstList, nTheIndex, LVIS_SELECTED, LVIS_SELECTED)
                 ListView_EnsureVisible(hDstList, nTheIndex, FALSE);
             }
         }
@@ -1515,7 +1515,7 @@ bool FileTransfer::GetSpecialFolderPathW(const int nId, WCHAR* const szPathW)
 {
     LPITEMIDLIST pidl;
 
-    if (::SHGetSpecialFolderLocation(0, nId, &pidl) != NOERROR)
+    if (::SHGetSpecialFolderLocation(nullptr, nId, &pidl) != NOERROR)
     {
         return false;
     }
@@ -1682,8 +1682,8 @@ void FileTransfer::PopulateLocalListBox(const HWND hWndIn, const LPSTR szPath)
                 ItemW.mask = LVIF_PARAM;
                 ItemW.iItem = nSelected;
                 ItemW.iSubItem = 0;
-                ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, (LPARAM)&ItemW);
-                std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
+                ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
+                std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~static_cast<LPARAM>(FT_LPARAM_UNREADABLE));
 
                 // Work in Unicode - no ANSI conversion needed!
                 std::array<WCHAR, MAX_PATH * 4> szFolderNameW{ 0 };
@@ -1698,7 +1698,7 @@ void FileTransfer::PopulateLocalListBox(const HWND hWndIn, const LPSTR szPath)
                     ItemW.mask = LVIF_TEXT;
                     ItemW.pszText = szDispW.data();
                     ItemW.cchTextMax = MAX_PATH;
-                    ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, (LPARAM)&ItemW);
+                    ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
                     // Strip brackets: "[ name ]" -> "name"
                     if ((std::wcslen(szDispW.data()) > 4) && (szDispW[0U] == L'[') && (szDispW[1U] == L' '))
                     {
@@ -1817,7 +1817,7 @@ void FileTransfer::PopulateLocalListBox(const HWND hWndIn, const LPSTR szPath)
             LVFINDINFO Info;
             std::memset(&Info, 0, sizeof(Info));
             Info.flags = LVFI_STRING;
-            Info.psz = (LPCWSTR)ofDirT.data();
+            Info.psz = reinterpret_cast<LPCWSTR>(ofDirT.data());
             m_nLastLocalAttemptItem = ListView_FindItem(hWndLocalList, -1, &Info);
             ::strcpy_s(m_szLastLocalAttemptName.data(), m_szLastLocalAttemptName.size(), ofDirT.data());
             // In the case of (..) we keep the current path intact
@@ -1868,8 +1868,8 @@ void FileTransfer::PopulateLocalListBox(const HWND hWndIn, const LPSTR szPath)
         std::array<char, 5U> szDrive;
         ::strcpy_s(szDrive.data(), szDrive.size(), rfbDirPrefix);
         ::strncat_s(szDrive.data(), szDrive.size(), ofDir.data(), 2);
-        nIndex = static_cast<int>(::SendDlgItemMessage(hWndIn, IDC_LOCAL_DRIVECB, CB_FINDSTRING, static_cast<WPARAM>(-1), (LPARAM)(LPSTR)szDrive.data()));
-        ::SendDlgItemMessage(hWndIn, IDC_LOCAL_DRIVECB, CB_SETCURSEL, nIndex, 0L);
+        nIndex = static_cast<int>(::SendDlgItemMessage(hWndIn, IDC_LOCAL_DRIVECB, CB_FINDSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(szDrive.data())));
+        ::SendDlgItemMessage(hWndIn, IDC_LOCAL_DRIVECB, CB_SETCURSEL, static_cast<WPARAM>(nIndex), 0L);
     }
 
     ::SetDlgItemTextW(hWndIn, IDC_LOCAL_STATUS, sz_H8.data());
@@ -1910,7 +1910,7 @@ populate_folder:
             ItemW.mask = LVIF_PARAM;
             ItemW.iItem = m_nLastLocalAttemptItem;
             ItemW.iSubItem = 0;
-            if (::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, (LPARAM)&ItemW))
+            if (::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW)))
             {
                 ItemW.lParam |= FT_LPARAM_UNREADABLE;
             }
@@ -1918,7 +1918,7 @@ populate_folder:
             {
                 ItemW.lParam = FT_LPARAM_UNREADABLE;
             }
-            ::SendMessageW(hWndLocalList, LVM_SETITEMW, 0, (LPARAM)&ItemW);
+            ::SendMessageW(hWndLocalList, LVM_SETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
             ListView_RedrawItems(hWndLocalList, m_nLastLocalAttemptItem, m_nLastLocalAttemptItem);
             ::UpdateWindow(hWndLocalList);
         }
@@ -1964,7 +1964,7 @@ populate_folder:
     ::FindClose(ff);
 
     // Sort: folders before files, then alphabetical within each group
-    ListView_SortItemsEx(hWndLocalList, FolderFirstSort, (LPARAM)hWndLocalList);
+    ListView_SortItemsEx(hWndLocalList, FolderFirstSort, reinterpret_cast<LPARAM>(hWndLocalList));
 
     {
         std::array<wchar_t, 128U> _ws58;
@@ -2025,7 +2025,7 @@ void FileTransfer::RequestRemoteDirectoryContent(const HWND hWndIn, const LPCWST
                 ItemLP.mask = LVIF_PARAM;
                 ItemLP.iItem = nSelected;
                 ItemLP.iSubItem = 0;
-                ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, (LPARAM)&ItemLP);
+                ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemLP));
                 // Also get display text (e.g. "[subfolder]" or "[C:]") for ANSI display/legacy
                 std::array<WCHAR, MAX_PATH> szDispW{ 0 };
                 LVITEMW ItemW;
@@ -2035,7 +2035,7 @@ void FileTransfer::RequestRemoteDirectoryContent(const HWND hWndIn, const LPCWST
                 ItemW.iSubItem = 0;
                 ItemW.pszText = szDispW.data();
                 ItemW.cchTextMax = MAX_PATH;
-                ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, (LPARAM)&ItemW);
+                ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
                 // Store display text for error tracking (convert to ANSI only for legacy m_szLastRemoteAttemptName)
                 std::array<char, MAX_PATH> szDispA;
                 ::WideCharToMultiByte(CP_ACP, 0, szDispW.data(), -1, szDispA.data(), static_cast<int>(szDispA.size()), nullptr, nullptr);
@@ -2044,7 +2044,7 @@ void FileTransfer::RequestRemoteDirectoryContent(const HWND hWndIn, const LPCWST
                 ::GetDlgItemTextW(hWndIn, IDC_CURR_REMOTE, m_szLastRemotePathW.data(), static_cast<int>(m_szLastRemotePathW.size()));
                 ::WideCharToMultiByte(CP_ACP, 0, m_szLastRemotePathW.data(), -1, m_szLastRemotePath.data(), static_cast<int>(m_szLastRemotePath.size()), nullptr, nullptr);
 
-                std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemLP.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
+                std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemLP.lParam & ~static_cast<LPARAM>(FT_LPARAM_UNREADABLE));
                 if (pNameW)
                 {
                     // Regular folder: get raw name from lParam
@@ -2272,8 +2272,8 @@ void FileTransfer::RequestRemoteDirectoryContent(const HWND hWndIn, const LPCWST
         std::array<char, 5U> szDrive;
         ::strcpy_s(szDrive.data(), szDrive.size(), rfbDirPrefix);
         ::strncat_s(szDrive.data(), szDrive.size(), ofDir.data(), 2);
-        nIndex = static_cast<int>(::SendDlgItemMessage(hWndIn, IDC_REMOTE_DRIVECB, CB_FINDSTRING, static_cast<WPARAM>(-1), (LPARAM)(LPSTR)szDrive.data()));
-        ::SendDlgItemMessage(hWndIn, IDC_REMOTE_DRIVECB, CB_SETCURSEL, nIndex, 0L);
+        nIndex = static_cast<int>(::SendDlgItemMessage(hWndIn, IDC_REMOTE_DRIVECB, CB_FINDSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(szDrive.data())));
+        ::SendDlgItemMessage(hWndIn, IDC_REMOTE_DRIVECB, CB_SETCURSEL, static_cast<WPARAM>(nIndex), 0L);
     }
 
     // Don't clear list here - wait until we know folder is readable (in PopulateRemoteListBox)
@@ -2285,11 +2285,11 @@ send_request:
     rfbFileTransferMsg ft;
     ft.type = rfbFileTransfer;
     ft.contentType = rfbDirContentRequest;
-    ft.contentParam = m_fServerSupportsUnicode ? (CARD16)(rfbRDirContent | rfbRDirContentUnicode) : (CARD16)rfbRDirContent;
-    ft.length = Swap32IfLE((UINT32)std::strlen(ofDir.data()));
+    ft.contentParam = m_fServerSupportsUnicode ? static_cast<CARD16>((rfbRDirContent | rfbRDirContentUnicode)) : static_cast<CARD16>(rfbRDirContent);
+    ft.length = Swap32IfLE(static_cast<UINT32>(std::strlen(ofDir.data())));
     //adzm 2010-09
-    m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-    m_pCC->WriteExact((char*)ofDir.data(), static_cast<int>(std::strlen(ofDir.data())));
+    m_pCC->WriteExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+    m_pCC->WriteExact(reinterpret_cast<char*>(ofDir.data()), static_cast<int>(std::strlen(ofDir.data())));
 
     return;
 }
@@ -2314,7 +2314,7 @@ void FileTransfer::PopulateRemoteListBox(const HWND hWndIn, const UINT nLen, [[m
             ItemW.mask = LVIF_PARAM;
             ItemW.iItem = m_nLastRemoteAttemptItem;
             ItemW.iSubItem = 0;
-            if (::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, (LPARAM)&ItemW))
+            if (::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW)))
             {
                 ItemW.lParam |= FT_LPARAM_UNREADABLE;
             }
@@ -2322,7 +2322,7 @@ void FileTransfer::PopulateRemoteListBox(const HWND hWndIn, const UINT nLen, [[m
             {
                 ItemW.lParam = FT_LPARAM_UNREADABLE;
             }
-            ::SendMessageW(hWndRemoteList, LVM_SETITEMW, 0, (LPARAM)&ItemW);
+            ::SendMessageW(hWndRemoteList, LVM_SETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
             ListView_RedrawItems(hWndRemoteList, m_nLastRemoteAttemptItem, m_nLastRemoteAttemptItem);
             ::UpdateWindow(hWndRemoteList);
         }
@@ -2403,7 +2403,7 @@ void FileTransfer::ReceiveDirectoryItem(const HWND hWndIn, const UINT nLen, cons
         }
         WIN32_FIND_DATAW fdW;
         std::memset(&fdW, 0, sizeof(fdW));
-        m_pCC->ReadExact((char*)&fdW, nLen);
+        m_pCC->ReadExact(reinterpret_cast<char*>(&fdW), static_cast<int>(nLen));
         if (std::wmemchr(fdW.cFileName, L'\0', _countof(fdW.cFileName)) == nullptr)
         {
             throw ErrorException(L"Unterminated directory filename.");
@@ -2426,7 +2426,7 @@ void FileTransfer::ReceiveDirectoryItem(const HWND hWndIn, const UINT nLen, cons
             throw ErrorException(L"Remote directory entry exceeds size limit.");
         }
         // Read the File/Directory full info
-        m_pCC->ReadString((char*)m_szFileSpec.data(), nLen);
+        m_pCC->ReadString(reinterpret_cast<char*>(m_szFileSpec.data()), nLen);
         std::memset(&m_fd, '\0', sizeof(WIN32_FIND_DATA));
         std::memcpy(&m_fd, m_szFileSpec.data(), nLen);
     }
@@ -2470,7 +2470,7 @@ void FileTransfer::FinishDirectoryReception()
     }
 
     // Sort: folders before files, then alphabetical within each group
-    ListView_SortItemsEx(hWndRemoteList, FolderFirstSort, (LPARAM)hWndRemoteList);
+    ListView_SortItemsEx(hWndRemoteList, FolderFirstSort, reinterpret_cast<LPARAM>(hWndRemoteList));
 
     // If some files have been sent to remote side highlight them
     HighlightTransferedFiles(hWndLocalList, hWndRemoteList);
@@ -2499,7 +2499,7 @@ void FileTransfer::RequestRemoteDrives()
     ft.contentType = rfbDirContentRequest;
     ft.contentParam = rfbRDrivesList; // List of Remote Drives please
     ft.length = 0;
-    m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+    m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
 
     return;
 }
@@ -2592,7 +2592,7 @@ void FileTransfer::ListRemoteDrives(const HWND hWndIn, const UINT nLen)
         }
 #endif
 
-        ::SendMessageW(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szTheDrive.data());
+        ::SendMessageW(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(szTheDrive.data()));
     }
 
     // List the usual shorcuts
@@ -2610,7 +2610,7 @@ void FileTransfer::ListRemoteDrives(const HWND hWndIn, const UINT nLen)
         ::_sntprintf_s(szGUIDir2.data(), 64, _TRUNCATE, _T("%s%s%s"), L"[ ", _T("My Documents"), L" ]");
         Item.pszText = szGUIDir2.data(); // Todo: Fr/De
         ListView_InsertItem(hWndRemoteList, &Item);
-        ::SendMessageW(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir2.data());
+        ::SendMessageW(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(szGUIDir2.data()));
 
         // Desktop
         Item.mask = LVIF_TEXT | LVIF_PARAM;
@@ -2620,7 +2620,7 @@ void FileTransfer::ListRemoteDrives(const HWND hWndIn, const UINT nLen)
         ::_sntprintf_s(szGUIDir2.data(), 64, _TRUNCATE, _T("%s%s%s"), L"[ ", _T("Desktop"), L" ]");
         Item.pszText = szGUIDir2.data(); // Todo: Fr/De
         ListView_InsertItem(hWndRemoteList, &Item);
-        ::SendMessageW(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir2.data());
+        ::SendMessageW(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(szGUIDir2.data()));
 
         Item.mask = LVIF_TEXT | LVIF_PARAM;
         Item.iItem = 0;
@@ -2629,7 +2629,7 @@ void FileTransfer::ListRemoteDrives(const HWND hWndIn, const UINT nLen)
         ::_sntprintf_s(szGUIDir2.data(), 64, _TRUNCATE, _T("%s%s%s"), L"[ ", _T("Network Favorites"), L" ]");
         Item.pszText = szGUIDir2.data(); // Todo: Fr/De
         ListView_InsertItem(hWndRemoteList, &Item);
-        ::SendMessageW(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir2.data());
+        ::SendMessageW(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(szGUIDir2.data()));
     }
 
     ::SendMessage(::GetDlgItem(hWndIn, IDC_REMOTE_DRIVECB), CB_SETCURSEL, static_cast<WPARAM>(-1), 0);
@@ -2704,8 +2704,8 @@ void FileTransfer::ListDrives(const HWND hWndIn)
         std::array<TCHAR, 4U> szDriveLetter;
         ::_tcscpy_s(szDriveLetter.data(), 4, szDrivesList.data() + (nIndex - 4));
         szDriveLetter[2U] = _T('\0');
-        ItemW.lParam = (LPARAM)(new std::wstring(szDriveLetter.data()));
-        const int nItem = static_cast<int>(::SendMessageW(hWndLocalList, LVM_INSERTITEMW, 0, (LPARAM)&ItemW));
+        ItemW.lParam = reinterpret_cast<LPARAM>((new std::wstring(szDriveLetter.data())));
+        const int nItem = static_cast<int>(::SendMessageW(hWndLocalList, LVM_INSERTITEMW, 0, reinterpret_cast<LPARAM>(&ItemW)));
 
         LVITEMW SubW;
         std::memset(&SubW, 0, sizeof(SubW));
@@ -2713,13 +2713,13 @@ void FileTransfer::ListDrives(const HWND hWndIn)
         SubW.iItem = nItem;
         SubW.iSubItem = 1;
         SubW.pszText = szType.data();
-        ::SendMessageW(hWndLocalList, LVM_SETITEMW, 0, (LPARAM)&SubW);
+        ::SendMessageW(hWndLocalList, LVM_SETITEMW, 0, reinterpret_cast<LPARAM>(&SubW));
 
         // Prepare it for Combo Box and add it
         ::_tcscat_s(szTheDrive.data(), 32, _T(" - "));
         ::_tcscat_s(szTheDrive.data(), 32, szType.data());
 
-        ::SendMessageW(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szTheDrive.data());
+        ::SendMessageW(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(szTheDrive.data()));
     }
 
     // List the usual shorcuts
@@ -2734,9 +2734,9 @@ void FileTransfer::ListDrives(const HWND hWndIn)
     Item.iSubItem = 0;
     ::_sntprintf_s(szGUIDir.data(), 64, _TRUNCATE, _T("%s%s%s"), L"[ ", _T("My Documents"), L" ]");
     Item.pszText = szGUIDir.data(); // Todo: Fr/De
-    Item.lParam = (LPARAM)(new std::wstring(L"My Documents"));
-    ::SendMessageW(hWndLocalList, LVM_INSERTITEMW, 0, (LPARAM)&Item);
-    ::SendMessageW(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir.data());
+    Item.lParam = reinterpret_cast<LPARAM>((new std::wstring(L"My Documents")));
+    ::SendMessageW(hWndLocalList, LVM_INSERTITEMW, 0, reinterpret_cast<LPARAM>(&Item));
+    ::SendMessageW(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(szGUIDir.data()));
 
     // Desktop
     std::memset(&Item, 0, sizeof(Item));
@@ -2745,9 +2745,9 @@ void FileTransfer::ListDrives(const HWND hWndIn)
     Item.iSubItem = 0;
     ::_sntprintf_s(szGUIDir.data(), 64, _TRUNCATE, _T("%s%s%s"), L"[ ", _T("Desktop"), L" ]");
     Item.pszText = szGUIDir.data(); // Todo: Fr/De
-    Item.lParam = (LPARAM)(new std::wstring(L"Desktop"));
-    ::SendMessageW(hWndLocalList, LVM_INSERTITEMW, 0, (LPARAM)&Item);
-    ::SendMessageW(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir.data());
+    Item.lParam = reinterpret_cast<LPARAM>((new std::wstring(L"Desktop")));
+    ::SendMessageW(hWndLocalList, LVM_INSERTITEMW, 0, reinterpret_cast<LPARAM>(&Item));
+    ::SendMessageW(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(szGUIDir.data()));
 
     // Network Favorites
     std::memset(&Item, 0, sizeof(Item));
@@ -2756,9 +2756,9 @@ void FileTransfer::ListDrives(const HWND hWndIn)
     Item.iSubItem = 0;
     ::_sntprintf_s(szGUIDir.data(), 64, _TRUNCATE, _T("%s%s%s"), L"[ ", _T("Network Favorites"), L" ]");
     Item.pszText = szGUIDir.data(); // Todo: Fr/De
-    Item.lParam = (LPARAM)(new std::wstring(L"Network Favorites"));
-    ::SendMessageW(hWndLocalList, LVM_INSERTITEMW, 0, (LPARAM)&Item);
-    ::SendMessageW(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, (LPARAM)szGUIDir.data());
+    Item.lParam = reinterpret_cast<LPARAM>((new std::wstring(L"Network Favorites")));
+    ::SendMessageW(hWndLocalList, LVM_INSERTITEMW, 0, reinterpret_cast<LPARAM>(&Item));
+    ::SendMessageW(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(szGUIDir.data()));
 
     ::SendMessage(::GetDlgItem(hWndIn, IDC_LOCAL_DRIVECB), CB_SETCURSEL, static_cast<WPARAM>(-1), 0);
 }
@@ -2770,8 +2770,8 @@ void FileTransfer::ListDrives(const HWND hWndIn)
 void FileTransfer::SetTotalSize(const HWND hWndIn, [[maybe_unused]] const DWORD dwTotalSize)
 {
     //	vnclog.Print(0, _T("SetTotalSize\n"));
-    ::SendDlgItemMessage(hWndIn, IDC_PROGRESS, PBM_SETPOS, (WPARAM)0, (LPARAM)0L);
-    ::SendDlgItemMessage(hWndIn, IDC_PROGRESS, PBM_SETRANGE, (WPARAM)0, MAKELPARAM(0, m_nBlockSize));
+    ::SendDlgItemMessage(hWndIn, IDC_PROGRESS, PBM_SETPOS, static_cast<WPARAM>(0), static_cast<LPARAM>(0L));
+    ::SendDlgItemMessage(hWndIn, IDC_PROGRESS, PBM_SETRANGE, static_cast<WPARAM>(0), MAKELPARAM(0, m_nBlockSize));
 }
 
 //
@@ -2786,14 +2786,14 @@ void FileTransfer::SetGauge(const HWND hWndIn, const __int64 dwCount)
     {
         dwSmallerFileSize = 1;
     }
-    DWORD dwValue = static_cast<DWORD>(((((__int64)(dwSmallerCount)*m_nBlockSize / dwSmallerFileSize))));
+    DWORD dwValue = static_cast<DWORD>((((static_cast<__int64>((dwSmallerCount))*m_nBlockSize / dwSmallerFileSize))));
     if (dwValue != m_dwCurrentValue)
     {
         ::SendDlgItemMessage(hWndIn, IDC_PROGRESS, PBM_SETPOS, dwValue, 0);
         m_dwCurrentValue = dwValue;
     }
 
-    DWORD dwPercent = static_cast<DWORD>((((__int64)(dwSmallerCount) * 100 / dwSmallerFileSize)));
+    DWORD dwPercent = static_cast<DWORD>(((static_cast<__int64>((dwSmallerCount)) * 100 / dwSmallerFileSize)));
     if (dwPercent != m_dwCurrentPercent)
     {
         // adzm - Include the speed and kb total
@@ -2854,10 +2854,10 @@ void FileTransfer::SetStatus(const LPWSTR szStatus)
         ::ReleaseDC(cbi.hwndList, hdc);
         int dx = rc.right - rc.left;
         m_maxHistExtent = maximum(m_maxHistExtent, dx);
-        ::SendDlgItemMessage(hWnd, IDC_HISTORY_CB, CB_SETHORIZONTALEXTENT, m_maxHistExtent, 0L);
+        ::SendDlgItemMessage(hWnd, IDC_HISTORY_CB, CB_SETHORIZONTALEXTENT, static_cast<WPARAM>(m_maxHistExtent), 0L);
     }
-    LRESULT Index = ::SendMessageW(::GetDlgItem(hWnd, IDC_HISTORY_CB), CB_ADDSTRING, 0, (LPARAM)szHist.data());
-    ::SendMessageW(::GetDlgItem(hWnd, IDC_HISTORY_CB), CB_SETCURSEL, (WPARAM)Index, (LPARAM)0);
+    LRESULT Index = ::SendMessageW(::GetDlgItem(hWnd, IDC_HISTORY_CB), CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(szHist.data()));
+    ::SendMessageW(::GetDlgItem(hWnd, IDC_HISTORY_CB), CB_SETCURSEL, static_cast<WPARAM>(Index), static_cast<LPARAM>(0));
 }
 
 
@@ -2929,8 +2929,8 @@ void FileTransfer::RequestRemoteFile(const LPSTR szRemoteFileName)
     ft.length = Swap32IfLE(std::strlen(szFileNameToSend.data()));
     ft.size = (m_pCC->kbitsPerSecond > 2048) ? Swap32IfLE(0) : Swap32IfLE(1); // 1 means "Enable compression"
                                                                               //adzm 2010-09
-    m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-    m_pCC->WriteExact((char*)szFileNameToSend.data(), static_cast<int>(std::strlen(szFileNameToSend.data())));
+    m_pCC->WriteExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+    m_pCC->WriteExact(reinterpret_cast<char*>(szFileNameToSend.data()), static_cast<int>(std::strlen(szFileNameToSend.data())));
     ::strncpy_s(szRemoteFileNameRequested.data(), sizeof(szRemoteFileNameRequested), szFileNameToSend.data(), _TRUNCATE);
     rfbFileHeaderRequested = true;
     return;
@@ -2974,7 +2974,7 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
     std::memset(szRemoteFileName, 0, nLen + 1);
 
     // Read in the Name of the file to copy (remote full name !)
-    m_pCC->ReadExact(szRemoteFileName, nLen);
+    m_pCC->ReadExact(szRemoteFileName, static_cast<int>(nLen));
 
     szRemoteFileName[nLen] = '\0';
 
@@ -2987,7 +2987,7 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
     if (!UsingOldProtocol())
     {
         CARD32 sizeHtmp;
-        m_pCC->ReadExact((char*)&sizeHtmp, sizeof(CARD32));
+        m_pCC->ReadExact(reinterpret_cast<char*>(&sizeHtmp), sizeof(CARD32));
         sizeH = Swap32IfLE(sizeHtmp);
     }
     // 5/2/2008 moved jdp so that the entire packet is read
@@ -3105,14 +3105,14 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
 
         delete[] szRemoteFileName;
         // Tell the server to cancel the transfer
-        ft.size = Swap32IfLE(-1);
+        ft.size = static_cast<unsigned int>(Swap32IfLE(-1));
         if (UsingOldProtocol())
         {
-            m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg);
+            m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg);
         }
         else
         {
-            m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+            m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
         }
         m_fFileDownloadError = true;
         return false;
@@ -3145,7 +3145,7 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
         ::wcscat_s(m_szDestFileNameW.data(), m_szDestFileNameW.size(), szTempNameW.data());
         // Also store CP_ACP version for legacy code that reads m_szDestFileName
         ::WideCharToMultiByte(CP_ACP, 0, m_szDestFileNameW.data(), -1, m_szDestFileName.data(), sizeof(m_szDestFileName), nullptr, nullptr);
-        m_nnFileSize = (((__int64)(sizeH)) << 32) + lSize;
+        m_nnFileSize = ((static_cast<__int64>((sizeH))) << 32) + lSize;
         std::array<char, 96U> szFFS;
         GetFriendlyFileSizeString(m_nnFileSize, szFFS.data(), 96);
         {
@@ -3201,14 +3201,14 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
         m_fFileDownloadError = true;
 
         // Tell the server to cancel the transfer
-        ft.size = Swap32IfLE(-1);
+        ft.size = static_cast<unsigned int>(Swap32IfLE(-1));
         if (UsingOldProtocol())
         {
-            m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg);
+            m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg);
         }
         else
         {
-            m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+            m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
         }
         return false;
     }
@@ -3226,7 +3226,7 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
         // if (dwFileSize != 0xFFFFFFFF)
         if (bSizeOk)
         {
-            unsigned long long nCSBufferSize = (4 * (unsigned long long)(n2FileSize.QuadPart / m_nBlockSize)) + 1024;
+            unsigned long long nCSBufferSize = (4 * static_cast<unsigned long long>((n2FileSize.QuadPart / m_nBlockSize))) + 1024;
             if (nCSBufferSize > std::numeric_limits<std::size_t>::max())
             {
                 return false;
@@ -3245,10 +3245,10 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
                     ftm.type = rfbFileTransfer;
                     ftm.contentType = rfbFileChecksums;
                     ftm.size = Swap32IfLE(nCSBufferSize);
-                    ftm.length = Swap32IfLE(nCSBufferLen);
+                    ftm.length = static_cast<unsigned int>(Swap32IfLE(nCSBufferLen));
                     //adzm 2010-09
-                    m_pCC->WriteExactQueue((char*)&ftm, sz_rfbFileTransferMsg, rfbFileTransfer);
-                    m_pCC->WriteExactQueue((char*)lpCSBuff.get(), nCSBufferLen);
+                    m_pCC->WriteExactQueue(reinterpret_cast<char*>(&ftm), sz_rfbFileTransferMsg, rfbFileTransfer);
+                    m_pCC->WriteExactQueue(reinterpret_cast<char*>(lpCSBuff.get()), nCSBufferLen);
                 }
             }
         }
@@ -3258,11 +3258,11 @@ bool FileTransfer::ReceiveFile(unsigned long lSize, const UINT nLen)
     ft.size = Swap32IfLE(lSize);
     if (UsingOldProtocol())
     {
-        m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg);
+        m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg);
     }
     else
     {
-        m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+        m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
     }
 
     // DWORD dwNbPackets = (DWORD)(lSize / m_nBlockSize);
@@ -3349,7 +3349,7 @@ bool FileTransfer::ReceiveFileChunk(const UINT nLen, const int nSize)
     // sf@2004 - Delta Transfer - Empty packet
     if (fAlreadyHere)
     {
-        DWORD dwPtr = ::SetFilePointer(m_hDestFile, nLen, nullptr, FILE_CURRENT);
+        DWORD dwPtr = ::SetFilePointer(m_hDestFile, static_cast<LONG>(nLen), nullptr, FILE_CURRENT);
         if (dwPtr == 0xFFFFFFFF)
         {
             fRes = false;
@@ -3357,7 +3357,7 @@ bool FileTransfer::ReceiveFileChunk(const UINT nLen, const int nSize)
     }
     else
     {
-        m_pCC->ReadExact((char*)m_pCC->m_filechunkbuf, nLen);
+        m_pCC->ReadExact(reinterpret_cast<char*>(m_pCC->m_filechunkbuf), static_cast<int>(nLen));
 
         if (nSize == 0)
         {
@@ -3369,10 +3369,10 @@ bool FileTransfer::ReceiveFileChunk(const UINT nLen, const int nSize)
         if (m_fPacketCompressed)
         {
             // Decompress incoming data
-            m_pCC->CheckFileZipBufferSize(nRawBytes);
-            int nRetU = uncompress((unsigned char*)m_pCC->m_filezipbuf,   // Dest
-                                   (unsigned long*)&nRawBytes,            // Dest len
-                                   (unsigned char*)m_pCC->m_filechunkbuf, // Src
+            m_pCC->CheckFileZipBufferSize(static_cast<int>(nRawBytes));
+            int nRetU = uncompress(reinterpret_cast<unsigned char*>(m_pCC->m_filezipbuf),   // Dest
+                                   reinterpret_cast<unsigned long*>(&nRawBytes),            // Dest len
+                                   reinterpret_cast<unsigned char*>(m_pCC->m_filechunkbuf), // Src
                                    nLen                                   // Src len
             );
 
@@ -3420,14 +3420,14 @@ bool FileTransfer::ReceiveFileChunk(const UINT nLen, const int nSize)
             if (m_fAbort || m_fFileDownloadError)
             {
                 // Ask the server to stop the transfer
-                ft.size = Swap32IfLE(-1);
-                m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg /*, rfbFileTransfer*/);
+                ft.size = static_cast<unsigned int>(Swap32IfLE(-1));
+                m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg /*, rfbFileTransfer*/);
             }
             else
             {
                 // Tell the server to continue the transfer
                 ft.size = Swap32IfLE(0);
-                m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg /*, rfbFileTransfer*/);
+                m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg /*, rfbFileTransfer*/);
             }
             m_nPacketCount = 0;
         }
@@ -3444,7 +3444,7 @@ bool FileTransfer::ReceiveFileChunk(const UINT nLen, const int nSize)
             ft.contentParam = rfbFileTransferVersion;
             ft.length = 0;
             ft.size = 0;
-            m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+            m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
         }
     }
 
@@ -3661,9 +3661,9 @@ bool FileTransfer::UnzipPossibleDirectory(const LPCWSTR szFileName)
 
         // Detect hex encoding: all chars are hex digits and length is even
         bool bIsHexEncoded = ((std::strlen(szDirName.data()) > 0) && (std::strlen(szDirName.data()) % 2 == 0));
-        for (int _ci{ 0 }; bIsHexEncoded && szDirName[_ci]; ++_ci)
+        for (int _ci{ 0 }; bIsHexEncoded && szDirName[static_cast<unsigned long long>(_ci)]; ++_ci)
         {
-            if (!std::isxdigit(static_cast<unsigned char>(szDirName[_ci])))
+            if (!std::isxdigit(static_cast<unsigned char>(szDirName[static_cast<unsigned long long>(_ci)])))
             {
                 bIsHexEncoded = false;
             }
@@ -3678,12 +3678,12 @@ bool FileTransfer::UnzipPossibleDirectory(const LPCWSTR szFileName)
 #endif
             std::array<char, MAX_PATH * 4> szUtf8;
             int nBytes{ 0 };
-            for (int _di{ 0 }; szDirName[_di] && szDirName[_di + 1]; _di += 2, ++nBytes)
+            for (int _di{ 0 }; szDirName[static_cast<unsigned long long>(_di)] && szDirName[static_cast<unsigned long long>(_di + 1)]; _di += 2, ++nBytes)
             {
-                char _hx[3U] = { szDirName[_di], szDirName[_di + 1], '\0' };
-                szUtf8[nBytes] = static_cast<char>(std::strtol(_hx, nullptr, 16));
+                char _hx[3U] = { szDirName[static_cast<unsigned long long>(_di)], szDirName[static_cast<unsigned long long>(_di + 1)], '\0' };
+                szUtf8[static_cast<unsigned long long>(nBytes)] = static_cast<char>(std::strtol(_hx, nullptr, 16));
             }
-            szUtf8[nBytes] = '\0';
+            szUtf8[static_cast<unsigned long long>(nBytes)] = '\0';
             ::MultiByteToWideChar(CP_UTF8, 0, szUtf8.data(), -1, szFinalDirNameW.data(), static_cast<int>(szFinalDirNameW.size()));
 #if DEBUG_FT
             ::OutputDebugStringW(L"  Decoded dirname: ");
@@ -3762,7 +3762,7 @@ bool FileTransfer::UnzipPossibleDirectory(const LPCWSTR szFileName)
             HANDLE hUnzipThread = ::CreateThread(
                 nullptr, 0,
                 [](LPVOID pv) -> DWORD {
-                    UnzipThreadParam* p = (UnzipThreadParam*)pv;
+                    UnzipThreadParam* p = reinterpret_cast<UnzipThreadParam*>(pv);
                     p->result = p->pZip->UnZipDirectory(p->szExtractPath, p->szZipPath);
                     return 0;
                 },
@@ -4062,7 +4062,7 @@ src_open_ok:
         ::FindClose(ffSize);
         n2SrcSize.LowPart = fdW2.nFileSizeLow;
         n2SrcSize.HighPart = fdW2.nFileSizeHigh;
-        n2SrcSize.QuadPart = (((__int64)fdW2.nFileSizeHigh) << 32) + fdW2.nFileSizeLow;
+        n2SrcSize.QuadPart = static_cast<ULONGLONG>(((static_cast<__int64>(fdW2.nFileSizeHigh)) << 32) + fdW2.nFileSizeLow);
     }
     if (!bSize)
     {
@@ -4079,7 +4079,7 @@ src_open_ok:
     }
 
     std::array<char, 96U> szFFS;
-    GetFriendlyFileSizeString(n2SrcSize.QuadPart, szFFS.data(), 96);
+    GetFriendlyFileSizeString(static_cast<long long>(n2SrcSize.QuadPart), szFFS.data(), 96);
     {
         std::array<wchar_t, MAX_PATH * 4> _wsf2;
         ::MultiByteToWideChar(CP_ACP, 0, m_szSrcFileName.data(), -1, _wsf2.data(), static_cast<int>(_wsf2.size()));
@@ -4089,7 +4089,7 @@ src_open_ok:
         ::_snwprintf_s(szStatusW8.data(), 512, _TRUNCATE, L" %s < %s > (%s) >>>", sz_H22.data(), _wsf2.data(), _wffs2.data());
         SetStatus(szStatusW8.data());
     }
-    m_nnFileSize = n2SrcSize.QuadPart;
+    m_nnFileSize = static_cast<long long>(n2SrcSize.QuadPart);
     SetTotalSize(hWnd, static_cast<DWORD>(m_nnFileSize)); // In bytes
     SetGauge(hWnd, 0);                                    // In bytes
     ::UpdateWindow(hWnd);
@@ -4216,13 +4216,13 @@ src_open_ok:
 
     ft.length = Swap32IfLE(std::strlen(szDstFileNameToSend.data()));
     //adzm 2010-09
-    m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-    m_pCC->WriteExactQueue((char*)szDstFileNameToSend.data(), static_cast<int>(std::strlen(szDstFileNameToSend.data())));
+    m_pCC->WriteExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+    m_pCC->WriteExactQueue(reinterpret_cast<char*>(szDstFileNameToSend.data()), static_cast<int>(std::strlen(szDstFileNameToSend.data())));
     rfbFileTransferOfferRequested = true;
     if (!UsingOldProtocol())
     {
         CARD32 sizeH = Swap32IfLE(n2SrcSize.HighPart);
-        m_pCC->WriteExact((char*)&sizeH, sizeof(CARD32));
+        m_pCC->WriteExact(reinterpret_cast<char*>(&sizeH), sizeof(CARD32));
     }
     else
     {
@@ -4316,10 +4316,10 @@ int FileTransfer::ZipPossibleDirectory(const LPSTR szSrcFileName)
         ::WideCharToMultiByte(CP_UTF8, 0, szDirNameW.data(), -1, szDirNameUtf8.data(), static_cast<int>(szDirNameUtf8.size()), nullptr, nullptr);
         std::array<char, MAX_PATH * 8> szHexName; // 2 hex chars per byte
         szHexName[0U] = '\0';
-        for (int _hi{ 0 }; (szDirNameUtf8[_hi] != '\0') && (_hi < MAX_PATH * 4 - 1); ++_hi)
+        for (int _hi{ 0 }; (szDirNameUtf8[static_cast<unsigned long long>(_hi)] != '\0') && (_hi < MAX_PATH * 4 - 1); ++_hi)
         {
             std::array<char, 3U> _hbuf;
-            ::sprintf_s(_hbuf.data(), _hbuf.size(), "%02X", static_cast<unsigned char>(szDirNameUtf8[_hi]));
+            ::sprintf_s(_hbuf.data(), _hbuf.size(), "%02X", static_cast<unsigned char>(szDirNameUtf8[static_cast<unsigned long long>(_hi)]));
             ::strcat_s(szHexName.data(), szHexName.size(), _hbuf.data());
         }
         // Truncate hex to keep zip filename reasonable (max 200 hex chars = 100 bytes UTF-8)
@@ -4386,7 +4386,7 @@ int FileTransfer::ZipPossibleDirectory(const LPSTR szSrcFileName)
             HANDLE hZipThread = ::CreateThread(
                 nullptr, 0,
                 [](LPVOID pv) -> DWORD {
-                    ZipThreadParam* p = (ZipThreadParam*)pv;
+                    ZipThreadParam* p = reinterpret_cast<ZipThreadParam*>(pv);
                     p->result = p->pZip->ZipDirectory(p->szSrcDir, p->szSrcWild, p->szZipPath, true);
                     return 0;
                 },
@@ -4475,8 +4475,8 @@ bool FileTransfer::ReceiveDestinationFileChecksums([[maybe_unused]] const int nS
 
     std::memset(m_lpCSBuffer, '\0', nLen + 1); // nSize
 
-    m_pCC->ReadExact((char*)m_lpCSBuffer, nLen);
-    m_nCSBufferSize = nLen;
+    m_pCC->ReadExact(reinterpret_cast<char*>(m_lpCSBuffer), static_cast<int>(nLen));
+    m_nCSBufferSize = static_cast<int>(nLen);
 
     return true;
 }
@@ -4518,7 +4518,7 @@ bool FileTransfer::SendFile(const long lSize, const UINT nLen)
     std::memset(szRemoteFileName, 0, nLen + 1);
 
     // Read in the Name of the file to copy (remote full name !)
-    m_pCC->ReadExact(szRemoteFileName, nLen);
+    m_pCC->ReadExact(szRemoteFileName, static_cast<int>(nLen));
 
     if (nLen > MAX_PATH)
     {
@@ -4738,7 +4738,7 @@ bool FileTransfer::SendFileChunk()
             ft.contentType = rfbFilePacket;
             ft.size = Swap32IfLE(2); // Means "Empty packet"// Swap32IfLE(nCS);
             ft.length = Swap32IfLE(m_dwNbBytesRead);
-            m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+            m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
             // m_nNotSent += m_dwNbBytesRead;
         }
         else
@@ -4749,9 +4749,9 @@ bool FileTransfer::SendFileChunk()
             bool fCompressed{ false };
             if (m_fCompress && !UsingOldProtocol())
             {
-                m_pCC->CheckFileZipBufferSize(nMaxCompSize);
-                int nRetC = compress((unsigned char*)(m_pCC->m_filezipbuf), (unsigned long*)&nMaxCompSize,
-                                     (unsigned char*)m_pCC->m_filechunkbuf, m_dwNbBytesRead);
+                m_pCC->CheckFileZipBufferSize(static_cast<int>(nMaxCompSize));
+                int nRetC = compress(reinterpret_cast<unsigned char*>((m_pCC->m_filezipbuf)), reinterpret_cast<unsigned long*>(&nMaxCompSize),
+                                     reinterpret_cast<unsigned char*>(m_pCC->m_filechunkbuf), m_dwNbBytesRead);
                 if (nRetC != 0)
                 {
                     // Todo: send data uncompressed instead
@@ -4776,20 +4776,20 @@ bool FileTransfer::SendFileChunk()
             //adzm 2010-09
             if (UsingOldProtocol())
             {
-                m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg);
+                m_pCC->WriteExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg);
             }
             else
             {
-                m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+                m_pCC->WriteExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
             }
 
             if (fCompressed)
             {
-                m_pCC->WriteExact((char*)m_pCC->m_filezipbuf, nMaxCompSize);
+                m_pCC->WriteExact(reinterpret_cast<char*>(m_pCC->m_filezipbuf), static_cast<int>(nMaxCompSize));
             }
             else
             {
-                m_pCC->WriteExact((char*)m_pCC->m_filechunkbuf, m_dwNbBytesRead);
+                m_pCC->WriteExact(reinterpret_cast<char*>(m_pCC->m_filechunkbuf), static_cast<int>(m_dwNbBytesRead));
             }
         }
 
@@ -4820,7 +4820,7 @@ bool FileTransfer::FinishFileSending()
 #if DEBUG_FT
     {
         std::array<WCHAR, 512U> _dbg;
-        ::_snwprintf_s(_dbg.data(), 512, _TRUNCATE, L"=== FinishFileSending: this=0x%p g_fHeadlessUpload=%d m_szHeadlessRemotePathW=[%s]\n", (void*)this, static_cast<int>(g_fHeadlessUpload), m_szHeadlessRemotePathW.data());
+        ::_snwprintf_s(_dbg.data(), 512, _TRUNCATE, L"=== FinishFileSending: this=0x%p g_fHeadlessUpload=%d m_szHeadlessRemotePathW=[%s]\n", reinterpret_cast<void*>(this), static_cast<int>(g_fHeadlessUpload), m_szHeadlessRemotePathW.data());
         ::OutputDebugStringW(_dbg.data());
     }
 #endif
@@ -4852,11 +4852,11 @@ bool FileTransfer::FinishFileSending()
 #endif
         if (UsingOldProtocol())
         {
-            m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg);
+            m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg);
         }
         else
         {
-            m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+            m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
         }
 #if DEBUG_FT
         ::OutputDebugStringW(L"  rfbEndOfFile message sent successfully\n");
@@ -4905,11 +4905,11 @@ bool FileTransfer::FinishFileSending()
         ft.size = 0;
         if (UsingOldProtocol())
         {
-            m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg);
+            m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg);
         }
         else
         {
-            m_pCC->WriteExact((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
+            m_pCC->WriteExact(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
         }
         ::sprintf_s(szStatus.data(), szStatus.size(), " %ls < %s > %ls", sz_H19.data(), m_szSrcFileName.data(), sz_H28.data());
     }
@@ -5071,8 +5071,8 @@ void FileTransfer::CreateRemoteDirectory(const LPSTR szDir)
 
     ft.length = Swap32IfLE(std::strlen(szDirToSend.data()));
     //adzm 2010-09
-    m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-    m_pCC->WriteExact((char*)szDirToSend.data(), static_cast<int>(std::strlen(szDirToSend.data())));
+    m_pCC->WriteExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+    m_pCC->WriteExact(reinterpret_cast<char*>(szDirToSend.data()), static_cast<int>(std::strlen(szDirToSend.data())));
     return;
 }
 
@@ -5105,8 +5105,8 @@ void FileTransfer::DeleteRemoteFile(const std::string szFile)
     std::size_t len = std::strlen(szFileToSend.data());
     ft.length = Swap32IfLE(len);
     //adzm 2010-09
-    m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-    m_pCC->WriteExact((char*)szFileToSend.data(), static_cast<int>(len));
+    m_pCC->WriteExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+    m_pCC->WriteExact(reinterpret_cast<char*>(szFileToSend.data()), static_cast<int>(len));
     return;
 }
 
@@ -5150,8 +5150,8 @@ void FileTransfer::RenameRemoteFileOrDirectory(const LPSTR szCurrentName, const 
     ft.size = 0;
     ft.length = Swap32IfLE(std::strlen(szMsgContentToSend.data()));
     //adzm 2010-09
-    m_pCC->WriteExactQueue((char*)&ft, sz_rfbFileTransferMsg, rfbFileTransfer);
-    m_pCC->WriteExact((char*)szMsgContentToSend.data(), static_cast<int>(std::strlen(szMsgContentToSend.data())));
+    m_pCC->WriteExactQueue(reinterpret_cast<char*>(&ft), sz_rfbFileTransferMsg, rfbFileTransfer);
+    m_pCC->WriteExact(reinterpret_cast<char*>(szMsgContentToSend.data()), static_cast<int>(std::strlen(szMsgContentToSend.data())));
     return;
 }
 
@@ -5170,7 +5170,7 @@ bool FileTransfer::CreateRemoteDirectoryFeedback(const long lSize, const UINT nL
         return false;
     }
     std::memset(szRemoteName, 0, nLen + 1);
-    m_pCC->ReadExact(szRemoteName, nLen);
+    m_pCC->ReadExact(szRemoteName, static_cast<int>(nLen));
 
     szRemoteName[nLen] = '\0';
 
@@ -5213,7 +5213,7 @@ bool FileTransfer::DeleteRemoteFileFeedback(const long lSize, const UINT nLen)
         return false;
     }
     std::memset(szRemoteName, 0, nLen + 1);
-    m_pCC->ReadExact(szRemoteName, nLen);
+    m_pCC->ReadExact(szRemoteName, static_cast<int>(nLen));
 
     szRemoteName[nLen] = '\0';
 
@@ -5222,7 +5222,7 @@ bool FileTransfer::DeleteRemoteFileFeedback(const long lSize, const UINT nLen)
     ::MultiByteToWideChar(cp, 0, szRemoteName, -1, szDisplayNameW.data(), static_cast<int>(szDisplayNameW.size()));
 
     std::array<wchar_t, MAX_PATH * 4 + 256> szStatusW;
-    bool isDir = IsDirectoryGetIt(szRemoteName, nLen + 1);
+    bool isDir = IsDirectoryGetIt(szRemoteName, static_cast<int>(nLen + 1));
     if (lSize == -1)
     {
         ::_snwprintf_s(szStatusW.data(), MAX_PATH * 4 + 256, _TRUNCATE, L"%s < %s > %s", isDir ? sz_H99.data() : sz_H33.data(), szDisplayNameW.data(), sz_H30.data());
@@ -5264,7 +5264,7 @@ bool FileTransfer::RenameRemoteFileOrDirectoryFeedback(const long lSize, const U
         return false;
     }
     std::memset(szContent, 0, nLen + 1);
-    m_pCC->ReadExact(szContent, nLen);
+    m_pCC->ReadExact(szContent, static_cast<int>(nLen));
     szContent[nLen] = '\0';
 
     std::array<wchar_t, MAX_PATH * 4 + 200> szStatusW2;
@@ -5348,7 +5348,7 @@ int FileTransfer::GenerateFileChecksums(const HANDLE hFile, char* const lpCSBuff
             }
 
             unsigned long cs = adler32(0L, Z_NULL, 0);
-            cs = adler32(cs, (unsigned char*)lpBuffer, static_cast<int>(dwNbBytesRead));
+            cs = adler32(cs, reinterpret_cast<unsigned char*>(lpBuffer), static_cast<int>(dwNbBytesRead));
             std::memcpy(lpCSBuffer + nCSBufferOffset, &cs, 4);
             nCSBufferOffset += 4;
         }
@@ -5375,7 +5375,7 @@ bool FileTransfer::IsDirectoryGetItW(WCHAR* const szName, const int size)
         std::size_t len = std::wcslen(szWork.data());
         if (len > 4) // Must have at least "[ x ]"
         {
-            ::wcsncpy_s(szName, size, szWork.data() + 2, len - 3);
+            ::wcsncpy_s(szName, static_cast<rsize_t>(size), szWork.data() + 2, len - 3);
             szName[len - 4] = L'\0';
             return true;
         }
@@ -5390,7 +5390,7 @@ bool FileTransfer::IsDirectoryGetIt(char* const szName, const int size)
     ::strcpy_s(szWork.data(), szWork.size(), szName);
     if ((szWork[0U] == rfbDirPrefix[0U]) && (szWork[1U] == rfbDirPrefix[1U]))
     {
-        ::strncpy_s(szName, size, szWork.data() + 2, std::strlen(szWork.data()) - 3);
+        ::strncpy_s(szName, static_cast<rsize_t>(size), szWork.data() + 2, std::strlen(szWork.data()) - 3);
         szName[std::strlen(szWork.data()) - 4] = '\0';
         return true;
     }
@@ -5400,8 +5400,8 @@ bool FileTransfer::IsDirectoryGetIt(char* const szName, const int size)
 int FileTransfer::DoDialog()
 {
     extern HINSTANCE m_hInstResDLL;
-    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_FILETRANSFER_DLG), nullptr, (DLGPROC)FileTransferDlgProc,
-                          (LONG_PTR)this));
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_FILETRANSFER_DLG), nullptr, reinterpret_cast<DLGPROC>(FileTransferDlgProc),
+                          reinterpret_cast<LONG_PTR>(this)));
 }
 
 
@@ -5467,7 +5467,7 @@ void FTAdjustFileNameColumns(const HWND hWnd)
     Column.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_ORDER | LVCF_SUBITEM;
     Column.fmt = LVCFMT_LEFT;
     Column.cx = cw;
-    Column.pszText = (LPWSTR)L"Name";
+    Column.pszText = reinterpret_cast<LPWSTR>(const_cast<wchar_t *>(L"Name"));
     Column.iSubItem = 0;
     Column.iOrder = 0;
 
@@ -5488,7 +5488,7 @@ static LRESULT CALLBACK PathEditSubclassProc(const HWND hEdit, const UINT uMsg, 
     {
         // Claim Enter key so IsDialogMessage doesn't swallow it; leave Tab alone
         LRESULT lr = ::DefSubclassProc(hEdit, uMsg, wParam, lParam);
-        MSG* pMsg = (MSG*)lParam;
+        MSG* pMsg = reinterpret_cast<MSG*>(lParam);
         if (pMsg && (pMsg->message == WM_KEYDOWN) && (pMsg->wParam == VK_RETURN))
         {
             return lr | DLGC_WANTMESSAGE;
@@ -5498,7 +5498,7 @@ static LRESULT CALLBACK PathEditSubclassProc(const HWND hEdit, const UINT uMsg, 
     if ((uMsg == WM_KEYDOWN) && (wParam == VK_RETURN))
     {
         HWND hDlg = ::GetParent(hEdit);
-        FileTransfer* _this = (FileTransfer*)helper::SafeGetWindowUserData<FileTransfer>(hDlg);
+        FileTransfer* _this = reinterpret_cast<FileTransfer*>(helper::SafeGetWindowUserData<FileTransfer>(hDlg));
         if (_this && !_this->m_fFileCommandPending)
         {
             std::array<wchar_t, MAX_PATH + 1> szPath;
@@ -5551,7 +5551,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
         {
             _this->m_fFileCommandPending = true;
             _this->RequestPermission();
-            if (::KillTimer(hWnd, _this->m_timer))
+            if (::KillTimer(hWnd, static_cast<UINT_PTR>(_this->m_timer)))
             {
                 _this->m_timer = 0;
             }
@@ -5565,11 +5565,11 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
 
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hWnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         helper::SafeSetWindowUserData(hWnd, lParam);
 
-        FileTransfer* l_this = (FileTransfer*)lParam;
+        FileTransfer* l_this = reinterpret_cast<FileTransfer*>(lParam);
         ::SetTimer(hWnd, 100, 5000, nullptr);
         // CentreWindow(hWnd);
         l_this->hWnd = hWnd;
@@ -5599,7 +5599,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
         Column.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_ORDER | LVCF_SUBITEM;
         Column.fmt = LVCFMT_LEFT;
         Column.cx = 166;
-        Column.pszText = (LPWSTR)L"Name";
+        Column.pszText = reinterpret_cast<LPWSTR>(const_cast<wchar_t *>(L"Name"));
         Column.iSubItem = 0;
         Column.iOrder = 0;
         HWND hWndList = ::GetDlgItem(hWnd, IDC_LOCAL_FILELIST);
@@ -5610,7 +5610,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
         Column.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_ORDER | LVCF_SUBITEM;
         Column.fmt = LVCFMT_LEFT;
         Column.cx = 70;
-        Column.pszText = (LPWSTR)L"Size";
+        Column.pszText = reinterpret_cast<LPWSTR>(const_cast<wchar_t *>(L"Size"));
         Column.iSubItem = 1;
         Column.iOrder = 1;
         hWndList = ::GetDlgItem(hWnd, IDC_LOCAL_FILELIST);
@@ -5621,7 +5621,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
         Column.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_ORDER | LVCF_SUBITEM;
         Column.fmt = LVCFMT_LEFT;
         Column.cx = 155;
-        Column.pszText = (LPWSTR)L"Modified";
+        Column.pszText = reinterpret_cast<LPWSTR>(const_cast<wchar_t *>(L"Modified"));
         Column.iSubItem = 2;
         Column.iOrder = 2;
         hWndList = ::GetDlgItem(hWnd, IDC_LOCAL_FILELIST);
@@ -5789,11 +5789,11 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                 std::memset(&ItemW, 0, sizeof(ItemW));
                 ItemW.mask = LVIF_PARAM;
                 ItemW.iItem = i;
-                ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, (LPARAM)&ItemW);
-                std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
+                ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
+                std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~static_cast<LPARAM>(FT_LPARAM_UNREADABLE));
                 if (pNameW && (::_wcsicmp(pNameW->c_str(), szFileName.data()) == 0))
                 {
-                    ListView_SetItemState(hWndLocalList, i, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+                    ListView_SetItemState(hWndLocalList, i, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED)
                     ListView_EnsureVisible(hWndLocalList, i, FALSE);
                     break;
                 }
@@ -5841,7 +5841,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
             // Trigger upload
             _thisInner->CheckButtonState(hWnd);
             ::EnableWindow(::GetDlgItem(hWnd, IDC_UPLOAD_B), TRUE);
-            ::PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_UPLOAD_B, BN_CLICKED), (LPARAM)::GetDlgItem(hWnd, IDC_UPLOAD_B));
+            ::PostMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_UPLOAD_B, BN_CLICKED), reinterpret_cast<LPARAM>(::GetDlgItem(hWnd, IDC_UPLOAD_B)));
         }
         return 0;
 
@@ -5912,8 +5912,8 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                     std::memset(&ItemW, 0, sizeof(ItemW));
                     ItemW.mask = LVIF_PARAM;
                     ItemW.iItem = nSelected;
-                    ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, (LPARAM)&ItemW);
-                    std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
+                    ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
+                    std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~static_cast<LPARAM>(FT_LPARAM_UNREADABLE));
                     if (!pNameW)
                     {
                         ::OutputDebugStringW(L"IDC_UPLOAD_B: pNameW is NULL, skipping\n");
@@ -5935,7 +5935,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         _di.iItem = nSelected;
                         _di.pszText = szDispW.data();
                         _di.cchTextMax = MAX_PATH + 8;
-                        ::SendMessageW(hWndLocalList, LVM_GETITEMTEXTW, nSelected, (LPARAM)&_di);
+                        ::SendMessageW(hWndLocalList, LVM_GETITEMTEXTW, static_cast<WPARAM>(nSelected), reinterpret_cast<LPARAM>(&_di));
                     }
                     if (::_wcsicmp(szDispW.data(), szUpDirMaskW.data()) != 0)
                     {
@@ -6005,8 +6005,8 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                 std::memset(&ItemW0, 0, sizeof(ItemW0));
                 ItemW0.mask = LVIF_PARAM;
                 ItemW0.iItem = *_this->m_iFile;
-                ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, (LPARAM)&ItemW0);
-                std::wstring* pNameW0 = reinterpret_cast<std::wstring*>(ItemW0.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
+                ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW0));
+                std::wstring* pNameW0 = reinterpret_cast<std::wstring*>(ItemW0.lParam & ~static_cast<LPARAM>(FT_LPARAM_UNREADABLE));
 
                 std::array<WCHAR, MAX_PATH * 4> szCurrLocalW;
                 ::GetDlgItemTextW(hWnd, IDC_CURR_LOCAL, szCurrLocalW.data(), MAX_PATH * 4);
@@ -6090,8 +6090,8 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         std::memset(&ItemW, 0, sizeof(ItemW));
                         ItemW.mask = LVIF_PARAM;
                         ItemW.iItem = nSelected;
-                        ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, (LPARAM)&ItemW);
-                        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
+                        ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
+                        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~static_cast<LPARAM>(FT_LPARAM_UNREADABLE));
                         if (!pNameW)
                         {
                             continue;
@@ -6107,7 +6107,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                             _di.iItem = nSelected;
                             _di.pszText = szDispW.data();
                             _di.cchTextMax = MAX_PATH + 8;
-                            ::SendMessageW(hWndRemoteList, LVM_GETITEMTEXTW, nSelected, (LPARAM)&_di);
+                            ::SendMessageW(hWndRemoteList, LVM_GETITEMTEXTW, static_cast<WPARAM>(nSelected), reinterpret_cast<LPARAM>(&_di));
                         }
                         if (::_wcsicmp(szDispW.data(), szUpDirMaskW.data()) != 0)
                         {
@@ -6172,8 +6172,8 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                     std::memset(&ItemW0, 0, sizeof(ItemW0));
                     ItemW0.mask = LVIF_PARAM;
                     ItemW0.iItem = *_this->m_iFile;
-                    ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, (LPARAM)&ItemW0);
-                    std::wstring* pNameW0 = reinterpret_cast<std::wstring*>(ItemW0.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
+                    ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW0));
+                    std::wstring* pNameW0 = reinterpret_cast<std::wstring*>(ItemW0.lParam & ~static_cast<LPARAM>(FT_LPARAM_UNREADABLE));
 
                     // Check display text to determine if it's a directory (shown as "[ name ]")
                     bool bIsDir0{ false };
@@ -6185,7 +6185,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         _di0.iItem = *_this->m_iFile;
                         _di0.pszText = _disp0.data();
                         _di0.cchTextMax = MAX_PATH + 4;
-                        ::SendMessageW(hWndRemoteList, LVM_GETITEMTEXTW, *_this->m_iFile, (LPARAM)&_di0);
+                        ::SendMessageW(hWndRemoteList, LVM_GETITEMTEXTW, static_cast<WPARAM>(*_this->m_iFile), reinterpret_cast<LPARAM>(&_di0));
                         if ((_disp0[0U] == L'[') && (_disp0[1U] == L' '))
                         {
                             bIsDir0 = true;
@@ -6232,7 +6232,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
             {
                 break;
             }
-            ::SendMessageW(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), CB_GETLBTEXT, (WPARAM)nSelected, (LPARAM)ofDirW.data());
+            ::SendMessageW(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), CB_GETLBTEXT, static_cast<WPARAM>(nSelected), reinterpret_cast<LPARAM>(ofDirW.data()));
             // Truncate at first ']' to handle "[ C: ] - Local Disk" format
             wchar_t* pEnd = std::wcschr(ofDirW.data(), L']');
             if (pEnd)
@@ -6252,7 +6252,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                 {
                     break;
                 }
-                ::SendMessageW(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), CB_GETLBTEXT, (WPARAM)nSelected, (LPARAM)ofDirW.data());
+                ::SendMessageW(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), CB_GETLBTEXT, static_cast<WPARAM>(nSelected), reinterpret_cast<LPARAM>(ofDirW.data()));
                 // Truncate at first ']' to handle "[ C: ] - Remote" format
                 WCHAR* pEnd = std::wcschr(ofDirW.data(), L']');
                 if (pEnd)
@@ -6323,7 +6323,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
 
                 HWND hWndLocalList = ::GetDlgItem(hWnd, IDC_LOCAL_FILELIST);
 
-                int nSelected = ListView_GetSelectedCount(hWndLocalList);
+                int nSelected = static_cast<int>(ListView_GetSelectedCount(hWndLocalList));
                 if (nSelected == 0)
                 {
                     yesUVNCMessageBox(m_hInstResDLL, _this->hWnd, sz_H46.data(), sz_H47.data(), MB_ICONINFORMATION);
@@ -6341,8 +6341,8 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         std::memset(&ItemW, 0, sizeof(ItemW));
                         ItemW.mask = LVIF_PARAM;
                         ItemW.iItem = i;
-                        ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, (LPARAM)&ItemW);
-                        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
+                        ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
+                        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~static_cast<LPARAM>(FT_LPARAM_UNREADABLE));
                         if (!pNameW)
                         {
                             continue;
@@ -6399,7 +6399,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                     break;
                 }
 
-                int nSelected = ListView_GetSelectedCount(hWndRemoteList);
+                int nSelected = static_cast<int>(ListView_GetSelectedCount(hWndRemoteList));
                 if (nSelected == 0)
                 {
                     yesUVNCMessageBox(m_hInstResDLL, _this->hWnd, sz_H46.data(), sz_H47.data(), MB_ICONINFORMATION);
@@ -6418,8 +6418,8 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         std::memset(&ItemW, 0, sizeof(ItemW));
                         ItemW.mask = LVIF_PARAM;
                         ItemW.iItem = i;
-                        ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, (LPARAM)&ItemW);
-                        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
+                        ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
+                        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~static_cast<LPARAM>(FT_LPARAM_UNREADABLE));
                         if (!pNameW)
                         {
                             continue;
@@ -6555,7 +6555,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
             if (_this->m_fFocusLocal)
             {
                 HWND hWndLocalList = ::GetDlgItem(hWnd, IDC_LOCAL_FILELIST);
-                int nCount = ListView_GetSelectedCount(hWndLocalList);
+                int nCount = static_cast<int>(ListView_GetSelectedCount(hWndLocalList));
                 if ((nCount == 0) || (nCount > 1))
                 {
                     yesUVNCMessageBox(m_hInstResDLL, _this->hWnd, sz_M1.data(), sz_M2.data(), MB_ICONINFORMATION);
@@ -6579,8 +6579,8 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         std::memset(&ItemW, 0, sizeof(ItemW));
                         ItemW.mask = LVIF_PARAM;
                         ItemW.iItem = nSelected;
-                        ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, (LPARAM)&ItemW);
-                        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
+                        ::SendMessageW(hWndLocalList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
+                        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~static_cast<LPARAM>(FT_LPARAM_UNREADABLE));
                         if (!pNameW)
                         {
                             break;
@@ -6632,7 +6632,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                     break;
                 }
                 HWND hWndRemoteList = ::GetDlgItem(hWnd, IDC_REMOTE_FILELIST);
-                int nCount = ListView_GetSelectedCount(hWndRemoteList);
+                int nCount = static_cast<int>(ListView_GetSelectedCount(hWndRemoteList));
                 if ((nCount == 0) || (nCount > 1))
                 {
                     yesUVNCMessageBox(m_hInstResDLL, _this->hWnd, sz_M1.data(), sz_M2.data(), MB_ICONINFORMATION);
@@ -6655,8 +6655,8 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         std::memset(&ItemW, 0, sizeof(ItemW));
                         ItemW.mask = LVIF_PARAM;
                         ItemW.iItem = nSel;
-                        ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, (LPARAM)&ItemW);
-                        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~(LPARAM)FT_LPARAM_UNREADABLE);
+                        ::SendMessageW(hWndRemoteList, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW));
+                        std::wstring* pNameW = reinterpret_cast<std::wstring*>(ItemW.lParam & ~static_cast<LPARAM>(FT_LPARAM_UNREADABLE));
                         if (!pNameW)
                         {
                             break;
@@ -6714,7 +6714,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                 {
                     break;
                 }
-                ::SendMessageW(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), CB_GETLBTEXT, (WPARAM)nSelected, (LPARAM)ofDirW.data());
+                ::SendMessageW(::GetDlgItem(hWnd, IDC_LOCAL_DRIVECB), CB_GETLBTEXT, static_cast<WPARAM>(nSelected), reinterpret_cast<LPARAM>(ofDirW.data()));
                 // Truncate at first ']' to handle "[ C: ] - Local Disk" format
                 wchar_t* pEnd = std::wcschr(ofDirW.data(), L']');
                 if (pEnd)
@@ -6737,7 +6737,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                 {
                     break;
                 }
-                ::SendMessageW(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), CB_GETLBTEXT, (WPARAM)nSelected, (LPARAM)ofDirW.data());
+                ::SendMessageW(::GetDlgItem(hWnd, IDC_REMOTE_DRIVECB), CB_GETLBTEXT, static_cast<WPARAM>(nSelected), reinterpret_cast<LPARAM>(ofDirW.data()));
 
                 // Truncate drive items from "[ D: ] - Local Disk" to "[ D: ]"
                 // Format: [ D: ] where positions are: [0]='[' [1]=' ' [2]='D' [3]=':' [4]=' ' [5]=']'
@@ -6785,7 +6785,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
     case WM_SIZING:
 
         LPRECT lprc;
-        lprc = (LPRECT)lParam;
+        lprc = reinterpret_cast<LPRECT>(lParam);
         switch (wParam)
         {
         case WMSZ_TOPLEFT:
@@ -6970,8 +6970,8 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
 
     // Messages from ListViews
     case WM_NOTIFY: {
-        LPNMLISTVIEW lpNmlv = (LPNMLISTVIEW)lParam;
-        [[maybe_unused]] LV_DISPINFO* pLvdi = (LV_DISPINFO*)lParam;
+        LPNMLISTVIEW lpNmlv = reinterpret_cast<LPNMLISTVIEW>(lParam);
+        [[maybe_unused]] LV_DISPINFO* pLvdi = reinterpret_cast<LV_DISPINFO*>(lParam);
 
 
         switch (lpNmlv->hdr.code)
@@ -6980,7 +6980,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
             return TRUE;
 
         case NM_CUSTOMDRAW: {
-            LPNMLVCUSTOMDRAW lpNmlvcd = (LPNMLVCUSTOMDRAW)lParam;
+            LPNMLVCUSTOMDRAW lpNmlvcd = reinterpret_cast<LPNMLVCUSTOMDRAW>(lParam);
             if ((lpNmlvcd->nmcd.hdr.hwndFrom != ::GetDlgItem(hWnd, IDC_LOCAL_FILELIST)) &&
                 (lpNmlvcd->nmcd.hdr.hwndFrom != ::GetDlgItem(hWnd, IDC_REMOTE_FILELIST)))
             {
@@ -6998,7 +6998,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                 ItemW.mask = LVIF_PARAM;
                 ItemW.iItem = static_cast<int>(lpNmlvcd->nmcd.dwItemSpec);
                 ItemW.iSubItem = 0;
-                if (::SendMessageW(lpNmlvcd->nmcd.hdr.hwndFrom, LVM_GETITEMW, 0, (LPARAM)&ItemW))
+                if (::SendMessageW(lpNmlvcd->nmcd.hdr.hwndFrom, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&ItemW)))
                 {
                     if ((ItemW.lParam & FT_LPARAM_UNREADABLE) == FT_LPARAM_UNREADABLE)
                     {
@@ -7024,7 +7024,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                     getItem.iSubItem = 2;
                     getItem.pszText = szFull.data();
                     getItem.cchTextMax = 128;
-                    ::SendMessageW(lpNmlvcd->nmcd.hdr.hwndFrom, LVM_GETITEMW, 0, (LPARAM)&getItem);
+                    ::SendMessageW(lpNmlvcd->nmcd.hdr.hwndFrom, LVM_GETITEMW, 0, reinterpret_cast<LPARAM>(&getItem));
                     WCHAR* pSep = std::wcschr(szFull.data(), L'|');
                     if (pSep)
                     {
@@ -7032,8 +7032,8 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
                         RECT rcInner;
                         rcInner.left = LVIR_BOUNDS; // Use BOUNDS for subitems, not LABEL
                         rcInner.top = lpNmlvcd->iSubItem;
-                        ::SendMessageW(lpNmlvcd->nmcd.hdr.hwndFrom, LVM_GETSUBITEMRECT, (WPARAM)lpNmlvcd->nmcd.dwItemSpec,
-                                     (LPARAM)&rcInner);
+                        ::SendMessageW(lpNmlvcd->nmcd.hdr.hwndFrom, LVM_GETSUBITEMRECT, reinterpret_cast<WPARAM>(lpNmlvcd->nmcd.dwItemSpec),
+                                     reinterpret_cast<LPARAM>(&rcInner));
                         // Use actual selection state from ListView
                         BOOL bSelected = (ListView_GetItemState(lpNmlvcd->nmcd.hdr.hwndFrom,
                                                                 static_cast<int>(lpNmlvcd->nmcd.dwItemSpec), LVIS_SELECTED) &
@@ -7133,20 +7133,20 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
         case LVN_COLUMNCLICK:
             if (lpNmlv->hdr.hwndFrom == ::GetDlgItem(hWnd, IDC_LOCAL_FILELIST))
             {
-                int c = (LPARAM)lpNmlv->iSubItem;
-                _this->bSortDirectionsL[c] = !(_this->bSortDirectionsL[c]);
+                int c = static_cast<LPARAM>(lpNmlv->iSubItem);
+                _this->bSortDirectionsL[static_cast<unsigned long long>(c)] = !(_this->bSortDirectionsL[static_cast<unsigned long long>(c)]);
                 ::SendMessage(lpNmlv->hdr.hwndFrom, LVM_FIRST + 81 /*LVM_SORTITEMSEX*/,
-                              (WPARAM)(LPARAM)(_this->bSortDirectionsL[c] ? c + 1 : ((c + 1) * -1)),
-                              (LPARAM)(PFNLVCOMPARE)ListViewLocalCompareProc);
+                              static_cast<WPARAM>(static_cast<LPARAM>(_this->bSortDirectionsL[c] ? c + 1 : ((c + 1) * -1))),
+                              reinterpret_cast<LPARAM>(reinterpret_cast<PFNLVCOMPARE>(ListViewLocalCompareProc)));
             }
 
             if (lpNmlv->hdr.hwndFrom == ::GetDlgItem(hWnd, IDC_REMOTE_FILELIST))
             {
-                int c = (LPARAM)lpNmlv->iSubItem;
-                _this->bSortDirectionsR[c] = !(_this->bSortDirectionsR[c]);
+                int c = static_cast<LPARAM>(lpNmlv->iSubItem);
+                _this->bSortDirectionsR[static_cast<unsigned long long>(c)] = !(_this->bSortDirectionsR[static_cast<unsigned long long>(c)]);
                 ::SendMessage(lpNmlv->hdr.hwndFrom, LVM_FIRST + 81 /*LVM_SORTITEMSEX*/,
-                              (WPARAM)(LPARAM)(_this->bSortDirectionsR[c] ? c + 1 + 10 : ((c + 1 + 10) * -1)),
-                              (LPARAM)(PFNLVCOMPARE)ListViewLocalCompareProc);
+                              static_cast<WPARAM>(static_cast<LPARAM>(_this->bSortDirectionsR[c] ? c + 1 + 10 : ((c + 1 + 10) * -1))),
+                              reinterpret_cast<LPARAM>(reinterpret_cast<PFNLVCOMPARE>(ListViewLocalCompareProc)));
             }
             return TRUE;
         } // end switch(lpNmlv->hdr.code)
@@ -7157,7 +7157,7 @@ BOOL CALLBACK FileTransfer::FileTransferDlgProc(const HWND hWnd, const UINT uMsg
     case WM_DESTROY:
         if (_this->m_timer != 0)
         {
-            ::KillTimer(hWnd, _this->m_timer);
+            ::KillTimer(hWnd, static_cast<UINT_PTR>(_this->m_timer));
         }
         ::KillTimer(hWnd, 100);
         ::EndDialog(hWnd, FALSE);
@@ -7192,7 +7192,7 @@ int FileTransfer::DoFTParamDialog(const LPWSTR szTitle, const LPWSTR szComment)
     extern HINSTANCE m_hInstResDLL;
     ::wcscpy_s(m_szFTParamTitle.data(), m_szFTParamTitle.size(), szTitle);
     ::wcscpy_s(m_szFTParamComment.data(), m_szFTParamComment.size(), szComment);
-    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_FTPARAM_DLG), hWnd, (DLGPROC)FTParamDlgProc, (LONG_PTR)this));
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_FTPARAM_DLG), hWnd, reinterpret_cast<DLGPROC>(FTParamDlgProc), reinterpret_cast<LONG_PTR>(this)));
 }
 
 
@@ -7203,10 +7203,10 @@ BOOL CALLBACK FileTransfer::FTParamDlgProc(const HWND hwnd, const UINT uMsg, con
     {
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         helper::SafeSetWindowUserData(hwnd, lParam);
-        _this = (FileTransfer*)lParam;
+        _this = reinterpret_cast<FileTransfer*>(lParam);
         //CentreWindow(hwnd);
 
         // Set Title
@@ -7225,7 +7225,7 @@ BOOL CALLBACK FileTransfer::FTParamDlgProc(const HWND hwnd, const UINT uMsg, con
         case IDC_FTPARAM_EDIT:
             if (HIWORD(wParam) == EN_CHANGE)
             {
-                std::size_t length = ::GetWindowTextLength(::GetDlgItem(hwnd, IDC_FTPARAM_EDIT));
+                std::size_t length = static_cast<std::size_t>(::GetWindowTextLength(::GetDlgItem(hwnd, IDC_FTPARAM_EDIT)));
                 bool stringOk = length > 0;
 
                 if (stringOk)
@@ -7276,8 +7276,8 @@ int FileTransfer::DoFTConfirmDialog(const LPWSTR szTitle, const LPWSTR szComment
     ::wcscpy_s(m_szFTConfirmTitle.data(), m_szFTConfirmTitle.size(), szTitle);
     ::wcscpy_s(m_szFTConfirmComment.data(), m_szFTConfirmComment.size(), szComment);
     m_nConfirmAnswer = CONFIRM_NO;
-    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_FTCONFIRM_DLG), hWnd, (DLGPROC)FTConfirmDlgProc,
-                          (LONG_PTR)this));
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_FTCONFIRM_DLG), hWnd, reinterpret_cast<DLGPROC>(FTConfirmDlgProc),
+                          reinterpret_cast<LONG_PTR>(this)));
 }
 
 
@@ -7288,10 +7288,10 @@ BOOL CALLBACK FileTransfer::FTConfirmDlgProc(const HWND hwnd, const UINT uMsg, c
     {
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         helper::SafeSetWindowUserData(hwnd, lParam);
-        _this = (FileTransfer*)lParam;
+        _this = reinterpret_cast<FileTransfer*>(lParam);
         //CentreWindow(hwnd);
 
         // Set Title
@@ -7428,7 +7428,7 @@ void FileTransfer::DoUploadFile(const LPCWSTR szLocalPath, const LPCWSTR szRemot
 #if DEBUG_FT
     {
         std::array<WCHAR, 512U> _dbg;
-        ::_snwprintf_s(_dbg.data(), 512, _TRUNCATE, L"=== DoUploadFile: this=0x%p Set g_fHeadlessUpload=true m_szHeadlessRemotePathW=[%s]\n", (void*)this, m_szHeadlessRemotePathW.data());
+        ::_snwprintf_s(_dbg.data(), 512, _TRUNCATE, L"=== DoUploadFile: this=0x%p Set g_fHeadlessUpload=true m_szHeadlessRemotePathW=[%s]\n", reinterpret_cast<void*>(this), m_szHeadlessRemotePathW.data());
         ::OutputDebugStringW(_dbg.data());
     }
 #endif
@@ -7525,8 +7525,8 @@ void FileTransfer::DisableButtons(const HWND hWndIn, const bool X)
     {
         HMENU hMenu = ::GetSystemMenu(hWndIn, 0);
         int nCount = ::GetMenuItemCount(hMenu);
-        ::EnableMenuItem(hMenu, nCount - 1, MF_DISABLED | MF_GRAYED | MF_BYPOSITION);
-        ::EnableMenuItem(hMenu, nCount - 2, MF_DISABLED | MF_GRAYED | MF_BYPOSITION);
+        ::EnableMenuItem(hMenu, static_cast<UINT>(nCount - 1), MF_DISABLED | MF_GRAYED | MF_BYPOSITION);
+        ::EnableMenuItem(hMenu, static_cast<UINT>(nCount - 2), MF_DISABLED | MF_GRAYED | MF_BYPOSITION);
     }
     ::DrawMenuBar(hWndIn);
 }
@@ -7578,8 +7578,8 @@ void FileTransfer::EnableButtons(const HWND hWndIn)
     // Disable Close Window in in title bar
     HMENU hMenu = ::GetSystemMenu(hWndIn, 0);
     int nCount = ::GetMenuItemCount(hMenu);
-    ::EnableMenuItem(hMenu, nCount - 1, MF_ENABLED | MF_BYPOSITION);
-    ::EnableMenuItem(hMenu, nCount - 2, MF_ENABLED | MF_BYPOSITION);
+    ::EnableMenuItem(hMenu, static_cast<UINT>(nCount - 1), MF_ENABLED | MF_BYPOSITION);
+    ::EnableMenuItem(hMenu, static_cast<UINT>(nCount - 2), MF_ENABLED | MF_BYPOSITION);
     ::DrawMenuBar(hWndIn);
 
     // Reset progress bar and status after transfer completes or is aborted
@@ -7639,8 +7639,8 @@ int CALLBACK FileTransfer::ListViewLocalCompareProc(const LPARAM lParam1, const 
 
     HWND hWndList = ::GetDlgItem(hFTWnd, bRemoteList ? IDC_REMOTE_FILELIST : IDC_LOCAL_FILELIST);
 
-    ListView_GetItemText(hWndList, static_cast<int>(lParam1), static_cast<int>(lParamSort), szBuf1.data(), sizeof(szBuf1));
-    ListView_GetItemText(hWndList, static_cast<int>(lParam2), static_cast<int>(lParamSort), szBuf2.data(), sizeof(szBuf2));
+    ListView_GetItemText(hWndList, static_cast<int>(lParam1), static_cast<int>(lParamSort), szBuf1.data(), sizeof(szBuf1))
+    ListView_GetItemText(hWndList, static_cast<int>(lParam2), static_cast<int>(lParamSort), szBuf2.data(), sizeof(szBuf2))
 
     switch (lParamSort)
     {
@@ -7696,16 +7696,16 @@ __int64 FileTransfer::GetFileSizeFromStringW(WCHAR* const szSize)
     switch (ts1)
     {
     case L'G':
-        Size = (__int64)(m * (__int64)(1024 * 1024 * 1024)) + (__int64)(r * (__int64)(1024 * 1024 * 1024 / 100));
+        Size = static_cast<__int64>((m * static_cast<__int64>(1024 * 1024 * 1024))) + static_cast<__int64>((r * static_cast<__int64>(1024 * 1024 * 1024 / 100)));
         break;
     case L'M':
-        Size = (__int64)(m * (__int64)(1024 * 1024)) + (__int64)(r * (__int64)(1024 * 1024 / 100));
+        Size = static_cast<__int64>((m * static_cast<__int64>(1024 * 1024))) + static_cast<__int64>((r * static_cast<__int64>(1024 * 1024 / 100)));
         break;
     case L'K':
-        Size = (__int64)(m * (__int64)(1024)) + (__int64)(r * 1024 / 100);
+        Size = static_cast<__int64>((m * static_cast<__int64>(1024))) + static_cast<__int64>((r * 1024 / 100));
         break;
     case L'e':
-        Size = (__int64)m;
+        Size = static_cast<__int64>(m);
         break;
     default:
         Size = 0;

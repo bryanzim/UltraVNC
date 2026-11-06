@@ -16,8 +16,8 @@
 // the CARD type definitions and various useful macros.
 //
 
-#ifndef RFB_H__
-#define RFB_H__
+#ifndef RFB_H
+#define RFB_H
 
 // Define the CARD* types as used in X11/Xmd.h
 
@@ -50,9 +50,15 @@ typedef unsigned char CARD8;
 
 #ifdef LITTLE_ENDIAN_HOST
 
+#ifdef __cplusplus
+#define Swap16IfLE(s) static_cast<CARD16>((((s) & 0xff) << 8) | (((s) >> 8) & 0xff))
+#define Swap32IfLE(l)                                                                                                              \
+    static_cast<CARD32>((((l) & 0xff000000) >> 24) | (((l) & 0x00ff0000) >> 8) | (((l) & 0x0000ff00) << 8) | (((l) & 0x000000ff) << 24))
+#else
 #define Swap16IfLE(s) ((CARD16)((((s) & 0xff) << 8) | (((s) >> 8) & 0xff)))
 #define Swap32IfLE(l)                                                                                                              \
     ((CARD32)((((l) & 0xff000000) >> 24) | (((l) & 0x00ff0000) >> 8) | (((l) & 0x0000ff00) << 8) | (((l) & 0x000000ff) << 24)))
+#endif
 
 #else
 
@@ -62,9 +68,15 @@ typedef unsigned char CARD8;
 #endif
 
 // unconditional swaps
+#ifdef __cplusplus
+#define Swap16(s) static_cast<CARD16>((((s) & 0xff) << 8) | (((s) >> 8) & 0xff))
+#define Swap32(l)                                                                                                                  \
+    static_cast<CARD32>((((l) & 0xff000000) >> 24) | (((l) & 0x00ff0000) >> 8) | (((l) & 0x0000ff00) << 8) | (((l) & 0x000000ff) << 24))
+#else
 #define Swap16(s) ((CARD16)((((s) & 0xff) << 8) | (((s) >> 8) & 0xff)))
 #define Swap32(l)                                                                                                                  \
     ((CARD32)((((l) & 0xff000000) >> 24) | (((l) & 0x00ff0000) >> 8) | (((l) & 0x0000ff00) << 8) | (((l) & 0x000000ff) << 24)))
+#endif
 
 #ifdef _Gii
 #define Swap64IfLE(ll)                                                                                                             \

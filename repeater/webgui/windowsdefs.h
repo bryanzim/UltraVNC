@@ -15,8 +15,8 @@
  * Windows (winsock) version
  */
 
-#ifndef _WINDOWDEFS_H_
-#define _WINDOWDEFS_H_ 1
+#ifndef WINDOWDEFS_H
+#define WINDOWDEFS_H 1
 
 #pragma warning(disable : 4115)
 #pragma warning(disable : 4152)
@@ -116,4 +116,4 @@ extern int WI_NOBLOCKSOCK(long sock);
 #define ECONNREFUSED WSAECONNREFUSED
 #endif
 
-#endif /* _WINDOWDEFS_H_ */
+#endif /* WINDOWDEFS_H */

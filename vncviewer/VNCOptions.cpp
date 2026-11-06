@@ -22,7 +22,7 @@
 #include "vncviewer.h"
 
 #include <direct.h>
-#include <shlobj.h>
+#include <ShlObj.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -132,7 +132,7 @@ VNCOptions::VNCOptions()
 {
     for (int i{ 0 }; i <= LASTENCODING; ++i)
     {
-        m_UseEnc[i] = false;
+        m_UseEnc[static_cast<unsigned long long>(i)] = false;
     }
 
     m_UseEnc[rfbEncodingRaw] = true;
@@ -275,7 +275,7 @@ VNCOptions::VNCOptions()
 
     m_NoMoreCommandLineUserPassword = false;
     m_fExitCheck = false; //PGM @ Advantig
-    hwnd = 0;
+    hwnd = nullptr;
     m_FTTimeout = FT_RECV_TIMEOUT;
     m_keepAliveInterval = KEEPALIVE_INTERVAL;
     m_IdleInterval = 0;
@@ -316,7 +316,7 @@ void VNCOptions::setDefaultOptionsFileName(wchar_t* const optionfile)
         return;
     }
     const TCHAR* APPDIR = _T("UltraVNC");
-    if (::SHGetFolderPathW(0, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, optionfile) == S_OK)
+    if (::SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, optionfile) == S_OK)
     {
         ::wcscat_s(optionfile, MAX_PATH, L"\\");
         ::wcscat_s(optionfile, MAX_PATH, APPDIR);
@@ -346,7 +346,7 @@ TCHAR* VNCOptions::getDefaultOptionsFileName() { return m_optionfile; }
 void VNCOptions::setDefaultDocumentPath()
 {
     const TCHAR* APPDIR = _T("UltraVNC");
-    if (::SHGetFolderPathW(0, CSIDL_PERSONAL, nullptr, SHGFP_TYPE_CURRENT, m_document_folder.data()) == S_OK)
+    if (::SHGetFolderPathW(nullptr, CSIDL_PERSONAL, nullptr, SHGFP_TYPE_CURRENT, m_document_folder.data()) == S_OK)
     {
         ::wcscat_s(m_document_folder.data(), m_document_folder.size(), L"\\");
         ::wcscat_s(m_document_folder.data(), m_document_folder.size(), APPDIR);
@@ -374,7 +374,7 @@ VNCOptions& VNCOptions::operator=(VNCOptions& s)
 
     for (int i = rfbEncodingRaw; i <= LASTENCODING; ++i)
     {
-        m_UseEnc[i] = s.m_UseEnc[i];
+        m_UseEnc[static_cast<unsigned long long>(i)] = s.m_UseEnc[static_cast<unsigned long long>(i)];
     }
 
     m_ViewOnly = s.m_ViewOnly;
@@ -555,8 +555,8 @@ void VNCOptions::SetFromCommandLine(const LPTSTR szCmdLineIn)
         return;
     }
 
-    TCHAR* cmd = new TCHAR[cmdlinelen + 1];
-    ::_tcscpy_s(cmd, cmdlinelen + 1, szCmdLineIn);
+    TCHAR* cmd = new TCHAR[static_cast<unsigned long long>(cmdlinelen + 1)];
+    ::_tcscpy_s(cmd, static_cast<rsize_t>(cmdlinelen + 1), szCmdLineIn);
 
     // Count the number of spaces
     // This may be more than the number of arguments, but that doesn't matter.
@@ -570,7 +570,7 @@ void VNCOptions::SetFromCommandLine(const LPTSTR szCmdLineIn)
     }
 
     // Create the array to hold pointers to each bit of string
-    TCHAR** args = new LPTSTR[nspaces + 1];
+    TCHAR** args = new LPTSTR[static_cast<unsigned long long>(nspaces + 1)];
 
     // replace spaces with nulls and
     // create an array of TCHAR*'s which points to start of each bit.
@@ -989,7 +989,7 @@ void VNCOptions::SetFromCommandLine(const LPTSTR szCmdLineIn)
             {
                 m_PreferredEncodings.clear();
                 m_PreferredEncodings.push_back(enc);
-                m_UseEnc[enc] = true;
+                m_UseEnc[static_cast<unsigned long long>(enc)] = true;
             }
         }
         else if (SwitchMatch(args[j], _T("encodings")))
@@ -1021,7 +1021,7 @@ void VNCOptions::SetFromCommandLine(const LPTSTR szCmdLineIn)
                     {
                         m_PreferredEncodings.clear();
                     }
-                    m_UseEnc[enc] = true;
+                    m_UseEnc[static_cast<unsigned long long>(enc)] = true;
                     if (m_PreferredEncodings.end() == std::find(m_PreferredEncodings.begin(), m_PreferredEncodings.end(), enc))
                     {
                         m_PreferredEncodings.push_back(enc);
@@ -1389,10 +1389,10 @@ void saveInt(const wchar_t* const name, const int value, const wchar_t* const fn
 }
 
 int readInt(const wchar_t* const name, const int defval, const wchar_t* const fname)
-{ return ::GetPrivateProfileIntW(L"options", name, defval, fname); }
+{ return static_cast<int>(::GetPrivateProfileIntW(L"options", name, defval, fname)); }
 
 int readInt(const char* const name, const int defval, const char* const fname)
-{ return ::GetPrivateProfileIntA("options", name, defval, fname); }
+{ return static_cast<int>(::GetPrivateProfileIntA("options", name, defval, fname)); }
 
 void VNCOptions::SaveOptions(const wchar_t* const fname)
 {
@@ -1400,7 +1400,7 @@ void VNCOptions::SaveOptions(const wchar_t* const fname)
     {
         std::array<wchar_t, 128U> buf;
         ::swprintf_s(buf.data(), 128, L"use_encoding_%d", i);
-        saveInt(buf.data(), m_UseEnc[i], fname);
+        saveInt(buf.data(), m_UseEnc[static_cast<unsigned long long>(i)], fname);
     }
     if (!m_PreferredEncodings.empty())
     {
@@ -1499,7 +1499,7 @@ void VNCOptions::LoadOptions(const wchar_t* const fname)
     {
         std::array<wchar_t, 128U> buf;
         ::swprintf_s(buf.data(), 128, L"use_encoding_%d", i);
-        m_UseEnc[i] = readInt(buf.data(), m_UseEnc[i], fname) != 0;
+        m_UseEnc[static_cast<unsigned long long>(i)] = readInt(buf.data(), m_UseEnc[static_cast<unsigned long long>(i)], fname) != 0;
     }
     int nExistingPreferred = m_PreferredEncodings.empty() ? rfbEncodingZRLE : m_PreferredEncodings[0U];
     int nPreferredEncoding = readInt(L"preferred_encoding", nExistingPreferred, fname);
@@ -1560,9 +1560,9 @@ void VNCOptions::LoadOptions(const wchar_t* const fname)
     m_fEnableZstd = readInt(L"EnableZstd", m_fEnableZstd, fname) != 0;
     m_quickoption = readInt(L"QuickOption", m_quickoption, fname);
     m_fUseDSMPlugin = readInt(L"UseDSMPlugin", m_fUseDSMPlugin, fname) != 0;
-    m_connectionType = (ConnectionType)readInt(L"UseProxy", static_cast<int>(m_connectionType), fname);
+    m_connectionType = static_cast<ConnectionType>(readInt(L"UseProxy", static_cast<int>(m_connectionType), fname));
     ::GetPrivateProfileStringW(L"connection", L"proxyhost", L"", m_proxyhost.data(), static_cast<DWORD>(m_proxyhost.size()), fname);
-    m_proxyport = ::GetPrivateProfileIntW(L"connection", L"proxyport", 0, fname);
+    m_proxyport = static_cast<int>(::GetPrivateProfileIntW(L"connection", L"proxyport", 0, fname));
     m_allowMonitorSpanning = readInt(L"allowMonitorSpanning", m_allowMonitorSpanning, fname);
     m_ChangeServerRes = readInt(L"ChangeServerRes", m_ChangeServerRes, fname);
     m_extendDisplay = readInt(L"extendDisplay", m_extendDisplay, fname);
@@ -1664,7 +1664,7 @@ int VNCOptions::DoDialog(bool running, const HWND hwndIn)
 {
     extern HINSTANCE m_hInstResDLL;
     m_running = running;
-    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_OPTIONDIALOG), hwndIn, (DLGPROC)OptDlgProc, (LONG_PTR)this));
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_OPTIONDIALOG), hwndIn, reinterpret_cast<DLGPROC>(OptDlgProc), reinterpret_cast<LONG_PTR>(this)));
 }
 
 void VNCOptions::CancelDialog() { ::SendMessage(hwnd, WM_COMMAND, IDCANCEL, 0); }
@@ -1681,10 +1681,10 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
     {
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         helper::SafeSetWindowUserData(hwnd, lParam);
-        _this = (VNCOptions*)lParam;
+        _this = reinterpret_cast<VNCOptions*>(lParam);
         // Initialise the controls
         _this->hwnd = hwnd;
         // Window always on top
@@ -1700,7 +1700,7 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
         {
             HWND hPref = ::GetDlgItem(hwnd, IDC_RAWRADIO + (i - rfbEncodingRaw));
             ::SendMessage(hPref, BM_SETCHECK, (i == nPreferredEncoding), 0);
-            ::EnableWindow(hPref, (_this->m_UseEnc[i] && !_this->autoDetect));
+            ::EnableWindow(hPref, (_this->m_UseEnc[static_cast<unsigned long long>(i)] && !_this->autoDetect));
         }
 
         HWND hCopyRect = ::GetDlgItem(hwnd, ID_SESSION_SET_CRECT);
@@ -1803,17 +1803,17 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
         std::array<TCHAR, 4U> szPer;
         for (i = 0; i <= 12; ++i)
         {
-            ::_itow_s(Scales[i], szPer.data(), szPer.size(), 10);
-            ::SendMessage(hViewerScale, CB_INSERTSTRING, (WPARAM)i, (LPARAM)szPer.data());
+            ::_itow_s(Scales[static_cast<unsigned long long>(i)], szPer.data(), szPer.size(), 10);
+            ::SendMessage(hViewerScale, CB_INSERTSTRING, static_cast<WPARAM>(i), reinterpret_cast<LPARAM>(szPer.data()));
         }
-        ::SetDlgItemInt(hwnd, IDC_SCALE_CB, ((_this->m_scale_num * 100) / _this->m_scale_den), FALSE);
+        ::SetDlgItemInt(hwnd, IDC_SCALE_CB, (static_cast<UINT>((_this->m_scale_num * 100) / _this->m_scale_den)), FALSE);
 
         // Modif sf@2002 - Server Scaling
-        ::SetDlgItemInt(hwnd, IDC_SERVER_SCALE, _this->m_nServerScale, FALSE);
+        ::SetDlgItemInt(hwnd, IDC_SERVER_SCALE, static_cast<UINT>(_this->m_nServerScale), FALSE);
 
         if (_this->m_Shared)
         {
-            ::SetDlgItemInt(hwnd, IDC_SERVER_RECON, _this->m_reconnectcounter, FALSE);
+            ::SetDlgItemInt(hwnd, IDC_SERVER_RECON, static_cast<UINT>(_this->m_reconnectcounter), FALSE);
         }
         else
         {
@@ -1821,14 +1821,14 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
         }
         if (_this->m_Shared)
         {
-            ::SetDlgItemInt(hwnd, IDC_SERVER_RECON_TIME, _this->m_autoReconnect, FALSE);
+            ::SetDlgItemInt(hwnd, IDC_SERVER_RECON_TIME, static_cast<UINT>(_this->m_autoReconnect), FALSE);
         }
         else
         {
             ::SetDlgItemInt(hwnd, IDC_SERVER_RECON_TIME, 0, FALSE);
         }
 
-        ::SetDlgItemInt(hwnd, IDC_FTTIMEOUT, _this->m_FTTimeout, FALSE);
+        ::SetDlgItemInt(hwnd, IDC_FTTIMEOUT, static_cast<UINT>(_this->m_FTTimeout), FALSE);
 
         // Modif sf@2002 - Cache
         HWND hCache = ::GetDlgItem(hwnd, ID_SESSION_SET_CACHE);
@@ -1874,8 +1874,8 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
         HWND hAllowJpeg = ::GetDlgItem(hwnd, IDC_ALLOW_JPEG);
         ::SendMessage(hAllowJpeg, BM_SETCHECK, _this->m_enableJpegCompression, 0);
 
-        ::SetDlgItemInt(hwnd, IDC_COMPRESSLEVEL, _this->m_compressLevel, FALSE);
-        ::SetDlgItemInt(hwnd, IDC_QUALITYLEVEL, _this->m_jpegQualityLevel, FALSE);
+        ::SetDlgItemInt(hwnd, IDC_COMPRESSLEVEL, static_cast<UINT>(_this->m_compressLevel), FALSE);
+        ::SetDlgItemInt(hwnd, IDC_QUALITYLEVEL, static_cast<UINT>(_this->m_jpegQualityLevel), FALSE);
 
         HWND hRemoteCursor;
         if (_this->m_requestShapeUpdates && !_this->m_ignoreShapeUpdates)
@@ -1906,7 +1906,7 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
         ::SendMessage(hpreemptiveUpdates, BM_SETCHECK, _this->m_preemptiveUpdates ? BST_CHECKED : BST_UNCHECKED, 0);
 
         //adzm 2010-10
-        ::SetDlgItemInt(hwnd, IDC_MOUSE_THROTTLE, _this->m_throttleMouse, FALSE);
+        ::SetDlgItemInt(hwnd, IDC_MOUSE_THROTTLE, static_cast<UINT>(_this->m_throttleMouse), FALSE);
 
         return TRUE;
     }
@@ -2008,7 +2008,7 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
 
             [[maybe_unused]] HWND hViewerScaling = ::GetDlgItem(hwnd, IDC_SCALE_CB);
             int nErr;
-            int nPer = ::GetDlgItemInt(hwnd, IDC_SCALE_CB, &nErr, FALSE);
+            int nPer = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SCALE_CB, &nErr, FALSE));
             if (nPer > 0)
             {
                 _this->m_scale_num = nPer;
@@ -2021,7 +2021,7 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
                 // _this->m_scale_num = GetDlgItemInt( hwnd, IDC_SCALE_NUM, NULL, TRUE);
                 // _this->m_scale_den = GetDlgItemInt( hwnd, IDC_SCALE_DEN, NULL, TRUE);
                 // Modif sf@2002 - Server Scaling
-                _this->m_nServerScale = ::GetDlgItemInt(hwnd, IDC_SERVER_SCALE, nullptr, TRUE);
+                _this->m_nServerScale = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SERVER_SCALE, nullptr, TRUE));
                 _this->FixScaling();
                 //if (_this->m_scale_num == 1 && _this->m_scale_den == 1)
                 // 	  _this->m_scaling = false;
@@ -2031,7 +2031,7 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
                 _this->m_scale_num = 1;
                 _this->m_scale_den = 1;
                 // Modif sf@2002 - Server Scaling
-                _this->m_nServerScale = ::GetDlgItemInt(hwnd, IDC_SERVER_SCALE, nullptr, TRUE);
+                _this->m_nServerScale = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SERVER_SCALE, nullptr, TRUE));
                 if ((_this->m_nServerScale < 1) || (_this->m_nServerScale > 9))
                 {
                     _this->m_nServerScale = 1;
@@ -2039,7 +2039,7 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
             }
             if (_this->m_Shared)
             {
-                _this->m_reconnectcounter = ::GetDlgItemInt(hwnd, IDC_SERVER_RECON, nullptr, TRUE);
+                _this->m_reconnectcounter = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SERVER_RECON, nullptr, TRUE));
             }
             else
             {
@@ -2047,14 +2047,14 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
             }
             if (_this->m_Shared)
             {
-                _this->m_autoReconnect = ::GetDlgItemInt(hwnd, IDC_SERVER_RECON_TIME, nullptr, TRUE);
+                _this->m_autoReconnect = static_cast<int>(::GetDlgItemInt(hwnd, IDC_SERVER_RECON_TIME, nullptr, TRUE));
             }
             else
             {
                 _this->m_autoReconnect = 0;
             }
 
-            _this->m_FTTimeout = ::GetDlgItemInt(hwnd, IDC_FTTIMEOUT, nullptr, TRUE);
+            _this->m_FTTimeout = static_cast<int>(::GetDlgItemInt(hwnd, IDC_FTTIMEOUT, nullptr, TRUE));
 
             HWND hFullScreen = ::GetDlgItem(hwnd, IDC_FULLSCREEN);
             _this->m_FullScreen = (::SendMessage(hFullScreen, BM_GETCHECK, 0, 0) == BST_CHECKED);
@@ -2081,7 +2081,7 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
             HWND hAllowCompressLevel = ::GetDlgItem(hwnd, IDC_ALLOW_COMPRESSLEVEL);
             _this->m_useCompressLevel = (::SendMessage(hAllowCompressLevel, BM_GETCHECK, 0, 0) == BST_CHECKED);
 
-            _this->m_compressLevel = ::GetDlgItemInt(hwnd, IDC_COMPRESSLEVEL, nullptr, TRUE);
+            _this->m_compressLevel = static_cast<int>(::GetDlgItemInt(hwnd, IDC_COMPRESSLEVEL, nullptr, TRUE));
             if (_this->m_compressLevel < 0)
             {
                 _this->m_compressLevel = 0;
@@ -2094,7 +2094,7 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
             HWND hAllowJpeg = ::GetDlgItem(hwnd, IDC_ALLOW_JPEG);
             _this->m_enableJpegCompression = (::SendMessage(hAllowJpeg, BM_GETCHECK, 0, 0) == BST_CHECKED);
 
-            _this->m_jpegQualityLevel = ::GetDlgItemInt(hwnd, IDC_QUALITYLEVEL, nullptr, TRUE);
+            _this->m_jpegQualityLevel = static_cast<int>(::GetDlgItemInt(hwnd, IDC_QUALITYLEVEL, nullptr, TRUE));
             if (_this->m_jpegQualityLevel < 0)
             {
                 _this->m_jpegQualityLevel = 0;
@@ -2159,7 +2159,7 @@ BOOL CALLBACK VNCOptions::OptDlgProc(const HWND hwnd, const UINT uMsg, const WPA
             for (int i = rfbEncodingRaw; i <= LASTENCODING; ++i)
             {
                 HWND hPref = ::GetDlgItem(hwnd, IDC_RAWRADIO + (i - rfbEncodingRaw));
-                ::EnableWindow(hPref, (_this->m_UseEnc[i] && !ad));
+                ::EnableWindow(hPref, (_this->m_UseEnc[static_cast<unsigned long long>(i)] && !ad));
             }
 
             HWND hCopyRect = ::GetDlgItem(hwnd, ID_SESSION_SET_CRECT);

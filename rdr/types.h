@@ -10,8 +10,8 @@
 //
 
 
-#ifndef __RDR_TYPES_H__
-#define __RDR_TYPES_H__
+#ifndef RDR_TYPES_H
+#define RDR_TYPES_H
 
 #pragma once
 

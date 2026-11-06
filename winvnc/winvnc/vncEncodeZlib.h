@@ -11,8 +11,8 @@
 
 class vncEncodeZlib;
 
-#if !defined(_WINVNC_ENCODEZLIB)
-#define _WINVNC_ENCODEZLIB
+#if !defined(WINVNC_ENCODEZLIB)
+#define WINVNC_ENCODEZLIB
 #pragma once
 
 #include "vncencoder.h"
@@ -62,4 +62,4 @@ protected:
     UltraVncZ* ultraVncZ;
 };
 
-#endif // _WINVNC_ENCODEZLIB
+#endif // WINVNC_ENCODEZLIB

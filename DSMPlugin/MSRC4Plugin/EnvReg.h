@@ -10,8 +10,8 @@
 //
 
 
-#ifndef _ENVREG_H
-#define _ENVREG_H
+#ifndef ENVREG_H
+#define ENVREG_H
 
 #include "registry.h"
 

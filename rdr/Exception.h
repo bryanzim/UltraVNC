@@ -10,8 +10,8 @@
 //
 
 
-#ifndef __RDR_EXCEPTION_H__
-#define __RDR_EXCEPTION_H__
+#ifndef RDR_EXCEPTION_H
+#define RDR_EXCEPTION_H
 
 #include <array>
 #include <cstring>
@@ -28,7 +28,7 @@ namespace rdr
             len = 256
         };
         char str_[len];
-        explicit Exception(const char* const s = 0, const char* const e = "rdr::Exception")
+        explicit Exception(const char* const s = nullptr, const char* const e = "rdr::Exception")
         {
             str_[0U] = 0;
             ::strncat_s(str_, e, len - 1);
@@ -63,17 +63,17 @@ namespace rdr
 
     struct TimedOut : public Exception
     {
-        explicit TimedOut(const char* s = 0) : Exception(s, "rdr::TimedOut") {}
+        explicit TimedOut(const char* s = nullptr) : Exception(s, "rdr::TimedOut") {}
     };
 
     struct EndOfStream : public Exception
     {
-        explicit EndOfStream(const char* s = 0) : Exception(s, "rdr::EndOfStream") {}
+        explicit EndOfStream(const char* s = nullptr) : Exception(s, "rdr::EndOfStream") {}
     };
 
     struct FrameException : public Exception
     {
-        explicit FrameException(const char* s = 0) : Exception(s, "rdr::FrameException") {}
+        explicit FrameException(const char* s = nullptr) : Exception(s, "rdr::FrameException") {}
     };
 
 }

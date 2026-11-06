@@ -71,10 +71,10 @@ wi_alloc(int bufsize)
    struct memmarker * mark;
    int   totalsize;
 
-   totalsize = bufsize + sizeof(struct memmarker) + 4;
+   totalsize = (unsigned long long)(bufsize) + (int)(sizeof(struct memmarker) + 4);
 
-   buffer = (char*)WI_MALLOC(totalsize);
-   memset(buffer, 0, totalsize);
+   buffer = (char*)WI_MALLOC((unsigned long long)(totalsize));
+   memset(buffer, 0, (unsigned long long)(totalsize));
 
    mark = (struct memmarker * )buffer;
    mark->marker = wi_marker;        /* Mark beginning of buffer */
@@ -84,7 +84,7 @@ wi_alloc(int bufsize)
 
    wi_blocks++;
    wi_totalblocks++;
-   wi_bytes += bufsize;
+   wi_bytes += (u_long)(bufsize);
    if(wi_bytes > wi_maxbytes)
       wi_maxbytes = wi_bytes;
 
@@ -117,7 +117,7 @@ wi_free(void * buff)
    }
    
    wi_blocks--;
-   wi_bytes -= mark->msize;
+   wi_bytes -= (u_long)(mark->msize);
 
    WI_FREE( (void*)mark );
 }
@@ -197,7 +197,7 @@ wi_newsess(void)
    }
    newsess->ws_socket = INVALID_SOCKET;
    newsess->ws_state = WI_HEADER;
-   newsess->ws_last = cticks;
+   newsess->ws_last = (wi_sec)(cticks);
 
    /* Add new session to master list */
    newsess->ws_next = wi_sessions;
@@ -220,7 +220,7 @@ wi_delsess(wi_sess * oldsess)
 
    if(oldsess->ws_socket != INVALID_SOCKET)
    {
-      closesocket(oldsess->ws_socket);
+      closesocket((SOCKET)(oldsess->ws_socket));
       oldsess->ws_socket = 0;
    }
 

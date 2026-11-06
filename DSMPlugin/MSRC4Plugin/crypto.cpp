@@ -17,7 +17,7 @@
 
 #include "crypto.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 //#include <time.h>
 //#include <tchar.h>

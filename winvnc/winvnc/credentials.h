@@ -29,7 +29,7 @@ private:
     static DesktopUsersToken* instance;
     DWORD dwExplorerLogonPid{ 0U };
     char username[257U]{};
-    HANDLE save_hPtoken = 0;
+    HANDLE save_hPtoken = nullptr;
 
 public:
     static DesktopUsersToken* getInstance();

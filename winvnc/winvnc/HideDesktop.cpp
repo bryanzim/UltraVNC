@@ -12,8 +12,8 @@
 #include <cstring>
 
 #define WIN32_LEAN_AND_MEAN
-//#include <shlwapi.h>
-#include <windows.h>
+//#include <Shlwapi.h>
+#include <Windows.h>
 
 #include <tchar.h>
 #include <wininet.h> // Shell object uses INTERNET_MAX_URL_LENGTH (go figure)
@@ -33,9 +33,9 @@
 #endif
 #include "stdhdrs.h"
 
-#include <shlguid.h> // shell GUIDs
-#include <shlobj.h>  // IActiveDesktop
-#include <shlwapi.h> // DLLVERSIONINFO
+#include <ShlGuid.h> // shell GUIDs
+#include <ShlObj.h>  // IActiveDesktop
+#include <Shlwapi.h> // DLLVERSIONINFO
 
 #include <array>
 
@@ -54,7 +54,7 @@ DWORD GetDllVersion(const LPCTSTR lpszDllName)
     {
         DLLGETVERSIONPROC pDllGetVersion;
 
-        pDllGetVersion = (DLLGETVERSIONPROC)::GetProcAddress(hinstDll, "DllGetVersion");
+        pDllGetVersion = reinterpret_cast<DLLGETVERSIONPROC>(::GetProcAddress(hinstDll, "DllGetVersion"));
 
         // Because some DLLs might not implement this function,
         // test for it explicitly. Depending on the particular
@@ -73,7 +73,7 @@ DWORD GetDllVersion(const LPCTSTR lpszDllName)
 
             if (SUCCEEDED(hr))
             {
-                dwVersion = PACKVERSION(dvi.dwMajorVersion, dvi.dwMinorVersion);
+                dwVersion = static_cast<DWORD>(PACKVERSION(dvi.dwMajorVersion, dvi.dwMinorVersion));
             }
         }
 
@@ -100,7 +100,7 @@ BOOL SHDesktopHTML()
     {
         P_SHGetSettings pSHGetSettings;
 
-        if ((pSHGetSettings = (P_SHGetSettings)::GetProcAddress(hinstDll, "SHGetSettings")))
+        if ((pSHGetSettings = reinterpret_cast<P_SHGetSettings>(::GetProcAddress(hinstDll, "SHGetSettings"))))
         {
             SHELLFLAGSTATE shfs;
 
@@ -188,7 +188,7 @@ void SaveWallpaperStyle()
     if (::RegOpenKeyEx(HKEY_CURRENT_USER, DESKTOP_KEYNAME, 0, KEY_READ, &hKey) == ERROR_SUCCESS)
     {
         DWORD sz = sizeof WallpaperStyle;
-        ::RegQueryValueEx(hKey, DESKTOP_WALLPAPER_STYLE_KEYNAME, 0, 0, WallpaperStyle.data(), &sz);
+        ::RegQueryValueEx(hKey, DESKTOP_WALLPAPER_STYLE_KEYNAME, nullptr, nullptr, WallpaperStyle.data(), &sz);
         ::RegCloseKey(hKey);
     }
 }
@@ -199,7 +199,7 @@ void RestoreWallpaperStyle()
 
     if (::RegOpenKeyEx(HKEY_CURRENT_USER, DESKTOP_KEYNAME, 0, KEY_WRITE, &hKey) == ERROR_SUCCESS)
     {
-        DWORD sz = static_cast<DWORD>(std::strlen((const char*)WallpaperStyle.data()));
+        DWORD sz = static_cast<DWORD>(std::strlen(reinterpret_cast<const char*>(WallpaperStyle.data())));
         ::RegSetValueEx(hKey, DESKTOP_WALLPAPER_STYLE_KEYNAME, 0, REG_SZ, WallpaperStyle.data(), sz);
         ::RegCloseKey(hKey);
     }
@@ -222,7 +222,7 @@ void HideDesktop()
     {
         SaveWallpaperStyle(); // Added Jef Fix
         ::SystemParametersInfo(SPI_GETDESKWALLPAPER, 1024, SCREENNAME.data(), 0);
-        ::SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, (PVOID) "", SPIF_SENDCHANGE);
+        ::SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, reinterpret_cast<PVOID>(const_cast<char *>("")), SPIF_SENDCHANGE);
         ADWasEnabled = HideActiveDesktop();
         ISWallPaperHided = true;
         vnclog.Print(LL_INTWARN, VNCLOG("Killwallpaper %i %i\n"), ISWallPaperHided, ADWasEnabled);
@@ -299,9 +299,9 @@ void DisableEffects()
         }
         for (iParam = 0; iParam < (sizeof(spiParams) / sizeof(spiParams[0U])); ++iParam)
         {
-            if (spiValues[iParam] != (BOOL)spiSuggested[iParam])
+            if (spiValues[iParam] != static_cast<BOOL>(spiSuggested[iParam]))
             {
-                if (!::SystemParametersInfo(spiParams[iParam] + 1, 0, (PVOID)spiSuggested[iParam], SPIF_SENDCHANGE))
+                if (!::SystemParametersInfo(spiParams[iParam] + 1, 0, reinterpret_cast<PVOID>(spiSuggested[iParam]), SPIF_SENDCHANGE))
                 {
                     vnclog.Print(LL_INTWARN, VNCLOG("Failed to set SPI value for 0x%04x to 0x%08x (0x%08x)\n"),
                                  spiParams[iParam] + 1, spiSuggested[iParam], ::GetLastError());
@@ -324,9 +324,9 @@ void EnableEffects()
         int iParam{ 0 };
         for (iParam = 0; iParam < (sizeof(spiParams) / sizeof(spiParams[0U])); ++iParam)
         {
-            if (spiValues[iParam] != (BOOL)spiSuggested[iParam])
+            if (spiValues[iParam] != static_cast<BOOL>(spiSuggested[iParam]))
             {
-                if (!::SystemParametersInfo(spiParams[iParam] + 1, 0, (PVOID)spiValues[iParam], SPIF_SENDCHANGE))
+                if (!::SystemParametersInfo(spiParams[iParam] + 1, 0, reinterpret_cast<PVOID>(spiValues[iParam]), SPIF_SENDCHANGE))
                 {
                     vnclog.Print(LL_INTWARN, VNCLOG("Failed to restore SPI value for 0x%04x (0x%08x)\n"), spiParams[iParam] + 1,
                                  ::GetLastError());
@@ -411,7 +411,7 @@ void DisableFontSmoothing()
 
             if (g_bGotClearType && (g_bOldClearTypeValue != FALSE))
             {
-                if (!::SystemParametersInfo(0x1049 /*SPI_SETCLEARTYPE*/, 0, (PVOID)FALSE, SPIF_SENDCHANGE))
+                if (!::SystemParametersInfo(0x1049 /*SPI_SETCLEARTYPE*/, 0, reinterpret_cast<PVOID>(FALSE), SPIF_SENDCHANGE))
                 {
                     vnclog.Print(LL_INTWARN, VNCLOG("Failed to set SPI value for SPI_SETCLEARTYPE (0x%08x)\n"), ::GetLastError());
                 }
@@ -442,7 +442,7 @@ void EnableFontSmoothing()
     {
         if (g_bOldFontSmoothingValue != FALSE)
         {
-            if (!::SystemParametersInfo(SPI_SETFONTSMOOTHING, g_bOldFontSmoothingValue, nullptr, SPIF_SENDCHANGE))
+            if (!::SystemParametersInfo(SPI_SETFONTSMOOTHING, static_cast<UINT>(g_bOldFontSmoothingValue), nullptr, SPIF_SENDCHANGE))
             {
                 vnclog.Print(LL_INTWARN, VNCLOG("Failed to restore SPI value for SPI_SETFONTSMOOTHING (0x%08x)\n"), ::GetLastError());
             }
@@ -452,7 +452,7 @@ void EnableFontSmoothing()
 
                 if (g_bGotClearType)
                 {
-                    if (!::SystemParametersInfo(0x1049 /*SPI_SETCLEARTYPE*/, 0, (PVOID)g_bOldClearTypeValue, SPIF_SENDCHANGE))
+                    if (!::SystemParametersInfo(0x1049 /*SPI_SETCLEARTYPE*/, 0, reinterpret_cast<PVOID>(g_bOldClearTypeValue), SPIF_SENDCHANGE))
                     {
                         vnclog.Print(LL_INTWARN, VNCLOG("Failed to restore SPI value for SPI_SETCLEARTYPE (0x%08x)\n"),
                                      ::GetLastError());
@@ -465,7 +465,7 @@ void EnableFontSmoothing()
 
                 if (g_bGotFontSmoothingType)
                 {
-                    if (!::SystemParametersInfo(0x200B /*SPI_SETFONTSMOOTHINGTYPE*/, 0, (PVOID)g_nOldFontSmoothingType,
+                    if (!::SystemParametersInfo(0x200B /*SPI_SETFONTSMOOTHINGTYPE*/, 0, reinterpret_cast<PVOID>(g_nOldFontSmoothingType),
                                               SPIF_SENDCHANGE))
                     {
                         vnclog.Print(LL_INTWARN, VNCLOG("Failed to restore SPI value for SPI_SETFONTSMOOTHINGTYPE (0x%08x)\n"),

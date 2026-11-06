@@ -49,7 +49,7 @@ vncEncryptBytes(unsigned char *bytes, char *passwd)
 
     for (i = 0; i < 8; i++) {
 	if (i < strlen(passwd)) {
-	    key[i] = passwd[i];
+	    key[i] = (unsigned char)(passwd[i]);
 	} else {
 	    key[i] = 0;
 	}
@@ -77,7 +77,7 @@ vncEncryptPasswd( unsigned char *encryptedPasswd, char *passwd )
     /* pad password with nulls */
     for (i = 0; i < MAXPWLEN; i++) {
 		if (i < strlen(passwd)) {
-			encryptedPasswd[i] = passwd[i];
+			encryptedPasswd[i] = (unsigned char)(passwd[i]);
 		} else {	
 			encryptedPasswd[i] = 0;
 		}
@@ -97,7 +97,7 @@ vncEncryptPasswdMs( unsigned char *encryptedPasswd, char *passwd )
     /* pad password with nulls */
     for (i = 0; i < 32; i++) {
 		if (i < strlen(passwd)) {
-			encryptedPasswd[i] = passwd[i];
+			encryptedPasswd[i] = (unsigned char)(passwd[i]);
 		} else {	
 			encryptedPasswd[i] = 0;
 		}

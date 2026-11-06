@@ -21,7 +21,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <process.h>
-#include <windows.h>
+#include <Windows.h>
 #include <wincrypt.h>
 #include <bcrypt.h>
 #include "vncauth.h"
@@ -146,7 +146,7 @@ vncEncryptBytes(unsigned char *where, const char *passwd)
 
     for (i = 0; i < 8; i++) {
 	if (i < strlen(passwd)) {
-	    key[i] = passwd[i];
+	    key[i] = (unsigned char)(passwd[i]);
 	} else {
 	    key[i] = 0;
 	}

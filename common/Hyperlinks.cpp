@@ -19,7 +19,7 @@
 
 #include "Hyperlinks.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #ifndef _X64
 #define PROP_ORIGINAL_FONT TEXT("_Hyperlink_Original_Font_")
@@ -176,13 +176,13 @@ BOOL ConvertStaticToHyperlink(const HWND hwndCtl)
 
 LRESULT CALLBACK _HyperlinkParentProc(const HWND hwnd, const UINT message, const WPARAM wParam, const LPARAM lParam)
 {
-    WNDPROC pfnOrigProc = (WNDPROC)::GetProp(hwnd, PROP_ORIGINAL_PROC);
+    WNDPROC pfnOrigProc = reinterpret_cast<WNDPROC>(::GetProp(hwnd, PROP_ORIGINAL_PROC));
 
     switch (message)
     {
     case WM_CTLCOLORSTATIC: {
-        HDC hdc = (HDC)wParam;
-        HWND hwndCtl = (HWND)lParam;
+        HDC hdc = reinterpret_cast<HDC>(wParam);
+        HWND hwndCtl = reinterpret_cast<HWND>(lParam);
 
         BOOL fHyperlink = (nullptr != ::GetProp(hwndCtl, PROP_STATIC_HYPERLINK));
         if (fHyperlink)
@@ -205,7 +205,7 @@ LRESULT CALLBACK _HyperlinkParentProc(const HWND hwnd, const UINT message, const
 
 LRESULT CALLBACK _HyperlinkProc(const HWND hwnd, const UINT message, const WPARAM wParam, const LPARAM lParam)
 {
-    WNDPROC pfnOrigProc = (WNDPROC)::GetProp(hwnd, PROP_ORIGINAL_PROC);
+    WNDPROC pfnOrigProc = reinterpret_cast<WNDPROC>(::GetProp(hwnd, PROP_ORIGINAL_PROC));
 
     switch (message)
     {
@@ -213,11 +213,11 @@ LRESULT CALLBACK _HyperlinkProc(const HWND hwnd, const UINT message, const WPARA
         ::SetWindowLongPtr(hwnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(pfnOrigProc));
         ::RemoveProp(hwnd, PROP_ORIGINAL_PROC);
 
-        HFONT hOrigFont = (HFONT)::GetProp(hwnd, PROP_ORIGINAL_FONT);
-        ::SendMessage(hwnd, WM_SETFONT, (WPARAM)hOrigFont, 0);
+        HFONT hOrigFont = reinterpret_cast<HFONT>(::GetProp(hwnd, PROP_ORIGINAL_FONT));
+        ::SendMessage(hwnd, WM_SETFONT, reinterpret_cast<WPARAM>(hOrigFont), 0);
         ::RemoveProp(hwnd, PROP_ORIGINAL_FONT);
 
-        HFONT hFont = (HFONT)::GetProp(hwnd, PROP_UNDERLINE_FONT);
+        HFONT hFont = reinterpret_cast<HFONT>(::GetProp(hwnd, PROP_UNDERLINE_FONT));
         ::DeleteObject(hFont);
         ::RemoveProp(hwnd, PROP_UNDERLINE_FONT);
 
@@ -228,8 +228,8 @@ LRESULT CALLBACK _HyperlinkProc(const HWND hwnd, const UINT message, const WPARA
     case WM_MOUSEMOVE: {
         if (::GetCapture() != hwnd)
         {
-            HFONT hFont = (HFONT)::GetProp(hwnd, PROP_UNDERLINE_FONT);
-            ::SendMessage(hwnd, WM_SETFONT, (WPARAM)hFont, FALSE);
+            HFONT hFont = reinterpret_cast<HFONT>(::GetProp(hwnd, PROP_UNDERLINE_FONT));
+            ::SendMessage(hwnd, WM_SETFONT, reinterpret_cast<WPARAM>(hFont), FALSE);
             ::InvalidateRect(hwnd, nullptr, FALSE);
             ::SetCapture(hwnd);
         }
@@ -243,8 +243,8 @@ LRESULT CALLBACK _HyperlinkProc(const HWND hwnd, const UINT message, const WPARA
 
             if (!::PtInRect(&rect, pt))
             {
-                HFONT hFont = (HFONT)::GetProp(hwnd, PROP_ORIGINAL_FONT);
-                ::SendMessage(hwnd, WM_SETFONT, (WPARAM)hFont, FALSE);
+                HFONT hFont = reinterpret_cast<HFONT>(::GetProp(hwnd, PROP_ORIGINAL_FONT));
+                ::SendMessage(hwnd, WM_SETFONT, reinterpret_cast<WPARAM>(hFont), FALSE);
                 ::InvalidateRect(hwnd, nullptr, FALSE);
                 ReleaseCapture();
             }
@@ -275,10 +275,10 @@ BOOL ConvertStaticToHyperlink(const HWND hwndCtl)
     HWND hwndParent = ::GetParent(hwndCtl);
     if (nullptr != hwndParent)
     {
-        WNDPROC pfnOrigProc = (WNDPROC)::GetWindowLongPtr(hwndParent, GWLP_WNDPROC);
+        WNDPROC pfnOrigProc = reinterpret_cast<WNDPROC>(::GetWindowLongPtr(hwndParent, GWLP_WNDPROC));
         if (pfnOrigProc != _HyperlinkParentProc)
         {
-            ::SetProp(hwndParent, PROP_ORIGINAL_PROC, (HANDLE)pfnOrigProc);
+            ::SetProp(hwndParent, PROP_ORIGINAL_PROC, reinterpret_cast<HANDLE>(pfnOrigProc));
             ::SetWindowLongPtr(hwndParent, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(_HyperlinkParentProc));
         }
     }
@@ -290,29 +290,29 @@ BOOL ConvertStaticToHyperlink(const HWND hwndCtl)
 
     // Subclass the existing control.
 
-    WNDPROC pfnOrigProc = (WNDPROC)::GetWindowLongPtr(hwndCtl, GWLP_WNDPROC);
-    ::SetProp(hwndCtl, PROP_ORIGINAL_PROC, (HANDLE)pfnOrigProc);
+    WNDPROC pfnOrigProc = reinterpret_cast<WNDPROC>(::GetWindowLongPtr(hwndCtl, GWLP_WNDPROC));
+    ::SetProp(hwndCtl, PROP_ORIGINAL_PROC, reinterpret_cast<HANDLE>(pfnOrigProc));
     ::SetWindowLongPtr(hwndCtl, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(_HyperlinkProc));
 
     // Create an updated font by adding an underline.
 
-    HFONT hOrigFont = (HFONT)::SendMessage(hwndCtl, WM_GETFONT, 0, 0);
-    ::SetProp(hwndCtl, PROP_ORIGINAL_FONT, (HANDLE)hOrigFont);
+    HFONT hOrigFont = reinterpret_cast<HFONT>(::SendMessage(hwndCtl, WM_GETFONT, 0, 0));
+    ::SetProp(hwndCtl, PROP_ORIGINAL_FONT, reinterpret_cast<HANDLE>(hOrigFont));
 
     LOGFONT lf;
     ::GetObject(hOrigFont, sizeof(lf), &lf);
     lf.lfUnderline = TRUE;
 
     HFONT hFont = ::CreateFontIndirect(&lf);
-    ::SetProp(hwndCtl, PROP_UNDERLINE_FONT, (HANDLE)hFont);
+    ::SetProp(hwndCtl, PROP_UNDERLINE_FONT, reinterpret_cast<HANDLE>(hFont));
 
     // Set a flag on the control so we know what color it should be.
 
-    ::SetProp(hwndCtl, PROP_STATIC_HYPERLINK, (HANDLE)1);
+    ::SetProp(hwndCtl, PROP_STATIC_HYPERLINK, reinterpret_cast<HANDLE>(static_cast<UINT_PTR>(1)));
 
     return TRUE;
 }
 #endif
 
 BOOL ConvertStaticToHyperlink(const HWND hwndParent, const UINT uiCtlId)
-{ return ConvertStaticToHyperlink(::GetDlgItem(hwndParent, uiCtlId)); }
+{ return ConvertStaticToHyperlink(::GetDlgItem(hwndParent, static_cast<int>(uiCtlId))); }

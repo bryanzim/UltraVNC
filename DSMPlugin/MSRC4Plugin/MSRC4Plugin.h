@@ -21,8 +21,8 @@
 ////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef _MSRC4PLUGIN_H
-#define _MSRC4PLUGIN_H
+#ifndef MSRC4PLUGIN_H
+#define MSRC4PLUGIN_H
 
 #ifdef PLUGIN_EXPORTS
 #define PLUGIN_API __declspec(dllexport)
@@ -41,7 +41,7 @@
 #include "EnvReg.h"
 #include "resource.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <crtdbg.h>
 #include <memory.h>

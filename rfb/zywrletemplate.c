@@ -309,7 +309,7 @@ const static signed char* zywrleParam[3][3][3]={
 
 static InlineX void Harr( signed char* pX0, signed char* pX1 ){
 	// Piecewise-Linear Harr(PLHarr)
-	int X0=(int)*pX0, X1=(int)*pX1;
+	int X0=static_cast<int>(*pX0), X1=static_cast<int>(*pX1);
 	int orgX0=X0, orgX1=X1;
 	if( (X0^X1)&0x80 ){
 		// differ sign
@@ -326,8 +326,8 @@ static InlineX void Harr( signed char* pX0, signed char* pX1 ){
 			X1 += X0;	// L = A
 		}
 	}
-	*pX0 = (signed char)X1;
-	*pX1 = (signed char)X0;
+	*pX0 = static_cast<signed char>(X1);
+	*pX1 = static_cast<signed char>(X0);
 }
 // 1D-Wavelet transform.
 //
@@ -354,7 +354,7 @@ static InlineX void WaveletLevel( int* data, int size, int l, int SkipPixel ){
 	signed char* pX0;
 	signed char* end;
 
-	pX0 = (signed char*)data;
+	pX0 = reinterpret_cast<signed char*>(data);
 	s = (8<<l)*SkipPixel;
 	end = pX0+(size>>(l+1))*s;
 	s -= 2;
@@ -459,9 +459,9 @@ static InlineX void FilterWaveletSquare( int* pBuf, int width, int height, int l
 		}
 		for( y=0; y<height/s; y++ ){
 			for( x=0; x<width/s; x++ ){
-				((signed char*)pH)[0] = pM[0][((unsigned char*)pH)[0]];
-				((signed char*)pH)[1] = pM[1][((unsigned char*)pH)[1]];
-				((signed char*)pH)[2] = pM[2][((unsigned char*)pH)[2]];
+				(reinterpret_cast<signed char*>(pH))[0] = pM[0][(reinterpret_cast<unsigned char*>(pH))[0]];
+				(reinterpret_cast<signed char*>(pH))[1] = pM[1][(reinterpret_cast<unsigned char*>(pH))[1]];
+				(reinterpret_cast<signed char*>(pH))[2] = pM[2][(reinterpret_cast<unsigned char*>(pH))[2]];
 				pH += s;
 			}
 			pH += (s-1)*width;
@@ -649,10 +649,10 @@ static InlineX void InvWavelet( int* pBuf, int width, int height, int level ){
 	pTop = pBuf+w*h;	\
 	if( uw ){	\
 		pData=         data + w;	\
-		pEnd = (int*)(pData+ h*scanline);	\
-		while( pData < (PIXEL_T*)pEnd ){	\
-			pLine = (int*)(pData + uw);	\
-			while( pData < (PIXEL_T*)pLine ){	\
+		pEnd = reinterpret_cast<int*>((pData+ h*scanline));	\
+		while( pData < reinterpret_cast<PIXEL_T*>(pEnd) ){	\
+			pLine = reinterpret_cast<int*>((pData + uw));	\
+			while( pData < reinterpret_cast<PIXEL_T*>(pLine) ){	\
 				TRANS	\
 				pData++;	\
 				pTop++;	\
@@ -662,10 +662,10 @@ static InlineX void InvWavelet( int* pBuf, int width, int height, int level ){
 	}	\
 	if( uh ){	\
 		pData=         data +  h*scanline;	\
-		pEnd = (int*)(pData+ uh*scanline);	\
-		while( pData < (PIXEL_T*)pEnd ){	\
-			pLine = (int*)(pData + w);	\
-			while( pData < (PIXEL_T*)pLine ){	\
+		pEnd = reinterpret_cast<int*>((pData+ uh*scanline));	\
+		while( pData < reinterpret_cast<PIXEL_T*>(pEnd) ){	\
+			pLine = reinterpret_cast<int*>((pData + w));	\
+			while( pData < reinterpret_cast<PIXEL_T*>(pLine) ){	\
 				TRANS	\
 				pData++;	\
 				pTop++;	\
@@ -675,10 +675,10 @@ static InlineX void InvWavelet( int* pBuf, int width, int height, int level ){
 	}	\
 	if( uw && uh ){	\
 		pData=         data + w+ h*scanline;	\
-		pEnd = (int*)(pData+   uh*scanline);	\
-		while( pData < (PIXEL_T*)pEnd ){	\
-			pLine = (int*)(pData + uw);	\
-			while( pData < (PIXEL_T*)pLine ){	\
+		pEnd = reinterpret_cast<int*>((pData+   uh*scanline));	\
+		while( pData < reinterpret_cast<PIXEL_T*>(pEnd) ){	\
+			pLine = reinterpret_cast<int*>((pData + uw));	\
+			while( pData < reinterpret_cast<PIXEL_T*>(pLine) ){	\
 				TRANS	\
 				pData++;	\
 				pTop++;	\
@@ -705,9 +705,9 @@ static InlineX void ZYWRLE_RGBYUV( int* pBuf, PIXEL_T* data, int width, int heig
 	while( pBuf < pEnd ){
 		pLine = pBuf+width;
 		while( pBuf < pLine ){
-			ZYWRLE_LOAD_PIXEL(data,R,G,B);
-			ZYWRLE_RGBYUV1(R,G,B,Y,U,V,ZYWRLE_YMASK,ZYWRLE_UVMASK);
-			ZYWRLE_SAVE_COEFF(pBuf,V,Y,U);
+			ZYWRLE_LOAD_PIXEL(data,R,G,B)
+			ZYWRLE_RGBYUV1(R,G,B,Y,U,V,ZYWRLE_YMASK,ZYWRLE_UVMASK)
+			ZYWRLE_SAVE_COEFF(pBuf,V,Y,U)
 			pBuf++;
 			data++;
 		}
@@ -725,9 +725,9 @@ static InlineX void ZYWRLE_YUVRGB( int* pBuf, PIXEL_T* data, int width, int heig
 	while( pBuf < pEnd ){
 		pLine = pBuf+width;
 		while( pBuf < pLine ){
-			ZYWRLE_LOAD_COEFF(pBuf,V,Y,U);
-			ZYWRLE_YUVRGB1(R,G,B,Y,U,V);
-			ZYWRLE_SAVE_PIXEL(data,R,G,B);
+			ZYWRLE_LOAD_COEFF(pBuf,V,Y,U)
+			ZYWRLE_YUVRGB1(R,G,B,Y,U,V)
+			ZYWRLE_SAVE_PIXEL(data,R,G,B)
 			pBuf++;
 			data++;
 		}
@@ -751,23 +751,23 @@ PIXEL_T* ZYWRLE_ANALYZE ( PIXEL_T* dst, PIXEL_T* src, int w, int h, int scanline
 
 	zywrleCalcSize( &w, &h, level );
 	if( (w==0)||(h==0) ){
-		return NULL;
+		return nullptr;
 	}
 	uw -= w;
 	uh -= h;
 
-	ZYWRLE_LOAD_UNALIGN(src,pSrc,*(PIXEL_T*)pTop=*pSrc;)
+	ZYWRLE_LOAD_UNALIGN(src,pSrc,*reinterpret_cast<PIXEL_T*>(pTop)=*pSrc;)
 	ZYWRLE_RGBYUV( pBuf, src, w, h, scanline );
 	Wavelet( pBuf, w, h, level );
 	for( l=0; l<level; l++ ){
-		ZYWRLE_PACK_COEFF( pBuf, dst, 3, w, h, l );
-		ZYWRLE_PACK_COEFF( pBuf, dst, 2, w, h, l );
-		ZYWRLE_PACK_COEFF( pBuf, dst, 1, w, h, l );
+		ZYWRLE_PACK_COEFF( pBuf, dst, 3, w, h, l )
+		ZYWRLE_PACK_COEFF( pBuf, dst, 2, w, h, l )
+		ZYWRLE_PACK_COEFF( pBuf, dst, 1, w, h, l )
 		if( l == level-1 ){
-			ZYWRLE_PACK_COEFF( pBuf, dst, 0, w, h, l );
+			ZYWRLE_PACK_COEFF( pBuf, dst, 0, w, h, l )
 		}
 	}
-	ZYWRLE_SAVE_UNALIGN(dst,*dst=*(PIXEL_T*)pTop;)
+	ZYWRLE_SAVE_UNALIGN(dst,*dst=*reinterpret_cast<PIXEL_T*>(pTop);)
 	return dst;
 }
 #endif
@@ -786,23 +786,23 @@ PIXEL_T* ZYWRLE_SYNTHESIZE ( PIXEL_T* dst, PIXEL_T* src, int w, int h, int scanl
 
 	zywrleCalcSize( &w, &h, level );
 	if( (w==0)||(h==0) ){
-		return NULL;
+		return nullptr;
 	}
 	uw -= w;
 	uh -= h;
 
 	for( l=0; l<level; l++ ){
-		ZYWRLE_UNPACK_COEFF( pBuf, src, 3, w, h, l );
-		ZYWRLE_UNPACK_COEFF( pBuf, src, 2, w, h, l );
-		ZYWRLE_UNPACK_COEFF( pBuf, src, 1, w, h, l );
+		ZYWRLE_UNPACK_COEFF( pBuf, src, 3, w, h, l )
+		ZYWRLE_UNPACK_COEFF( pBuf, src, 2, w, h, l )
+		ZYWRLE_UNPACK_COEFF( pBuf, src, 1, w, h, l )
 		if( l == level-1 ){
-			ZYWRLE_UNPACK_COEFF( pBuf, src, 0, w, h, l );
+			ZYWRLE_UNPACK_COEFF( pBuf, src, 0, w, h, l )
 		}
 	}
-	ZYWRLE_SAVE_UNALIGN(src,*(PIXEL_T*)pTop=*src;)
+	ZYWRLE_SAVE_UNALIGN(src,*reinterpret_cast<PIXEL_T*>(pTop)=*src;)
 	InvWavelet( pBuf, w, h, level );
 	ZYWRLE_YUVRGB( pBuf, dst, w, h, scanline );
-	ZYWRLE_LOAD_UNALIGN(dst,pDst,*pDst=*(PIXEL_T*)pTop;)
+	ZYWRLE_LOAD_UNALIGN(dst,pDst,*pDst=*reinterpret_cast<PIXEL_T*>(pTop);)
 	return src;
 }
 #endif

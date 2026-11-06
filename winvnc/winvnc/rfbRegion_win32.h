@@ -12,8 +12,8 @@
 
 // rfb::Region2D class for Win32
 
-#ifndef __RFB_REGION_WIN32_INCLUDED__
-#define __RFB_REGION_WIN32_INCLUDED__
+#ifndef RFB_REGION_WIN32_INCLUDED
+#define RFB_REGION_WIN32_INCLUDED
 
 #include "rfbRect.h"
 
@@ -82,4 +82,4 @@ namespace rfb
 
 };
 
-#endif /* __RFB_REGION_WIN32_INCLUDED__ */
+#endif /* RFB_REGION_WIN32_INCLUDED */

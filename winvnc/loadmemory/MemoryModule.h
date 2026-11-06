@@ -33,10 +33,10 @@
  *
  */
 
-#ifndef __MEMORY_MODULE_HEADER
-#define __MEMORY_MODULE_HEADER
+#ifndef MEMORY_MODULE_HEADER
+#define MEMORY_MODULE_HEADER
 
-#include <windows.h>
+#include <Windows.h>
 
 typedef void* HMEMORYMODULE;
 
@@ -169,4 +169,4 @@ void MemoryDefaultFreeLibrary(HCUSTOMMODULE, void*);
 }
 #endif
 
-#endif // __MEMORY_MODULE_HEADER
+#endif // MEMORY_MODULE_HEADER

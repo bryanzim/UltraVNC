@@ -62,7 +62,7 @@ vncAcceptDialog::~vncAcceptDialog()
 // Routine called to activate the dialog and, once it's done, delete it
 DWORD WINAPI DialogThread(const LPVOID lpParam)
 {
-    vncAcceptDialog* dialog = (vncAcceptDialog*)lpParam;
+    vncAcceptDialog* dialog = reinterpret_cast<vncAcceptDialog*>(lpParam);
     HDESK desktop;
     desktop = ::OpenInputDesktop(0, FALSE,
                                DESKTOP_CREATEMENU | DESKTOP_CREATEWINDOW | DESKTOP_ENUMERATE | DESKTOP_HOOKCONTROL |
@@ -73,7 +73,7 @@ DWORD WINAPI DialogThread(const LPVOID lpParam)
     //	[v1.0.2-jp1 fix]
     //int retVal = DialogBoxParam(hAppInstance, MAKEINTRESOURCE(IDD_ACCEPT_CONN),
     int retVal =
-        static_cast<int>(::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_ACCEPT_CONN), nullptr, (DLGPROC)dialog->vncAcceptDlgProc, (LONG_PTR)dialog));
+        static_cast<int>(::DialogBoxParam(hInstResDLL, MAKEINTRESOURCE(IDD_ACCEPT_CONN), nullptr, reinterpret_cast<DLGPROC>(dialog->vncAcceptDlgProc), reinterpret_cast<LONG_PTR>(dialog)));
 
     ::SetThreadDesktop(old_desktop);
     ::CloseDesktop(desktop);
@@ -116,12 +116,12 @@ BOOL CALLBACK vncAcceptDialog::vncAcceptDlgProc(const HWND hwnd, const UINT uMsg
         // Dialog has just been created
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDI_WINVNC));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         // Save the lParam into our user data so that subsequent calls have
         // access to the parent C++ object
         helper::SafeSetWindowUserData(hwnd, lParam);
-        vncAcceptDialog* _thisInner = (vncAcceptDialog*)lParam;
+        vncAcceptDialog* _thisInner = reinterpret_cast<vncAcceptDialog*>(lParam);
 
         // Set the IP-address string
         std::array<char, 512U> baseMsg;
@@ -155,9 +155,9 @@ BOOL CALLBACK vncAcceptDialog::vncAcceptDlgProc(const HWND hwnd, const UINT uMsg
             std::array<char, MAX_PATH> mycommand;
             ::strcpy_s(mycommand.data(), mycommand.size(), winvncFolder.data());
             ::strcat_s(mycommand.data(), mycommand.size(), "\\mylogo.bmp");
-            hbmBkGnd = (HBITMAP)::LoadImage(nullptr, mycommand.data(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+            hbmBkGnd = reinterpret_cast<HBITMAP>(::LoadImage(nullptr, mycommand.data(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
         }
-        ::SendMessage(::GetDlgItem(hwnd, IDC_ACCEPTLOGO), STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)(HBITMAP)hbmBkGnd);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_ACCEPTLOGO), STM_SETIMAGE, IMAGE_BITMAP, reinterpret_cast<LPARAM>(hbmBkGnd));
 
         if (::SetTimer(hwnd, 1, 1000, nullptr) == 0)
         {
@@ -251,7 +251,7 @@ BOOL CALLBACK vncAcceptDialog::vncAcceptDlgProc(const HWND hwnd, const UINT uMsg
         case IDCANCEL:
             ::EndDialog(hwnd, IDREJECT);
             return TRUE;
-        };
+        }
 
         break;
 

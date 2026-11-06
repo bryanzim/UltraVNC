@@ -27,12 +27,12 @@
 #define ViewOnly 0x0001
 #define Interact 0x0002
 
-#include "../../../winvnc/winvnc/localization.h" // Act : add localization on messages
+#include "../../../winvnc/winvnc/Localization.h" // Act : add localization on messages
 
 #include <cstdio>
 #include <ctime>
 
-CheckUserPasswordSDFn CheckUserPasswordSD = 0;
+CheckUserPasswordSDFn CheckUserPasswordSD = nullptr;
 
 const TCHAR REGISTRY_KEY[] = _T("Software\\UltraVNC");
 
@@ -209,13 +209,13 @@ int CUPSDV2(const char* const userin, const char* const password, const char* co
 
 TCHAR* AddToModuleDir(TCHAR* filename, const int length)
 {
-    TCHAR* szCurrentDir = new TCHAR[length];
-    if (::GetModuleFileName(nullptr, szCurrentDir, length))
+    TCHAR* szCurrentDir = new TCHAR[static_cast<unsigned long long>(length)];
+    if (::GetModuleFileName(nullptr, szCurrentDir, static_cast<DWORD>(length)))
     {
         TCHAR* p = ::_tcsrchr(szCurrentDir, '\\');
         *p = '\0';
-        ::_tcscat_s(szCurrentDir, length, _T("\\"));
-        ::_tcscat_s(szCurrentDir, length, filename);
+        ::_tcscat_s(szCurrentDir, static_cast<rsize_t>(length), _T("\\"));
+        ::_tcscat_s(szCurrentDir, static_cast<rsize_t>(length), filename);
     }
     filename = szCurrentDir;
     return filename;

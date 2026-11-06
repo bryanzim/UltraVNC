@@ -11,7 +11,7 @@
 
 #include <winsock.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <conio.h>
 #include <fcntl.h>

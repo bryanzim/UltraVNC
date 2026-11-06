@@ -13,9 +13,9 @@
 
 #include "rfb.h"
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <mbstring.h>
 
@@ -65,7 +65,7 @@ namespace helper
 #ifndef _X64
         HINSTANCE hInstance = (HINSTANCE)::GetWindowLong(hWnd, GWL_HINSTANCE);
 #else
-        HINSTANCE hInstance = (HINSTANCE)::GetWindowLongPtr(hWnd, GWLP_HINSTANCE);
+        HINSTANCE hInstance = reinterpret_cast<HINSTANCE>(::GetWindowLongPtr(hWnd, GWLP_HINSTANCE));
 #endif
         return hInstance;
     }
@@ -104,19 +104,19 @@ namespace helper
     {
         if ((in[0U] == L'\\') && (in[1U] == L'\\') && (in[2U] == L'?') && (in[3U] == L'\\'))
         {
-            ::wcscpy_s(out, outLen, in);
+            ::wcscpy_s(out, static_cast<rsize_t>(outLen), in);
         } // already prefixed
         else if ((in[0U] == L'\\') && (in[1U] == L'\\'))
         {
-            ::_snwprintf_s(out, outLen, _TRUNCATE, L"\\\\?\\UNC\\%s", in + 2);
+            ::_snwprintf_s(out, static_cast<size_t>(outLen), _TRUNCATE, L"\\\\?\\UNC\\%s", in + 2);
         }
         else if (in[0U] && (in[1U] == L':'))
         {
-            ::_snwprintf_s(out, outLen, _TRUNCATE, L"\\\\?\\%s", in);
+            ::_snwprintf_s(out, static_cast<size_t>(outLen), _TRUNCATE, L"\\\\?\\%s", in);
         }
         else
         {
-            ::wcscpy_s(out, outLen, in);
+            ::wcscpy_s(out, static_cast<rsize_t>(outLen), in);
         }
     }
 
@@ -210,7 +210,7 @@ namespace helper
                     }
                     if (a & FILE_ATTRIBUTE_READONLY)
                     {
-                        ::SetFileAttributesW(dstChild.data(), a & ~FILE_ATTRIBUTE_READONLY);
+                        ::SetFileAttributesW(dstChild.data(), a & static_cast<DWORD>(~FILE_ATTRIBUTE_READONLY));
                     }
                 }
                 if (!::MoveFileExW(srcChild.data(), dstChild.data(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED))
@@ -304,7 +304,7 @@ namespace helper
             {
                 ++e;
             }
-            std::size_t len = e - p;
+            std::size_t len = static_cast<std::size_t>(e - p);
             if (len > 0)
             {
                 if (((len == 1) && (p[0U] == L'.')) || ((len == 2) && (p[0U] == L'.') && (p[1U] == L'.')))
@@ -380,7 +380,7 @@ namespace helper
         // current protocol, "(name)" for the <= RC18 protocol (the request is
         // rewritten for old servers). _mbsrchr handles DBCS names like strrchr
         // is meant to in the file-transfer code.
-        const char* reqBase = (const char*)_mbsrchr((const unsigned char*)szRequested, '\\');
+        const char* reqBase = reinterpret_cast<const char*>(_mbsrchr((const unsigned char*)szRequested, '\\'));
         reqBase = reqBase ? reqBase + 1 : szRequested;
         std::size_t reqLen = std::strlen(reqBase);
         bool bBracketMarker = ((reqLen >= 5) && (reqBase[0U] == rfbDirPrefix[0U]) && (reqBase[1U] == rfbDirPrefix[1U]) &&
@@ -392,7 +392,7 @@ namespace helper
         }
 
         // The reply basename must be !UVNCDIR-<name>.zip
-        const char* rcvBase = (const char*)_mbsrchr((const unsigned char*)szReceived, '\\');
+        const char* rcvBase = reinterpret_cast<const char*>(_mbsrchr((const unsigned char*)szReceived, '\\'));
         rcvBase = rcvBase ? rcvBase + 1 : szReceived;
         if (std::strncmp(rcvBase, rfbZipDirectoryPrefix, std::strlen(rfbZipDirectoryPrefix)) != 0)
         {
@@ -436,7 +436,7 @@ namespace helper
                     return false;
                 }
                 char hexByte[3U] = { mid[i * 2], mid[i * 2 + 1], '\0' };
-                if ((unsigned char)std::strtol(hexByte, nullptr, 16) != static_cast<unsigned char>(reqName[i]))
+                if (static_cast<unsigned char>(std::strtol(hexByte, nullptr, 16)) != static_cast<unsigned char>(reqName[i]))
                 {
                     return false;
                 }
@@ -454,14 +454,14 @@ namespace helper
         return IsSafeFileNameW(szMidW.data());
     }
 
-    DynamicFnBase::DynamicFnBase(const TCHAR* dllName, const char* fnName) : fnPtr{ 0 }, dllHandle{ 0 }
+    DynamicFnBase::DynamicFnBase(const TCHAR* dllName, const char* fnName) : fnPtr{ nullptr }, dllHandle{ nullptr }
     {
         dllHandle = ::LoadLibrary(dllName);
         if (!dllHandle)
         {
             return;
         }
-        fnPtr = (void*)::GetProcAddress(dllHandle, fnName);
+        fnPtr = reinterpret_cast<void*>(::GetProcAddress(dllHandle, fnName));
     }
 
     DynamicFnBase::~DynamicFnBase()

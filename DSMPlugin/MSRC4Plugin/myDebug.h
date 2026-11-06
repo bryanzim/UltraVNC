@@ -10,8 +10,8 @@
 //
 
 
-#ifndef _MYDEBUG_H
-#define _MYDEBUG_H
+#ifndef MYDEBUG_H
+#define MYDEBUG_H
 
 //Assert macro
 #define My_assert(e) ((e) ? (void)0 : Die(__FILE__, __LINE__, #e))

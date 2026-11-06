@@ -10,7 +10,7 @@
 #pragma warning(disable : 4996)
 
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <array>
 #include <cstdio>
@@ -19,7 +19,7 @@
 #include <stdlib.h>
 
 typedef BOOL (*CheckUserGroupPasswordFn)(char* userin, char* password, char* machine, char* group, int lodom);
-CheckUserGroupPasswordFn CheckUserGroupPassword = 0;
+CheckUserGroupPasswordFn CheckUserGroupPassword = nullptr;
 bool CheckAD()
 {
     HMODULE hModule = ::LoadLibrary("Activeds.dll");
@@ -132,7 +132,7 @@ int main(const int argc, char* argv[])
         HMODULE hModule = ::LoadLibrary("authlogonuser.dll");
         if (hModule)
         {
-            CheckUserGroupPassword = (CheckUserGroupPasswordFn)::GetProcAddress(hModule, "CUGP");
+            CheckUserGroupPassword = reinterpret_cast<CheckUserGroupPasswordFn>(::GetProcAddress(hModule, "CUGP"));
             [[maybe_unused]] HRESULT hr = ::CoInitialize(nullptr);
             returnvalue = ::CheckUserGroupPassword(pszBuffer.data(), pszBuffer2.data(), "test", pszBuffer3.data(), locdom);
             ::CoUninitialize();
@@ -171,7 +171,7 @@ int main(const int argc, char* argv[])
     HMODULE hModule = ::LoadLibrary("auth.dll");
     if (hModule)
     {
-        CheckUserGroupPassword = (CheckUserGroupPasswordFn)::GetProcAddress(hModule, "CUGP");
+        CheckUserGroupPassword = reinterpret_cast<CheckUserGroupPasswordFn>(::GetProcAddress(hModule, "CUGP"));
         [[maybe_unused]] HRESULT hr = ::CoInitialize(nullptr);
         returnvalue = ::CheckUserGroupPassword(pszBuffer.data(), pszBuffer2.data(), "test", pszBuffer3.data(), locdom);
         ::CoUninitialize();
@@ -210,7 +210,7 @@ int main(const int argc, char* argv[])
         HMODULE hModuleInner = ::LoadLibrary("authad.dll");
         if (hModuleInner)
         {
-            CheckUserGroupPassword = (CheckUserGroupPasswordFn)::GetProcAddress(hModuleInner, "CUGP");
+            CheckUserGroupPassword = reinterpret_cast<CheckUserGroupPasswordFn>(::GetProcAddress(hModuleInner, "CUGP"));
             [[maybe_unused]] HRESULT hr = ::CoInitialize(nullptr);
             returnvalue = ::CheckUserGroupPassword(pszBuffer.data(), pszBuffer2.data(), "test", pszBuffer3.data(), locdom);
             ::CoUninitialize();
@@ -260,7 +260,7 @@ int main(const int argc, char* argv[])
                 HMODULE hModuleInner = ::LoadLibrary("ldapauthnt4.dll");
                 if (hModuleInner)
                 {
-                    CheckUserGroupPassword = (CheckUserGroupPasswordFn)::GetProcAddress(hModuleInner, "CUGP");
+                    CheckUserGroupPassword = reinterpret_cast<CheckUserGroupPasswordFn>(::GetProcAddress(hModuleInner, "CUGP"));
                     [[maybe_unused]] HRESULT hr = ::CoInitialize(nullptr);
                     returnvalue = ::CheckUserGroupPassword(pszBuffer.data(), pszBuffer2.data(), "test", pszBuffer3.data(), locdom);
                     ::CoUninitialize();
@@ -303,7 +303,7 @@ int main(const int argc, char* argv[])
                 HMODULE hModuleInner = ::LoadLibrary("ldapauth.dll");
                 if (hModuleInner)
                 {
-                    CheckUserGroupPassword = (CheckUserGroupPasswordFn)::GetProcAddress(hModuleInner, "CUGP");
+                    CheckUserGroupPassword = reinterpret_cast<CheckUserGroupPasswordFn>(::GetProcAddress(hModuleInner, "CUGP"));
                     [[maybe_unused]] HRESULT hr = ::CoInitialize(nullptr);
                     returnvalue = ::CheckUserGroupPassword(pszBuffer.data(), pszBuffer2.data(), "test", pszBuffer3.data(), locdom);
                     ::CoUninitialize();

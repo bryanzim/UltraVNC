@@ -34,8 +34,8 @@
 #include "winvnc.h"
 
 #include <lmcons.h>
-#include <shlobj.h>
-#include <userenv.h>
+#include <ShlObj.h>
+#include <UserEnv.h>
 #include <wininet.h>
 
 #include <array>
@@ -104,7 +104,7 @@ static inline VOID ResetAero(VOID)
     vnclog.Print(LL_INTINFO, VNCLOG("Reset %i \n"), AeroWasEnabled);
     if (AeroWasEnabled)
     {
-        ::DwmEnableComposition(AeroWasEnabled);
+        ::DwmEnableComposition(static_cast<UINT>(AeroWasEnabled));
     }
 }
 
@@ -176,10 +176,10 @@ static void RestoreFontSmoothing() { EnableFontSmoothing(); }
 
 vncMenu::vncMenu(vncServer* server)
 {
-    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+    ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     vnclog.Print(LL_INTERR, VNCLOG("vncmenu(server)\n"));
     ports_set = false;
-    ::CoInitialize(0);
+    ::CoInitialize(nullptr);
     IsIconSet = false;
     IconFaultCounter = 0;
 
@@ -198,7 +198,7 @@ vncMenu::vncMenu(vncServer* server)
     s_server = server;
 
     // Set the initial user name to something sensible...
-    processHelper::CurrentUser((char*)m_username.data(), sizeof(m_username));
+    processHelper::CurrentUser(reinterpret_cast<char*>(m_username.data()), sizeof(m_username));
 
     //if (strcmp(m_username, "") == 0)
     //	strcpy_s((char *)&m_username, "SYSTEM");
@@ -215,8 +215,8 @@ vncMenu::vncMenu(vncServer* server)
     wndclass.hInstance = hAppInstance;
     wndclass.hIcon = ::LoadIcon(nullptr, IDI_APPLICATION);
     wndclass.hCursor = ::LoadCursor(nullptr, IDC_ARROW);
-    wndclass.hbrBackground = (HBRUSH)::GetStockObject(WHITE_BRUSH);
-    wndclass.lpszMenuName = (const char*)nullptr;
+    wndclass.hbrBackground = reinterpret_cast<HBRUSH>(::GetStockObject(WHITE_BRUSH));
+    wndclass.lpszMenuName = static_cast<const char*>(nullptr);
     wndclass.lpszClassName = MENU_CLASS_NAME;
     wndclass.hIconSm = ::LoadIcon(nullptr, IDI_APPLICATION);
 
@@ -232,7 +232,7 @@ vncMenu::vncMenu(vncServer* server)
     }
 
     // record which client created this window
-    helper::SafeSetWindowUserData(m_hwnd, (LONG_PTR)this);
+    helper::SafeSetWindowUserData(m_hwnd, reinterpret_cast<LONG_PTR>(this));
 
     // Ask the server object to notify us of stuff
     server->AddNotify(m_hwnd);
@@ -265,23 +265,23 @@ vncMenu::vncMenu(vncServer* server)
     //	m_winvnc_icon = LoadIcon(hAppInstance, MAKEINTRESOURCE(IDI_WINVNC));
     //	m_flash_icon = LoadIcon(hAppInstance, MAKEINTRESOURCE(IDI_FLASH));
     {
-        m_winvnc_icon = (HICON)::LoadImage(nullptr, "icon1.ico", IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
-                                         GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE | LR_DEFAULTCOLOR);
-        m_flash_icon = (HICON)::LoadImage(nullptr, "icon2.ico", IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
-                                        GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE | LR_DEFAULTCOLOR);
+        m_winvnc_icon = reinterpret_cast<HICON>(::LoadImage(nullptr, "icon1.ico", IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
+                                         GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE | LR_DEFAULTCOLOR));
+        m_flash_icon = reinterpret_cast<HICON>(::LoadImage(nullptr, "icon2.ico", IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
+                                        GetSystemMetrics(SM_CYSMICON), LR_LOADFROMFILE | LR_DEFAULTCOLOR));
         // [v1.0.2-jp1 fix]
         //if (!m_winvnc_icon) m_winvnc_icon=(HICON)LoadImage(hAppInstance, MAKEINTRESOURCE(IDI_WINVNC), IMAGE_ICON,
         if (!m_winvnc_icon)
         {
-            m_winvnc_icon = (HICON)::LoadImage(hInstResDLL, MAKEINTRESOURCE(IDI_WINVNC), IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
-                                             GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
+            m_winvnc_icon = reinterpret_cast<HICON>(::LoadImage(hInstResDLL, MAKEINTRESOURCE(IDI_WINVNC), IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
+                                             GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR));
         }
         // [v1.0.2-jp1 fix]
         //if (!m_flash_icon) m_flash_icon=(HICON)LoadImage(hAppInstance, MAKEINTRESOURCE(IDI_FLASH), IMAGE_ICON,
         if (!m_flash_icon)
         {
-            m_flash_icon = (HICON)::LoadImage(hInstResDLL, MAKEINTRESOURCE(IDI_FLASH), IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
-                                            GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
+            m_flash_icon = reinterpret_cast<HICON>(::LoadImage(hInstResDLL, MAKEINTRESOURCE(IDI_FLASH), IMAGE_ICON, GetSystemMetrics(SM_CXSMICON),
+                                            GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR));
         }
     }
 
@@ -648,7 +648,7 @@ void vncMenu::GetIPAddrString(char* buffer, int buflen)
     if ((old_buflen != 0) && (dns_counter < 12))
     {
         ++dns_counter;
-        ::strcpy_s(buffer, buflen, old_buffer.data());
+        ::strcpy_s(buffer, static_cast<rsize_t>(buflen), old_buffer.data());
         return;
     }
     dns_counter = 0;
@@ -656,9 +656,9 @@ void vncMenu::GetIPAddrString(char* buffer, int buflen)
 
     if (gethostname(namebuf.data(), 256) != 0)
     {
-        ::strncpy_s(buffer, buflen, "Host name unavailable", buflen);
+        ::strncpy_s(buffer, static_cast<rsize_t>(buflen), "Host name unavailable", static_cast<rsize_t>(buflen));
         return;
-    };
+    }
 
     if (settings->getIPV6())
     {
@@ -666,7 +666,7 @@ void vncMenu::GetIPAddrString(char* buffer, int buflen)
 
         LPSOCKADDR sockaddr_ip;
         struct addrinfo hint;
-        struct addrinfo* serverinfo = 0;
+        struct addrinfo* serverinfo = nullptr;
         std::memset(&hint, 0, sizeof(hint));
         hint.ai_family = AF_UNSPEC;
         hint.ai_socktype = SOCK_STREAM;
@@ -677,7 +677,7 @@ void vncMenu::GetIPAddrString(char* buffer, int buflen)
 
         //make sure the buffer is not overwritten
 
-        if (getaddrinfo(namebuf.data(), 0, &hint, &serverinfo) == 0)
+        if (getaddrinfo(namebuf.data(), nullptr, &hint, &serverinfo) == 0)
         {
             struct addrinfo* p;
             p = serverinfo;
@@ -693,10 +693,10 @@ void vncMenu::GetIPAddrString(char* buffer, int buflen)
                     DWORD ipbufferlength{ 46U };
                     ipbufferlength = 46;
                     std::memset(ipstringbuffer.data(), 0, 46);
-                    pIpv6Addr = (struct sockaddr_in6*)p->ai_addr;
+                    pIpv6Addr = reinterpret_cast<struct sockaddr_in6*>(p->ai_addr);
                     std::memcpy(&Ipv6Addr, pIpv6Addr, sizeof(Ipv6Addr));
                     Ipv6Addr.sin6_family = AF_INET6;
-                    sockaddr_ip = (LPSOCKADDR)p->ai_addr;
+                    sockaddr_ip = reinterpret_cast<LPSOCKADDR>(p->ai_addr);
                     ::WSAAddressToString(sockaddr_ip, static_cast<DWORD>(p->ai_addrlen), nullptr, ipstringbuffer.data(),
                                        &ipbufferlength);
                     std::array<char, 256U> szText;
@@ -707,7 +707,7 @@ void vncMenu::GetIPAddrString(char* buffer, int buflen)
                     int len2 = static_cast<int>(std::strlen(szText.data()));
                     if (len + len2 < buflen)
                     {
-                        ::strcat_s(buffer, buflen, szText.data());
+                        ::strcat_s(buffer, static_cast<rsize_t>(buflen), szText.data());
                     }
                     break;
                 }
@@ -723,9 +723,9 @@ void vncMenu::GetIPAddrString(char* buffer, int buflen)
         HOSTENT* ph = gethostbyname(namebuf.data());
         if (!ph)
         {
-            ::strncpy_s(buffer, buflen, "IP address unavailable", buflen);
+            ::strncpy_s(buffer, static_cast<rsize_t>(buflen), "IP address unavailable", static_cast<rsize_t>(buflen));
             return;
-        };
+        }
 
         *buffer = '\0';
         std::array<char, 5U> digtxt;
@@ -734,12 +734,12 @@ void vncMenu::GetIPAddrString(char* buffer, int buflen)
             for (int j{ 0 }; j < ph->h_length; ++j)
             {
                 ::sprintf_s(digtxt.data(), digtxt.size(), "%d.", static_cast<unsigned char>(ph->h_addr_list[i][j]));
-                ::strncat_s(buffer, buflen, digtxt.data(), (buflen - 1) - std::strlen(buffer));
+                ::strncat_s(buffer, static_cast<rsize_t>(buflen), digtxt.data(), (static_cast<size_t>(buflen - 1)) - std::strlen(buffer));
             }
             buffer[std::strlen(buffer) - 1] = '\0';
-            if (ph->h_addr_list[i + 1] != 0)
+            if (ph->h_addr_list[i + 1] != nullptr)
             {
-                ::strncat_s(buffer, buflen, ", ", (buflen - 1) - std::strlen(buffer));
+                ::strncat_s(buffer, static_cast<rsize_t>(buflen), ", ", (static_cast<size_t>(buflen - 1)) - std::strlen(buffer));
             }
         }
     }
@@ -789,7 +789,7 @@ bool vncMenu::OpenWebpageFromService(char* const cmdline)
                     DWORD dwUIAccess{ 1U };
                     ::SetTokenInformation(hToken2, TokenUIAccess, &dwUIAccess, sizeof(dwUIAccess));
                     STARTUPINFO si{ 0 };
-                    PROCESS_INFORMATION pi{ 0 };
+                    PROCESS_INFORMATION pi{ nullptr };
                     si.cb = sizeof(STARTUPINFO);
                     si.dwFlags = STARTF_USESHOWWINDOW;
                     si.wShowWindow = FALSE;
@@ -936,7 +936,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
             if (_this->authClientCount != _this->m_server->AuthClientCount())
             {
                 _this->FlashTrayIcon(_this->m_server->AuthClientCount() != 0);
-                _this->authClientCount = _this->m_server->AuthClientCount();
+                _this->authClientCount = static_cast<int>(_this->m_server->AuthClientCount());
             }
         }
         else if (wParam == 2)
@@ -1070,7 +1070,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
         case ID_VISITUSONLINE_HOMEPAGE:
             if (settings->RunningFromExternalService() && OpenWebpageFromService("cmd /c start https://uvnc.com/"))
             {
-                ;
+                
             }
             else
             {
@@ -1081,7 +1081,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
         case ID_VISITUSONLINE_FORUM:
             if (settings->RunningFromExternalService() && OpenWebpageFromService("cmd /c start https://forum.uvnc.com/"))
             {
-                ;
+                
             }
             else
             {
@@ -1092,7 +1092,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
         case ID_VISITUSONLINE_GITHUB:
             if (settings->RunningFromExternalService() && OpenWebpageFromService("cmd /c start https://github.com/ultravnc"))
             {
-                ;
+                
             }
             else
             {
@@ -1103,7 +1103,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
         case ID_VISITUSONLINE_MASTODON:
             if (settings->RunningFromExternalService() && OpenWebpageFromService("cmd /c start https://mastodon.social/@ultravnc"))
             {
-                ;
+                
             }
             else
             {
@@ -1115,7 +1115,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
             if (settings->RunningFromExternalService() &&
                 OpenWebpageFromService("cmd /c start https://bsky.app/profile/ultravnc.bsky.social"))
             {
-                ;
+                
             }
             else
             {
@@ -1126,7 +1126,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
         case ID_VISITUSONLINE_FACEBOOK:
             if (settings->RunningFromExternalService() && OpenWebpageFromService("cmd /c start https://www.facebook.com/ultravnc1"))
             {
-                ;
+                
             }
             else
             {
@@ -1137,7 +1137,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
         case ID_VISITUSONLINE_XTWITTER:
             if (settings->RunningFromExternalService() && OpenWebpageFromService("cmd /c start https://x.com/ultravnc1"))
             {
-                ;
+                
             }
             else
             {
@@ -1148,7 +1148,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
         case ID_VISITUSONLINE_REDDIT:
             if (settings->RunningFromExternalService() && OpenWebpageFromService("cmd /c start https://www.reddit.com/r/ultravnc"))
             {
-                ;
+                
             }
             else
             {
@@ -1159,7 +1159,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
         case ID_VISITUSONLINE_OPENHUB:
             if (settings->RunningFromExternalService() && OpenWebpageFromService("cmd /c start https://openhub.net/p/ultravnc"))
             {
-                ;
+                
             }
             else
             {
@@ -1688,7 +1688,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
         // The current user may have changed.
         {
             ::strcpy_s(newuser.data(), newuser.size(), "");
-            if (processHelper::CurrentUser((char*)newuser.data(), sizeof(newuser)))
+            if (processHelper::CurrentUser(reinterpret_cast<char*>(newuser.data()), sizeof(newuser)))
             {
                 //vnclog.Print(LL_INTINFO,
                 //	VNCLOG("############### Usernames change: old=\"%s\", new=\"%s\"\n"),
@@ -1738,8 +1738,8 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
             UINT ret{ 0U };
             if (lParam != 0)
             {
-                ret = ::GlobalGetAtomName((ATOM)lParam, szId.data(), sizeof(szId));
-                ::GlobalDeleteAtom((ATOM)lParam);
+                ret = ::GlobalGetAtomName(static_cast<ATOM>(lParam), szId.data(), sizeof(szId));
+                ::GlobalDeleteAtom(static_cast<ATOM>(lParam));
             }
             _this->m_server->AutoReconnect(true);
 
@@ -1756,8 +1756,8 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
             UINT ret{ 0U };
             if (lParam != 0)
             {
-                ret = ::GlobalGetAtomName((ATOM)lParam, szId.data(), sizeof(szId));
-                ::GlobalDeleteAtom((ATOM)lParam);
+                ret = ::GlobalGetAtomName(static_cast<ATOM>(lParam), szId.data(), sizeof(szId));
+                ::GlobalDeleteAtom(static_cast<ATOM>(lParam));
             }
             _this->m_server->IdReconnect(true);
 
@@ -1815,7 +1815,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                 }
 
                 unsigned short nport{ 0U };
-                char* nameDup = 0;
+                char* nameDup = nullptr;
                 std::array<char, 64U> szAdrName;
                 std::array<char, MAX_PATH> szId{ 0 };
                 // sf@2003 - Values are already converted
@@ -1840,13 +1840,13 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                         return 0;
                     }
                     nameDup = _strdup(straddr.data());
-                    if (nameDup == 0)
+                    if (nameDup == nullptr)
                     {
                         return 0;
                     }
                     ::strcpy_s(szAdrName.data(), szAdrName.size(), nameDup);
                     // Free the duplicate name
-                    if (nameDup != 0)
+                    if (nameDup != nullptr)
                     {
                         std::free(nameDup);
                     }
@@ -1865,13 +1865,13 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                         return 0;
                     }
                     nameDup = _strdup(straddr.data());
-                    if (nameDup == 0)
+                    if (nameDup == nullptr)
                     {
                         return 0;
                     }
                     ::strcpy_s(szAdrName.data(), szAdrName.size(), nameDup);
                     // Free the duplicate name
-                    if (nameDup != 0)
+                    if (nameDup != nullptr)
                     {
                         std::free(nameDup);
                     }
@@ -1996,7 +1996,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                 }
 
                 unsigned short nport{ 0U };
-                char* nameDup = 0;
+                char* nameDup = nullptr;
                 std::array<char, 64U> szAdrName;
                 std::array<char, MAX_PATH> szId{ 0 };
                 // sf@2003 - Values are already converted
@@ -2014,18 +2014,18 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                     unsigned long ipaddress_long = ipaddress;
                     address.S_un.S_addr = ipaddress_long;
                     char* name = inet_ntoa(address);
-                    if (name == 0)
+                    if (name == nullptr)
                     {
                         return 0;
                     }
                     nameDup = _strdup(name);
-                    if (nameDup == 0)
+                    if (nameDup == nullptr)
                     {
                         return 0;
                     }
                     ::strcpy_s(szAdrName.data(), szAdrName.size(), nameDup);
                     // Free the duplicate name
-                    if (nameDup != 0)
+                    if (nameDup != nullptr)
                     {
                         std::free(nameDup);
                     }
@@ -2036,18 +2036,18 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                     struct in_addr address;
                     address.S_un.S_addr = static_cast<ULONG>(lParam);
                     char* name = inet_ntoa(address);
-                    if (name == 0)
+                    if (name == nullptr)
                     {
                         return 0;
                     }
                     nameDup = _strdup(name);
-                    if (nameDup == 0)
+                    if (nameDup == nullptr)
                     {
                         return 0;
                     }
                     ::strcpy_s(szAdrName.data(), szAdrName.size(), nameDup);
                     // Free the duplicate name
-                    if (nameDup != 0)
+                    if (nameDup != nullptr)
                     {
                         std::free(nameDup);
                     }
@@ -2207,12 +2207,12 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                         }
 
                         tmpsock->Create();
-                        if (tmpsock->Connect(actualhostname.data(), port))
+                        if (tmpsock->Connect(actualhostname.data(), static_cast<VCard>(port)))
                         {
                             tmpsock->Send(finalidcode.data(), 250);
                             tmpsock->SetTimeout(0);
                             _this->m_server->AddClient(tmpsock, !settings->getReverseAuthRequired(), TRUE, 0, nullptr,
-                                                       finalidcode.data(), actualhostname.data(), port, true);
+                                                       finalidcode.data(), actualhostname.data(), static_cast<VCard>(port), true);
                         }
                         else
                         {
@@ -2255,7 +2255,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                 }
 
                 unsigned short nport{ 0U };
-                char* nameDup = 0;
+                char* nameDup = nullptr;
                 std::array<char, 64U> szAdrName{};
                 std::array<char, MAX_PATH> szId{ 0 };
                 // sf@2003 - Values are already converted
@@ -2274,18 +2274,18 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                     unsigned long ipaddress_long = ipaddress;
                     address.S_un.S_addr = ipaddress_long;
                     char* name = inet_ntoa(address);
-                    if (name == 0)
+                    if (name == nullptr)
                     {
                         return 0;
                     }
                     nameDup = _strdup(name);
-                    if (nameDup == 0)
+                    if (nameDup == nullptr)
                     {
                         return 0;
                     }
                     ::strcpy_s(szAdrName.data(), szAdrName.size(), nameDup);
                     // Free the duplicate name
-                    if (nameDup != 0)
+                    if (nameDup != nullptr)
                     {
                         std::free(nameDup);
                     }
@@ -2296,18 +2296,18 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
                     struct in_addr address{};
                     address.S_un.S_addr = static_cast<ULONG>(lParam);
                     char* name = inet_ntoa(address);
-                    if (name == 0)
+                    if (name == nullptr)
                     {
                         return 0;
                     }
                     nameDup = _strdup(name);
-                    if (nameDup == 0)
+                    if (nameDup == nullptr)
                     {
                         return 0;
                     }
                     ::strcpy_s(szAdrName.data(), szAdrName.size(), nameDup);
                     // Free the duplicate name
-                    if (nameDup != 0)
+                    if (nameDup != nullptr)
                     {
                         std::free(nameDup);
                     }
@@ -2397,7 +2397,7 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
         // Process File Transfer asynchronous Send Packet Message
         if (iMsg == postHelper::FileTransferSendPacketMessage)
         {
-            vncClient* pClient = (vncClient*)wParam;
+            vncClient* pClient = reinterpret_cast<vncClient*>(wParam);
             if (_this->m_server->IsClient(pClient))
             {
                 pClient->SendFileChunk();
@@ -2411,8 +2411,8 @@ LRESULT CALLBACK vncMenu::WndProc(HWND hwnd, const UINT iMsg, const WPARAM wPara
             {
                 omni_mutex_lock sync(_this->m_mutexTrayIcon, 70);
 
-                wchar_t* szTitle = (wchar_t*)lParam;
-                wchar_t* szInfo = (wchar_t*)wParam;
+                wchar_t* szTitle = reinterpret_cast<wchar_t*>(lParam);
+                wchar_t* szInfo = reinterpret_cast<wchar_t*>(wParam);
 
                 if (szInfo && (std::wcslen(szInfo) > 0))
                 {
@@ -2454,7 +2454,7 @@ void vncMenu::NotifyBalloon(wchar_t* const szInfo, wchar_t* const szTitle)
 {
     wchar_t* szInfoCopy = _wcsdup(szInfo);
     wchar_t* szTitleCopy = _wcsdup(szTitle);
-    if (!postHelper::PostToThisWinVNC(postHelper::MENU_TRAYICON_BALLOON_MSG, (WPARAM)szInfoCopy, (LPARAM)szTitleCopy))
+    if (!postHelper::PostToThisWinVNC(postHelper::MENU_TRAYICON_BALLOON_MSG, reinterpret_cast<WPARAM>(szInfoCopy), reinterpret_cast<LPARAM>(szTitleCopy)))
     {
         if (szInfoCopy)
         {
@@ -2501,7 +2501,7 @@ void vncMenu::updateUser(const HWND hwnd)
     if (settings->RunningFromExternalService())
     {
         ::strcpy_s(newuser.data(), newuser.size(), "");
-        if (processHelper::CurrentUser((char*)newuser.data(), sizeof(newuser)))
+        if (processHelper::CurrentUser(reinterpret_cast<char*>(newuser.data()), sizeof(newuser)))
         {
             // Check whether the user name has changed!
             if ((::_stricmp(newuser.data(), m_username.data()) != 0) || (IconFaultCounter > 2))

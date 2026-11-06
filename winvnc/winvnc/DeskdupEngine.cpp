@@ -32,10 +32,10 @@ DeskDupEngine::DeskDupEngine()
     pChangebuf = nullptr;
 
     hFileMap = nullptr;
-    fileView = 0;
+    fileView = nullptr;
 
     hFileMapBitmap = nullptr;
-    fileViewBitmap = 0;
+    fileViewBitmap = nullptr;
 
     init = true;
     hModule = nullptr;
@@ -72,15 +72,15 @@ DeskDupEngine::DeskDupEngine()
         hModule = ::LoadLibrary(szCurrentDir.data());
         if (hModule)
         {
-            StartW8 = (StartW8Fn)::GetProcAddress(hModule, "StartW8");
-            StartW8V2 = (StartW8V2Fn)::GetProcAddress(hModule, "StartW8V2");
-            StopW8 = (StopW8Fn)::GetProcAddress(hModule, "StopW8");
+            StartW8 = reinterpret_cast<StartW8Fn>(::GetProcAddress(hModule, "StartW8"));
+            StartW8V2 = reinterpret_cast<StartW8V2Fn>(::GetProcAddress(hModule, "StartW8V2"));
+            StopW8 = reinterpret_cast<StopW8Fn>(::GetProcAddress(hModule, "StopW8"));
 
-            LockW8 = (LockW8Fn)::GetProcAddress(hModule, "LockW8");
-            UnlockW8 = (UnlockW8Fn)::GetProcAddress(hModule, "UnlockW8");
+            LockW8 = reinterpret_cast<LockW8Fn>(::GetProcAddress(hModule, "LockW8"));
+            UnlockW8 = reinterpret_cast<UnlockW8Fn>(::GetProcAddress(hModule, "UnlockW8"));
 
-            ShowCursorW8 = (ShowCursorW8Fn)::GetProcAddress(hModule, "ShowCursorW8");
-            HideCursorW8 = (HideCursorW8Fn)::GetProcAddress(hModule, "HideCursorW8");
+            ShowCursorW8 = reinterpret_cast<ShowCursorW8Fn>(::GetProcAddress(hModule, "ShowCursorW8"));
+            HideCursorW8 = reinterpret_cast<HideCursorW8Fn>(::GetProcAddress(hModule, "HideCursorW8"));
 
             if ((StartW8 == nullptr) || (StopW8 == nullptr) || (LockW8 == nullptr) || (UnlockW8 == nullptr) ||
                 (ShowCursorW8 == nullptr) || (HideCursorW8 == nullptr))
@@ -140,7 +140,7 @@ void DeskDupEngine::videoDriver_start([[maybe_unused]] const int x, [[maybe_unus
 
     if (StartW8V2)
     {
-        if (!StartW8V2(primonly, onlyVirtual, 1000 / maxFPS))
+        if (!StartW8V2(primonly, onlyVirtual, static_cast<UINT>(1000 / maxFPS)))
         {
             vnclog.Print(LL_INTWARN, VNCLOG("DDengine V2 failed, not supported by Video Driver\n"));
             return;
@@ -171,7 +171,7 @@ void DeskDupEngine::videoDriver_start([[maybe_unused]] const int x, [[maybe_unus
         return;
     }
 
-    pChangebuf = (CHANGES_BUF*)fileView;
+    pChangebuf = reinterpret_cast<CHANGES_BUF*>(fileView);
     pChangebuf->pointrect[0U].rect.left;
 
     if (hFileMapBitmap != nullptr)
@@ -210,7 +210,7 @@ void DeskDupEngine::videoDriver_start([[maybe_unused]] const int x, [[maybe_unus
         return;
     }
 
-    pFramebuffer = (PCHAR)fileViewBitmap;
+    pFramebuffer = reinterpret_cast<PCHAR>(fileViewBitmap);
 }
 //-----------------------------------------------------------
 void DeskDupEngine::videoDriver_Stop()
@@ -236,7 +236,7 @@ void DeskDupEngine::videoDriver_Stop()
     hFileMap = nullptr;
     if (fileViewBitmap)
     {
-        ::UnmapViewOfFile((LPVOID)fileViewBitmap);
+        ::UnmapViewOfFile(reinterpret_cast<LPVOID>(fileViewBitmap));
     }
     fileViewBitmap = nullptr;
     if (hFileMapBitmap != nullptr)

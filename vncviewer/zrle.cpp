@@ -111,38 +111,38 @@ void ClientConnection::zrleDecode(const int x, const int y, const int w, const i
             {
 
             case 8:
-                zrleDecode8NE(x, y, w, h, fis, zis, (rdr::U8*)m_netbuf);
+                zrleDecode8NE(x, y, w, h, fis, zis, reinterpret_cast<rdr::U8*>(m_netbuf));
                 break;
 
             case 16:
                 if (m_myFormat.greenMax > 0x1F)
                 {
-                    zrleDecode16LE(x, y, w, h, fis, zis, (rdr::U16*)m_netbuf);
+                    zrleDecode16LE(x, y, w, h, fis, zis, reinterpret_cast<rdr::U16*>(m_netbuf));
                 }
                 else
                 {
-                    zrleDecode15LE(x, y, w, h, fis, zis, (rdr::U16*)m_netbuf);
+                    zrleDecode15LE(x, y, w, h, fis, zis, reinterpret_cast<rdr::U16*>(m_netbuf));
                 }
                 break;
 
             case 32:
-                bool fitsInLS3Bytes = ((((CARD32)m_myFormat.redMax << m_myFormat.redShift) < (1 << 24)) &&
-                                       (((CARD32)m_myFormat.greenMax << m_myFormat.greenShift) < (1 << 24)) &&
-                                       (((CARD32)m_myFormat.blueMax << m_myFormat.blueShift) < (1 << 24)));
+                bool fitsInLS3Bytes = (((static_cast<CARD32>(m_myFormat.redMax) << m_myFormat.redShift) < (1 << 24)) &&
+                                       ((static_cast<CARD32>(m_myFormat.greenMax) << m_myFormat.greenShift) < (1 << 24)) &&
+                                       ((static_cast<CARD32>(m_myFormat.blueMax) << m_myFormat.blueShift) < (1 << 24)));
 
                 bool fitsInMS3Bytes = ((m_myFormat.redShift > 7) && (m_myFormat.greenShift > 7) && (m_myFormat.blueShift > 7));
 
                 if ((fitsInLS3Bytes && !m_myFormat.bigEndian) || (fitsInMS3Bytes && m_myFormat.bigEndian))
                 {
-                    zrleDecode24ALE(x, y, w, h, fis, zis, (rdr::U32*)m_netbuf);
+                    zrleDecode24ALE(x, y, w, h, fis, zis, reinterpret_cast<rdr::U32*>(m_netbuf));
                 }
                 else if ((fitsInLS3Bytes && m_myFormat.bigEndian) || (fitsInMS3Bytes && !m_myFormat.bigEndian))
                 {
-                    zrleDecode24BLE(x, y, w, h, fis, zis, (rdr::U32*)m_netbuf);
+                    zrleDecode24BLE(x, y, w, h, fis, zis, reinterpret_cast<rdr::U32*>(m_netbuf));
                 }
                 else
                 {
-                    zrleDecode32LE(x, y, w, h, fis, zis, (rdr::U32*)m_netbuf);
+                    zrleDecode32LE(x, y, w, h, fis, zis, reinterpret_cast<rdr::U32*>(m_netbuf));
                 }
                 break;
             }
@@ -153,38 +153,38 @@ void ClientConnection::zrleDecode(const int x, const int y, const int w, const i
             {
 
             case 8:
-                zrleDecode8NE(x, y, w, h, fis, zstdis, (rdr::U8*)m_netbuf);
+                zrleDecode8NE(x, y, w, h, fis, zstdis, reinterpret_cast<rdr::U8*>(m_netbuf));
                 break;
 
             case 16:
                 if (m_myFormat.greenMax > 0x1F)
                 {
-                    zrleDecode16LE(x, y, w, h, fis, zstdis, (rdr::U16*)m_netbuf);
+                    zrleDecode16LE(x, y, w, h, fis, zstdis, reinterpret_cast<rdr::U16*>(m_netbuf));
                 }
                 else
                 {
-                    zrleDecode15LE(x, y, w, h, fis, zstdis, (rdr::U16*)m_netbuf);
+                    zrleDecode15LE(x, y, w, h, fis, zstdis, reinterpret_cast<rdr::U16*>(m_netbuf));
                 }
                 break;
 
             case 32:
-                bool fitsInLS3Bytes = ((((CARD32)m_myFormat.redMax << m_myFormat.redShift) < (1 << 24)) &&
-                                       (((CARD32)m_myFormat.greenMax << m_myFormat.greenShift) < (1 << 24)) &&
-                                       (((CARD32)m_myFormat.blueMax << m_myFormat.blueShift) < (1 << 24)));
+                bool fitsInLS3Bytes = (((static_cast<CARD32>(m_myFormat.redMax) << m_myFormat.redShift) < (1 << 24)) &&
+                                       ((static_cast<CARD32>(m_myFormat.greenMax) << m_myFormat.greenShift) < (1 << 24)) &&
+                                       ((static_cast<CARD32>(m_myFormat.blueMax) << m_myFormat.blueShift) < (1 << 24)));
 
                 bool fitsInMS3Bytes = ((m_myFormat.redShift > 7) && (m_myFormat.greenShift > 7) && (m_myFormat.blueShift > 7));
 
                 if ((fitsInLS3Bytes && !m_myFormat.bigEndian) || (fitsInMS3Bytes && m_myFormat.bigEndian))
                 {
-                    zrleDecode24ALE(x, y, w, h, fis, zstdis, (rdr::U32*)m_netbuf);
+                    zrleDecode24ALE(x, y, w, h, fis, zstdis, reinterpret_cast<rdr::U32*>(m_netbuf));
                 }
                 else if ((fitsInLS3Bytes && m_myFormat.bigEndian) || (fitsInMS3Bytes && !m_myFormat.bigEndian))
                 {
-                    zrleDecode24BLE(x, y, w, h, fis, zstdis, (rdr::U32*)m_netbuf);
+                    zrleDecode24BLE(x, y, w, h, fis, zstdis, reinterpret_cast<rdr::U32*>(m_netbuf));
                 }
                 else
                 {
-                    zrleDecode32LE(x, y, w, h, fis, zstdis, (rdr::U32*)m_netbuf);
+                    zrleDecode32LE(x, y, w, h, fis, zstdis, reinterpret_cast<rdr::U32*>(m_netbuf));
                 }
                 break;
             }

@@ -101,7 +101,7 @@ void XZ_DECODE_BPP(int x, int y, int w, int h, [[maybe_unused]] rdr::InStream* c
 
             for (int i{ 0 }; i < palSize; ++i)
             {
-                palette[i] = xzisIn->READ_PIXEL();
+                palette[static_cast<unsigned long long>(i)] = xzisIn->READ_PIXEL();
             }
 
             if (palSize == 1)
@@ -272,7 +272,7 @@ void XZ_DECODE_BPP(int x, int y, int w, int h, [[maybe_unused]] rdr::InStream* c
                         {
                             throw Exception("Invalid RLE palette index");
                         }
-                        PIXEL_T pix = palette[index];
+                        PIXEL_T pix = palette[static_cast<unsigned long long>(index)];
 
 #ifdef FAVOUR_FILL_RECT
                         int i = ptr - buf;
@@ -323,7 +323,7 @@ void XZ_DECODE_BPP(int x, int y, int w, int h, [[maybe_unused]] rdr::InStream* c
                 XZYW_SYNTHESIZE(buf, buf, tw, th, tw, xzyw_level, xzywBuf);
             }
 #endif
-            IMAGE_RECT(tx, ty, tw, th, buf);
+            IMAGE_RECT(tx, ty, tw, th, buf)
 #endif
         }
     }

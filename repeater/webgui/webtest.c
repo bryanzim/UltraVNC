@@ -146,10 +146,10 @@ DWORD WINAPI ThreadStartWeb(LPVOID lpParam)
 					}
 			}
 		dtrap:
-		closesocket(wi_listen);
+		closesocket((SOCKET)(wi_listen));
 		WSACleanup( );
 	 }
-   return sessions;
+   return (DWORD)(sessions);
 }
 
 
@@ -441,7 +441,7 @@ testaction2_cgi(wi_sess * sess,  EOFILE * eofile)
    commentLocal = wi_formvalue(sess, "comment"); 
    if (id && commentLocal) 
 	   {
-		   add_comment(atol(id), commentLocal);
+		   add_comment((ULONG)(atol(id)), commentLocal);
 		   Save_comment();
 		}
    wi_redirect(sess, "comment.html");
@@ -466,7 +466,7 @@ testaction3_cgi(wi_sess * sess,  EOFILE * eofile)
 	   commentLocal = wi_formvalue(sess, commentnr); 
 	   if (id && commentLocal) 
 		   {
-			   add_comment(atol(id), commentLocal);			  
+			   add_comment((ULONG)(atol(id)), commentLocal);			  
 			}
    }
     Save_comment();
@@ -484,7 +484,7 @@ testaction4_cgi(wi_sess * sess,  EOFILE * eofile)
    id = wi_formvalue(sess, "id");  
    if (id) 
 	   {
-		   del_comment(atol(id));
+		   del_comment((ULONG)(atol(id)));
 		   Save_comment();
 		}
    wi_redirect(sess, "comment.html");

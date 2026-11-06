@@ -109,7 +109,7 @@ HMODULE LoadSecurityDll()
     __try
     {
 
-        _AcceptSecurityContext = (ACCEPT_SECURITY_CONTEXT_FN)::GetProcAddress(hModule, "AcceptSecurityContext");
+        _AcceptSecurityContext = reinterpret_cast<ACCEPT_SECURITY_CONTEXT_FN>(::GetProcAddress(hModule, "AcceptSecurityContext"));
         if (!_AcceptSecurityContext)
         {
             __leave;
@@ -118,7 +118,7 @@ HMODULE LoadSecurityDll()
 #ifdef UNICODE
         _AcquireCredentialsHandle = (ACQUIRE_CREDENTIALS_HANDLE_FN)::GetProcAddress(hModule, "AcquireCredentialsHandleW");
 #else
-        _AcquireCredentialsHandle = (ACQUIRE_CREDENTIALS_HANDLE_FN)::GetProcAddress(hModule, "AcquireCredentialsHandleA");
+        _AcquireCredentialsHandle = reinterpret_cast<ACQUIRE_CREDENTIALS_HANDLE_FN>(::GetProcAddress(hModule, "AcquireCredentialsHandleA"));
 #endif
         if (!_AcquireCredentialsHandle)
         {
@@ -127,21 +127,21 @@ HMODULE LoadSecurityDll()
 
         // CompleteAuthToken is not present on Windows 9x Secur32.dll
         // Do not check for the availablity of the function if it is NULL;
-        _CompleteAuthToken = (COMPLETE_AUTH_TOKEN_FN)::GetProcAddress(hModule, "CompleteAuthToken");
+        _CompleteAuthToken = reinterpret_cast<COMPLETE_AUTH_TOKEN_FN>(::GetProcAddress(hModule, "CompleteAuthToken"));
 
-        _DeleteSecurityContext = (DELETE_SECURITY_CONTEXT_FN)::GetProcAddress(hModule, "DeleteSecurityContext");
+        _DeleteSecurityContext = reinterpret_cast<DELETE_SECURITY_CONTEXT_FN>(::GetProcAddress(hModule, "DeleteSecurityContext"));
         if (!_DeleteSecurityContext)
         {
             __leave;
         }
 
-        _FreeContextBuffer = (FREE_CONTEXT_BUFFER_FN)::GetProcAddress(hModule, "FreeContextBuffer");
+        _FreeContextBuffer = reinterpret_cast<FREE_CONTEXT_BUFFER_FN>(::GetProcAddress(hModule, "FreeContextBuffer"));
         if (!_FreeContextBuffer)
         {
             __leave;
         }
 
-        _FreeCredentialsHandle = (FREE_CREDENTIALS_HANDLE_FN)::GetProcAddress(hModule, "FreeCredentialsHandle");
+        _FreeCredentialsHandle = reinterpret_cast<FREE_CREDENTIALS_HANDLE_FN>(::GetProcAddress(hModule, "FreeCredentialsHandle"));
         if (!_FreeCredentialsHandle)
         {
             __leave;
@@ -150,7 +150,7 @@ HMODULE LoadSecurityDll()
 #ifdef UNICODE
         _InitializeSecurityContext = (INITIALIZE_SECURITY_CONTEXT_FN)::GetProcAddress(hModule, "InitializeSecurityContextW");
 #else
-        _InitializeSecurityContext = (INITIALIZE_SECURITY_CONTEXT_FN)::GetProcAddress(hModule, "InitializeSecurityContextA");
+        _InitializeSecurityContext = reinterpret_cast<INITIALIZE_SECURITY_CONTEXT_FN>(::GetProcAddress(hModule, "InitializeSecurityContextA"));
 #endif
         if (!_InitializeSecurityContext)
         {
@@ -160,7 +160,7 @@ HMODULE LoadSecurityDll()
 #ifdef UNICODE
         _QuerySecurityPackageInfo = (QUERY_SECURITY_PACKAGE_INFO_FN)::GetProcAddress(hModule, "QuerySecurityPackageInfoW");
 #else
-        _QuerySecurityPackageInfo = (QUERY_SECURITY_PACKAGE_INFO_FN)::GetProcAddress(hModule, "QuerySecurityPackageInfoA");
+        _QuerySecurityPackageInfo = reinterpret_cast<QUERY_SECURITY_PACKAGE_INFO_FN>(::GetProcAddress(hModule, "QuerySecurityPackageInfoA"));
 #endif
         if (!_QuerySecurityPackageInfo)
         {
@@ -440,12 +440,12 @@ BOOL WINAPI SSPLogonUser(const LPTSTR szDomain, const LPTSTR szUser, const LPTST
         ai.PasswordLength = ::lstrlen(szPassword);
         ai.Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;
 #else
-        ai.Domain = (unsigned char*)szDomain;
-        ai.DomainLength = ::lstrlen(szDomain);
-        ai.User = (unsigned char*)szUser;
-        ai.UserLength = ::lstrlen(szUser);
-        ai.Password = (unsigned char*)szPassword;
-        ai.PasswordLength = ::lstrlen(szPassword);
+        ai.Domain = reinterpret_cast<unsigned char*>(szDomain);
+        ai.DomainLength = static_cast<unsigned long>(::lstrlen(szDomain));
+        ai.User = reinterpret_cast<unsigned char*>(szUser);
+        ai.UserLength = static_cast<unsigned long>(::lstrlen(szUser));
+        ai.Password = reinterpret_cast<unsigned char*>(szPassword);
+        ai.PasswordLength = static_cast<unsigned long>(::lstrlen(szPassword));
         ai.Flags = SEC_WINNT_AUTH_IDENTITY_ANSI;
 #endif
 
@@ -546,7 +546,7 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
         isXP = true;
     }
 
-    HINSTANCE hNet = 0, hLoc = 0;
+    HINSTANCE hNet = nullptr, hLoc = nullptr;
 
     if (isNT)
     {
@@ -558,24 +558,24 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
         hNet = ::LoadLibrary("radmin32.dll");
     }
 
-    if (hNet == 0)
+    if (hNet == nullptr)
     {
         std::printf("LoadLibrary( %s ) failed, gle = %lu\n", isNT ? "netapi32.dll" : "radmin32.dll", ::GetLastError());
         return false;
     }
 
     // locate needed functions
-    NetApiBufferFree_t NetApiBufferFree = 0;
-    NetGetDCNameNT_t NetGetDCNameNT = 0;
-    NetGetDCName95_t NetGetDCName95 = 0;
-    NetUserGetGroupsNT_t NetUserGetGroupsNT = 0;
-    NetUserGetGroupsNT_t2 NetUserGetGroupsNT2 = 0;
-    NetUserGetGroups95_t NetUserGetGroups95 = 0;
-    NetWkstaGetInfoNT_t NetWkstaGetInfoNT = 0;
-    NetWkstaGetInfo95_t NetWkstaGetInfo95 = 0;
+    NetApiBufferFree_t NetApiBufferFree = nullptr;
+    NetGetDCNameNT_t NetGetDCNameNT = nullptr;
+    NetGetDCName95_t NetGetDCName95 = nullptr;
+    NetUserGetGroupsNT_t NetUserGetGroupsNT = nullptr;
+    NetUserGetGroupsNT_t2 NetUserGetGroupsNT2 = nullptr;
+    NetUserGetGroups95_t NetUserGetGroups95 = nullptr;
+    NetWkstaGetInfoNT_t NetWkstaGetInfoNT = nullptr;
+    NetWkstaGetInfo95_t NetWkstaGetInfo95 = nullptr;
 
-    NetApiBufferFree = (NetApiBufferFree_t)::GetProcAddress(hNet, "NetApiBufferFree");
-    if (NetApiBufferFree == 0)
+    NetApiBufferFree = reinterpret_cast<NetApiBufferFree_t>(::GetProcAddress(hNet, "NetApiBufferFree"));
+    if (NetApiBufferFree == nullptr)
     {
         std::printf("Oops! GetProcAddress() failed\n");
         return false;
@@ -583,11 +583,11 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
 
     if (isNT)
     {
-        NetGetDCNameNT = (NetGetDCNameNT_t)::GetProcAddress(hNet, "NetGetDCName");
-        NetUserGetGroupsNT = (NetUserGetGroupsNT_t)::GetProcAddress(hNet, "NetUserGetLocalGroups");
-        NetUserGetGroupsNT2 = (NetUserGetGroupsNT_t2)::GetProcAddress(hNet, "NetUserGetGroups");
-        NetWkstaGetInfoNT = (NetWkstaGetInfoNT_t)::GetProcAddress(hNet, "NetWkstaGetInfo");
-        if ((NetGetDCNameNT == 0) || (NetUserGetGroupsNT == 0) || (NetWkstaGetInfoNT == 0) || (NetUserGetGroupsNT2 == 0))
+        NetGetDCNameNT = reinterpret_cast<NetGetDCNameNT_t>(::GetProcAddress(hNet, "NetGetDCName"));
+        NetUserGetGroupsNT = reinterpret_cast<NetUserGetGroupsNT_t>(::GetProcAddress(hNet, "NetUserGetLocalGroups"));
+        NetUserGetGroupsNT2 = reinterpret_cast<NetUserGetGroupsNT_t2>(::GetProcAddress(hNet, "NetUserGetGroups"));
+        NetWkstaGetInfoNT = reinterpret_cast<NetWkstaGetInfoNT_t>(::GetProcAddress(hNet, "NetWkstaGetInfo"));
+        if ((NetGetDCNameNT == nullptr) || (NetUserGetGroupsNT == nullptr) || (NetWkstaGetInfoNT == nullptr) || (NetUserGetGroupsNT2 == nullptr))
         {
             std::printf("Oops! Some functions not found...\n");
             return false;
@@ -595,11 +595,11 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
     }
     else
     {
-        NetGetDCName95 = (NetGetDCName95_t)::GetProcAddress(hLoc, "LocalNetGetDCName");
-        NetUserGetGroups95 = (NetUserGetGroups95_t)::GetProcAddress(hNet, "NetUserGetGroupsA");
-        NetWkstaGetInfo95 = (NetWkstaGetInfo95_t)::GetProcAddress(hNet, "NetWkstaGetInfoA");
+        NetGetDCName95 = reinterpret_cast<NetGetDCName95_t>(::GetProcAddress(hLoc, "LocalNetGetDCName"));
+        NetUserGetGroups95 = reinterpret_cast<NetUserGetGroups95_t>(::GetProcAddress(hNet, "NetUserGetGroupsA"));
+        NetWkstaGetInfo95 = reinterpret_cast<NetWkstaGetInfo95_t>(::GetProcAddress(hNet, "NetWkstaGetInfoA"));
 
-        if ((NetGetDCName95 == 0) || (NetUserGetGroups95 == 0) || (NetWkstaGetInfo95 == 0))
+        if ((NetGetDCName95 == nullptr) || (NetUserGetGroups95 == nullptr) || (NetWkstaGetInfo95 == nullptr))
         {
             std::printf("Oops! Some functions not found...\n");
             return false;
@@ -608,7 +608,7 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
     // find PDC if necessary; else set up server name for call
 
 
-    byte* buf = 0;
+    byte* buf = nullptr;
     DWORD rc, rc2, read, total, i, rcdomain;
     std::array<char, MAXLEN * sizeof(wchar_t)> server;
     std::array<char, MAXLEN * sizeof(wchar_t)> user;
@@ -619,7 +619,7 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
     std::size_t pnconv;
     if (isNT)
     {
-        ::mbstowcs_s(&pnconv, (wchar_t*)user.data(), MAXLEN, userin, MAXLEN);
+        ::mbstowcs_s(&pnconv, reinterpret_cast<wchar_t*>(user.data()), MAXLEN, userin, MAXLEN);
     }
     else
     {
@@ -628,7 +628,7 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
 
     if (isNT)
     {
-        ::mbstowcs_s(&pnconv, (wchar_t*)group.data(), MAXLEN, groupin, MAXLEN);
+        ::mbstowcs_s(&pnconv, reinterpret_cast<wchar_t*>(group.data()), MAXLEN, groupin, MAXLEN);
     }
     else
     {
@@ -642,7 +642,7 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
 
         std::printf("Client NT4 or later \n");
         ///////////////// search DC ///////////////////////////////////
-        rcdomain = NetGetDCNameNT(0, 0, &buf);
+        rcdomain = NetGetDCNameNT(nullptr, nullptr, &buf);
         if (rcdomain == 2453)
         {
             std::printf("No domain controler found\n");
@@ -650,13 +650,13 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
         if (!rcdomain)
         {
             std::printf("Domain controler found");
-            ::wcscpy_s((wchar_t*)server.data(), MAXLEN, (wchar_t*)buf);
-            wprintf((wchar_t*)server.data());
+            ::wcscpy_s(reinterpret_cast<wchar_t*>(server.data()), MAXLEN, reinterpret_cast<wchar_t*>(buf));
+            wprintf(reinterpret_cast<wchar_t*>(server.data()));
             std::printf("\n------------------------------\n");
         }
         std::printf("Checking Local groups for ");
-        std::printf("user: %S\n", _wcsupr((wchar_t*)user.data()));
-        std::printf("group: %S\n", _wcsupr((wchar_t*)group.data()));
+        std::printf("user: %S\n", _wcsupr(reinterpret_cast<wchar_t*>(user.data())));
+        std::printf("group: %S\n", _wcsupr(reinterpret_cast<wchar_t*>(group.data())));
 
         //////////////////////////////////////////////////////////////////
         ///////////////// Local groups ///////////////////////////////////
@@ -671,7 +671,7 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
 
             netlocalgroupgetmembers_t netlocalgroupgetmembers;
             HINSTANCE h = ::LoadLibrary("netapi32.dll");
-            netlocalgroupgetmembers = (netlocalgroupgetmembers_t)::GetProcAddress(h, "NetLocalGroupGetMembers");
+            netlocalgroupgetmembers = reinterpret_cast<netlocalgroupgetmembers_t>(::GetProcAddress(h, "NetLocalGroupGetMembers"));
 
             ////////////////////// GROUPS///////////////////////////////////////
             std::size_t pnconvInner;
@@ -681,7 +681,7 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
             do
             {
                 bufLMI = nullptr;
-                rcInner = netlocalgroupgetmembers(nullptr, (wchar_t*)group.data(), 2, (BYTE**)&bufLMI, BUFSIZE, &readInner, &totalInner, &resumeh);
+                rcInner = netlocalgroupgetmembers(nullptr, reinterpret_cast<wchar_t*>(group.data()), 2, reinterpret_cast<BYTE**>(&bufLMI), BUFSIZE, &readInner, &totalInner, &resumeh);
                 if ((rcInner == ERROR_MORE_DATA) || (rcInner == ERROR_SUCCESS))
                 {
 
@@ -694,7 +694,7 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
                         wchar_t* t = std::wcsstr(tempbuf.data(), seperator.data());
                         ++t;
                         std::printf("%S\n", t);
-                        if (std::wcscmp(_wcsupr(t), _wcsupr((wchar_t*)user.data())) == 0)
+                        if (std::wcscmp(_wcsupr(t), _wcsupr(reinterpret_cast<wchar_t*>(user.data()))) == 0)
                         {
                             laccess_vnc = TRUE;
                             std::printf("Local: User found in group \n");
@@ -708,7 +708,7 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
             } while (rcInner == ERROR_MORE_DATA);
 
             ///////////////////////////////////////////////////////////////////////
-            if (h != 0)
+            if (h != nullptr)
             {
                 ::FreeLibrary(h);
             }
@@ -719,9 +719,9 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
         {
             DWORD rcInner;
             std::printf("New added ----  just for testing \n");
-            ::wcscpy_s((wchar_t*)server.data(), MAXLEN, (wchar_t*)buf);
-            byte* buf2 = 0;
-            rc2 = NetWkstaGetInfoNT(0, 100, &buf2);
+            ::wcscpy_s(reinterpret_cast<wchar_t*>(server.data()), MAXLEN, reinterpret_cast<wchar_t*>(buf));
+            byte* buf2 = nullptr;
+            rc2 = NetWkstaGetInfoNT(nullptr, 100, &buf2);
             std::size_t pnconvInner725;
             if (rc2)
             {
@@ -729,26 +729,26 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
             }
             else
             {
-                ::wcstombs_s(&pnconvInner725, domain.data(), MAXLEN, ((WKSTA_INFO_100_NT*)buf2)->wki100_langroup, MAXLEN);
+                ::wcstombs_s(&pnconvInner725, domain.data(), MAXLEN, (reinterpret_cast<WKSTA_INFO_100_NT*>(buf2))->wki100_langroup, MAXLEN);
             }
             NetApiBufferFree(buf2);
             domain[MAXLEN - 1] = '\0';
             std::printf("Detected domain = %s\n", domain.data());
-            buf2 = 0;
+            buf2 = nullptr;
             std::array<char, MAXLEN * sizeof(wchar_t)> userdomain;
             std::array<char, MAXLEN> userdom;
             ::strcpy_s(userdom.data(), userdom.size(), domain.data());
             ::strcat_s(userdom.data(), userdom.size(), "\\");
             ::strcat_s(userdom.data(), userdom.size(), userin);
-            ::mbstowcs_s(&pnconvInner725, (wchar_t*)userdomain.data(), MAXLEN, userdom.data(), userdom.size());
-            std::printf("%S\n", (wchar_t*)userdomain.data());
-            rcInner = NetUserGetGroupsNT(nullptr, (wchar_t*)userdomain.data(), 0, 1, &buf2, MAX_PREFERRED_LENGTH, &read, &total);
+            ::mbstowcs_s(&pnconvInner725, reinterpret_cast<wchar_t*>(userdomain.data()), MAXLEN, userdom.data(), userdom.size());
+            std::printf("%S\n", reinterpret_cast<wchar_t*>(userdomain.data()));
+            rcInner = NetUserGetGroupsNT(nullptr, reinterpret_cast<wchar_t*>(userdomain.data()), 0, 1, &buf2, MAX_PREFERRED_LENGTH, &read, &total);
             if (rcInner == NERR_Success)
             {
                 for (i = 0; i < read; ++i)
                 {
                     std::size_t pnconvInner;
-                    ::wcstombs_s(&pnconvInner, groupname.data(), groupname.size(), ((LPLOCALGROUP_USERS_INFO_0_NT*)buf2)[i].grui0_name, MAXLEN);
+                    ::wcstombs_s(&pnconvInner, groupname.data(), groupname.size(), (reinterpret_cast<LPLOCALGROUP_USERS_INFO_0_NT*>(buf2))[i].grui0_name, MAXLEN);
                     groupname[MAXLEN - 1] = '\0'; // because strncpy won't do this if overflow
 #ifdef _MSC_VER
                     _strupr(groupname.data());
@@ -786,9 +786,9 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
             {
                 DWORD rcInner;
                 std::printf("New added ----  just for testing \n");
-                ::wcscpy_s((wchar_t*)server.data(), MAXLEN, (wchar_t*)buf);
-                byte* buf2 = 0;
-                rc2 = NetWkstaGetInfoNT(0, 100, &buf2);
+                ::wcscpy_s(reinterpret_cast<wchar_t*>(server.data()), MAXLEN, reinterpret_cast<wchar_t*>(buf));
+                byte* buf2 = nullptr;
+                rc2 = NetWkstaGetInfoNT(nullptr, 100, &buf2);
                 std::size_t pnconvInner792;
                 if (rc2)
                 {
@@ -796,27 +796,27 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
                 }
                 else
                 {
-                    ::wcstombs_s(&pnconvInner792, domain.data(), MAXLEN, ((WKSTA_INFO_100_NT*)buf2)->wki100_langroup, MAXLEN);
+                    ::wcstombs_s(&pnconvInner792, domain.data(), MAXLEN, (reinterpret_cast<WKSTA_INFO_100_NT*>(buf2))->wki100_langroup, MAXLEN);
                 }
                 NetApiBufferFree(buf2);
                 domain[MAXLEN - 1] = '\0';
                 std::printf("Detected domain = %s\n", domain.data());
-                buf2 = 0;
+                buf2 = nullptr;
                 std::array<char, MAXLEN * sizeof(wchar_t)> userdomain;
                 std::array<char, MAXLEN> userdom;
                 //strcpy(_s(userdom,domain);
                 //strcat_s(userdom,"\\");
                 ::strcpy_s(userdom.data(), userdom.size(), userin);
-                ::mbstowcs_s(&pnconvInner792, (wchar_t*)userdomain.data(), MAXLEN, userdom.data(), userdom.size());
-                std::printf("%S\n", (wchar_t*)userdomain.data());
-                rcInner = NetUserGetGroupsNT2((wchar_t*)server.data(), (wchar_t*)userdomain.data(), 0, &buf2, MAX_PREFERRED_LENGTH,
+                ::mbstowcs_s(&pnconvInner792, reinterpret_cast<wchar_t*>(userdomain.data()), MAXLEN, userdom.data(), userdom.size());
+                std::printf("%S\n", reinterpret_cast<wchar_t*>(userdomain.data()));
+                rcInner = NetUserGetGroupsNT2(reinterpret_cast<wchar_t*>(server.data()), reinterpret_cast<wchar_t*>(userdomain.data()), 0, &buf2, MAX_PREFERRED_LENGTH,
                                          &read, &total);
                 if (rcInner == NERR_Success)
                 {
                     for (i = 0; i < read; ++i)
                     {
                         std::size_t pnconvInner;
-                        ::wcstombs_s(&pnconvInner, groupname.data(), groupname.size(), ((LPLOCALGROUP_USERS_INFO_0_NT*)buf2)[i].grui0_name, MAXLEN);
+                        ::wcstombs_s(&pnconvInner, groupname.data(), groupname.size(), (reinterpret_cast<LPLOCALGROUP_USERS_INFO_0_NT*>(buf2))[i].grui0_name, MAXLEN);
                         groupname[MAXLEN - 1] = '\0'; // because strncpy won't do this if overflow
 #ifdef _MSC_VER
                         _strupr(groupname.data());
@@ -854,7 +854,7 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
     if ((locdom == 2) || (locdom == 3))
         if (!isNT)
         {
-            rc = NetGetDCName95(0, &buf);
+            rc = NetGetDCName95(nullptr, &buf);
             if (rc)
             {
                 std::printf("NetGetDCName95() returned %lu\n", rc);
@@ -866,29 +866,29 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
             }
             if (!rc)
             {
-                ::strcpy_s(server.data(), server.size(), (char*)buf);
-                byte* buf2 = 0;
-                rc = NetWkstaGetInfo95(0, 100, &buf2);
+                ::strcpy_s(server.data(), server.size(), reinterpret_cast<char*>(buf));
+                byte* buf2 = nullptr;
+                rc = NetWkstaGetInfo95(nullptr, 100, &buf2);
                 if (rc)
                 {
                     std::printf("NetWkstaGetInfoA() returned %lu \n", rc);
                 }
                 else
                 {
-                    ::strncpy_s(domain.data(), domain.size(), ((WKSTA_INFO_100_95*)buf2)->wki100_langroup, MAXLEN);
+                    ::strncpy_s(domain.data(), domain.size(), (reinterpret_cast<WKSTA_INFO_100_95*>(buf2))->wki100_langroup, MAXLEN);
                 }
                 NetApiBufferFree(buf2);
                 domain[MAXLEN - 1] = '\0';
                 NetApiBufferFree(buf);
-                buf = 0;
-                buf2 = 0;
+                buf = nullptr;
+                buf2 = nullptr;
                 ////////////////////////////////////////////
                 rc = NetUserGetGroups95(server.data(), user.data(), 0, &buf2, 2024, &read, &total);
                 if (rc == NERR_Success)
                 {
                     for (i = 0; i < read; ++i)
                     {
-                        ::strncpy_s(groupname.data(), groupname.size(), ((LPLOCALGROUP_USERS_INFO_0_95*)buf2)[i].grui0_name, MAXLEN);
+                        ::strncpy_s(groupname.data(), groupname.size(), (reinterpret_cast<LPLOCALGROUP_USERS_INFO_0_95*>(buf2))[i].grui0_name, MAXLEN);
                         groupname[MAXLEN - 1] = '\0'; // because strncpy won't do this if overflow
 #ifdef _MSC_VER
                         _strupr(groupname.data());
@@ -911,7 +911,7 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
                     }
                 }
                 NetApiBufferFree(buf2);
-                buf2 = 0;
+                buf2 = nullptr;
             }
         }
 
@@ -920,11 +920,11 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
     {
         NetApiBufferFree(buf);
     }
-    if (hNet != 0)
+    if (hNet != nullptr)
     {
         ::FreeLibrary(hNet);
     }
-    if (hLoc != 0)
+    if (hLoc != nullptr)
     {
         ::FreeLibrary(hLoc);
     }
@@ -955,7 +955,7 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
         HMODULE shell1 = ::LoadLibrary("advapi32.dll");
         if (shell1 != nullptr)
         {
-            LU = (LOGONUSER)::GetProcAddress((HINSTANCE)shell1, "LogonUserA");
+            LU = reinterpret_cast<LOGONUSER>(::GetProcAddress((HINSTANCE)shell1, "LogonUserA"));
         }
         if (LU != nullptr)
         {

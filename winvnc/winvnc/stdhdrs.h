@@ -53,13 +53,13 @@
 #endif
 
 //compile special case, rfb port is used for java and rfb
-#include <winsock2.h>
-#include <ws2tcpip.h>
+#include <WinSock2.h>
+#include <WS2tcpip.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <crtdbg.h>
-//#include <winsock2.h>
+//#include <WinSock2.h>
 #include <malloc.h>
 #include <process.h>
 #include <shellapi.h>

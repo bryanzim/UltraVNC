@@ -117,7 +117,7 @@ void rfbTranslateNone([[maybe_unused]] char* const table, [[maybe_unused]] rfbPi
 
     while (height > 0)
     {
-        std::memcpy(optr, iptr, bytesPerOutputLine);
+        std::memcpy(optr, iptr, static_cast<size_t>(bytesPerOutputLine));
         iptr += bytesBetweenInputLines;
         optr += bytesPerOutputLine;
         --height;
@@ -142,7 +142,7 @@ HDC GetDcMirror()
     HMODULE hUser32 = ::LoadLibrary("USER32");
     if (hUser32)
     {
-        pd = (pEnumDisplayDevices)::GetProcAddress(hUser32, "EnumDisplayDevicesA");
+        pd = reinterpret_cast<pEnumDisplayDevices>(::GetProcAddress(hUser32, "EnumDisplayDevicesA"));
     }
     if (pd)
     {
@@ -154,9 +154,9 @@ HDC GetDcMirror()
         INT devNum{ 0 };
         BOOL result;
         DriverFound = false;
-        while (result = (*pd)(nullptr, devNum, &dd, 0))
+        while (result = (*pd)(nullptr, static_cast<DWORD>(devNum), &dd, 0))
         {
-            if (std::strcmp((const char*)&dd.DeviceString[0U], driverName) == 0)
+            if (std::strcmp(reinterpret_cast<const char*>(&dd.DeviceString[0U]), driverName) == 0)
             {
                 DriverFound = true;
                 break;
@@ -165,7 +165,7 @@ HDC GetDcMirror()
         }
         if (DriverFound)
         {
-            deviceName = (LPSTR)&dd.DeviceName[0U];
+            deviceName = reinterpret_cast<LPSTR>(&dd.DeviceName[0U]);
             m_hrootdc = ::CreateDC("DISPLAY", deviceName, nullptr, nullptr);
         }
     }

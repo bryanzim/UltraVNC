@@ -245,15 +245,15 @@ bool ClientConnection::BumpScroll(int x, int y)
     if (x >= rightborder)
     {
         dx = +BUMPSCROLLAMOUNTX * m_opts->m_scale_num / m_opts->m_scale_den;
-    };
+    }
     if (y < BUMPSCROLLBORDER)
     {
         dy = -BUMPSCROLLAMOUNTY * m_opts->m_scale_num / m_opts->m_scale_den;
-    };
+    }
     if (y >= bottomborder)
     {
         dy = +BUMPSCROLLAMOUNTY * m_opts->m_scale_num / m_opts->m_scale_den;
-    };
+    }
     if (dx || dy)
     {
         if (ScrollScreen(dx, dy))

@@ -25,7 +25,7 @@
 void ClientConnection::ReadCacheRect(rfbFramebufferUpdateRectHeader* const pfburh)
 {
     rfbCacheRect cr;
-    ReadExact((char*)&cr, sz_rfbCacheRect);
+    ReadExact(reinterpret_cast<char*>(&cr), sz_rfbCacheRect);
     cr.special = Swap16IfLE(cr.special);
 
     RECT rect;
@@ -55,7 +55,7 @@ void ClientConnection::SaveArea(RECT& r)
     omni_mutex_lock l(m_bitmapdcMutex);
     if (m_DIBbitsCache && m_DIBbits)
     {
-        Copybuffer(w, h, x, y, m_myFormat.bitsPerPixel / 8, (BYTE*)m_DIBbits, (BYTE*)m_DIBbitsCache, m_si.framebufferWidth,
+        Copybuffer(w, h, x, y, m_myFormat.bitsPerPixel / 8, reinterpret_cast<BYTE*>(m_DIBbits), reinterpret_cast<BYTE*>(m_DIBbitsCache), m_si.framebufferWidth,
                    m_si.framebufferHeight);
     }
 }
@@ -75,7 +75,7 @@ void ClientConnection::RestoreArea(RECT& r)
 
     if (m_DIBbitsCache && m_DIBbits)
     {
-        Switchbuffer(w, h, x, y, m_myFormat.bitsPerPixel / 8, (BYTE*)m_DIBbits, (BYTE*)m_DIBbitsCache, m_si.framebufferWidth);
+        Switchbuffer(w, h, x, y, m_myFormat.bitsPerPixel / 8, reinterpret_cast<BYTE*>(m_DIBbits), reinterpret_cast<BYTE*>(m_DIBbitsCache), m_si.framebufferWidth);
     }
 }
 
@@ -109,21 +109,21 @@ void ClientConnection::ReadCacheZip(rfbFramebufferUpdateRectHeader* const pfburh
 
     rfbZlibHeader hdr;
     // Read in the rfbZlibHeader
-    ReadExact((char*)&hdr, sz_rfbZlibHeader);
+    ReadExact(reinterpret_cast<char*>(&hdr), sz_rfbZlibHeader);
     numCompBytes = Swap32IfLE(hdr.nBytes);
 
     // Check the net buffer
     CheckBufferSize(numCompBytes);
 
     // Read the compressed data
-    ReadExact((char*)m_netbuf, numCompBytes);
+    ReadExact(reinterpret_cast<char*>(m_netbuf), static_cast<int>(numCompBytes));
 
     // Verify buffer space for cache rects list
-    CheckZipBufferSize(numRawBytes);
+    CheckZipBufferSize(static_cast<int>(numRawBytes));
 
-    int nRet = uncompress((unsigned char*)m_zipbuf,     // Dest
-                          (unsigned long*)&numRawBytes, // Dest len
-                          (unsigned char*)m_netbuf,     // Src
+    int nRet = uncompress(reinterpret_cast<unsigned char*>(m_zipbuf),     // Dest
+                          reinterpret_cast<unsigned long*>(&numRawBytes), // Dest len
+                          reinterpret_cast<unsigned char*>(m_netbuf),     // Src
                           numCompBytes                  // Src len
     );
     if ((nRet != 0) || (numRawBytes < nNbCacheRects * sz_rfbRectangle))
@@ -137,7 +137,7 @@ void ClientConnection::ReadCacheZip(rfbFramebufferUpdateRectHeader* const pfburh
     BYTE* p = m_zipbuf;
     for (UINT i{ 0U }; i < nNbCacheRects; ++i)
     {
-        std::memcpy((BYTE*)&theRect, p, sz_rfbRectangle);
+        std::memcpy(reinterpret_cast<BYTE*>(&theRect), p, sz_rfbRectangle);
         p += sz_rfbRectangle;
 
         RECT cacherect;

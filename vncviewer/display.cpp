@@ -21,7 +21,7 @@ void tempdisplayclass::checkmonitors()
     int id{ 2 };     // monitor number, as used by Display Properties > Settings
     nr_monitors = 1;
 
-    while (EnumDisplayDevices(0, dev, &dd, 0))
+    while (EnumDisplayDevices(nullptr, dev, &dd, 0))
     {
         if (!(dd.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER))
             if ((dd.StateFlags & DISPLAY_DEVICE_ATTACHED_TO_DESKTOP))
@@ -62,14 +62,14 @@ void tempdisplayclass::checkmonitors()
                 ::ZeroMemory(&dm, sizeof(dm));
                 dm.dmSize = sizeof(dm);
                 dm.dmDriverExtra = 0;
-                if (::EnumDisplaySettingsExW((LPCWSTR)dd.DeviceName, ENUM_CURRENT_SETTINGS, &dm, 0) == FALSE)
+                if (::EnumDisplaySettingsExW(reinterpret_cast<LPCWSTR>(dd.DeviceName), ENUM_CURRENT_SETTINGS, &dm, 0) == FALSE)
                 {
-                    ::EnumDisplaySettingsExW((LPCWSTR)dd.DeviceName, ENUM_REGISTRY_SETTINGS, &dm, 0);
+                    ::EnumDisplaySettingsExW(reinterpret_cast<LPCWSTR>(dd.DeviceName), ENUM_REGISTRY_SETTINGS, &dm, 0);
                 }
 
 
                 // get the monitor handle and workspace
-                HMONITOR hm = 0;
+                HMONITOR hm = nullptr;
                 MONITORINFO mi;
                 ::ZeroMemory(&mi, sizeof(mi));
                 mi.cbSize = sizeof(mi);
@@ -94,30 +94,30 @@ void tempdisplayclass::checkmonitors()
                         monarray[1U].hm = hm;
                         ::sprintf_s(monarray[1U].buttontext.data(), monarray[1U].buttontext.size(), "%d. %d x %d @ %d,%d - %d-bit - %d Hz", 1, dm.dmPelsWidth,
                                   dm.dmPelsHeight, dm.dmPosition.x, dm.dmPosition.y, dm.dmBitsPerPel, dm.dmDisplayFrequency);
-                        monarray[1U].width = dm.dmPelsWidth;
-                        monarray[1U].height = dm.dmPelsHeight;
-                        monarray[1U].depth = dm.dmBitsPerPel;
+                        monarray[1U].width = static_cast<int>(dm.dmPelsWidth);
+                        monarray[1U].height = static_cast<int>(dm.dmPelsHeight);
+                        monarray[1U].depth = static_cast<int>(dm.dmBitsPerPel);
                         monarray[1U].offsetx = dm.dmPosition.x;
                         monarray[1U].offsety = dm.dmPosition.y;
-                        monarray[1U].freq = dm.dmDisplayFrequency;
-                        ::strcpy_s(monarray[1U].devicename.data(), monarray[1U].devicename.size(), (char*)dd.DeviceName);
+                        monarray[1U].freq = static_cast<int>(dm.dmDisplayFrequency);
+                        ::strcpy_s(monarray[1U].devicename.data(), monarray[1U].devicename.size(), reinterpret_cast<char*>(dd.DeviceName));
                     }
                     else
                     {
-                        monarray[id].wl = mi.rcWork.left;
-                        monarray[id].wt = mi.rcWork.top;
-                        monarray[id].wr = mi.rcWork.right;
-                        monarray[id].wb = mi.rcWork.bottom;
-                        monarray[id].hm = hm;
-                        ::sprintf_s(monarray[id].buttontext.data(), monarray[id].buttontext.size(), "%d. %d x %d @ %d,%d - %d-bit - %d Hz", id, dm.dmPelsWidth,
+                        monarray[static_cast<unsigned long long>(id)].wl = mi.rcWork.left;
+                        monarray[static_cast<unsigned long long>(id)].wt = mi.rcWork.top;
+                        monarray[static_cast<unsigned long long>(id)].wr = mi.rcWork.right;
+                        monarray[static_cast<unsigned long long>(id)].wb = mi.rcWork.bottom;
+                        monarray[static_cast<unsigned long long>(id)].hm = hm;
+                        ::sprintf_s(monarray[static_cast<unsigned long long>(id)].buttontext.data(), monarray[static_cast<unsigned long long>(id)].buttontext.size(), "%d. %d x %d @ %d,%d - %d-bit - %d Hz", id, dm.dmPelsWidth,
                                   dm.dmPelsHeight, dm.dmPosition.x, dm.dmPosition.y, dm.dmBitsPerPel, dm.dmDisplayFrequency);
-                        monarray[id].width = dm.dmPelsWidth;
-                        monarray[id].height = dm.dmPelsHeight;
-                        monarray[id].depth = dm.dmBitsPerPel;
-                        monarray[id].offsetx = dm.dmPosition.x;
-                        monarray[id].offsety = dm.dmPosition.y;
-                        monarray[id].freq = dm.dmDisplayFrequency;
-                        ::strcpy_s(monarray[id].devicename.data(), monarray[id].devicename.size(), (char*)dd.DeviceName);
+                        monarray[static_cast<unsigned long long>(id)].width = static_cast<int>(dm.dmPelsWidth);
+                        monarray[static_cast<unsigned long long>(id)].height = static_cast<int>(dm.dmPelsHeight);
+                        monarray[static_cast<unsigned long long>(id)].depth = static_cast<int>(dm.dmBitsPerPel);
+                        monarray[static_cast<unsigned long long>(id)].offsetx = dm.dmPosition.x;
+                        monarray[static_cast<unsigned long long>(id)].offsety = dm.dmPosition.y;
+                        monarray[static_cast<unsigned long long>(id)].freq = static_cast<int>(dm.dmDisplayFrequency);
+                        ::strcpy_s(monarray[static_cast<unsigned long long>(id)].devicename.data(), monarray[static_cast<unsigned long long>(id)].devicename.size(), reinterpret_cast<char*>(dd.DeviceName));
                         nr_monitors = id;
                         ++id;
                     }
@@ -182,7 +182,7 @@ int tempdisplayclass::getSelectedScreen(const HWND hwnd, const bool allowMonitor
     HMONITOR hm = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
     for (int i{ 0 }; i <= nr_monitors; ++i)
     {
-        if (monarray[i].hm == hm)
+        if (monarray[static_cast<unsigned long long>(i)].hm == hm)
         {
             return i;
         }

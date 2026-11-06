@@ -22,7 +22,7 @@
 #endif
 // ICS API
 #ifndef __netcon_h__
-#include <netcon.h>
+#include <NetCon.h>
 
 #endif
 
@@ -41,7 +41,7 @@ int CheckFirewallPortState(const long number, const NET_FW_IP_PROTOCOL protocol)
     VARIANT_BOOL portenabled = 0; // false
     int result{ 0 };              // error
 
-    hr = ::CoCreateInstance(__uuidof(NetFwMgr), nullptr, CLSCTX_INPROC_SERVER, __uuidof(INetFwMgr), (void**)&imgr);
+    hr = ::CoCreateInstance(__uuidof(NetFwMgr), nullptr, CLSCTX_INPROC_SERVER, __uuidof(INetFwMgr), reinterpret_cast<void**>(&imgr));
     if (FAILED(hr))
     {
         return 0;
@@ -100,7 +100,7 @@ bool ControlUPnPPorts(const bool open)
     bool port2869{ false };
     bool port1900{ false };
 
-    hr = ::CoCreateInstance(__uuidof(NetFwMgr), nullptr, CLSCTX_INPROC_SERVER, __uuidof(INetFwMgr), (void**)&imgr);
+    hr = ::CoCreateInstance(__uuidof(NetFwMgr), nullptr, CLSCTX_INPROC_SERVER, __uuidof(INetFwMgr), reinterpret_cast<void**>(&imgr));
     if (FAILED(hr))
     {
         return false;
@@ -120,7 +120,7 @@ bool ControlUPnPPorts(const bool open)
                 if (FAILED(hr))
                 {
                     hr = ::CoCreateInstance(__uuidof(NetFwOpenPort), nullptr, CLSCTX_INPROC_SERVER, __uuidof(INetFwOpenPort),
-                                          (void**)&iport);
+                                          reinterpret_cast<void**>(&iport));
                     if (SUCCEEDED(hr))
                     {
                         iport->put_Name(L"UPnP TCP 2869");
@@ -144,7 +144,7 @@ bool ControlUPnPPorts(const bool open)
                 if (FAILED(hr))
                 {
                     hr = ::CoCreateInstance(__uuidof(NetFwOpenPort), nullptr, CLSCTX_INPROC_SERVER, __uuidof(INetFwOpenPort),
-                                          (void**)&iport);
+                                          reinterpret_cast<void**>(&iport));
                     if (SUCCEEDED(hr))
                     {
                         iport->put_Name(L"UPnP UDP 1900");
@@ -196,7 +196,7 @@ bool IsICSConnEnabled()
     bool prvactive{ false };
 
     INetSharingManager* csmgr = nullptr;
-    hr = ::CoCreateInstance(CLSID_NetSharingManager, nullptr, CLSCTX_INPROC_SERVER, IID_INetSharingManager, (LPVOID*)&csmgr);
+    hr = ::CoCreateInstance(CLSID_NetSharingManager, nullptr, CLSCTX_INPROC_SERVER, IID_INetSharingManager, reinterpret_cast<LPVOID*>(&csmgr));
     if (SUCCEEDED(hr))
     {
         VARIANT_BOOL isinstalled = FALSE;
@@ -217,7 +217,7 @@ bool IsICSConnEnabled()
                     if (ipubcol->get__NewEnum(&ienum) == S_OK)
                     {
                         IEnumNetSharingPublicConnection* ipubs = nullptr;
-                        hr = ienum->QueryInterface(IID_IEnumNetSharingPublicConnection, (void**)&ipubs);
+                        hr = ienum->QueryInterface(IID_IEnumNetSharingPublicConnection, reinterpret_cast<void**>(&ipubs));
                         if (SUCCEEDED(hr))
                         {
                             ::VariantInit(&vconn);
@@ -226,7 +226,7 @@ bool IsICSConnEnabled()
                             {
                                 pubactive = true;
                                 iconn = nullptr;
-                                iconn = (INetConnection*)vconn.punkVal;
+                                iconn = reinterpret_cast<INetConnection*>(vconn.punkVal);
                                 ::VariantClear(&vconn);
                             }
 
@@ -250,7 +250,7 @@ bool IsICSConnEnabled()
                     if (iprvcol->get__NewEnum(&ienum) == S_OK)
                     {
                         IEnumNetSharingPrivateConnection* iprvs = nullptr;
-                        hr = ienum->QueryInterface(IID_IEnumNetSharingPrivateConnection, (void**)&iprvs);
+                        hr = ienum->QueryInterface(IID_IEnumNetSharingPrivateConnection, reinterpret_cast<void**>(&iprvs));
                         if (SUCCEEDED(hr))
                         {
                             ::VariantInit(&vconn);
@@ -259,7 +259,7 @@ bool IsICSConnEnabled()
                             {
                                 prvactive = true;
                                 iconn = nullptr;
-                                iconn = (INetConnection*)vconn.punkVal;
+                                iconn = reinterpret_cast<INetConnection*>(vconn.punkVal);
                                 ::VariantClear(&vconn);
                             }
 
@@ -412,7 +412,7 @@ bool ControlSSDPService(const bool start)
 
         if (::QueryServiceStatus(hsrv, &srvstatus))
         {
-            HANDLE hevent = ::CreateEvent(0, true, false, _T("dummyevent"));
+            HANDLE hevent = ::CreateEvent(nullptr, true, false, _T("dummyevent"));
 
             // if service_*_pending then wait for complete operation
             switch (srvstatus.dwCurrentState)

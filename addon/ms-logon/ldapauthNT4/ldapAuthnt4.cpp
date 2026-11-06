@@ -12,7 +12,7 @@
 // /macine-vnc Greg Wood (wood@agressiv.com)
 
 
-#include "ldapauthnt4.h"
+#include "ldapAuthnt4.h"
 
 #include <array>
 #include <cstddef>
@@ -49,10 +49,10 @@ BOOL CUGP(char* const userin, char* const password, char* const machine, char* c
         LPOLESTR pszBuffer3 = new OLECHAR[MAX_PATH * 2];
         LPOLESTR pszBuffer4 = new OLECHAR[MAX_PATH * 2];
         std::size_t pnconv;
-        ::mbstowcs_s(&pnconv, (wchar_t*)pszBuffer, MAX_PATH * 2, userin, MAX_PATH);
-        ::mbstowcs_s(&pnconv, (wchar_t*)pszBuffer2, MAX_PATH * 2, password, MAX_PATH);
-        ::mbstowcs_s(&pnconv, (wchar_t*)pszBuffer3, MAX_PATH * 2, machine, MAX_PATH);
-        ::mbstowcs_s(&pnconv, (wchar_t*)pszBuffer4, MAX_PATH * 2, groupin, MAX_PATH);
+        ::mbstowcs_s(&pnconv, reinterpret_cast<wchar_t*>(pszBuffer), MAX_PATH * 2, userin, MAX_PATH);
+        ::mbstowcs_s(&pnconv, reinterpret_cast<wchar_t*>(pszBuffer2), MAX_PATH * 2, password, MAX_PATH);
+        ::mbstowcs_s(&pnconv, reinterpret_cast<wchar_t*>(pszBuffer3), MAX_PATH * 2, machine, MAX_PATH);
+        ::mbstowcs_s(&pnconv, reinterpret_cast<wchar_t*>(pszBuffer4), MAX_PATH * 2, groupin, MAX_PATH);
         HRESULT hr = S_OK;
         //Get rootDSE and the domain container's DN.
         IADs* pObject = nullptr;
@@ -91,7 +91,7 @@ BOOL CUGP(char* const userin, char* const password, char* const machine, char* c
 
         hr = ::ADsOpenObject(szPath, pszBuffer, pszBuffer2,
                            ADS_SECURE_AUTHENTICATION, //Use Secure Authentication
-                           IID_IADs, (void**)&pObject);
+                           IID_IADs, reinterpret_cast<void**>(&pObject));
         if (FAILED(hr))
         {
             bool result{ false };
@@ -120,7 +120,7 @@ BOOL CUGP(char* const userin, char* const password, char* const machine, char* c
             wprintf(szPath);
             wprintf(L"\n");
             //Bind to the root of the current domain.
-            hr = ::ADsOpenObject(szPath, pszBuffer, pszBuffer2, ADS_SECURE_AUTHENTICATION, IID_IDirectorySearch, (void**)&pDS);
+            hr = ::ADsOpenObject(szPath, pszBuffer, pszBuffer2, ADS_SECURE_AUTHENTICATION, IID_IDirectorySearch, reinterpret_cast<void**>(&pDS));
             if (SUCCEEDED(hr))
             {
                 if (SUCCEEDED(hr))
@@ -160,7 +160,7 @@ BOOL CUGP(char* const userin, char* const password, char* const machine, char* c
                         wprintf(L"FindGroup OK\n");
                         IADsGroup* pIADsG;
                         hr = ::ADsOpenObject(gbsGroup, pszBuffer, pszBuffer2, ADS_SECURE_AUTHENTICATION, IID_IADsGroup,
-                                           (void**)&pIADsG);
+                                           reinterpret_cast<void**>(&pIADsG));
                         if (SUCCEEDED(hr))
                         {
                             VARIANT_BOOL bMember = FALSE;
@@ -188,7 +188,7 @@ BOOL CUGP(char* const userin, char* const password, char* const machine, char* c
                                     BSTR bsMemberGUID = nullptr;
                                     IDirectoryObject* pDOMember = nullptr;
                                     hr = ::ADsOpenObject(gbsMember, pszBuffer, pszBuffer2, ADS_SECURE_AUTHENTICATION,
-                                                       IID_IDirectoryObject, (void**)&pDOMember);
+                                                       IID_IDirectoryObject, reinterpret_cast<void**>(&pDOMember));
                                     if (SUCCEEDED(hr))
                                     {
                                         hr = GetObjectGuid(pDOMember, bsMemberGUID);
@@ -289,7 +289,7 @@ HRESULT FindUserByName(IDirectorySearch* const pSearchBase, const LPOLESTR szFin
                     ::wcscpy_s(szADsPath, MAX_PATH, col.pADsValues->CaseIgnoreString);
                     hr = ::ADsOpenObject(szADsPath, nullptr, nullptr,
                                        ADS_SECURE_AUTHENTICATION, //Use Secure Authentication
-                                       IID_IADs, (void**)ppUser);
+                                       IID_IADs, reinterpret_cast<void**>(ppUser));
                     if (SUCCEEDED(hr))
                     {
                         wprintf(L"%s: %s\r\n", pszAttribute[x], col.pADsValues->CaseIgnoreString);
@@ -371,7 +371,7 @@ HRESULT FindGroup(IDirectorySearch* const pSearchBase, const LPOLESTR szFindUser
                     ::wcscpy_s(szADsPath, MAX_PATH, col.pADsValues->CaseIgnoreString);
                     hr = ::ADsOpenObject(szADsPath, nullptr, nullptr,
                                        ADS_SECURE_AUTHENTICATION, //Use Secure Authentication
-                                       IID_IADs, (void**)ppUser);
+                                       IID_IADs, reinterpret_cast<void**>(ppUser));
                     if (SUCCEEDED(hr))
                     {
                         wprintf(L"%s: %s\r\n", pszAttribute[x], col.pADsValues->CaseIgnoreString);
@@ -462,7 +462,7 @@ BOOL RecursiveIsMember(IADsGroup* const pADsGroup, const LPWSTR pwszMemberGUID, 
         if (SUCCEEDED(hr))
         {
             // QI the IUnknown * for an IEnumVARIANT interface
-            hr = pUnknown->QueryInterface(IID_IEnumVARIANT, (void**)&pEnumVariant);
+            hr = pUnknown->QueryInterface(IID_IEnumVARIANT, reinterpret_cast<void**>(&pEnumVariant));
 
             if (SUCCEEDED(hr))
             {
@@ -488,7 +488,7 @@ BOOL RecursiveIsMember(IADsGroup* const pADsGroup, const LPWSTR pwszMemberGUID, 
                             //                            assert(HAS_BIT_STYLE(VariantArray[i].vt,VT_DISPATCH));
 
                             // Get the IADs interface for the "member" of this group
-                            hr = pDispatch->QueryInterface(IID_IDirectoryObject, (VOID**)&pIDOCurrent);
+                            hr = pDispatch->QueryInterface(IID_IDirectoryObject, reinterpret_cast<VOID**>(&pIDOCurrent));
 
                             if (SUCCEEDED(hr))
                             {
@@ -503,7 +503,7 @@ BOOL RecursiveIsMember(IADsGroup* const pADsGroup, const LPWSTR pwszMemberGUID, 
                                 IADs* pIADsCurrent = nullptr;
 
                                 // Retrieve the IADs Interface for the current object
-                                hr = pIDOCurrent->QueryInterface(IID_IADs, (void**)&pIADsCurrent);
+                                hr = pIDOCurrent->QueryInterface(IID_IADs, reinterpret_cast<void**>(&pIADsCurrent));
                                 if (FAILED(hr))
                                 {
                                     return hr;
@@ -539,11 +539,11 @@ BOOL RecursiveIsMember(IADsGroup* const pADsGroup, const LPWSTR pwszMemberGUID, 
                                         if (pwszUser)
                                         {
                                             hr = ::ADsOpenObject(bstrCurrentPath, pwszUser, pwszPassword, ADS_SECURE_AUTHENTICATION,
-                                                               IID_IADsGroup, (void**)&pIADsGroupAsMember);
+                                                               IID_IADsGroup, reinterpret_cast<void**>(&pIADsGroupAsMember));
                                         }
                                         else
                                         {
-                                            hr = ::ADsGetObject(bstrCurrentPath, IID_IADsGroup, (void**)&pIADsGroupAsMember);
+                                            hr = ::ADsGetObject(bstrCurrentPath, IID_IADsGroup, reinterpret_cast<void**>(&pIADsGroupAsMember));
                                         }
 
                                         // If bind was completed, then this is a group.
@@ -642,7 +642,7 @@ HRESULT GetObjectGuid(IDirectoryObject* const pDO, BSTR& bsGuid)
         {
             // Get COM converted string version of the GUID
             // lpvalue should be LPBYTE. Should be able to cast it to ptr to GUID.
-            pObjectGUID = (GUID*)(pAttributeEntries->pADsValues[0U].OctetString.lpValue);
+            pObjectGUID = reinterpret_cast<GUID*>((pAttributeEntries->pADsValues[0U].OctetString.lpValue));
 
             // OLE str to fit a GUID
 

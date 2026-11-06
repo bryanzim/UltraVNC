@@ -15,8 +15,8 @@
 // Representation).
 //
 
-#ifndef __RDR_INSTREAM_H__
-#define __RDR_INSTREAM_H__
+#ifndef RDR_INSTREAM_H
+#define RDR_INSTREAM_H
 
 #pragma once
 
@@ -73,12 +73,12 @@ namespace rdr
             const int b1 = *ptr++;
             const int b2 = *ptr++;
             const int b3 = *ptr++;
-            return b0 << 24 | b1 << 16 | b2 << 8 | b3;
+            return b0 << 24 | b1 << 16 | static_cast<U32>(b2 << 8 | b3);
         }
 
-        inline S8 readS8() { return (S8)readU8(); }
-        inline S16 readS16() { return (S16)readU16(); }
-        inline S32 readS32() { return (S32)readU32(); }
+        inline S8 readS8() { return static_cast<S8>(readU8()); }
+        inline S16 readS16() { return static_cast<S16>(readU16()); }
+        inline S32 readS32() { return static_cast<S32>(readU32()); }
 
         // readString() reads a string - a U32 length followed by the data.
         // Returns a null-terminated string - the caller should delete[] it
@@ -105,12 +105,12 @@ namespace rdr
 
         virtual void readBytes(void* const data, const int length)
         {
-            U8* dataPtr = (U8*)data;
+            U8* dataPtr = reinterpret_cast<U8*>(data);
             U8* dataEnd = dataPtr + length;
             while (dataPtr < dataEnd)
             {
                 int n = check(1, static_cast<int>((dataEnd - dataPtr)));
-                std::memcpy(dataPtr, ptr, n);
+                std::memcpy(dataPtr, ptr, static_cast<size_t>(n));
                 ptr += n;
                 dataPtr += n;
             }
@@ -123,36 +123,36 @@ namespace rdr
         {
             check(2);
             U16 r;
-            ((U8*)&r)[0U] = *ptr++;
-            ((U8*)&r)[1U] = *ptr++;
+            (reinterpret_cast<U8*>(&r))[0U] = *ptr++;
+            (reinterpret_cast<U8*>(&r))[1U] = *ptr++;
             return r;
         }
         inline U32 readOpaque32()
         {
             check(4);
             U32 r;
-            ((U8*)&r)[0U] = *ptr++;
-            ((U8*)&r)[1U] = *ptr++;
-            ((U8*)&r)[2U] = *ptr++;
-            ((U8*)&r)[3U] = *ptr++;
+            (reinterpret_cast<U8*>(&r))[0U] = *ptr++;
+            (reinterpret_cast<U8*>(&r))[1U] = *ptr++;
+            (reinterpret_cast<U8*>(&r))[2U] = *ptr++;
+            (reinterpret_cast<U8*>(&r))[3U] = *ptr++;
             return r;
         }
         inline U32 readOpaque24A()
         {
             check(3);
             U32 r = 0;
-            ((U8*)&r)[0U] = *ptr++;
-            ((U8*)&r)[1U] = *ptr++;
-            ((U8*)&r)[2U] = *ptr++;
+            (reinterpret_cast<U8*>(&r))[0U] = *ptr++;
+            (reinterpret_cast<U8*>(&r))[1U] = *ptr++;
+            (reinterpret_cast<U8*>(&r))[2U] = *ptr++;
             return r;
         }
         inline U32 readOpaque24B()
         {
             check(3);
             U32 r = 0;
-            ((U8*)&r)[1U] = *ptr++;
-            ((U8*)&r)[2U] = *ptr++;
-            ((U8*)&r)[3U] = *ptr++;
+            (reinterpret_cast<U8*>(&r))[1U] = *ptr++;
+            (reinterpret_cast<U8*>(&r))[2U] = *ptr++;
+            (reinterpret_cast<U8*>(&r))[3U] = *ptr++;
             return r;
         }
 

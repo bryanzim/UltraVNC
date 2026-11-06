@@ -9,8 +9,8 @@
 //
 
 
-#ifndef _G_HIDEDESKTOP_H_
-#define _G_HIDEDESKTOP_H_
+#ifndef G_HIDEDESKTOP_H
+#define G_HIDEDESKTOP_H
 
 // Everything
 

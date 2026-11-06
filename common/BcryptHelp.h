@@ -9,7 +9,7 @@
 // BcryptHelp.h - minimal BCrypt wrappers (SHA-256, HMAC-SHA256, PBKDF2, RNG)
 // used by the SASL/SCRAM implementation.
 #pragma once
-#include <windows.h>
+#include <Windows.h>
 
 #include <bcrypt.h>
 

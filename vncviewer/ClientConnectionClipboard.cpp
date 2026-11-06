@@ -70,7 +70,7 @@ void ClientConnection::ProcessLocalClipboardChange()
         UpdateRemoteClipboard();
     }
     // Pass the message to the next window in clipboard viewer chain
-    if ((m_hwndNextViewer != nullptr) && (m_hwndNextViewer != (HWND)INVALID_HANDLE_VALUE))
+    if ((m_hwndNextViewer != nullptr) && (m_hwndNextViewer != reinterpret_cast<HWND>(INVALID_HANDLE_VALUE)))
     {
         vnclog.Print(6, _T("Passing WM_DRAWCLIPBOARD to 0x%08x\n"), m_hwndNextViewer);
         // use SendNotifyMessage instead of SendMessage so misbehaving or hung applications
@@ -119,11 +119,11 @@ void ClientConnection::UpdateRemoteClipboard(CARD32 overrideFlags)
                 std::memset(&message, 0, sizeof(rfbClientCutTextMsg));
                 message.type = rfbClientCutText;
 
-                message.length = Swap32IfLE(-actualLen);
+                message.length = static_cast<unsigned int>(Swap32IfLE(-actualLen));
 
                 //adzm 2010-09
-                WriteExactQueue((char*)&message, sz_rfbClientCutTextMsg, rfbClientCutText);
-                WriteExact((char*)(m_clipboard.extendedClipboardDataMessage.GetData()),
+                WriteExactQueue(reinterpret_cast<char*>(&message), sz_rfbClientCutTextMsg, rfbClientCutText);
+                WriteExact(const_cast<char*>(reinterpret_cast<const char *>((m_clipboard.extendedClipboardDataMessage.GetData()))),
                            m_clipboard.extendedClipboardDataMessage.GetDataLength());
 
                 vnclog.Print(6, _T("Sent extended clipboard\n"));
@@ -143,10 +143,10 @@ void ClientConnection::UpdateRemoteClipboard(CARD32 overrideFlags)
                     std::memset(&message, 0, sizeof(rfbClientCutTextMsg));
                     message.type = rfbClientCutText;
 
-                    message.length = Swap32IfLE(-actualLen);
+                    message.length = static_cast<unsigned int>(Swap32IfLE(-actualLen));
 
-                    WriteExactQueue((char*)&message, sz_rfbClientCutTextMsg, rfbClientCutText);
-                    WriteExact((char*)(m_clipboard.extendedClipboardDataNotifyMessage.GetData()),
+                    WriteExactQueue(reinterpret_cast<char*>(&message), sz_rfbClientCutTextMsg, rfbClientCutText);
+                    WriteExact(const_cast<char*>(reinterpret_cast<const char *>((m_clipboard.extendedClipboardDataNotifyMessage.GetData()))),
                                m_clipboard.extendedClipboardDataNotifyMessage.GetDataLength());
                 }
                 m_clipboard.extendedClipboardDataNotifyMessage.Reset();
@@ -172,7 +172,7 @@ void ClientConnection::UpdateRemoteClipboard(CARD32 overrideFlags)
             else
             {
                 vnclog.Print(6, _T("Got CF_TEXT!\n"));
-                LPSTR lpstr = (LPSTR)::GlobalLock(hglb);
+                LPSTR lpstr = reinterpret_cast<LPSTR>(::GlobalLock(hglb));
 
                 char* contents = new char[std::strlen(lpstr) + 1];
                 char* unixcontents = new char[std::strlen(lpstr) + 1];
@@ -242,11 +242,11 @@ void ClientConnection::UpdateRemoteClipboardCaps(const bool bSavePreferences)
     std::memset(&message, 0, sizeof(rfbClientCutTextMsg));
     message.type = rfbClientCutText;
 
-    message.length = Swap32IfLE(-actualLen);
+    message.length = static_cast<unsigned int>(Swap32IfLE(-actualLen));
 
     //adzm 2010-09
-    WriteExactQueue((char*)&message, sz_rfbClientCutTextMsg, rfbClientCutText);
-    WriteExact((char*)(extendedClipboardDataMessage.GetData()), extendedClipboardDataMessage.GetDataLength());
+    WriteExactQueue(reinterpret_cast<char*>(&message), sz_rfbClientCutTextMsg, rfbClientCutText);
+    WriteExact(const_cast<char*>(reinterpret_cast<const char *>((extendedClipboardDataMessage.GetData()))), extendedClipboardDataMessage.GetDataLength());
 }
 
 void ClientConnection::RequestRemoteClipboard(CARD32 formats, const bool automatic)
@@ -272,11 +272,11 @@ void ClientConnection::RequestRemoteClipboard(CARD32 formats, const bool automat
     std::memset(&message, 0, sizeof(rfbClientCutTextMsg));
     message.type = rfbClientCutText;
 
-    message.length = Swap32IfLE(-actualLen);
+    message.length = static_cast<unsigned int>(Swap32IfLE(-actualLen));
 
     //adzm 2010-09
-    WriteExactQueue((char*)&message, sz_rfbClientCutTextMsg, rfbClientCutText);
-    WriteExact((char*)(extendedClipboardDataMessage.GetData()), extendedClipboardDataMessage.GetDataLength());
+    WriteExactQueue(reinterpret_cast<char*>(&message), sz_rfbClientCutTextMsg, rfbClientCutText);
+    WriteExact(const_cast<char*>(reinterpret_cast<const char *>((extendedClipboardDataMessage.GetData()))), extendedClipboardDataMessage.GetDataLength());
 }
 
 // We've read some text from the remote server, and
@@ -291,10 +291,10 @@ void ClientConnection::UpdateLocalClipboard(char* const buf, int len)
     }
 
     // Copy to wincontents replacing LF with CR-LF
-    char* wincontents = new char[len * 2 + 1];
+    char* wincontents = new char[static_cast<unsigned long long>(len * 2 + 1)];
 
     int j{ 0 };
-    ;
+    
     for (int i{ 0 }; buf[i] != 0; ++i, ++j)
     {
         if (buf[i] == '\x0a')
@@ -327,12 +327,12 @@ void ClientConnection::UpdateLocalClipboard(char* const buf, int len)
         int finalLen = static_cast<int>(std::strlen(wincontents) + 1);
 
         // Allocate a global memory object for the text.
-        HGLOBAL hglbCopy = ::GlobalAlloc(GMEM_DDESHARE, finalLen); // in bytes
+        HGLOBAL hglbCopy = ::GlobalAlloc(GMEM_DDESHARE, static_cast<SIZE_T>(finalLen)); // in bytes
         if (hglbCopy != nullptr)
         {
             // Lock the handle and copy the text to the buffer.
-            LPSTR lpstrCopy = (LPSTR)::GlobalLock(hglbCopy);
-            std::memcpy(lpstrCopy, wincontents, finalLen); // in bytes
+            LPSTR lpstrCopy = reinterpret_cast<LPSTR>(::GlobalLock(hglbCopy));
+            std::memcpy(lpstrCopy, wincontents, static_cast<size_t>(finalLen)); // in bytes
             lpstrCopy[finalLen - 1] = 0;                   // null character
             ::GlobalUnlock(hglbCopy);                        // Place the handle on the clipboard.
 
@@ -340,7 +340,7 @@ void ClientConnection::UpdateLocalClipboard(char* const buf, int len)
             int nWideLen = ::MultiByteToWideChar(CP_ACP, 0, wincontents, -1, nullptr, 0);
             if (nWideLen > 0)
             {
-                wchar_t* wideStr = new wchar_t[nWideLen];
+                wchar_t* wideStr = new wchar_t[static_cast<unsigned long long>(nWideLen)];
                 ::MultiByteToWideChar(CP_ACP, 0, wincontents, -1, wideStr, nWideLen);
                 m_clipboard.m_strLastCutText = wideStr;
                 delete[] wideStr;
@@ -393,7 +393,7 @@ bool ClientConnection::LoadClipboardPreferences()
         ::WideCharToMultiByte(CP_UTF8, 0, m_opts->getDefaultOptionsFileName(), -1, _fn.data(), static_cast<int>(_fn.size()), nullptr, nullptr);
         vnclog.Print(1, _T("Loading from %S\n"), m_opts->getDefaultOptionsFileName());
         dwClipboardPrefs = clipText | clipRTF | clipHTML;
-        dwClipboardPrefs = ::GetPrivateProfileIntA("connection", "ClipboardPrefs", dwClipboardPrefs, _fn.data());
+        dwClipboardPrefs = ::GetPrivateProfileIntA("connection", "ClipboardPrefs", static_cast<INT>(dwClipboardPrefs), _fn.data());
     }
     dwClipboardPrefs |= clipText;
     if (!(dwClipboardPrefs & clipRTF))

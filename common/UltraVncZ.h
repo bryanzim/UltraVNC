@@ -9,8 +9,8 @@
 //
 
 
-#if !defined(_WINVNC_VNCZ)
-#define _WINVNC_VNCZ
+#if !defined(WINVNC_VNCZ)
+#define WINVNC_VNCZ
 #pragma once
 #ifdef _VCPKG
 #include <zlib.h>
@@ -67,4 +67,4 @@ protected:
     int decompressZstd_usingCDict(UINT &avail_in, UINT &avail_out, BYTE * next_in, BYTE *next_out);*/
 };
 
-#endif // _WINVNC_VNCZ
+#endif // WINVNC_VNCZ

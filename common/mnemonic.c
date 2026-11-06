@@ -106,7 +106,7 @@ mn_index mn_encode_word_index (void *vsrc, int srcsize, int n)
     case 1:			/* Second word of group */
       x /= MN_BASE;
     }
-  return x % MN_BASE + extra + 1;
+  return x % MN_BASE + (mn_word32)(extra) + 1;
 }
 
 

@@ -42,17 +42,17 @@ void ClientConnection::ReadZlibRect(rfbFramebufferUpdateRectHeader* const pfburh
     rfbZlibHeader hdr;
 
     // Read in the rfbZlibHeader
-    ReadExact((char*)&hdr, sz_rfbZlibHeader);
+    ReadExact(reinterpret_cast<char*>(&hdr), sz_rfbZlibHeader);
 
     numCompBytes = Swap32IfLE(hdr.nBytes);
 
     // Read in the compressed data
     CheckBufferSize(numCompBytes);
-    ReadExact(m_netbuf, numCompBytes);
+    ReadExact(m_netbuf, static_cast<int>(numCompBytes));
 
     // Verify enough buffer space for screen update.
-    CheckZlibBufferSize(numRawBytes);
-    if ((ultraVncZlib->decompress(numCompBytes, numRawBytes, (unsigned char*)m_netbuf, m_zlibbuf, zstd) != Z_OK) ||
+    CheckZlibBufferSize(static_cast<int>(numRawBytes));
+    if ((ultraVncZlib->decompress(numCompBytes, numRawBytes, reinterpret_cast<unsigned char*>(m_netbuf), m_zlibbuf, zstd) != Z_OK) ||
         (numRawBytes != 0))
     {
         throw ErrorException(L"Invalid compressed rectangle data.");
@@ -99,7 +99,7 @@ void ClientConnection::CheckZlibBufferSize(int bufsize)
     omni_mutex_lock l(m_zlibBufferMutex);
 
 
-    newbuf = (unsigned char*)new char[bufsize + 256];
+    newbuf = reinterpret_cast<unsigned char*>(new char[static_cast<unsigned long long>(bufsize + 256)]);
     // Note: ZeroMemory removed - buffer will be overwritten by decompression
     if (newbuf == nullptr)
     {
@@ -124,18 +124,18 @@ void ClientConnection::ReadQueueZip(rfbFramebufferUpdateRectHeader* const pfburh
     UINT numCompBytes;
     rfbZlibHeader hdr;
     // Read in the rfbZlibHeader
-    ReadExact((char*)&hdr, sz_rfbZlibHeader);
+    ReadExact(reinterpret_cast<char*>(&hdr), sz_rfbZlibHeader);
     numCompBytes = Swap32IfLE(hdr.nBytes);
     // Check the net buffer
     CheckBufferSize(numCompBytes);
     // Read the compressed data
-    ReadExact((char*)m_netbuf, numCompBytes);
+    ReadExact(reinterpret_cast<char*>(m_netbuf), static_cast<int>(numCompBytes));
 
     // Verify buffer space for cache rects list
-    CheckZipBufferSize(numRawBytes + 500);
+    CheckZipBufferSize(static_cast<int>(numRawBytes + 500));
 
     UINT numAvailOut = numRawBytes;
-    if (ultraVncZlib->decompress(numCompBytes, numAvailOut, (unsigned char*)m_netbuf, m_zipbuf, zstd) != Z_OK)
+    if (ultraVncZlib->decompress(numCompBytes, numAvailOut, reinterpret_cast<unsigned char*>(m_netbuf), m_zipbuf, zstd) != Z_OK)
     {
         return;
     }
@@ -149,7 +149,7 @@ void ClientConnection::ReadQueueZip(rfbFramebufferUpdateRectHeader* const pfburh
             return;
         }
         rfbFramebufferUpdateRectHeader surh;
-        std::memcpy((char*)&surh, pzipbuf, sz_rfbFramebufferUpdateRectHeader);
+        std::memcpy(reinterpret_cast<char*>(&surh), pzipbuf, sz_rfbFramebufferUpdateRectHeader);
         surh.r.x = Swap16IfLE(surh.r.x);
         surh.r.y = Swap16IfLE(surh.r.y);
         surh.r.w = Swap16IfLE(surh.r.w);
@@ -174,7 +174,7 @@ void ClientConnection::ReadQueueZip(rfbFramebufferUpdateRectHeader* const pfburh
         if (surh.encoding == rfbEncodingRaw)
         {
             UINT numpixels = surh.r.w * surh.r.h;
-            if ((unsigned __int64)numpixels * (m_myFormat.bitsPerPixel / 8) > numDecompBytes)
+            if (static_cast<unsigned __int64>(numpixels) * (m_myFormat.bitsPerPixel / 8) > numDecompBytes)
             {
                 return;
             }

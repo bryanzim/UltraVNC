@@ -36,7 +36,7 @@ bool vncCad::ISUACENabled()
     {
         DWORD value{ 0U };
         DWORD tt{ 4U };
-        if (::RegQueryValueExW(hKey, L"EnableLUA", nullptr, nullptr, (LPBYTE)&value, &tt) == ERROR_SUCCESS)
+        if (::RegQueryValueExW(hKey, L"EnableLUA", nullptr, nullptr, reinterpret_cast<LPBYTE>(&value), &tt) == ERROR_SUCCESS)
         {
             ::RegCloseKey(hKey);
             return (value != 0);
@@ -63,7 +63,7 @@ void vncCad::Enable_softwareCAD()
     }
     LONG pref;
     pref = 1;
-    ::RegSetValueEx(hkLocalKey, "SoftwareSASGeneration", 0, REG_DWORD, (LPBYTE)&pref, sizeof(pref));
+    ::RegSetValueEx(hkLocalKey, "SoftwareSASGeneration", 0, REG_DWORD, reinterpret_cast<LPBYTE>(&pref), sizeof(pref));
     ::RegCloseKey(hkLocalKey);
     ::RegCloseKey(hkLocal);
 }
@@ -99,7 +99,7 @@ void vncCad::delete_softwareCAD_elevated()
     }
 
     std::array<char, MAX_PATH> exe_file_name;
-    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+    ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     SHELLEXECUTEINFO shExecInfo;
     shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
     shExecInfo.fMask = 0;
@@ -123,7 +123,7 @@ void vncCad::Enable_softwareCAD_elevated()
         return;
     }
     std::array<char, MAX_PATH> exe_file_name;
-    ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+    ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
     SHELLEXECUTEINFO shExecInfo;
     shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
     shExecInfo.fMask = 0;
@@ -164,7 +164,7 @@ bool vncCad::IsSoftwareCadEnabled()
     ULONG type = REG_DWORD;
     ULONG prefsize = sizeof(pref);
 
-    if (RegQueryValueEx(hkLocalKey, "SoftwareSASGeneration", nullptr, &type, (LPBYTE)&pref, &prefsize) != ERROR_SUCCESS)
+    if (RegQueryValueEx(hkLocalKey, "SoftwareSASGeneration", nullptr, &type, reinterpret_cast<LPBYTE>(&pref), &prefsize) != ERROR_SUCCESS)
     {
         ::RegCloseKey(hkLocalKey);
         ::RegCloseKey(hkLocal);
@@ -209,7 +209,7 @@ DWORD WINAPI vncCad::Cadthread([[maybe_unused]] const LPVOID lpParam)
             {
                 std::array<char, MAX_PATH + 32> dir;
                 std::array<char, MAX_PATH> exe_file_name;
-                ::GetModuleFileName(0, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
+                ::GetModuleFileName(nullptr, exe_file_name.data(), static_cast<DWORD>(exe_file_name.size()));
                 ::sprintf_s(dir.data(), dir.size(), "\"%s\" -softwarecadhelper", exe_file_name.data());
 
                 STARTUPINFO StartUPInfo{};
@@ -272,7 +272,7 @@ gotome:
         ::strcat_s(mycommand.data(), mycommand.size(), WORKDIR.data()); //set the directory
         ::strcat_s(mycommand.data(), mycommand.size(), "\\");
         ::strcat_s(mycommand.data(), mycommand.size(), "cad.exe");
-        ::ShellExecute(::GetDesktopWindow(), "open", mycommand.data(), "", 0, SW_SHOWNORMAL);
+        ::ShellExecute(::GetDesktopWindow(), "open", mycommand.data(), "", nullptr, SW_SHOWNORMAL);
     }
     if (hShutdownEventcad)
     {

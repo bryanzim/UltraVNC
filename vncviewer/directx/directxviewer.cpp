@@ -39,7 +39,7 @@ static INT MaskToShift(DWORD mask)
 ViewerDirectxClass::ViewerDirectxClass()
 {
     directxlocked = false;
-    surface = 0;
+    surface = nullptr;
     pD3DDevice9 = nullptr;
     pD3D9 = nullptr;
     devicelost = true;
@@ -51,7 +51,7 @@ ViewerDirectxClass::ViewerDirectxClass()
         return;
     }
 
-    d3dCreate = (D3DCREATETYPE)::GetProcAddress(D3DLibrary, "Direct3DCreate9");
+    d3dCreate = reinterpret_cast<D3DCREATETYPE>(::GetProcAddress(D3DLibrary, "Direct3DCreate9"));
     if (!d3dCreate)
     {
 
@@ -81,7 +81,7 @@ void ViewerDirectxClass::DestroyD3D(void)
     if (surface)
     {
         LPDIRECT3DSURFACE9 pSurface = surface;
-        surface = 0;
+        surface = nullptr;
         pSurface->Release();
     }
     if (pD3DDevice9)
@@ -129,8 +129,8 @@ ViewerDirectxClass::InitD3D(HWND hwnd, const HWND hwndm, int width, int height, 
 
     // set the presentation parameters
     ::ZeroMemory(&d3dpp, sizeof(d3dpp));
-    d3dpp.BackBufferWidth = width;
-    d3dpp.BackBufferHeight = height;
+    d3dpp.BackBufferWidth = static_cast<UINT>(width);
+    d3dpp.BackBufferHeight = static_cast<UINT>(height);
     d3dpp.BackBufferCount = 2;
     if (bit == 32)
     {
@@ -215,39 +215,39 @@ ViewerDirectxClass::InitD3D(HWND hwnd, const HWND hwndm, int width, int height, 
         }
     } //!pD3
 
-    pD3DDevice9->CreateOffscreenPlainSurface(width, height, d3ddm.Format, D3DPOOL_SYSTEMMEM, &surface, nullptr);
+    pD3DDevice9->CreateOffscreenPlainSurface(static_cast<UINT>(width), static_cast<UINT>(height), d3ddm.Format, D3DPOOL_SYSTEMMEM, &surface, nullptr);
     if ((format == D3DFMT_X8R8G8B8) || (format == D3DFMT_A8R8G8B8))
     {
         m_directxformat.bitsPerPixel = 32;
         m_directxformat.depth = 32;
         m_directxformat.redMask = 0xff0000;
-        m_directxformat.redShift = MaskToShift(m_directxformat.redMask);
+        m_directxformat.redShift = static_cast<unsigned long>(MaskToShift(m_directxformat.redMask));
         m_directxformat.greenMask = 0xff00;
-        m_directxformat.greenShift = MaskToShift(m_directxformat.greenMask);
+        m_directxformat.greenShift = static_cast<unsigned long>(MaskToShift(m_directxformat.greenMask));
         m_directxformat.blueMask = 0x00ff;
-        m_directxformat.blueShift = MaskToShift(m_directxformat.blueMask);
+        m_directxformat.blueShift = static_cast<unsigned long>(MaskToShift(m_directxformat.blueMask));
     }
     if ((format == D3DFMT_A1R5G5B5) || (format == D3DFMT_X1R5G5B5))
     {
         m_directxformat.bitsPerPixel = 16;
         m_directxformat.depth = 16;
         m_directxformat.redMask = 0x7c00;
-        m_directxformat.redShift = MaskToShift(m_directxformat.redMask);
+        m_directxformat.redShift = static_cast<unsigned long>(MaskToShift(m_directxformat.redMask));
         m_directxformat.greenMask = 0x03e0;
-        m_directxformat.greenShift = MaskToShift(m_directxformat.greenMask);
+        m_directxformat.greenShift = static_cast<unsigned long>(MaskToShift(m_directxformat.greenMask));
         m_directxformat.blueMask = 0x001f;
-        m_directxformat.blueShift = MaskToShift(m_directxformat.blueMask);
+        m_directxformat.blueShift = static_cast<unsigned long>(MaskToShift(m_directxformat.blueMask));
     }
     if (format == D3DFMT_R5G6B5)
     {
         m_directxformat.bitsPerPixel = 16;
         m_directxformat.depth = 16;
         m_directxformat.redMask = 0xF800;
-        m_directxformat.redShift = MaskToShift(m_directxformat.redMask);
+        m_directxformat.redShift = static_cast<unsigned long>(MaskToShift(m_directxformat.redMask));
         m_directxformat.greenMask = 0x07e0;
-        m_directxformat.greenShift = MaskToShift(m_directxformat.greenMask);
+        m_directxformat.greenShift = static_cast<unsigned long>(MaskToShift(m_directxformat.greenMask));
         m_directxformat.blueMask = 0x001f;
-        m_directxformat.blueShift = MaskToShift(m_directxformat.blueMask);
+        m_directxformat.blueShift = static_cast<unsigned long>(MaskToShift(m_directxformat.blueMask));
     }
     //edMask = 0x7c00; greenMask = 0x03e0; blueMask = 0x001f;
     //PostMessage(hwnd_sendm,WM_SYSCOMMAND,ID_REQUEST_REFRESH,0);
@@ -288,8 +288,8 @@ ViewerDirectxClass::ReInitD3D()
 
     // set the presentation parameters
     ::ZeroMemory(&d3dpp, sizeof(d3dpp));
-    d3dpp.BackBufferWidth = width;
-    d3dpp.BackBufferHeight = height;
+    d3dpp.BackBufferWidth = static_cast<UINT>(width);
+    d3dpp.BackBufferHeight = static_cast<UINT>(height);
     d3dpp.BackBufferCount = 2;
     if (bit == 32)
     {
@@ -374,46 +374,46 @@ ViewerDirectxClass::ReInitD3D()
         }
     } //!pD3
 
-    pD3DDevice9->CreateOffscreenPlainSurface(width, height, d3ddm.Format, D3DPOOL_SYSTEMMEM, &surface, nullptr);
+    pD3DDevice9->CreateOffscreenPlainSurface(static_cast<UINT>(width), static_cast<UINT>(height), d3ddm.Format, D3DPOOL_SYSTEMMEM, &surface, nullptr);
     if ((format == D3DFMT_X8R8G8B8) || (format == D3DFMT_A8R8G8B8))
     {
         m_directxformat.bitsPerPixel = 32;
         m_directxformat.depth = 32;
         m_directxformat.redMask = 0xff0000;
-        m_directxformat.redShift = MaskToShift(m_directxformat.redMask);
+        m_directxformat.redShift = static_cast<unsigned long>(MaskToShift(m_directxformat.redMask));
         m_directxformat.greenMask = 0xff00;
-        m_directxformat.greenShift = MaskToShift(m_directxformat.greenMask);
+        m_directxformat.greenShift = static_cast<unsigned long>(MaskToShift(m_directxformat.greenMask));
         m_directxformat.blueMask = 0x00ff;
-        m_directxformat.blueShift = MaskToShift(m_directxformat.blueMask);
+        m_directxformat.blueShift = static_cast<unsigned long>(MaskToShift(m_directxformat.blueMask));
     }
     if ((format == D3DFMT_A1R5G5B5) || (format == D3DFMT_X1R5G5B5))
     {
         m_directxformat.bitsPerPixel = 16;
         m_directxformat.depth = 16;
         m_directxformat.redMask = 0x7c00;
-        m_directxformat.redShift = MaskToShift(m_directxformat.redMask);
+        m_directxformat.redShift = static_cast<unsigned long>(MaskToShift(m_directxformat.redMask));
         m_directxformat.greenMask = 0x03e0;
-        m_directxformat.greenShift = MaskToShift(m_directxformat.greenMask);
+        m_directxformat.greenShift = static_cast<unsigned long>(MaskToShift(m_directxformat.greenMask));
         m_directxformat.blueMask = 0x001f;
-        m_directxformat.blueShift = MaskToShift(m_directxformat.blueMask);
+        m_directxformat.blueShift = static_cast<unsigned long>(MaskToShift(m_directxformat.blueMask));
     }
     if (format == D3DFMT_R5G6B5)
     {
         m_directxformat.bitsPerPixel = 16;
         m_directxformat.depth = 16;
         m_directxformat.redMask = 0xF800;
-        m_directxformat.redShift = MaskToShift(m_directxformat.redMask);
+        m_directxformat.redShift = static_cast<unsigned long>(MaskToShift(m_directxformat.redMask));
         m_directxformat.greenMask = 0x07e0;
-        m_directxformat.greenShift = MaskToShift(m_directxformat.greenMask);
+        m_directxformat.greenShift = static_cast<unsigned long>(MaskToShift(m_directxformat.greenMask));
         m_directxformat.blueMask = 0x001f;
-        m_directxformat.blueShift = MaskToShift(m_directxformat.blueMask);
+        m_directxformat.blueShift = static_cast<unsigned long>(MaskToShift(m_directxformat.blueMask));
     }
     //edMask = 0x7c00; greenMask = 0x03e0; blueMask = 0x001f;
     //PostMessage(hwnd_sendm,WM_SYSCOMMAND,ID_REQUEST_REFRESH,0);
     return S_OK;
 }
 
-bool ViewerDirectxClass::valid() { return (pD3DDevice9 != 0) && (surface != 0); }
+bool ViewerDirectxClass::valid() { return (pD3DDevice9 != nullptr) && (surface != nullptr); }
 bool ViewerDirectxClass::paintdevice()
 {
     // check if valid
@@ -442,7 +442,7 @@ bool ViewerDirectxClass::paintdevice()
             return false;
         }
 
-        result = pD3DDevice9->UpdateSurface(surface, 0, backBuffer, nullptr);
+        result = pD3DDevice9->UpdateSurface(surface, nullptr, backBuffer, nullptr);
 
         backBuffer->Release();
         pD3DDevice9->EndScene();
@@ -608,7 +608,7 @@ unsigned char* ViewerDirectxClass::Preupdate2([[maybe_unused]] unsigned char* co
     }
     directxlocked = true;
     devicelost = false;
-    unsigned char* data = (unsigned char*)lock.pBits;
+    unsigned char* data = reinterpret_cast<unsigned char*>(lock.pBits);
     pitch = lock.Pitch;
     return data;
 }

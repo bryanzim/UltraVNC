@@ -19,15 +19,15 @@ namespace Base64
 
     std::string Encode(const void* const data, const std::size_t len)
     {
-        const std::uint8_t* p = (const std::uint8_t*)data;
+        const std::uint8_t* p = reinterpret_cast<const std::uint8_t*>(data);
         std::string out;
         out.reserve(((len + 2) / 3) * 4);
         for (std::size_t i{ 0U }; i < len; i += 3)
         {
-            std::uint32_t v = p[i] << 16;
+            std::uint32_t v = static_cast<std::uint32_t>(p[i] << 16);
             if (i + 1 < len)
             {
-                v |= p[i + 1] << 8;
+                v |= static_cast<std::uint32_t>(p[i + 1] << 8);
             }
             if (i + 2 < len)
             {
@@ -98,7 +98,7 @@ namespace Base64
             {
                 return false;
             }
-            acc = (acc << 6) | v;
+            acc = (acc << 6) | static_cast<std::uint32_t>(v);
             nbits += 6;
             if (nbits >= 8)
             {

@@ -9,17 +9,17 @@
 //
 
 
-#ifndef _VIDEOD_H
-#define _VIDEOD_H
+#ifndef VIDEOD_H
+#define VIDEOD_H
 
 #include "ScreenCapture.h"
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <tchar.h>
-#include <winbase.h>
+#include <WinBase.h>
 #include <winreg.h>
 
 #include <stdarg.h>
@@ -35,8 +35,8 @@ public:
     virtual void videoDriver_Stop();
     virtual bool hardwareCursor();
     virtual bool noHardwareCursor();
-    virtual void Lock() {};
-    virtual void Unlock() {};
+    virtual void Lock() {}
+    virtual void Unlock() {}
     virtual HANDLE getHScreenEvent() { return nullptr; }
     virtual HANDLE getHPointerEvent() { return nullptr; }
 

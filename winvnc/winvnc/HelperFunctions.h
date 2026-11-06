@@ -9,12 +9,12 @@
 //
 
 
-#if (!defined(_HELPERFUNCTIONS))
-#define _HELPERFUNCTIONS
+#if (!defined(HELPERFUNCTIONS))
+#define HELPERFUNCTIONS
 
 #pragma once
 
-#include <tlhelp32.h>
+#include <TlHelp32.h>
 
 #include <string>
 

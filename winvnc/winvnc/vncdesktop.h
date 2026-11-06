@@ -21,8 +21,8 @@
 
 class vncDesktop;
 
-#if !defined(_WINVNC_VNCDESKTOP)
-#define _WINVNC_VNCDESKTOP
+#if !defined(WINVNC_VNCDESKTOP)
+#define WINVNC_VNCDESKTOP
 #pragma once
 
 // Include files
@@ -184,13 +184,13 @@ public:
     // The lock is held while data is being grabbed and copied
     // to the back buffer, and while changes are being passed to
     // clients
-    omni_mutex& GetUpdateLock() { return m_update_lock; };
+    omni_mutex& GetUpdateLock() { return m_update_lock; }
 
     // Screen translation, capture, info
     void FillDisplayInfo(rfbServerInitMsg* scrInfo);
     void CaptureScreen(const rfb::Rect& UpdateArea, BYTE* scrBuff, UINT scrBuffSize, BOOL capture);
     int ScreenBuffSize();
-    HWND Window() { return m_hwnd; };
+    HWND Window() { return m_hwnd; }
 
     // Mouse related
     void CaptureMouse(BYTE* scrBuff, UINT scrBuffSize);
@@ -207,7 +207,7 @@ public:
 
     // Method to obtain the DIBsection buffer if fast blits are enabled
     // If they're disabled, it'll return NULL
-    inline VOID* OptimisedBlitBuffer() { return m_DIBbits; };
+    inline VOID* OptimisedBlitBuffer() { return m_DIBbits; }
 
     // adzm - 2010-07 - Extended clipboard
     //BOOL	m_initialClipBoardSeen;
@@ -215,7 +215,7 @@ public:
     // Handler for pixel data grabbing and region change checking
     vncBuffer m_buffer;
     //SINGLE WINDOW
-    vncServer* GetServerPointer() { return m_server; };
+    vncServer* GetServerPointer() { return m_server; }
     rfb::Rect GetSize();
     void SetBitmapRectOffsetAndClipRect(int offesetx, int offsety, int width = 0, int height = 0);
 
@@ -302,7 +302,7 @@ protected:
     static void MaskToMaxAndShift(DWORD mask, CARD16& max, CARD8& shift);
 
     // Enabling & disabling clipboard handling
-    void SetClipboardActive(BOOL active) { m_clipboard_active = active; };
+    void SetClipboardActive(BOOL active) { m_clipboard_active = active; }
 
     // Modif sf@2002 - v1.1.0 - FastDetectChanges stuff
     bool FastDetectChanges(rfb::Region2D& rgn, rfb::Rect& rect, int nZone, bool fTurbo);
@@ -454,4 +454,4 @@ private:
     //POINT	old_caret_pt;
 };
 
-#endif // _WINVNC_VNCDESKTOP
+#endif // WINVNC_VNCDESKTOP

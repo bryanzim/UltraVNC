@@ -20,10 +20,10 @@
 // This version created:
 // 24/11/97
 
-#if !defined(_VNCHOOKS_DLL_)
-#define _VNCHOOKS_DLL_
+#if !defined(VNCHOOKS_DLL)
+#define VNCHOOKS_DLL
 
-#include <windows.h>
+#include <Windows.h>
 /////////////////////////////////////////////////////////////////////////////
 // Define the import/export tags
 
@@ -50,4 +50,4 @@ DllExport BOOL SetMouseFilterHook(BOOL activate);
 // Control mouse filtering
 }
 
-#endif // !defined(_VNCHOOKS_DLL_)
+#endif // !defined(VNCHOOKS_DLL)

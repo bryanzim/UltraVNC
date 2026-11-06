@@ -77,7 +77,7 @@ UINT vncEncodeTight::RequiredBuffSize([[maybe_unused]] const UINT width, [[maybe
 {
     int result = m_conf[0U].maxRectSize * (m_remoteformat.bitsPerPixel / 8);
     result += result / 100 + 16;
-    return result;
+    return static_cast<UINT>(result);
 }
 
 UINT vncEncodeTight::NumCodedRects(RECT& rect)
@@ -92,14 +92,14 @@ UINT vncEncodeTight::NumCodedRects(RECT& rect)
         return 0;
     }
 
-    const int maxRectSize = m_conf[m_turboCompressLevel].maxRectSize;
-    const int maxRectWidth = m_conf[m_turboCompressLevel].maxRectWidth;
+    const int maxRectSize = m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].maxRectSize;
+    const int maxRectWidth = m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].maxRectWidth;
 
     if ((w > maxRectWidth) || (w * h > maxRectSize))
     {
         const int subrectMaxWidth = (w > maxRectWidth) ? maxRectWidth : w;
         const int subrectMaxHeight = maxRectSize / subrectMaxWidth;
-        return (((w - 1) / maxRectWidth + 1) * ((h - 1) / subrectMaxHeight + 1));
+        return (static_cast<UINT>(((w - 1) / maxRectWidth + 1) * ((h - 1) / subrectMaxHeight + 1)));
     }
     else
     {
@@ -145,7 +145,7 @@ UINT vncEncodeTight::EncodeRect(BYTE* const source, VSocket* const outConn, BYTE
         m_turboCompressLevel = 3;
     }
 
-    const int maxRectSize = m_conf[m_turboCompressLevel].maxRectSize;
+    const int maxRectSize = m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].maxRectSize;
     const int rawDataSize = maxRectSize * (m_remoteformat.bitsPerPixel / 8);
 
     if (m_bufflen < rawDataSize)
@@ -155,7 +155,7 @@ UINT vncEncodeTight::EncodeRect(BYTE* const source, VSocket* const outConn, BYTE
             delete[] m_buffer;
         }
 
-        m_buffer = new BYTE[rawDataSize + 1];
+        m_buffer = new BYTE[static_cast<unsigned long long>(rawDataSize + 1)];
         if (m_buffer == nullptr)
         {
             return vncEncoder::EncodeRect(source, dest, rect);
@@ -183,8 +183,8 @@ UINT vncEncodeTight::EncodeRect(BYTE* const source, VSocket* const outConn, BYTE
 
     int nMaxRows;
     {
-        int maxRectSizeInner = m_conf[m_turboCompressLevel].maxRectSize;
-        const int maxRectWidth = m_conf[m_turboCompressLevel].maxRectWidth;
+        int maxRectSizeInner = m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].maxRectSize;
+        const int maxRectWidth = m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].maxRectWidth;
         const int nMaxWidth = (w > maxRectWidth) ? maxRectWidth : w;
         nMaxRows = maxRectSizeInner / nMaxWidth;
     }
@@ -205,8 +205,8 @@ UINT vncEncodeTight::EncodeRect(BYTE* const source, VSocket* const outConn, BYTE
             RECT upperRect;
             ::SetRect(&upperRect, x, y, x + w, y + nMaxRows);
 
-            int size = EncodeRectSimple(source, outConn, dest, upperRect);
-            outConn->SendExactQueue((char*)dest, size);
+            int size = static_cast<int>(EncodeRectSimple(source, outConn, dest, upperRect));
+            outConn->SendExactQueue(reinterpret_cast<char*>(dest), static_cast<VCard>(size));
 
             y += nMaxRows;
             h -= nMaxRows;
@@ -229,7 +229,7 @@ UINT vncEncodeTight::EncodeRect(BYTE* const source, VSocket* const outConn, BYTE
                     CARD32 b = (colorValue) & 0xFF;
                     double yInner = (0.257 * static_cast<double>(r)) + (0.504 * static_cast<double>(g)) +
                                (0.098 * static_cast<double>(b)) + 16.;
-                    colorValue = static_cast<int>(yInner) + ((static_cast<int>(yInner)) << 8) + ((static_cast<int>(yInner)) << 16);
+                    colorValue = static_cast<int>(yInner) + static_cast<CARD32>(((static_cast<int>(yInner)) << 8) + ((static_cast<int>(yInner)) << 16));
                 }
 
                 // Get dimensions of solid-color area.
@@ -271,17 +271,17 @@ UINT vncEncodeTight::EncodeRect(BYTE* const source, VSocket* const outConn, BYTE
                         SendTightHeader(x_best, y_best, w_best, h_best);
                         int size = SendSolidRect(dest);
 
-                        outConn->SendExactQueue((char*)m_hdrBuffer, m_hdrBufferBytes);
-                        outConn->SendExactQueue((char*)dest, size);
+                        outConn->SendExactQueue(reinterpret_cast<char*>(m_hdrBuffer), static_cast<VCard>(m_hdrBufferBytes));
+                        outConn->SendExactQueue(reinterpret_cast<char*>(dest), static_cast<VCard>(size));
                         encodedSize += (m_hdrBufferBytes + size - sz_rfbFramebufferUpdateRectHeader);
                         transmittedSize += (m_hdrBufferBytes + size);
                     }
-                    if ((rects[i].left == rects[i].right) || (rects[i].top == rects[i].bottom))
+                    if ((rects[static_cast<unsigned long long>(i)].left == rects[static_cast<unsigned long long>(i)].right) || (rects[static_cast<unsigned long long>(i)].top == rects[static_cast<unsigned long long>(i)].bottom))
                     {
                         continue;
                     }
-                    int size = EncodeRect(source, outConn, dest, rects[i]);
-                    outConn->SendExactQueue((char*)dest, size);
+                    int size = static_cast<int>(EncodeRect(source, outConn, dest, rects[i]));
+                    outConn->SendExactQueue(reinterpret_cast<char*>(dest), static_cast<VCard>(size));
                 }
                 // Return after all recursive calls done (0 == data sent).
                 return 0;
@@ -338,7 +338,7 @@ void vncEncodeTight::ExtendSolidArea(BYTE* const source, int x, int y, const int
     // Try to extend the area upwards.
     for (cy = *y_ptr - 1; (cy >= y) && CheckSolidTile(source, *x_ptr, cy, *w_ptr, 1, &colorValue, TRUE); --cy)
     {
-        ;
+        
     }
     *h_ptr += *y_ptr - (cy + 1);
     *y_ptr = cy + 1;
@@ -346,14 +346,14 @@ void vncEncodeTight::ExtendSolidArea(BYTE* const source, int x, int y, const int
     // ... downwards.
     for (cy = *y_ptr + *h_ptr; (cy < y + h) && CheckSolidTile(source, *x_ptr, cy, *w_ptr, 1, &colorValue, TRUE); ++cy)
     {
-        ;
+        
     }
     *h_ptr += cy - (*y_ptr + *h_ptr);
 
     // ... to the left.
     for (cx = *x_ptr - 1; (cx >= x) && CheckSolidTile(source, cx, *y_ptr, 1, *h_ptr, &colorValue, TRUE); --cx)
     {
-        ;
+        
     }
     *w_ptr += *x_ptr - (cx + 1);
     *x_ptr = cx + 1;
@@ -361,7 +361,7 @@ void vncEncodeTight::ExtendSolidArea(BYTE* const source, int x, int y, const int
     // ... to the right.
     for (cx = *x_ptr + *w_ptr; (cx < x + w) && CheckSolidTile(source, cx, *y_ptr, 1, *h_ptr, &colorValue, TRUE); ++cx)
     {
-        ;
+        
     }
     *w_ptr += cx - (*x_ptr + *w_ptr);
 }
@@ -391,7 +391,7 @@ bool vncEncodeTight::CheckSolidTile(BYTE* const source, const int x, const int y
         fbptr = (CARD##bpp*)&source[y * m_bytesPerRow + x * (bpp / 8)];                                                            \
                                                                                                                                    \
         colorValue = *fbptr;                                                                                                       \
-        if (needSameColor && ((CARD32)colorValue != *colorPtr))                                                                    \
+        if (needSameColor && (static_cast<CARD32>(colorValue) != *colorPtr))                                                                    \
             return false;                                                                                                          \
                                                                                                                                    \
         for (dy = 0; dy < h; ++dy)                                                                                                 \
@@ -401,10 +401,10 @@ bool vncEncodeTight::CheckSolidTile(BYTE* const source, const int x, const int y
                 if (colorValue != fbptr[dx])                                                                                       \
                     return false;                                                                                                  \
             }                                                                                                                      \
-            fbptr = (CARD##bpp*)((BYTE*)fbptr + m_bytesPerRow);                                                                    \
+            fbptr = (CARD##bpp*)(reinterpret_cast<BYTE*>(fbptr) + m_bytesPerRow);                                                                    \
         }                                                                                                                          \
                                                                                                                                    \
-        *colorPtr = (CARD32)colorValue;                                                                                            \
+        *colorPtr = static_cast<CARD32>(colorValue);                                                                                            \
         return true;                                                                                                               \
     }
 
@@ -417,8 +417,8 @@ UINT vncEncodeTight::EncodeRectSimple(BYTE* const source, VSocket* const outConn
     const int x = rect.left, y = rect.top;
     const int w = rect.right - x, h = rect.bottom - y;
 
-    const int maxRectSize = m_conf[m_turboCompressLevel].maxRectSize;
-    const int maxRectWidth = m_conf[m_turboCompressLevel].maxRectWidth;
+    const int maxRectSize = m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].maxRectSize;
+    const int maxRectWidth = m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].maxRectWidth;
 
     int partialSize{ 0 };
 
@@ -435,20 +435,20 @@ UINT vncEncodeTight::EncodeRectSimple(BYTE* const source, VSocket* const outConn
                 rw = (dx + maxRectWidth < w) ? maxRectWidth : w - dx;
                 rh = (dy + subrectMaxHeight < h) ? subrectMaxHeight : h - dy;
 
-                partialSize = EncodeSubrect(source, outConn, dest, x + dx, y + dy, rw, rh);
+                partialSize = static_cast<int>(EncodeSubrect(source, outConn, dest, x + dx, y + dy, rw, rh));
                 if ((dy + subrectMaxHeight < h) || (dx + maxRectWidth < w))
                 {
-                    outConn->SendExactQueue((char*)dest, partialSize);
+                    outConn->SendExactQueue(reinterpret_cast<char*>(dest), static_cast<VCard>(partialSize));
                 }
             }
         }
     }
     else
     {
-        partialSize = EncodeSubrect(source, outConn, dest, x, y, w, h);
+        partialSize = static_cast<int>(EncodeSubrect(source, outConn, dest, x, y, w, h));
     }
 
-    return partialSize;
+    return static_cast<UINT>(partialSize);
 }
 
 UINT vncEncodeTight::EncodeSubrect(BYTE* const source, VSocket* const outConn, BYTE* const dest, const int x, const int y, int w,
@@ -469,12 +469,12 @@ UINT vncEncodeTight::EncodeSubrect(BYTE* const source, VSocket* const outConn, B
     }
     else
     {
-        m_paletteMaxColors = w * h / m_conf[m_turboCompressLevel].idxMaxColorsDivisor;
+        m_paletteMaxColors = w * h / m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].idxMaxColorsDivisor;
         if (m_finequalitylevel != -1)
         {
-            m_paletteMaxColors = m_conf[m_turboCompressLevel].palMaxColorsWithJPEG;
+            m_paletteMaxColors = m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].palMaxColorsWithJPEG;
         }
-        if ((m_paletteMaxColors < 2) && (w * h >= m_conf[m_turboCompressLevel].monoMinRectSize))
+        if ((m_paletteMaxColors < 2) && (w * h >= m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].monoMinRectSize))
         {
             m_paletteMaxColors = 2;
         }
@@ -491,10 +491,10 @@ UINT vncEncodeTight::EncodeSubrect(BYTE* const source, VSocket* const outConn, B
             switch (m_remoteformat.bitsPerPixel)
             {
             case 16:
-                FastFillPalette16((CARD16*)fbptr, w, m_bytesPerRow / 2, h);
+                FastFillPalette16(reinterpret_cast<CARD16*>(fbptr), w, m_bytesPerRow / 2, h);
                 break;
             default:
-                FastFillPalette32((CARD32*)fbptr, w, m_bytesPerRow / 4, h);
+                FastFillPalette32(reinterpret_cast<CARD32*>(fbptr), w, m_bytesPerRow / 4, h);
             }
 
             if ((m_paletteNumColors != 0) || (m_finequalitylevel == -1))
@@ -551,12 +551,12 @@ UINT vncEncodeTight::EncodeSubrect(BYTE* const source, VSocket* const outConn, B
         return vncEncoder::EncodeRect(source, dest, r);
     }
 
-    outConn->SendExactQueue((char*)m_hdrBuffer, m_hdrBufferBytes);
+    outConn->SendExactQueue(reinterpret_cast<char*>(m_hdrBuffer), static_cast<VCard>(m_hdrBufferBytes));
 
     encodedSize += m_hdrBufferBytes - sz_rfbFramebufferUpdateRectHeader + encDataSize;
     transmittedSize += m_hdrBufferBytes + encDataSize;
 
-    return encDataSize;
+    return static_cast<UINT>(encDataSize);
 }
 
 void vncEncodeTight::SendTightHeader(int x, int y, int w, int h)
@@ -567,12 +567,12 @@ void vncEncodeTight::SendTightHeader(int x, int y, int w, int h)
     rect.r.y = Swap16IfLE(y - monitor_Offsety);
     rect.r.w = Swap16IfLE(w);
     rect.r.h = Swap16IfLE(h);
-    rect.encoding = Swap32IfLE(m_use_zstd ? rfbEncodingTightZstd : rfbEncodingTight);
+    rect.encoding = static_cast<unsigned int>(Swap32IfLE(m_use_zstd ? rfbEncodingTightZstd : rfbEncodingTight));
 
     dataSize += w * h * (m_remoteformat.bitsPerPixel / 8);
     rectangleOverhead += sz_rfbFramebufferUpdateRectHeader;
 
-    std::memcpy(m_hdrBuffer, (BYTE*)&rect, sz_rfbFramebufferUpdateRectHeader);
+    std::memcpy(m_hdrBuffer, reinterpret_cast<BYTE*>(&rect), sz_rfbFramebufferUpdateRectHeader);
     m_hdrBufferBytes = sz_rfbFramebufferUpdateRectHeader;
 }
 
@@ -595,7 +595,7 @@ int vncEncodeTight::SendSolidRect(BYTE* const dest)
     }
 
     m_hdrBuffer[m_hdrBufferBytes++] = rfbTightFill << 4;
-    std::memcpy(dest, m_buffer, len);
+    std::memcpy(dest, m_buffer, static_cast<size_t>(len));
 
     return len;
 }
@@ -610,7 +610,7 @@ int vncEncodeTight::SendMonoRect(BYTE* const dest, const int w, const int h)
     dataLen = (w + 7) / 8;
     dataLen *= h;
 
-    if (m_conf[m_turboCompressLevel].monoZlibLevel == 0)
+    if (m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].monoZlibLevel == 0)
     {
         m_hdrBuffer[m_hdrBufferBytes++] = static_cast<char>(((rfbTightNoZlib | rfbTightExplicitFilter) << 4));
     }
@@ -625,10 +625,10 @@ int vncEncodeTight::SendMonoRect(BYTE* const dest, const int w, const int h)
     switch (m_remoteformat.bitsPerPixel)
     {
     case 32:
-        EncodeMonoRect32((CARD8*)m_buffer, w, h);
+        EncodeMonoRect32(reinterpret_cast<CARD8*>(m_buffer), w, h);
 
-        ((CARD32*)paletteBuf.data())[0U] = m_monoBackground;
-        ((CARD32*)paletteBuf.data())[1U] = m_monoForeground;
+        (reinterpret_cast<CARD32*>(paletteBuf.data()))[0U] = m_monoBackground;
+        (reinterpret_cast<CARD32*>(paletteBuf.data()))[1U] = m_monoForeground;
 
         if (m_usePixelFormat24)
         {
@@ -640,28 +640,28 @@ int vncEncodeTight::SendMonoRect(BYTE* const dest, const int w, const int h)
             paletteLen = 8;
         }
 
-        std::memcpy(&m_hdrBuffer[m_hdrBufferBytes], paletteBuf.data(), paletteLen);
+        std::memcpy(&m_hdrBuffer[m_hdrBufferBytes], paletteBuf.data(), static_cast<size_t>(paletteLen));
         m_hdrBufferBytes += paletteLen;
         break;
 
     case 16:
-        EncodeMonoRect16((CARD8*)m_buffer, w, h);
+        EncodeMonoRect16(reinterpret_cast<CARD8*>(m_buffer), w, h);
 
-        ((CARD16*)paletteBuf.data())[0U] = (CARD16)m_monoBackground;
-        ((CARD16*)paletteBuf.data())[1U] = (CARD16)m_monoForeground;
+        (reinterpret_cast<CARD16*>(paletteBuf.data()))[0U] = static_cast<CARD16>(m_monoBackground);
+        (reinterpret_cast<CARD16*>(paletteBuf.data()))[1U] = static_cast<CARD16>(m_monoForeground);
 
         std::memcpy(&m_hdrBuffer[m_hdrBufferBytes], paletteBuf.data(), 4);
         m_hdrBufferBytes += 4;
         break;
 
     default:
-        EncodeMonoRect8((CARD8*)m_buffer, w, h);
+        EncodeMonoRect8(reinterpret_cast<CARD8*>(m_buffer), w, h);
 
         m_hdrBuffer[m_hdrBufferBytes++] = static_cast<BYTE>(m_monoBackground);
         m_hdrBuffer[m_hdrBufferBytes++] = static_cast<BYTE>(m_monoForeground);
     }
 
-    return CompressData(dest, streamId, dataLen, m_conf[m_turboCompressLevel].monoZlibLevel, Z_DEFAULT_STRATEGY);
+    return CompressData(dest, streamId, dataLen, m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].monoZlibLevel, Z_DEFAULT_STRATEGY);
 }
 
 int vncEncodeTight::SendIndexedRect(BYTE* const dest, const int w, const int h)
@@ -671,7 +671,7 @@ int vncEncodeTight::SendIndexedRect(BYTE* const dest, const int w, const int h)
     std::array<CARD8, 256 * 4> paletteBuf;
 
     // Prepare tight encoding header.
-    if (m_conf[m_turboCompressLevel].idxZlibLevel == 0)
+    if (m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].idxZlibLevel == 0)
     {
         m_hdrBuffer[m_hdrBufferBytes++] = static_cast<char>(((rfbTightNoZlib | rfbTightExplicitFilter) << 4));
     }
@@ -686,11 +686,11 @@ int vncEncodeTight::SendIndexedRect(BYTE* const dest, const int w, const int h)
     switch (m_remoteformat.bitsPerPixel)
     {
     case 32:
-        EncodeIndexedRect32((CARD8*)m_buffer, w * h);
+        EncodeIndexedRect32(reinterpret_cast<CARD8*>(m_buffer), w * h);
 
         for (i = 0; i < m_paletteNumColors; ++i)
         {
-            ((CARD32*)paletteBuf.data())[i] = m_palette.entry[i].listNode->rgb;
+            (reinterpret_cast<CARD32*>(paletteBuf.data()))[i] = m_palette.entry[static_cast<unsigned long long>(i)].listNode->rgb;
         }
         if (m_usePixelFormat24)
         {
@@ -702,19 +702,19 @@ int vncEncodeTight::SendIndexedRect(BYTE* const dest, const int w, const int h)
             entryLen = 4;
         }
 
-        std::memcpy(&m_hdrBuffer[m_hdrBufferBytes], paletteBuf.data(), m_paletteNumColors * entryLen);
+        std::memcpy(&m_hdrBuffer[m_hdrBufferBytes], paletteBuf.data(), static_cast<size_t>(m_paletteNumColors * entryLen));
         m_hdrBufferBytes += m_paletteNumColors * entryLen;
         break;
 
     case 16:
-        EncodeIndexedRect16((CARD8*)m_buffer, w * h);
+        EncodeIndexedRect16(reinterpret_cast<CARD8*>(m_buffer), w * h);
 
         for (i = 0; i < m_paletteNumColors; ++i)
         {
-            ((CARD16*)paletteBuf.data())[i] = (CARD16)m_palette.entry[i].listNode->rgb;
+            (reinterpret_cast<CARD16*>(paletteBuf.data()))[i] = static_cast<CARD16>(m_palette.entry[i].listNode->rgb);
         }
 
-        std::memcpy(&m_hdrBuffer[m_hdrBufferBytes], paletteBuf.data(), m_paletteNumColors * 2);
+        std::memcpy(&m_hdrBuffer[m_hdrBufferBytes], paletteBuf.data(), static_cast<size_t>(m_paletteNumColors * 2));
         m_hdrBufferBytes += m_paletteNumColors * 2;
         break;
 
@@ -722,7 +722,7 @@ int vncEncodeTight::SendIndexedRect(BYTE* const dest, const int w, const int h)
         return -1; // Should never happen.
     }
 
-    return CompressData(dest, streamId, w * h, m_conf[m_turboCompressLevel].idxZlibLevel, Z_DEFAULT_STRATEGY);
+    return CompressData(dest, streamId, w * h, m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].idxZlibLevel, Z_DEFAULT_STRATEGY);
 }
 
 int vncEncodeTight::SendFullColorRect(BYTE* const dest, const int w, const int h)
@@ -730,7 +730,7 @@ int vncEncodeTight::SendFullColorRect(BYTE* const dest, const int w, const int h
     const int streamId{ 0 };
     int len;
 
-    if (m_conf[m_turboCompressLevel].rawZlibLevel == 0)
+    if (m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].rawZlibLevel == 0)
     {
         m_hdrBuffer[m_hdrBufferBytes++] = static_cast<char>((rfbTightNoZlib << 4));
     }
@@ -749,7 +749,7 @@ int vncEncodeTight::SendFullColorRect(BYTE* const dest, const int w, const int h
         len = m_remoteformat.bitsPerPixel / 8;
     }
 
-    return CompressData(dest, streamId, w * h * len, m_conf[m_turboCompressLevel].rawZlibLevel, Z_DEFAULT_STRATEGY);
+    return CompressData(dest, streamId, w * h * len, m_conf[static_cast<unsigned long long>(m_turboCompressLevel)].rawZlibLevel, Z_DEFAULT_STRATEGY);
 }
 
 int vncEncodeTight::CompressData(BYTE* const dest, const int streamId, const int dataLen, const int zlibLevel,
@@ -757,19 +757,19 @@ int vncEncodeTight::CompressData(BYTE* const dest, const int streamId, const int
 {
     if (dataLen < TIGHT_MIN_TO_COMPRESS)
     {
-        std::memcpy(dest, m_buffer, dataLen);
+        std::memcpy(dest, m_buffer, static_cast<size_t>(dataLen));
         return dataLen;
     }
 
     if (zlibLevel == 0)
     {
-        std::memcpy(dest, m_buffer, dataLen);
+        std::memcpy(dest, m_buffer, static_cast<size_t>(dataLen));
         return SendCompressedData(dataLen);
     }
 
-    UltraVncZ* uz = &ultraVncZTight[streamId];
+    UltraVncZ* uz = &ultraVncZTight[static_cast<unsigned long long>(streamId)];
 
-    int result = uz->compress(zlibLevel, dataLen, dataLen + dataLen / 100 + 16, (Bytef*)m_buffer, (Bytef*)dest);
+    int result = static_cast<int>(uz->compress(zlibLevel, dataLen, dataLen + dataLen / 100 + 16, reinterpret_cast<Bytef*>(m_buffer), reinterpret_cast<Bytef*>(dest)));
     if (result == 0)
     {
         return -1;
@@ -796,7 +796,7 @@ int vncEncodeTight::SendCompressedData(const int compressedLen)
 
 void vncEncodeTight::FillPalette8(const int count)
 {
-    CARD8* data = (CARD8*)m_buffer;
+    CARD8* data = reinterpret_cast<CARD8*>(m_buffer);
     CARD8 c0, c1;
     int i, n0, n1;
 
@@ -805,7 +805,7 @@ void vncEncodeTight::FillPalette8(const int count)
     c0 = data[0U];
     for (i = 1; (i < count) && (data[i] == c0); ++i)
     {
-        ;
+        
     }
     if (i == count)
     {
@@ -840,13 +840,13 @@ void vncEncodeTight::FillPalette8(const int count)
     {
         if (n0 > n1)
         {
-            m_monoBackground = (CARD32)c0;
-            m_monoForeground = (CARD32)c1;
+            m_monoBackground = static_cast<CARD32>(c0);
+            m_monoForeground = static_cast<CARD32>(c1);
         }
         else
         {
-            m_monoBackground = (CARD32)c1;
-            m_monoForeground = (CARD32)c0;
+            m_monoBackground = static_cast<CARD32>(c1);
+            m_monoForeground = static_cast<CARD32>(c0);
         }
         m_paletteNumColors = 2; // Two colors
     }
@@ -856,7 +856,7 @@ void vncEncodeTight::set_use_zstd(const bool enabled)
 {
     for (int i{ 0 }; i < 4; ++i)
     {
-        ultraVncZTight[i].set_use_zstd(enabled);
+        ultraVncZTight[static_cast<unsigned long long>(i)].set_use_zstd(enabled);
     }
     vncEncoder::set_use_zstd(enabled);
 }
@@ -906,21 +906,21 @@ void vncEncodeTight::set_use_zstd(const bool enabled)
         {                                                                                                                          \
             if (n0 > n1)                                                                                                           \
             {                                                                                                                      \
-                m_monoBackground = (CARD32)c0;                                                                                     \
-                m_monoForeground = (CARD32)c1;                                                                                     \
+                m_monoBackground = static_cast<CARD32>(c0);                                                                                     \
+                m_monoForeground = static_cast<CARD32>(c1);                                                                                     \
             }                                                                                                                      \
             else                                                                                                                   \
             {                                                                                                                      \
-                m_monoBackground = (CARD32)c1;                                                                                     \
-                m_monoForeground = (CARD32)c0;                                                                                     \
+                m_monoBackground = static_cast<CARD32>(c1);                                                                                     \
+                m_monoForeground = static_cast<CARD32>(c0);                                                                                     \
             }                                                                                                                      \
             m_paletteNumColors = 2; /* Two colors */                                                                               \
             return;                                                                                                                \
         }                                                                                                                          \
                                                                                                                                    \
         PaletteReset();                                                                                                            \
-        PaletteInsert(c0, (CARD32)n0, bpp);                                                                                        \
-        PaletteInsert(c1, (CARD32)n1, bpp);                                                                                        \
+        PaletteInsert(c0, static_cast<CARD32>(n0), bpp);                                                                                        \
+        PaletteInsert(c1, static_cast<CARD32>(n1), bpp);                                                                                        \
                                                                                                                                    \
         ni = 1;                                                                                                                    \
         for (i++; i < count; ++i)                                                                                                  \
@@ -931,13 +931,13 @@ void vncEncodeTight::set_use_zstd(const bool enabled)
             }                                                                                                                      \
             else                                                                                                                   \
             {                                                                                                                      \
-                if (!PaletteInsert(ci, (CARD32)ni, bpp))                                                                           \
+                if (!PaletteInsert(ci, static_cast<CARD32>(ni), bpp))                                                                           \
                     return;                                                                                                        \
                 ci = data[i];                                                                                                      \
                 ni = 1;                                                                                                            \
             }                                                                                                                      \
         }                                                                                                                          \
-        PaletteInsert(ci, (CARD32)ni, bpp);                                                                                        \
+        PaletteInsert(ci, static_cast<CARD32>(ni), bpp);                                                                                        \
     }
 
 DEFINE_FILL_PALETTE_FUNCTION(16)
@@ -1010,27 +1010,27 @@ DEFINE_FILL_PALETTE_FUNCTION(32)
         }                                                                                                                          \
     done2:                                                                                                                         \
         RECT rect1{ 0, 0, 1, 1 };                                                                                                  \
-        Translate((BYTE*)&c0, (BYTE*)&c0t, rect1);                                                                                 \
-        Translate((BYTE*)&c1, (BYTE*)&c1t, rect1);                                                                                 \
+        Translate(reinterpret_cast<BYTE*>(&c0), reinterpret_cast<BYTE*>(&c0t), rect1);                                                                                 \
+        Translate(reinterpret_cast<BYTE*>(&c1), reinterpret_cast<BYTE*>(&c1t), rect1);                                                                                 \
         if (j2 >= h)                                                                                                               \
         {                                                                                                                          \
             if (n0 > n1)                                                                                                           \
             {                                                                                                                      \
-                m_monoBackground = (CARD32)c0t;                                                                                    \
-                m_monoForeground = (CARD32)c1t;                                                                                    \
+                m_monoBackground = static_cast<CARD32>(c0t);                                                                                    \
+                m_monoForeground = static_cast<CARD32>(c1t);                                                                                    \
             }                                                                                                                      \
             else                                                                                                                   \
             {                                                                                                                      \
-                m_monoBackground = (CARD32)c1t;                                                                                    \
-                m_monoForeground = (CARD32)c0t;                                                                                    \
+                m_monoBackground = static_cast<CARD32>(c1t);                                                                                    \
+                m_monoForeground = static_cast<CARD32>(c0t);                                                                                    \
             }                                                                                                                      \
             m_paletteNumColors = 2; /* Two colors */                                                                               \
             return;                                                                                                                \
         }                                                                                                                          \
                                                                                                                                    \
         PaletteReset();                                                                                                            \
-        PaletteInsert(c0t, (CARD32)n0, bpp);                                                                                       \
-        PaletteInsert(c1t, (CARD32)n1, bpp);                                                                                       \
+        PaletteInsert(c0t, static_cast<CARD32>(n0), bpp);                                                                                       \
+        PaletteInsert(c1t, static_cast<CARD32>(n1), bpp);                                                                                       \
                                                                                                                                    \
         ni = 1;                                                                                                                    \
         ++i2;                                                                                                                      \
@@ -1049,8 +1049,8 @@ DEFINE_FILL_PALETTE_FUNCTION(32)
                 }                                                                                                                  \
                 else                                                                                                               \
                 {                                                                                                                  \
-                    Translate((BYTE*)&ci, (BYTE*)&cit, rect1);                                                                     \
-                    if (!PaletteInsert(cit, (CARD32)ni, bpp))                                                                      \
+                    Translate(reinterpret_cast<BYTE*>(&ci), reinterpret_cast<BYTE*>(&cit), rect1);                                                                     \
+                    if (!PaletteInsert(cit, static_cast<CARD32>(ni), bpp))                                                                      \
                         return;                                                                                                    \
                     ci = data[j * pitch + i] & mask;                                                                               \
                     ni = 1;                                                                                                        \
@@ -1059,8 +1059,8 @@ DEFINE_FILL_PALETTE_FUNCTION(32)
             i2 = 0;                                                                                                                \
         }                                                                                                                          \
                                                                                                                                    \
-        Translate((BYTE*)&ci, (BYTE*)&cit, rect1);                                                                                 \
-        PaletteInsert(cit, (CARD32)ni, bpp);                                                                                       \
+        Translate(reinterpret_cast<BYTE*>(&ci), reinterpret_cast<BYTE*>(&cit), rect1);                                                                                 \
+        PaletteInsert(cit, static_cast<CARD32>(ni), bpp);                                                                                       \
     }
 
 DEFINE_FAST_FILL_PALETTE_FUNCTION(16)
@@ -1096,19 +1096,19 @@ int vncEncodeTight::PaletteInsert(const CARD32 rgb, int numPixels, const int bpp
         {
             // Such palette entry already exists.
             new_idx = idx = pnode->idx;
-            count = m_palette.entry[idx].numPixels + numPixels;
-            if (new_idx && (m_palette.entry[new_idx - 1].numPixels < count))
+            count = m_palette.entry[static_cast<unsigned long long>(idx)].numPixels + numPixels;
+            if (new_idx && (m_palette.entry[static_cast<unsigned long long>(new_idx - 1)].numPixels < count))
             {
                 do
                 {
-                    m_palette.entry[new_idx] = m_palette.entry[new_idx - 1];
-                    m_palette.entry[new_idx].listNode->idx = new_idx;
+                    m_palette.entry[static_cast<unsigned long long>(new_idx)] = m_palette.entry[static_cast<unsigned long long>(new_idx - 1)];
+                    m_palette.entry[static_cast<unsigned long long>(new_idx)].listNode->idx = new_idx;
                     --new_idx;
-                } while (new_idx && (m_palette.entry[new_idx - 1].numPixels < count));
-                m_palette.entry[new_idx].listNode = pnode;
+                } while (new_idx && (m_palette.entry[static_cast<unsigned long long>(new_idx - 1)].numPixels < count));
+                m_palette.entry[static_cast<unsigned long long>(new_idx)].listNode = pnode;
                 pnode->idx = new_idx;
             }
-            m_palette.entry[new_idx].numPixels = count;
+            m_palette.entry[static_cast<unsigned long long>(new_idx)].numPixels = count;
             return m_paletteNumColors;
         }
         prev_pnode = pnode;
@@ -1123,14 +1123,14 @@ int vncEncodeTight::PaletteInsert(const CARD32 rgb, int numPixels, const int bpp
     }
 
     // Move palette entries with lesser pixel counts.
-    for (idx = m_paletteNumColors; (idx > 0) && (m_palette.entry[idx - 1].numPixels < numPixels); --idx)
+    for (idx = m_paletteNumColors; (idx > 0) && (m_palette.entry[static_cast<unsigned long long>(idx - 1)].numPixels < numPixels); --idx)
     {
-        m_palette.entry[idx] = m_palette.entry[idx - 1];
-        m_palette.entry[idx].listNode->idx = idx;
+        m_palette.entry[static_cast<unsigned long long>(idx)] = m_palette.entry[static_cast<unsigned long long>(idx - 1)];
+        m_palette.entry[static_cast<unsigned long long>(idx)].listNode->idx = idx;
     }
 
     // Add new palette entry into the freed slot.
-    pnode = &m_palette.list[m_paletteNumColors];
+    pnode = &m_palette.list[static_cast<unsigned long long>(m_paletteNumColors)];
     if (prev_pnode != nullptr)
     {
         prev_pnode->next = pnode;
@@ -1142,8 +1142,8 @@ int vncEncodeTight::PaletteInsert(const CARD32 rgb, int numPixels, const int bpp
     pnode->next = nullptr;
     pnode->idx = idx;
     pnode->rgb = rgb;
-    m_palette.entry[idx].listNode = pnode;
-    m_palette.entry[idx].numPixels = numPixels;
+    m_palette.entry[static_cast<unsigned long long>(idx)].listNode = pnode;
+    m_palette.entry[static_cast<unsigned long long>(idx)].numPixels = numPixels;
 
     return (++m_paletteNumColors);
 }
@@ -1161,7 +1161,7 @@ void vncEncodeTight::Pack24(BYTE* buf, int count)
     CARD32 pix;
     int r_shift, g_shift, b_shift;
 
-    buf32 = (CARD32*)buf;
+    buf32 = reinterpret_cast<CARD32*>(buf);
 
     if (!m_localformat.bigEndian == !m_remoteformat.bigEndian)
     {
@@ -1211,12 +1211,12 @@ void vncEncodeTight::Pack24(BYTE* buf, int count)
             pnode = m_palette.hash[HASH_FUNC##bpp(rgb)];                                                                           \
             while (pnode != nullptr)                                                                                               \
             {                                                                                                                      \
-                if ((CARD##bpp)pnode->rgb == rgb)                                                                                  \
+                if (static_cast<CARD##bpp>(pnode->rgb) == rgb)                                                                                  \
                 {                                                                                                                  \
-                    *buf++ = (CARD8)pnode->idx;                                                                                    \
+                    *buf++ = static_cast<CARD8>(pnode->idx);                                                                                    \
                     while (rep)                                                                                                    \
                     {                                                                                                              \
-                        *buf++ = (CARD8)pnode->idx;                                                                                \
+                        *buf++ = static_cast<CARD8>(pnode->idx);                                                                                \
                         --rep;                                                                                                     \
                     }                                                                                                              \
                     break;                                                                                                         \
@@ -1240,7 +1240,7 @@ DEFINE_IDX_ENCODE_FUNCTION(32)
         int x, y, bg_bits;                                                                                                         \
                                                                                                                                    \
         ptr = (CARD##bpp*)buf;                                                                                                     \
-        bg = (CARD##bpp)m_monoBackground;                                                                                          \
+        bg = static_cast<CARD##bpp>(m_monoBackground);                                                                                          \
         aligned_width = w - w % 8;                                                                                                 \
                                                                                                                                    \
         for (y = 0; y < h; ++y)                                                                                                    \
@@ -1267,7 +1267,7 @@ DEFINE_IDX_ENCODE_FUNCTION(32)
                         value |= mask;                                                                                             \
                     }                                                                                                              \
                 }                                                                                                                  \
-                *buf++ = (CARD8)value;                                                                                             \
+                *buf++ = static_cast<CARD8>(value);                                                                                             \
             }                                                                                                                      \
                                                                                                                                    \
             mask = 0x80;                                                                                                           \
@@ -1283,7 +1283,7 @@ DEFINE_IDX_ENCODE_FUNCTION(32)
                 }                                                                                                                  \
                 mask >>= 1;                                                                                                        \
             }                                                                                                                      \
-            *buf++ = (CARD8)value;                                                                                                 \
+            *buf++ = static_cast<CARD8>(value);                                                                                                 \
         }                                                                                                                          \
     }
 
@@ -1318,8 +1318,8 @@ int vncEncodeTight::SendJpegRect(BYTE* source, BYTE* const dst, const int x, int
     sizeof(cinfo);
     jpeg_create_compress(&cinfo);
 
-    cinfo.image_width = w;
-    cinfo.image_height = h;
+    cinfo.image_width = static_cast<JDIMENSION>(w);
+    cinfo.image_height = static_cast<JDIMENSION>(h);
     cinfo.input_components = 3;
     cinfo.in_color_space = JCS_RGB;
 #ifdef JCS_EXTENSIONS
@@ -1353,8 +1353,8 @@ int vncEncodeTight::SendJpegRect(BYTE* source, BYTE* const dst, const int x, int
 
     jpeg_set_defaults(&cinfo);
     jpeg_set_quality(&cinfo, m_finequalitylevel, TRUE);
-    cinfo.comp_info[0U].h_samp_factor = h_samp_factor[m_subsampling];
-    cinfo.comp_info[0U].v_samp_factor = v_samp_factor[m_subsampling];
+    cinfo.comp_info[0U].h_samp_factor = h_samp_factor[static_cast<unsigned long long>(m_subsampling)];
+    cinfo.comp_info[0U].v_samp_factor = v_samp_factor[static_cast<unsigned long long>(m_subsampling)];
     if (m_subsampling == SUBSAMP_GRAY)
     {
         jpeg_set_colorspace(&cinfo, JCS_GRAYSCALE);
@@ -1366,16 +1366,16 @@ int vncEncodeTight::SendJpegRect(BYTE* source, BYTE* const dst, const int x, int
         cinfo.comp_info[2U].h_samp_factor = cinfo.comp_info[2U].v_samp_factor = 1;
     }
 
-    JpegSetDstManager(&cinfo, (JOCTET*)dst, w * h * (m_localformat.bitsPerPixel / 8));
+    JpegSetDstManager(&cinfo, reinterpret_cast<JOCTET*>(dst), w * static_cast<std::size_t>(h * (m_localformat.bitsPerPixel / 8)));
 
     jpeg_start_compress(&cinfo, TRUE);
 
     BYTE* srcBuf{ nullptr };
     if (cinfo.in_color_space == JCS_RGB)
     {
-        srcBuf = new BYTE[w * 3];
+        srcBuf = new BYTE[static_cast<unsigned long long>(w * 3)];
         std::array<JSAMPROW, 1U> rowPointer;
-        rowPointer[0U] = (JSAMPROW)srcBuf;
+        rowPointer[0U] = static_cast<JSAMPROW>(srcBuf);
 
         for (int dy{ 0 }; dy < h; ++dy)
         {
@@ -1390,7 +1390,7 @@ int vncEncodeTight::SendJpegRect(BYTE* source, BYTE* const dst, const int x, int
     else
     {
         JSAMPROW* rowPointer;
-        rowPointer = new JSAMPROW[h];
+        rowPointer = new JSAMPROW[static_cast<unsigned long long>(h)];
         for (int dy{ 0 }; dy < h; ++dy)
         {
             rowPointer[dy] = &source[(y + dy) * m_bytesPerRow + x * (m_localformat.bitsPerPixel / 8)];
@@ -1431,7 +1431,7 @@ void vncEncodeTight::PrepareRowForJpeg(BYTE* const dst, const int y, const int w
 {
     if (m_remoteformat.bitsPerPixel == 32)
     {
-        CARD32* src = (CARD32*)&m_buffer[y * w * sizeof(CARD32)];
+        CARD32* src = reinterpret_cast<CARD32*>(&m_buffer[y * w * sizeof(CARD32)]);
         if (m_usePixelFormat24)
         {
             PrepareRowForJpeg24(dst, src, w);
@@ -1444,7 +1444,7 @@ void vncEncodeTight::PrepareRowForJpeg(BYTE* const dst, const int y, const int w
     else
     {
         // 16 bpp assumed.
-        CARD16* src = (CARD16*)&m_buffer[y * w * sizeof(CARD16)];
+        CARD16* src = reinterpret_cast<CARD16*>(&m_buffer[y * w * sizeof(CARD16)]);
         PrepareRowForJpeg16(dst, src, w);
     }
 }

@@ -113,38 +113,38 @@ void ClientConnection::xzDecode(const int x, const int y, const int w, const int
         {
 
         case 8:
-            xzDecode8NE(x, y, w, h, fis, xzis, (rdr::U8*)m_netbuf);
+            xzDecode8NE(x, y, w, h, fis, xzis, reinterpret_cast<rdr::U8*>(m_netbuf));
             break;
 
         case 16:
             if (m_myFormat.greenMax > 0x1F)
             {
-                xzDecode16LE(x, y, w, h, fis, xzis, (rdr::U16*)m_netbuf);
+                xzDecode16LE(x, y, w, h, fis, xzis, reinterpret_cast<rdr::U16*>(m_netbuf));
             }
             else
             {
-                xzDecode15LE(x, y, w, h, fis, xzis, (rdr::U16*)m_netbuf);
+                xzDecode15LE(x, y, w, h, fis, xzis, reinterpret_cast<rdr::U16*>(m_netbuf));
             }
             break;
 
         case 32:
-            bool fitsInLS3Bytes = ((((CARD32)m_myFormat.redMax << m_myFormat.redShift) < (1 << 24)) &&
-                                   (((CARD32)m_myFormat.greenMax << m_myFormat.greenShift) < (1 << 24)) &&
-                                   (((CARD32)m_myFormat.blueMax << m_myFormat.blueShift) < (1 << 24)));
+            bool fitsInLS3Bytes = (((static_cast<CARD32>(m_myFormat.redMax) << m_myFormat.redShift) < (1 << 24)) &&
+                                   ((static_cast<CARD32>(m_myFormat.greenMax) << m_myFormat.greenShift) < (1 << 24)) &&
+                                   ((static_cast<CARD32>(m_myFormat.blueMax) << m_myFormat.blueShift) < (1 << 24)));
 
             bool fitsInMS3Bytes = ((m_myFormat.redShift > 7) && (m_myFormat.greenShift > 7) && (m_myFormat.blueShift > 7));
 
             if ((fitsInLS3Bytes && !m_myFormat.bigEndian) || (fitsInMS3Bytes && m_myFormat.bigEndian))
             {
-                xzDecode24ALE(x, y, w, h, fis, xzis, (rdr::U32*)m_netbuf);
+                xzDecode24ALE(x, y, w, h, fis, xzis, reinterpret_cast<rdr::U32*>(m_netbuf));
             }
             else if ((fitsInLS3Bytes && m_myFormat.bigEndian) || (fitsInMS3Bytes && !m_myFormat.bigEndian))
             {
-                xzDecode24BLE(x, y, w, h, fis, xzis, (rdr::U32*)m_netbuf);
+                xzDecode24BLE(x, y, w, h, fis, xzis, reinterpret_cast<rdr::U32*>(m_netbuf));
             }
             else
             {
-                xzDecode32LE(x, y, w, h, fis, xzis, (rdr::U32*)m_netbuf);
+                xzDecode32LE(x, y, w, h, fis, xzis, reinterpret_cast<rdr::U32*>(m_netbuf));
             }
             break;
         }

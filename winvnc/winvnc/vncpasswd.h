@@ -18,8 +18,8 @@
 
 class vncPasswd;
 
-#if (!defined(_WINVNC_VNCPASSWD))
-#define _WINVNC_VNCPASSWD
+#if (!defined(WINVNC_VNCPASSWD))
+#define WINVNC_VNCPASSWD
 
 #include "stdhdrs.h"
 
@@ -63,9 +63,9 @@ public:
         inline ToText(const char encrypted[MAXPWLEN], const bool secure)
         {
             //vnclog.Print(LL_INTINFO, VNCLOG("PASSWD : ToText called\n"));
-            char* emptyPasswd = (char*)std::malloc(1);
+            char* emptyPasswd = reinterpret_cast<char*>(std::malloc(1));
             emptyPasswd[0U] = 0;
-            plaintext = vncPasswdIsEmpty(encrypted) ? emptyPasswd : vncDecryptPasswd((char*)encrypted, secure);
+            plaintext = vncPasswdIsEmpty(encrypted) ? emptyPasswd : vncDecryptPasswd(const_cast<char*>(reinterpret_cast<const char *>(encrypted)), secure);
         }
         inline ~ToText()
         {
@@ -75,7 +75,7 @@ public:
                 std::free(plaintext);
             }
         }
-        inline operator const char*() const { return plaintext; };
+        inline operator const char*() const { return plaintext; }
 
     private:
         char* plaintext;
@@ -91,7 +91,7 @@ public:
             // ZeroMemory(unencrypted, strlen(unencrypted));
         }
         inline ~FromText() {}
-        inline operator const char*() const { return encrypted; };
+        inline operator const char*() const { return encrypted; }
 
     private:
         char encrypted[MAXPWLEN];
@@ -103,10 +103,10 @@ public:
         inline explicit FromClear(const bool secure)
         {
             //vnclog.Print(LL_INTINFO, VNCLOG("PASSWD : FromClear called\n"));
-            vncEncryptPasswd((char*)"", encrypted, secure);
+            vncEncryptPasswd(const_cast<char*>(reinterpret_cast<const char *>("")), encrypted, secure);
         }
         inline ~FromClear() {}
-        inline operator const char*() const { return encrypted; };
+        inline operator const char*() const { return encrypted; }
 
     private:
         char encrypted[MAXPWLEN];

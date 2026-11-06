@@ -31,11 +31,11 @@
 
 // Adopted to MS-Logon for UltraVNC by marscha, 2006.
 
-#ifndef __RFB_DH_H__
-#define __RFB_DH_H__
-#include <winsock2.h>
+#ifndef RFB_DH_H
+#define RFB_DH_H
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <math.h>
 #include <stdio.h>
@@ -89,4 +89,4 @@ bool int64ToBytes(const unsigned __int64 integer, char* const bytes);
 unsigned __int64 bytesToInt64(const char* const bytes);
 bool vncWc2Mb(char* multibyte, WCHAR* widechar, int length, int widechar_count);
 
-#endif // __RFB_DH_H__
+#endif // RFB_DH_H

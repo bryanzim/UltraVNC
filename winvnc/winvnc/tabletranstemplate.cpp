@@ -43,11 +43,11 @@ static void rfbTranslateWithSingleTableINVNCtoOUTVNC(char* const table, [[maybe_
                                                      char* const iptr, char* const optr, const int bytesBetweenInputLines,
                                                      const int width, int height)
 {
-    IN_T* ip = (IN_T*)iptr;
-    OUT_T* op = (OUT_T*)optr;
-    const int ipextra = bytesBetweenInputLines / sizeof(IN_T) - width;
+    IN_T* ip = reinterpret_cast<IN_T*>(iptr);
+    OUT_T* op = reinterpret_cast<OUT_T*>(optr);
+    const int ipextra = static_cast<int>(bytesBetweenInputLines / sizeof(IN_T) - width);
     OUT_T* opLineEnd;
-    OUT_T* t = (OUT_T*)table;
+    OUT_T* t = reinterpret_cast<OUT_T*>(table);
 
     while (height > 0)
     {
@@ -73,11 +73,11 @@ static void rfbTranslateWithRGBTablesINVNCtoOUTVNC(char* const table, rfbPixelFo
                                                    char* const iptr, char* const optr, const int bytesBetweenInputLines,
                                                    const int width, int height)
 {
-    IN_T* ip = (IN_T*)iptr;
-    OUT_T* op = (OUT_T*)optr;
-    const int ipextra = bytesBetweenInputLines / sizeof(IN_T) - width;
+    IN_T* ip = reinterpret_cast<IN_T*>(iptr);
+    OUT_T* op = reinterpret_cast<OUT_T*>(optr);
+    const int ipextra = static_cast<int>(bytesBetweenInputLines / sizeof(IN_T) - width);
     OUT_T* opLineEnd;
-    OUT_T* redTable = (OUT_T*)table;
+    OUT_T* redTable = reinterpret_cast<OUT_T*>(table);
     OUT_T* greenTable = redTable + in->redMax + 1;
     OUT_T* blueTable = greenTable + in->greenMax + 1;
 

@@ -14,7 +14,7 @@
 
 #include "stdafx.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 void Enable_softwareCAD()
 {
@@ -32,7 +32,7 @@ void Enable_softwareCAD()
     }
     LONG pref;
     pref = 1;
-    ::RegSetValueEx(hkLocalKey, L"SoftwareSASGeneration", 0, REG_DWORD, (LPBYTE)&pref, sizeof(pref));
+    ::RegSetValueEx(hkLocalKey, L"SoftwareSASGeneration", 0, REG_DWORD, reinterpret_cast<LPBYTE>(&pref), sizeof(pref));
     ::RegCloseKey(hkLocalKey);
     ::RegCloseKey(hkLocal);
 }

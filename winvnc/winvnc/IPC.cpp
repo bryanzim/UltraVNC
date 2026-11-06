@@ -11,9 +11,9 @@
 
 #include "IPC.h"
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <crtdbg.h>
 #include <tchar.h>
@@ -28,8 +28,8 @@ CIPC::CIPC()
     m_hFileMapBitmap = nullptr;
     pBitmap = nullptr;
     plist = nullptr;
-    m_FileView = 0;
-    m_FileViewBitmap = 0;
+    m_FileView = nullptr;
+    m_FileViewBitmap = nullptr;
     CreateIPCMMF();
     OpenIPCMMF();
 }
@@ -53,7 +53,7 @@ bool CIPC::CreateIPCMMF(void)
         } // Already created
 
         // Create an in-memory 4KB memory mapped file to share data
-        m_hFileMap = ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, listsize, g_szIPCSharedMMF);
+        m_hFileMap = ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, static_cast<DWORD>(listsize), g_szIPCSharedMMF);
         if (m_hFileMap != nullptr)
         {
             bCreated = true;
@@ -78,7 +78,7 @@ bool CIPC::CreateIPCMMFBitmap(const int size)
         } // Already created
 
         // Create an in-memory 4KB memory mapped file to share data
-        m_hFileMapBitmap = ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, size, g_szIPCSharedMMFBitmap);
+        m_hFileMapBitmap = ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, static_cast<DWORD>(size), g_szIPCSharedMMFBitmap);
         if (m_hFileMapBitmap != nullptr)
         {
             bCreatedBitmap = true;
@@ -108,11 +108,11 @@ bool CIPC::OpenIPCMMF(void)
         {
             bOpened = true;
             m_FileView = ::MapViewOfFile(m_hFileMap, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
-            if (m_FileView == 0)
+            if (m_FileView == nullptr)
             {
                 bOpened = false;
             }
-            plist = (mystruct*)m_FileView;
+            plist = reinterpret_cast<mystruct*>(m_FileView);
         }
     }
     catch (...)
@@ -138,11 +138,11 @@ bool CIPC::OpenIPCMMFBitmap(void)
         {
             bOpenedBitmap = true;
             m_FileViewBitmap = ::MapViewOfFile(m_hFileMapBitmap, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0);
-            if (m_FileViewBitmap == 0)
+            if (m_FileViewBitmap == nullptr)
             {
                 bOpenedBitmap = false;
             }
-            pBitmap = (byte*)m_FileViewBitmap;
+            pBitmap = reinterpret_cast<byte*>(m_FileViewBitmap);
         }
     }
     catch (...)
@@ -176,7 +176,7 @@ void CIPC::CloseIPCMMFBitmap(void)
     {
         if (m_FileViewBitmap)
         {
-            ::UnmapViewOfFile((LPVOID)m_FileViewBitmap);
+            ::UnmapViewOfFile(reinterpret_cast<LPVOID>(m_FileViewBitmap));
         }
         m_FileViewBitmap = nullptr;
         if (m_hFileMapBitmap != nullptr)

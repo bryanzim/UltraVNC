@@ -17,8 +17,8 @@
 
 class vncSetAuth;
 
-#if (!defined(_WINVNC_VNCSETAUTH))
-#define _WINVNC_VNCSETAUTH
+#if (!defined(WINVNC_VNCSETAUTH))
+#define WINVNC_VNCSETAUTH
 
 // Includes
 #include "stdhdrs.h"

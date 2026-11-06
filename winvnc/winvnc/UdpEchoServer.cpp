@@ -72,7 +72,7 @@ void UdpEchoServer(int port)
         realvnc[3U] = -85;
         realvnc[4U] = 0;
         // Print received message
-        buffer[bytesReceived] = '\0'; // Null-terminate the received data
+        buffer[static_cast<unsigned long long>(bytesReceived)] = '\0'; // Null-terminate the received data
         // Echo the message back to the client
         if (std::strcmp(buffer.data(), realvnc.data()) != 0)
         {

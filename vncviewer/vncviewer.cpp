@@ -19,7 +19,7 @@
 #include "display.h"
 #include "Exception.h"
 
-#include <shlobj.h>
+#include <ShlObj.h>
 
 #include <array>
 #include <cstddef>
@@ -34,7 +34,7 @@
 #endif*/
 
 #include "omnithread/omnithread.h"
-#include "shellscalingapi.h"
+#include "ShellScalingApi.h"
 #include "UltraVNCHelperFunctions.h"
 #include "VNCviewerApp32.h"
 // All logging is done via the log object
@@ -339,7 +339,7 @@ static BOOL read_reg_string(const HKEY key, const LPCTSTR sub_key, const LPCTSTR
 
     if (ERROR_SUCCESS == ::RegOpenKeyEx(key, sub_key, 0, KEY_QUERY_VALUE, &hkey))
     {
-        if (ERROR_SUCCESS == (retv = RegQueryValueEx(hkey, val_name, 0, nullptr, data, data_len)))
+        if (ERROR_SUCCESS == (retv = RegQueryValueEx(hkey, val_name, nullptr, nullptr, data, data_len)))
         {
             ret = TRUE;
         }
@@ -391,13 +391,13 @@ int WINAPI wWinMain(HINSTANCE hInstanceLocal, [[maybe_unused]] const HINSTANCE h
     SetProcessDpiAwarenessContextFunc SetProcessDpiAwarenessContextF = nullptr;
     if (hUser32)
     {
-        setDPIAwareF = (SetProcessDPIAwareFunc)::GetProcAddress(hUser32, "SetProcessDPIAware");
+        setDPIAwareF = reinterpret_cast<SetProcessDPIAwareFunc>(::GetProcAddress(hUser32, "SetProcessDPIAware"));
         SetProcessDpiAwarenessContextF =
-            (SetProcessDpiAwarenessContextFunc)::GetProcAddress(hUser32, "SetProcessDpiAwarenessContext");
+            reinterpret_cast<SetProcessDpiAwarenessContextFunc>(::GetProcAddress(hUser32, "SetProcessDpiAwarenessContext"));
     }
     if (shcoreDLL)
     {
-        setDPIpiAwarenessF = (SetProcessDpiAwarenessFunc)::GetProcAddress(shcoreDLL, "SetProcessDpiAwareness");
+        setDPIpiAwarenessF = reinterpret_cast<SetProcessDpiAwarenessFunc>(::GetProcAddress(shcoreDLL, "SetProcessDpiAwareness"));
     }
 
     HRESULT hr = S_FALSE;
@@ -453,7 +453,7 @@ int WINAPI wWinMain(HINSTANCE hInstanceLocal, [[maybe_unused]] const HINSTANCE h
     }
 #endif
 
-    setbuf(stderr, 0);
+    setbuf(stderr, nullptr);
     bool console{ false };
     ::hInstance = hInstanceLocal;
     m_hInstResDLL = nullptr;
@@ -464,7 +464,7 @@ int WINAPI wWinMain(HINSTANCE hInstanceLocal, [[maybe_unused]] const HINSTANCE h
     HKEY hkey;
     if ((hmod = ::GetModuleHandleW(_T("kernel32.dll"))))
     {
-        MySetDllDirectory = (LPFNSETDLLDIRECTORY)::GetProcAddress(hmod, "SetDllDirectoryW");
+        MySetDllDirectory = reinterpret_cast<LPFNSETDLLDIRECTORY>(::GetProcAddress(hmod, "SetDllDirectoryW"));
         if (MySetDllDirectory)
         {
             ::MySetDllDirectory(_T(""));
@@ -475,16 +475,16 @@ int WINAPI wWinMain(HINSTANCE hInstanceLocal, [[maybe_unused]] const HINSTANCE h
             osinfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
             GetVersionEx(&osinfo);
             if (((osinfo.dwMajorVersion == 5) && (osinfo.dwMinorVersion == 0) &&
-                 (::_tcsicmp((TCHAR*)osinfo.szCSDVersion, _T("Service Pack 3")) >= 0)) ||
+                 (::_tcsicmp(reinterpret_cast<TCHAR*>(osinfo.szCSDVersion), _T("Service Pack 3")) >= 0)) ||
                 ((osinfo.dwMajorVersion == 5) && (osinfo.dwMinorVersion == 1) &&
-                 (::_tcsicmp((TCHAR*)osinfo.szCSDVersion, _T("")) >= 0)))
+                 (::_tcsicmp(reinterpret_cast<TCHAR*>(osinfo.szCSDVersion), _T("")) >= 0)))
             {
                 DWORD regval{ 1U };
                 DWORD reglen = sizeof(DWORD);
 
                 vnclog.Print(3, _T("Using Win2k (SP3+) / WinXP (No SP).. Checking SafeDllSearch\n"));
                 read_reg_string(HKEY_LOCAL_MACHINE, _T("System\\CurrentControlSet\\Control\\Session Manager"),
-                                _T("SafeDllSearchMode"), (LPBYTE)&regval, &reglen);
+                                _T("SafeDllSearchMode"), reinterpret_cast<LPBYTE>(&regval), &reglen);
 
                 if (regval != 0)
                 {
@@ -493,7 +493,7 @@ int WINAPI wWinMain(HINSTANCE hInstanceLocal, [[maybe_unused]] const HINSTANCE h
                     if (::RegOpenKeyEx(HKEY_LOCAL_MACHINE, _T("System\\CurrentControlSet\\Control\\Session Manager"), 0,
                                      KEY_SET_VALUE, &hkey) == ERROR_SUCCESS)
                     {
-                        if (::RegSetValueEx(hkey, _T("SafeDllSearchMode"), 0, REG_DWORD, (LPBYTE)&regval, sizeof(DWORD)) !=
+                        if (::RegSetValueEx(hkey, _T("SafeDllSearchMode"), 0, REG_DWORD, reinterpret_cast<LPBYTE>(&regval), sizeof(DWORD)) !=
                             ERROR_SUCCESS)
                         {
                             vnclog.Print(3, _T("Error writing SafeDllSearchMode. Error: %u\n"), static_cast<UINT>(::GetLastError()));
@@ -537,7 +537,7 @@ int WINAPI wWinMain(HINSTANCE hInstanceLocal, [[maybe_unused]] const HINSTANCE h
     if (hFile == INVALID_HANDLE_VALUE)
     {
         // Try AppData folder
-        if (::SHGetFolderPathW(0, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, optionsFile.data()) == S_OK)
+        if (::SHGetFolderPathW(nullptr, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, optionsFile.data()) == S_OK)
         {
             ::wcscat_s(optionsFile.data(), optionsFile.size(), L"\\UltraVNC\\");
             ::wcscat_s(optionsFile.data(), optionsFile.size(), L"options.vnc");
@@ -967,13 +967,13 @@ bool ParseDisplay(const LPTSTR display, const LPTSTR phost, const int hostlen, i
         } // Invalid format - opening bracket without closing
 
         // Extract IPv6 address between brackets
-        std::size_t ipv6len = bracketend - display - 1;
+        std::size_t ipv6len = static_cast<std::size_t>(bracketend - display - 1);
         if (ipv6len >= static_cast<std::size_t>(hostlen))
         {
             return false;
         }
 
-        ::_tcsncpy_s(phost, hostlen, display + 1, ipv6len);
+        ::_tcsncpy_s(phost, static_cast<rsize_t>(hostlen), display + 1, ipv6len);
         phost[ipv6len] = L'\0';
 
         // Check for port after the bracket
@@ -1024,7 +1024,7 @@ bool ParseDisplay(const LPTSTR display, const LPTSTR phost, const int hostlen, i
         }
         else
         {
-            ::_tcsncpy_s(phost, MAX_HOST_NAME_LEN, display, colonpos - display);
+            ::_tcsncpy_s(phost, MAX_HOST_NAME_LEN, display, static_cast<rsize_t>(colonpos - display));
             phost[colonpos - display] = L'\0';
             if (colonpos[1U] == L':')
             {

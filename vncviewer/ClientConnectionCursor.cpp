@@ -35,7 +35,7 @@ void ClientConnection::ReadCursorShape(rfbFramebufferUpdateRectHeader* const pfb
     const int bytesPerRow = (cursorWidth + 7) / 8;
     const int bytesMaskData = bytesPerRow * cursorHeight;
     const int bytesSourceData = cursorPixels * (m_myFormat.bitsPerPixel / 8);
-    CheckBufferSize(bytesMaskData);
+    CheckBufferSize(static_cast<UINT>(bytesMaskData));
 
     SoftCursorFree();
 
@@ -54,19 +54,19 @@ void ClientConnection::ReadCursorShape(rfbFramebufferUpdateRectHeader* const pfb
     if (m_opts->m_ignoreShapeUpdates)
     {
         int bytesToSkip = (pfburh->encoding == rfbEncodingXCursor) ? (6 + 2 * bytesMaskData) : (bytesSourceData + bytesMaskData);
-        CheckBufferSize(bytesToSkip);
+        CheckBufferSize(static_cast<UINT>(bytesToSkip));
         ReadExact(m_netbuf, bytesToSkip);
         return;
     }
 
     // Read cursor pixel data.
 
-    rcSource = new COLORREF[cursorPixels];
+    rcSource = new COLORREF[static_cast<unsigned long long>(cursorPixels)];
 
     if (pfburh->encoding == rfbEncodingXCursor)
     {
         std::array<CARD8, 6U> xcolors;
-        ReadExact((char*)xcolors.data(), 6);
+        ReadExact(reinterpret_cast<char*>(xcolors.data()), 6);
         std::array<COLORREF, 2U> rcolors;
         rcolors[1U] = PALETTERGB(xcolors[0U], xcolors[1U], xcolors[2U]);
         rcolors[0U] = PALETTERGB(xcolors[3U], xcolors[4U], xcolors[5U]);
@@ -99,9 +99,9 @@ void ClientConnection::ReadCursorShape(rfbFramebufferUpdateRectHeader* const pfb
     else
     {
         // rfb.EncodingRichCursor
-        CheckBufferSize(bytesSourceData);
+        CheckBufferSize(static_cast<UINT>(bytesSourceData));
         ReadExact(m_netbuf, bytesSourceData);
-        SETUP_COLOR_SHORTCUTS;
+        SETUP_COLOR_SHORTCUTS
         char* p = m_netbuf;
         for (int i{ 0 }; i < cursorPixels; ++i)
         {
@@ -112,11 +112,11 @@ void ClientConnection::ReadCursorShape(rfbFramebufferUpdateRectHeader* const pfb
                 ++p;
                 break;
             case 16:
-                rcSource[i] = *(CARD16*)p;
+                rcSource[i] = *reinterpret_cast<CARD16*>(p);
                 p += 2;
                 break;
             case 32:
-                rcSource[i] = *(CARD32*)p;
+                rcSource[i] = *reinterpret_cast<CARD32*>(p);
                 p += 4;
                 break;
             }
@@ -127,7 +127,7 @@ void ClientConnection::ReadCursorShape(rfbFramebufferUpdateRectHeader* const pfb
 
     ReadExact(m_netbuf, bytesMaskData);
 
-    rcMask = new bool[cursorPixels];
+    rcMask = new bool[static_cast<unsigned long long>(cursorPixels)];
 
     {
         const int fullBytes = cursorWidth / 8;
@@ -168,7 +168,7 @@ void ClientConnection::ReadCursorShape(rfbFramebufferUpdateRectHeader* const pfb
     {
         delete[] m_SavedAreaBIB;
     }
-    m_SavedAreaBIB = new BYTE[cursorPixels * (m_myFormat.bitsPerPixel / 8)];
+    m_SavedAreaBIB = new BYTE[static_cast<unsigned long long>(cursorPixels * (m_myFormat.bitsPerPixel / 8))];
 
     SoftCursorSaveArea();
     SoftCursorDraw();
@@ -359,7 +359,7 @@ void ClientConnection::SoftCursorSaveArea()
     omni_mutex_lock l(m_bitmapdcMutex);
     if (m_DIBbits && m_SavedAreaBIB)
     {
-        Copyto0buffer(w, h, x, y, m_myFormat.bitsPerPixel / 8, (BYTE*)m_DIBbits, m_SavedAreaBIB, m_si.framebufferWidth,
+        Copyto0buffer(w, h, x, y, m_myFormat.bitsPerPixel / 8, reinterpret_cast<BYTE*>(m_DIBbits), m_SavedAreaBIB, m_si.framebufferWidth,
                       m_si.framebufferHeight);
     }
 }
@@ -381,7 +381,7 @@ void ClientConnection::SoftCursorRestoreArea()
     omni_mutex_lock l(m_bitmapdcMutex);
     if (m_DIBbits && m_SavedAreaBIB)
     {
-        Copyfrom0buffer(w, h, x, y, m_myFormat.bitsPerPixel / 8, m_SavedAreaBIB, (BYTE*)m_DIBbits, m_si.framebufferWidth,
+        Copyfrom0buffer(w, h, x, y, m_myFormat.bitsPerPixel / 8, m_SavedAreaBIB, reinterpret_cast<BYTE*>(m_DIBbits), m_si.framebufferWidth,
                         m_si.framebufferHeight);
     }
 
@@ -418,7 +418,7 @@ void ClientConnection::SoftCursorDraw()
         bytesPerOutputRow += 4 - bytesPerOutputRow % 4;
     }
 
-    BYTE* destBase = (BYTE*)m_DIBbits;
+    BYTE* destBase = reinterpret_cast<BYTE*>(m_DIBbits);
 
     for (int y{ 0 }; y < rcHeight; ++y)
     {
@@ -436,7 +436,7 @@ void ClientConnection::SoftCursorDraw()
                     if (rcMask[offset])
                     {
                         // Inline pixel copy - avoids per-pixel function call overhead
-                        std::memcpy(destRow + (x0 * bytesPerPixel), &rcSource[offset], bytesPerPixel);
+                        std::memcpy(destRow + (x0 * bytesPerPixel), &rcSource[offset], static_cast<size_t>(bytesPerPixel));
                     }
                 }
             }

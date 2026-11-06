@@ -14,8 +14,8 @@
  * Definitions for Linux port of webio demo.
  */
 
-#ifndef _LINUXDEFS_H_
-#define _LINUXDEFS_H_ 1
+#ifndef LINUXDEFS_H
+#define LINUXDEFS_H 1
 
 #include <fcntl.h>
 #include <malloc.h>

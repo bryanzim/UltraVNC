@@ -24,11 +24,11 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
 #include "omnithread.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <array>
 #include <memory>
@@ -41,7 +41,7 @@ class LoadDllFromMemory;
 class IPlugin
 {
 public:
-    virtual ~IPlugin() {};
+    virtual ~IPlugin() {}
 
     virtual BYTE* TransformBuffer(BYTE* pDataBuffer, int nDataLen, int* pnTransformedDataLen) = 0;
     virtual BYTE* RestoreBuffer(BYTE* pTransBuffer, int nTransDataLen, int* pnRestoredDataLen) = 0;
@@ -50,7 +50,7 @@ public:
 class IIntegratedPlugin : public IPlugin
 {
 public:
-    virtual ~IIntegratedPlugin() {};
+    virtual ~IIntegratedPlugin() {}
 
     // Free memory allocated by the plugin
     virtual void FreeMemory(void* pMemory) = 0;
@@ -108,9 +108,9 @@ class CDSMPlugin
 {
 public:
     void SetLoaded(bool fEnable);
-    bool IsLoaded(void) { return m_fLoaded; };
+    bool IsLoaded(void) { return m_fLoaded; }
     void SetEnabled(bool fEnable);
-    bool IsEnabled(void) { return m_fEnabled; };
+    bool IsEnabled(void) { return m_fEnabled; }
     bool InitPlugin(void);
     //adzm 2010-05-12 - dsmplugin config
     bool SetPluginParams(HWND hWnd, char* szParams, char* szConfig = nullptr, char** szNewConfig = nullptr);
@@ -123,11 +123,11 @@ public:
     BYTE* RestoreBufferStep1(BYTE* pDataBuffer, int nDataLen, int* nRestoredDataLen);
     BYTE* RestoreBufferStep2(BYTE* pDataBuffer, int nDataLen, int* nRestoredDataLen);
     void RestoreBufferUnlock();
-    char* GetPluginName(void) { return m_szPluginName.data(); };
-    char* GetPluginVersion(void) { return m_szPluginVersion.data(); };
-    char* GetPluginDate(void) { return m_szPluginDate.data(); };
-    char* GetPluginAuthor(void) { return m_szPluginAuthor.data(); };
-    char* GetPluginFileName(void) { return m_szPluginFileName.data(); };
+    char* GetPluginName(void) { return m_szPluginName.data(); }
+    char* GetPluginVersion(void) { return m_szPluginVersion.data(); }
+    char* GetPluginDate(void) { return m_szPluginDate.data(); }
+    char* GetPluginAuthor(void) { return m_szPluginAuthor.data(); }
+    char* GetPluginFileName(void) { return m_szPluginFileName.data(); }
 
     //adzm - 2009-06-21
     IPlugin* CreatePluginInterface();

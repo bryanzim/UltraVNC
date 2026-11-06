@@ -24,7 +24,7 @@
 void ClientConnection::ReadCopyRect(rfbFramebufferUpdateRectHeader* const pfburh)
 {
     rfbCopyRect cr;
-    ReadExact((char*)&cr, sz_rfbCopyRect);
+    ReadExact(reinterpret_cast<char*>(&cr), sz_rfbCopyRect);
     cr.srcX = Swap16IfLE(cr.srcX);
     cr.srcY = Swap16IfLE(cr.srcY);
     // By sure the rect is insite the border memcopy does not like it
@@ -58,15 +58,15 @@ void ClientConnection::ReadCopyRect(rfbFramebufferUpdateRectHeader* const pfburh
         if (cr.srcY <= pfburh->r.y)
         {
             {
-                destpos = (BYTE*)m_DIBbits + (bytesPerInputRow * (pfburh->r.y + pfburh->r.h - 1)) +
+                destpos = reinterpret_cast<BYTE*>(m_DIBbits) + (bytesPerInputRow * (pfburh->r.y + pfburh->r.h - 1)) +
                           (pfburh->r.x * m_myFormat.bitsPerPixel / 8);
                 sourcepos =
-                    (BYTE*)m_DIBbits + (bytesPerInputRow * (cr.srcY + pfburh->r.h - 1)) + ((cr.srcX) * m_myFormat.bitsPerPixel / 8);
+                    reinterpret_cast<BYTE*>(m_DIBbits) + (bytesPerInputRow * (cr.srcY + pfburh->r.h - 1)) + ((cr.srcX) * m_myFormat.bitsPerPixel / 8);
                 iptr = sourcepos;
                 optr = destpos;
                 while (OutputHeight > 0)
                 {
-                    std::memcpy(optr, iptr, bytesPerOutputRow);
+                    std::memcpy(optr, iptr, static_cast<size_t>(bytesPerOutputRow));
                     iptr -= bytesPerInputRow;
                     optr -= bytesPerInputRow;
                     --OutputHeight;
@@ -76,13 +76,13 @@ void ClientConnection::ReadCopyRect(rfbFramebufferUpdateRectHeader* const pfburh
         else if (cr.srcY > pfburh->r.y)
         {
             {
-                destpos = (BYTE*)m_DIBbits + (bytesPerInputRow * pfburh->r.y) + (pfburh->r.x * m_myFormat.bitsPerPixel / 8);
-                sourcepos = (BYTE*)m_DIBbits + (bytesPerInputRow * (cr.srcY)) + ((cr.srcX) * m_myFormat.bitsPerPixel / 8);
+                destpos = reinterpret_cast<BYTE*>(m_DIBbits) + (bytesPerInputRow * pfburh->r.y) + (pfburh->r.x * m_myFormat.bitsPerPixel / 8);
+                sourcepos = reinterpret_cast<BYTE*>(m_DIBbits) + (bytesPerInputRow * (cr.srcY)) + ((cr.srcX) * m_myFormat.bitsPerPixel / 8);
                 iptr = sourcepos;
                 optr = destpos;
                 while (OutputHeight > 0)
                 {
-                    std::memcpy(optr, iptr, bytesPerOutputRow);
+                    std::memcpy(optr, iptr, static_cast<size_t>(bytesPerOutputRow));
                     iptr += bytesPerInputRow;
                     optr += bytesPerInputRow;
                     --OutputHeight;

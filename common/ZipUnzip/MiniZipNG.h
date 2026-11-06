@@ -6,12 +6,12 @@
 //
 // SPDX-FileCopyrightText: Copyright (C) 2025 UltraVNC Team Members. All Rights Reserved.
 
-#ifndef _MINIZIPNG_H
-#define _MINIZIPNG_H
+#ifndef MINIZIPNG_H
+#define MINIZIPNG_H
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 // Unicode-aware zip/unzip wrapper using minizip-ng
 // Compatible interface with ZipUnZip32 but supports Unicode paths
 
@@ -53,4 +53,4 @@ private:
     volatile bool m_fAbortRequested;
 };
 
-#endif // _MINIZIPNG_H
+#endif // MINIZIPNG_H

@@ -31,7 +31,7 @@
     rect.tl.y = ty;                                                                                                                \
     rect.br.x = tx + tw;                                                                                                           \
     rect.br.y = ty + th;                                                                                                           \
-    encoder->Translate(source, (BYTE*)buf, rect);
+    encoder->Translate(source, reinterpret_cast<BYTE*>(buf), rect);
 
 #define EXTRA_ARGS , BYTE *source, vncEncoder *encoder
 
@@ -142,7 +142,7 @@ UINT vncEncodeXZ::EncodeBulkRects(const rfb::RectVector& allRects, BYTE* const s
         rectangle.w = Swap16IfLE(rect.br.x - rect.tl.x);
         rectangle.h = Swap16IfLE(rect.br.y - rect.tl.y);
 
-        xzos->writeBytes((const void*)&rectangle, sz_rfbRectangle);
+        xzos->writeBytes(reinterpret_cast<const void*>(&rectangle), sz_rfbRectangle);
     }
 
     for (i = allRects.begin(); i != allRects.end(); ++i)
@@ -174,10 +174,10 @@ UINT vncEncodeXZ::EncodeBulkRects(const rfb::RectVector& allRects, BYTE* const s
         surh.encoding = Swap32IfLE(rfbEncodingXZ);
     }
 
-    int nAllRectsHigh = (nAllRects & 0xFFFF0000) >> 16;
+    int nAllRectsHigh = (static_cast<unsigned int>(nAllRects) & 0xFFFF0000) >> 16;
     int nAllRectsLow = (nAllRects & 0x0000FFFF);
 
-    int nDataLengthHigh = (nDataLength & 0xFFFF0000) >> 16;
+    int nDataLengthHigh = (static_cast<unsigned int>(nDataLength) & 0xFFFF0000) >> 16;
     int nDataLengthLow = (nDataLength & 0x0000FFFF);
 
     surh.r.x = Swap16IfLE(nAllRectsHigh);
@@ -186,17 +186,17 @@ UINT vncEncodeXZ::EncodeBulkRects(const rfb::RectVector& allRects, BYTE* const s
     surh.r.h = Swap16IfLE(nDataLengthLow);
 
     UINT nTotalLength{ 0U };
-    if (!outConn->SendExact((const char*)&surh, sz_rfbFramebufferUpdateRectHeader))
+    if (!outConn->SendExact(reinterpret_cast<const char*>(&surh), sz_rfbFramebufferUpdateRectHeader))
     {
         return FALSE;
     }
     nTotalLength += sz_rfbFramebufferUpdateRectHeader;
 
-    if (!outConn->SendExact((const char*)pDataBytes, nDataLength))
+    if (!outConn->SendExact(reinterpret_cast<const char*>(pDataBytes), static_cast<VCard>(nDataLength)))
     {
         return FALSE;
     }
-    nTotalLength += nDataLength;
+    nTotalLength += static_cast<UINT>(nDataLength);
 
     return nDataLength > 0 ? TRUE : FALSE;
 }
@@ -216,7 +216,7 @@ UINT vncEncodeXZ::EncodeRect(BYTE* const source, BYTE* const dest, const rfb::Re
 
     xzos->flush();
 
-    rfbFramebufferUpdateRectHeader* surh = (rfbFramebufferUpdateRectHeader*)dest;
+    rfbFramebufferUpdateRectHeader* surh = reinterpret_cast<rfbFramebufferUpdateRectHeader*>(dest);
     surh->r.x = Swap16IfLE(x - monitor_Offsetx);
     surh->r.y = Swap16IfLE(y - monitor_Offsety);
     surh->r.w = Swap16IfLE(w);
@@ -230,14 +230,14 @@ UINT vncEncodeXZ::EncodeRect(BYTE* const source, BYTE* const dest, const rfb::Re
         surh->encoding = Swap32IfLE(rfbEncodingXZ);
     }
 
-    rfbXZHeader* hdr = (rfbXZHeader*)(dest + sz_rfbFramebufferUpdateRectHeader);
+    rfbXZHeader* hdr = reinterpret_cast<rfbXZHeader*>((dest + sz_rfbFramebufferUpdateRectHeader));
 
     int length = mos->length();
-    hdr->length = Swap32IfLE(length);
+    hdr->length = static_cast<unsigned int>(Swap32IfLE(length));
 
-    std::memcpy(dest + sz_rfbFramebufferUpdateRectHeader + sz_rfbXZHeader, (rdr::U8*)mos->data(), length);
+    std::memcpy(dest + sz_rfbFramebufferUpdateRectHeader + sz_rfbXZHeader, const_cast<rdr::U8*>(reinterpret_cast<const rdr::U8 *>(mos->data())), static_cast<size_t>(length));
 
-    return sz_rfbFramebufferUpdateRectHeader + sz_rfbXZHeader + length;
+    return sz_rfbFramebufferUpdateRectHeader + static_cast<UINT>(sz_rfbXZHeader + length);
 }
 
 void vncEncodeXZ::EncodeRect_Internal(BYTE* const source, const int x, const int y, const int w, const int h)

@@ -56,17 +56,17 @@ public:
 
     // Change the log level
     void SetLevel(int level);
-    int GetLevel() const { return m_level; };
+    int GetLevel() const { return m_level; }
 
-    void SetVideo(const bool enable) { m_video = enable; };
-    bool GetVideo() { return m_video; };
+    void SetVideo(const bool enable) { m_video = enable; }
+    bool GetVideo() { return m_video; }
     void SetPath(char path[512U]);
     char* GetPath();
     void ClearAviConfig();
 
     // Change the logging mode
     void SetMode(int mode);
-    int GetMode() const { return m_mode; };
+    int GetMode() const { return m_mode; }
 
     // Change or set the logging filename. This only has an effect if
     // the log mode includes ToFile

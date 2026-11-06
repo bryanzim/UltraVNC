@@ -18,18 +18,18 @@ using namespace rdr;
 enum { DEFAULT_BUF_SIZE = 16384 };
 
 ZstdInStream::ZstdInStream(int bufSize_)
-	: underlying(0), bufSize(bufSize_ ? bufSize_ : DEFAULT_BUF_SIZE), offset(0),
+	: underlying(nullptr), bufSize(bufSize_ ? bufSize_ : DEFAULT_BUF_SIZE), offset(0),
 	bytesIn(0)
 {
 	zstds = ZSTD_createDStream();
 	unsigned int inSize = static_cast<unsigned int>(ZSTD_DStreamInSize());
 	unsigned int outSize = static_cast<unsigned int>(ZSTD_DStreamOutSize());
-	bufSize = inSize > outSize ? inSize : outSize;
+	bufSize = inSize > outSize ? static_cast<int>(inSize) : static_cast<int>(outSize);
 	bufSize = bufSize_ > bufSize ? bufSize_ : bufSize;
 	outBuffer = new ZSTD_outBuffer;
 	inBuffer = new ZSTD_inBuffer;	
 	ZSTD_initDStream(zstds);	
-	ptr = end = start = new U8[bufSize];
+	ptr = end = start = new U8[static_cast<unsigned long long>(bufSize)];
 }
 
 ZstdInStream::~ZstdInStream()
@@ -48,7 +48,7 @@ void ZstdInStream::setUnderlying(InStream* is, int bytesIn_)
 
 int ZstdInStream::pos()
 {
-	return (int)(offset + ptr - start);
+	return static_cast<int>((offset + ptr - start));
 }
 
 void ZstdInStream::reset()
@@ -60,7 +60,7 @@ void ZstdInStream::reset()
 		decompress();
 		end = start; // throw away any data
 	}
-	underlying = 0;
+	underlying = nullptr;
 }
 
 int ZstdInStream::overrun(int itemSize, int nItems)
@@ -71,9 +71,9 @@ int ZstdInStream::overrun(int itemSize, int nItems)
 		throw Exception("ZlibInStream overrun: no underlying stream");
 
 	if (end - ptr != 0)
-		memmove(start, ptr, end - ptr);
+		memmove(start, ptr, static_cast<size_t>(end - ptr));
 
-	offset += (int)(ptr - start);
+	offset += static_cast<int>((ptr - start));
 	end -= ptr - start;
 	ptr = start;
 
@@ -82,7 +82,7 @@ int ZstdInStream::overrun(int itemSize, int nItems)
 	}
 
 	if (itemSize * nItems > end - ptr)
-		nItems = (int)((end - ptr) / itemSize);
+		nItems = static_cast<int>(((end - ptr) / itemSize));
 
 	return nItems;
 }
@@ -93,23 +93,23 @@ int ZstdInStream::overrun(int itemSize, int nItems)
 void ZstdInStream::decompress()
 {
 
-	outBuffer->dst = (U8*)end;
-	outBuffer->size = start + bufSize - end;
+	outBuffer->dst = const_cast<U8*>(reinterpret_cast<const U8 *>(end));
+	outBuffer->size = static_cast<size_t>(start + bufSize - end);
 	outBuffer->pos = 0;
 
 	underlying->check(1);
 	inBuffer->src = underlying->getptr();
-	inBuffer->size = underlying->getend() - underlying->getptr();
+	inBuffer->size = static_cast<size_t>(underlying->getend() - underlying->getptr());
 	inBuffer->pos = 0;
 
-	if (inBuffer->size > (size_t)bytesIn)
-		inBuffer->size = bytesIn;
+	if (inBuffer->size > static_cast<size_t>(bytesIn))
+		inBuffer->size = static_cast<size_t>(bytesIn);
 
 	auto result = ZSTD_decompressStream(zstds, outBuffer, inBuffer);
 	if (ZSTD_isError(result))
 		throw Exception(ZSTD_getErrorName(result));
 
-	size_t consumed = (size_t)(((U8*)inBuffer->src + inBuffer->pos) - (U8*)underlying->getptr());
+	size_t consumed = static_cast<size_t>((((U8*)inBuffer->src + inBuffer->pos) - (U8*)underlying->getptr()));
 	size_t produced = outBuffer->pos;
 
 	// If a call neither consumes input nor produces output, the loop in
@@ -119,7 +119,7 @@ void ZstdInStream::decompress()
 	if (consumed == 0 && produced == 0)
 		throw Exception("ZstdInStream: no decompression progress (truncated input?)");
 
-	bytesIn -= (int)consumed;
-	end = ((U8*)outBuffer->dst + outBuffer->pos);
-	underlying->setptr((U8*)inBuffer->src + inBuffer->pos);
+	bytesIn -= static_cast<int>(consumed);
+	end = (reinterpret_cast<U8*>(outBuffer->dst) + outBuffer->pos);
+	underlying->setptr(const_cast<U8*>(reinterpret_cast<const U8 *>(inBuffer->src)) + inBuffer->pos);
 }

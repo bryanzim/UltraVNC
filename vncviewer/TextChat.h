@@ -9,8 +9,8 @@
 //
 
 
-#ifndef TEXTCHAT_H__
-#define TEXTCHAT_H__
+#ifndef TEXTCHAT_H
+#define TEXTCHAT_H
 #pragma once
 
 #define BLACK 0x00000000

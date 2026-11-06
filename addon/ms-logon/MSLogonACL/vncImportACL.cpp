@@ -67,20 +67,20 @@ void vncImportACL::GetOldACL()
         // First call to RegQueryValueEx just gets the buffer length.
         if (ERROR_SUCCESS != RegQueryValueEx(hk,        // subkey handle
                                              _T("ACL"), // value name
-                                             0,         // must be zero
-                                             0,         // value type , not needed here
+                                             nullptr,         // must be zero
+                                             nullptr,         // value type , not needed here
                                              nullptr,   //
                                              &dwValueLength))
         { // length of value data
             __leave;
         }
-        pOldACL = (PACL)::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, dwValueLength);
+        pOldACL = reinterpret_cast<PACL>(::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, dwValueLength));
 
         if (ERROR_SUCCESS != RegQueryValueEx(hk,        // subkey handle
                                              _T("ACL"), // value name
-                                             0,         // must be zero
-                                             0,         // value type
-                                             (LPBYTE)pOldACL, &dwValueLength))
+                                             nullptr,         // must be zero
+                                             nullptr,         // value type
+                                             reinterpret_cast<LPBYTE>(pOldACL), &dwValueLength))
         { // length of value data
             __leave;
         }
@@ -106,7 +106,7 @@ void vncImportACL::GetOldACL()
 
     for (DWORD i{ 0U }; i < asi.AceCount; ++i)
     {
-        ReadAce(i, pOldACL);
+        ReadAce(static_cast<int>(i), pOldACL);
     }
 
     ::HeapFree(::GetProcessHeap(), 0, pOldACL);
@@ -119,7 +119,7 @@ void vncImportACL::ReadAce(const int index, const PACL pACL)
     //PSID psid;
     ACE_DATA* pACEdata;
 
-    if (!::GetAce(pACL, index, (void**)&ace))
+    if (!::GetAce(pACL, static_cast<DWORD>(index), reinterpret_cast<void**>(&ace)))
     {
         _ftprintf(stderr, _T("DACL, entry %d: GetAce() failed, gle == %lu\n"), index, ::GetLastError());
         return;
@@ -130,15 +130,15 @@ void vncImportACL::ReadAce(const int index, const PACL pACL)
     {
     case ACCESS_ALLOWED_ACE_TYPE:
         pACEdata->type = ACCESS_ALLOWED;
-        pACEdata->pSID = CopySID(&((ACCESS_ALLOWED_ACE*)ace)->SidStart);
-        pACEdata->mask = ((ACCESS_ALLOWED_ACE*)ace)->Mask;
+        pACEdata->pSID = CopySID(&(reinterpret_cast<ACCESS_ALLOWED_ACE*>(ace))->SidStart);
+        pACEdata->mask = (reinterpret_cast<ACCESS_ALLOWED_ACE*>(ace))->Mask;
         pACEdata->next = lastAllowACE;
         lastAllowACE = pACEdata;
         break;
     case ACCESS_DENIED_ACE_TYPE:
         pACEdata->type = ACCESS_DENIED;
-        pACEdata->pSID = CopySID(&((ACCESS_DENIED_ACE*)ace)->SidStart);
-        pACEdata->mask = ((ACCESS_DENIED_ACE*)ace)->Mask;
+        pACEdata->pSID = CopySID(&(reinterpret_cast<ACCESS_DENIED_ACE*>(ace))->SidStart);
+        pACEdata->mask = (reinterpret_cast<ACCESS_DENIED_ACE*>(ace))->Mask;
         pACEdata->next = lastDenyACE;
         lastDenyACE = pACEdata;
         break;
@@ -157,7 +157,7 @@ PSID vncImportACL::CopySID(const PSID pSID)
     if (::IsValidSid(pSID))
     {
         sidLength = ::GetLengthSid(pSID);
-        pNewSID = (PSID) new char[sidLength];
+        pNewSID = reinterpret_cast<PSID>(new char[sidLength]);
         ::CopySid(sidLength, pNewSID, pSID);
     }
     return pNewSID;
@@ -223,10 +223,10 @@ PACL vncImportACL::BuildACL()
         aclSize += ::GetLengthSid(j->pSID) + sizeof(ACCESS_ALLOWED_ACE) - sizeof(DWORD);
     }
 
-    pACL = (PACL)::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, aclSize);
+    pACL = reinterpret_cast<PACL>(::HeapAlloc(::GetProcessHeap(), HEAP_ZERO_MEMORY, aclSize));
 
     // Initialize the new ACL.
-    if (::InitializeAcl(pACL, aclSize, ACL_REVISION))
+    if (::InitializeAcl(pACL, static_cast<DWORD>(aclSize), ACL_REVISION))
     {
         // Add the access-denied ACEs to the ACL.
         for (ACE_DATA* i = lastDenyACE; i != nullptr; i = i->next)
@@ -275,7 +275,7 @@ bool vncImportACL::SetACL(const PACL pACL)
         }
 
         // Add the ACL value to the VNC registry key
-        if (ERROR_SUCCESS != ::RegSetValueEx(hk, _T("ACL"), 0, REG_BINARY, (LPBYTE)pACL, AclInformation.AclBytesInUse))
+        if (ERROR_SUCCESS != ::RegSetValueEx(hk, _T("ACL"), 0, REG_BINARY, reinterpret_cast<LPBYTE>(pACL), AclInformation.AclBytesInUse))
         {
             _ftprintf(stderr, _T("Error %d: RegSetValueEx\n"), ::GetLastError());
             __leave;
@@ -374,7 +374,7 @@ PSID vncImportACL::GetSID(const TCHAR* const domainaccount)
     // First call to LookupAccountName is expected to fail.
     // Sets pSid and domain size
     ::LookupAccountName(nullptr, domainaccount, pSid, &ulSidLen, domain, &ulDomLen, &peUse);
-    pSid = (PSID) new TCHAR[ulSidLen];
+    pSid = reinterpret_cast<PSID>(new TCHAR[ulSidLen]);
     domain = new TCHAR[ulDomLen];
     ::LookupAccountName(nullptr, domainaccount, pSid, &ulSidLen, domain, &ulDomLen, &peUse);
     if (!::IsValidSid(pSid))
@@ -399,7 +399,7 @@ const TCHAR* vncImportACL::SplitString(const TCHAR* const input, const TCHAR sep
     tail = ::_tcschr(input, separator);
     if (tail)
     {
-        l = tail - input;
+        l = static_cast<std::size_t>(tail - input);
         // get rid of separator
         tail = tail + 1;
         _tcsncpy(head, input, l);
@@ -438,7 +438,7 @@ TCHAR* vncImportACL::AddDomainname(const TCHAR* const user)
     LPWKSTA_INFO_100 wkstainfo = nullptr;
     NET_API_STATUS nStatus;
 
-    nStatus = ::NetWkstaGetInfo(0, 100, (LPBYTE*)&wkstainfo);
+    nStatus = ::NetWkstaGetInfo(nullptr, 100, reinterpret_cast<LPBYTE*>(&wkstainfo));
     if (nStatus == NERR_Success)
     {
         _tcsncpy(domain.data(), wkstainfo->wki100_langroup, MAXLEN);
@@ -518,7 +518,7 @@ bool vncScanInput::Tokenize(const TCHAR* line, TCHAR** const token)
             ++line; // Eat closing quote
             break;
         default:
-            len = (int)GetWordLength(line);
+            len = static_cast<int>(GetWordLength(line));
             tokenCount = AddToken(token, tokenCount, &line, len);
             break;
         }
@@ -536,11 +536,11 @@ std::size_t vncScanInput::GetWordLength(const TCHAR* const line)
     const TCHAR* nexttab = ::_tcschr(line, _T('\t'));
     if (nextblank)
     {
-        blength = nextblank - line;
+        blength = static_cast<std::size_t>(nextblank - line);
     }
     if (nexttab)
     {
-        tlength = nexttab - line;
+        tlength = static_cast<std::size_t>(nexttab - line);
     }
     if (nextblank && nexttab)
     { // Found blank and tab
@@ -567,7 +567,7 @@ int vncScanInput::GetQuoteLength(const TCHAR* const line)
     std::size_t len{ 0U };
     if (eoq)
     {
-        len = eoq - line;
+        len = static_cast<std::size_t>(eoq - line);
     }
     return static_cast<int>(len);
 }

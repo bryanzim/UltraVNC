@@ -190,11 +190,11 @@ static void WebSHA1Hash(const unsigned char* const data, std::size_t len, unsign
         std::array<unsigned, 80U> w;
         for (int i{ 0 }; i < 16; ++i)
         {
-            w[i] = (buf[i * 4] << 24) | (buf[i * 4 + 1] << 16) | (buf[i * 4 + 2] << 8) | buf[i * 4 + 3];
+            w[static_cast<std::size_t>(i)] = (static_cast<unsigned>(buf[static_cast<std::size_t>(i * 4)]) << 24) | (static_cast<unsigned>(buf[static_cast<std::size_t>(i * 4 + 1)]) << 16) | (static_cast<unsigned>(buf[static_cast<std::size_t>(i * 4 + 2)]) << 8) | static_cast<unsigned>(buf[static_cast<std::size_t>(i * 4 + 3)]);
         }
         for (int i{ 16 }; i < 80; ++i)
         {
-            w[i] = ROL(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
+            w[static_cast<unsigned long long>(i)] = ROL(w[static_cast<unsigned long long>(i - 3)] ^ w[static_cast<unsigned long long>(i - 8)] ^ w[static_cast<unsigned long long>(i - 14)] ^ w[static_cast<unsigned long long>(i - 16)], 1);
         }
 
         unsigned a = h[0U], b = h[1U], c = h[2U], d = h[3U], e = h[4U];
@@ -221,7 +221,7 @@ static void WebSHA1Hash(const unsigned char* const data, std::size_t len, unsign
                 f = b ^ c ^ d;
                 k = 0xCA62C1D6;
             }
-            unsigned t = ROL(a, 5) + f + e + k + w[i];
+            unsigned t = ROL(a, 5) + f + e + k + w[static_cast<unsigned long long>(i)];
             e = d;
             d = c;
             c = ROL(b, 30);
@@ -245,11 +245,11 @@ static void WebSHA1Hash(const unsigned char* const data, std::size_t len, unsign
         std::array<unsigned, 80U> w;
         for (int i{ 0 }; i < 16; ++i)
         {
-            w[i] = (buf[i * 4] << 24) | (buf[i * 4 + 1] << 16) | (buf[i * 4 + 2] << 8) | buf[i * 4 + 3];
+            w[static_cast<std::size_t>(i)] = (static_cast<unsigned>(buf[static_cast<std::size_t>(i * 4)]) << 24) | (static_cast<unsigned>(buf[static_cast<std::size_t>(i * 4 + 1)]) << 16) | (static_cast<unsigned>(buf[static_cast<std::size_t>(i * 4 + 2)]) << 8) | static_cast<unsigned>(buf[static_cast<std::size_t>(i * 4 + 3)]);
         }
         for (int i{ 16 }; i < 80; ++i)
         {
-            w[i] = ROL(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
+            w[static_cast<unsigned long long>(i)] = ROL(w[static_cast<unsigned long long>(i - 3)] ^ w[static_cast<unsigned long long>(i - 8)] ^ w[static_cast<unsigned long long>(i - 14)] ^ w[static_cast<unsigned long long>(i - 16)], 1);
         }
         unsigned a = h[0U], b = h[1U], c = h[2U], d = h[3U], e = h[4U];
         for (int i{ 0 }; i < 80; ++i)
@@ -275,7 +275,7 @@ static void WebSHA1Hash(const unsigned char* const data, std::size_t len, unsign
                 f = b ^ c ^ d;
                 k = 0xCA62C1D6;
             }
-            unsigned t = ROL(a, 5) + f + e + k + w[i];
+            unsigned t = ROL(a, 5) + f + e + k + w[static_cast<unsigned long long>(i)];
             e = d;
             d = c;
             c = ROL(b, 30);
@@ -296,11 +296,11 @@ static void WebSHA1Hash(const unsigned char* const data, std::size_t len, unsign
         std::array<unsigned, 80U> w;
         for (int i{ 0 }; i < 16; ++i)
         {
-            w[i] = (buf[i * 4] << 24) | (buf[i * 4 + 1] << 16) | (buf[i * 4 + 2] << 8) | buf[i * 4 + 3];
+            w[static_cast<std::size_t>(i)] = (static_cast<unsigned>(buf[static_cast<std::size_t>(i * 4)]) << 24) | (static_cast<unsigned>(buf[static_cast<std::size_t>(i * 4 + 1)]) << 16) | (static_cast<unsigned>(buf[static_cast<std::size_t>(i * 4 + 2)]) << 8) | static_cast<unsigned>(buf[static_cast<std::size_t>(i * 4 + 3)]);
         }
         for (int i{ 16 }; i < 80; ++i)
         {
-            w[i] = ROL(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
+            w[static_cast<unsigned long long>(i)] = ROL(w[static_cast<unsigned long long>(i - 3)] ^ w[static_cast<unsigned long long>(i - 8)] ^ w[static_cast<unsigned long long>(i - 14)] ^ w[static_cast<unsigned long long>(i - 16)], 1);
         }
         unsigned a = h[0U], b = h[1U], c = h[2U], d = h[3U], e = h[4U];
         for (int i{ 0 }; i < 80; ++i)
@@ -326,7 +326,7 @@ static void WebSHA1Hash(const unsigned char* const data, std::size_t len, unsign
                 f = b ^ c ^ d;
                 k = 0xCA62C1D6;
             }
-            unsigned t = ROL(a, 5) + f + e + k + w[i];
+            unsigned t = ROL(a, 5) + f + e + k + w[static_cast<unsigned long long>(i)];
             e = d;
             d = c;
             c = ROL(b, 30);
@@ -342,7 +342,7 @@ static void WebSHA1Hash(const unsigned char* const data, std::size_t len, unsign
 
     for (int i{ 0 }; i < 5; ++i)
     {
-        PUT32(hash + i * 4, h[i]);
+        PUT32(hash + i * 4, h[static_cast<unsigned long long>(i)]);
     }
 }
 
@@ -397,7 +397,7 @@ static BOOL PerformWebSocketHandshake(VSocket* const socket, const char* const h
               "Connection: Upgrade\r\n"
               "Sec-WebSocket-Accept: %s\r\n"
               "\r\n", accept.data());
-    return socket->SendExactHTTP(response.data(), (VCard)std::strlen(response.data()));
+    return socket->SendExactHTTP(response.data(), static_cast<VCard>(std::strlen(response.data())));
 }
 
 static BOOL WebSocketSendFrame(VSocket* const socket, const unsigned char opcode, const char* const payload, const int len)
@@ -421,16 +421,16 @@ static BOOL WebSocketSendFrame(VSocket* const socket, const unsigned char opcode
         hdr[1U] = 127;
         for (int i{ 0 }; i < 8; ++i)
         {
-            hdr[2 + i] = static_cast<char>((len >> (56 - i * 8)));
+            hdr[static_cast<unsigned long long>(2 + i)] = static_cast<char>((len >> (56 - i * 8)));
         }
         hdrLen = 10;
     }
-    if (!socket->SendExactHTTP(hdr.data(), hdrLen))
+    if (!socket->SendExactHTTP(hdr.data(), static_cast<VCard>(hdrLen)))
     {
         vnclog.Print(LL_CONNERR, VNCLOG("WS send frame: header send failed\n"));
         return FALSE;
     }
-    if ((len > 0) && !socket->SendExactHTTP(payload, len))
+    if ((len > 0) && !socket->SendExactHTTP(payload, static_cast<VCard>(len)))
     {
         vnclog.Print(LL_CONNERR, VNCLOG("WS send frame: payload send failed\n"));
         return FALSE;
@@ -462,7 +462,7 @@ static BOOL WebSocketRecvFrame(VSocket* const socket, char* const payload, const
             {
                 return FALSE;
             }
-            len = (static_cast<unsigned char>(lenBytes[0U]) << 8) | static_cast<unsigned char>(lenBytes[1U]);
+            len = static_cast<std::uint64_t>((static_cast<unsigned char>(lenBytes[0U]) << 8) | static_cast<unsigned char>(lenBytes[1U]));
         }
         else if (len == 127)
         {
@@ -473,7 +473,7 @@ static BOOL WebSocketRecvFrame(VSocket* const socket, char* const payload, const
             len = 0;
             for (int i{ 0 }; i < 8; ++i)
             {
-                len = (len << 8) | static_cast<unsigned char>(lenBytes[i]);
+                len = (len << 8) | static_cast<unsigned char>(lenBytes[static_cast<unsigned long long>(i)]);
             }
         }
 
@@ -508,7 +508,7 @@ static BOOL WebSocketRecvFrame(VSocket* const socket, char* const payload, const
 
         if (len > 0)
         {
-            if (!socket->ReadExactHTTP(payload + totalLen, (VCard)len))
+            if (!socket->ReadExactHTTP(payload + totalLen, static_cast<VCard>(len)))
             {
                 return FALSE;
             }
@@ -516,7 +516,7 @@ static BOOL WebSocketRecvFrame(VSocket* const socket, char* const payload, const
             {
                 for (std::uint64_t i{ 0U }; i < len; ++i)
                 {
-                    payload[totalLen + i] ^= mask[i & 3];
+                    payload[static_cast<std::uint64_t>(totalLen) + i] ^= mask[i & 3];
                 }
             }
             totalLen += static_cast<int>(len);
@@ -767,7 +767,7 @@ struct WebSocketBridgeContext
 
 static unsigned __stdcall WSClientToRFB(void* const arg)
 {
-    WebSocketBridgeContext* ctx = (WebSocketBridgeContext*)arg;
+    WebSocketBridgeContext* ctx = reinterpret_cast<WebSocketBridgeContext*>(arg);
     static const int WS_MAX_PAYLOAD = 256 * 1024;
     std::vector<char> payloadBuf(WS_MAX_PAYLOAD);
     char* payload = payloadBuf.data();
@@ -781,7 +781,7 @@ static unsigned __stdcall WSClientToRFB(void* const arg)
         }
         if (len > 0)
         {
-            if (!ctx->rfb->SendExact(payload, len))
+            if (!ctx->rfb->SendExact(payload, static_cast<VCard>(len)))
             {
                 vnclog.Print(LL_CONNERR, VNCLOG("WS->RFB: SendExact failed\n"));
                 ctx->running = FALSE;
@@ -794,7 +794,7 @@ static unsigned __stdcall WSClientToRFB(void* const arg)
 
 static unsigned __stdcall WSRFBToClient(void* const arg)
 {
-    WebSocketBridgeContext* ctx = (WebSocketBridgeContext*)arg;
+    WebSocketBridgeContext* ctx = reinterpret_cast<WebSocketBridgeContext*>(arg);
     static const int RFB_BUF = 256 * 1024;
     std::vector<char> buf(RFB_BUF);
     while (ctx->running)
@@ -823,7 +823,7 @@ static void BridgeWebSocketToRFB(VSocket* const clientSocket, [[maybe_unused]] v
     // Connect a second socket to the local RFB listener so that the
     // browser's WebSocket stream is forwarded to the VNC server.
     VSocket* rfbSocket = new VSocket();
-    if (!rfbSocket->CreateConnect("127.0.0.1", settings->getPortNumber()))
+    if (!rfbSocket->CreateConnect("127.0.0.1", static_cast<VCard>(settings->getPortNumber())))
     {
         vnclog.Print(LL_CONNERR, VNCLOG("failed to connect WebSocket bridge to RFB port %d\n"), settings->getPortNumber());
         delete rfbSocket;
@@ -837,8 +837,8 @@ static void BridgeWebSocketToRFB(VSocket* const clientSocket, [[maybe_unused]] v
     ::InitializeCriticalSection(&ctx.sendLock);
 
     unsigned int tid1{ 0U }, tid2 = 0;
-    HANDLE h1 = (HANDLE)_beginthreadex(nullptr, 0, WSClientToRFB, &ctx, 0, &tid1);
-    HANDLE h2 = (HANDLE)_beginthreadex(nullptr, 0, WSRFBToClient, &ctx, 0, &tid2);
+    HANDLE h1 = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, WSClientToRFB, &ctx, 0, &tid1));
+    HANDLE h2 = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, 0, WSRFBToClient, &ctx, 0, &tid2));
 
     if (h1 && h2)
     {
@@ -912,7 +912,7 @@ void vncHTTPConnectThread::DoHTTP(VSocket* const socket)
         }
         if (headerPos < static_cast<int>(sizeof(headers)) - 1)
         {
-            headers[headerPos++] = c;
+            headers[static_cast<unsigned long long>(headerPos++)] = c;
         }
         if (c == '\n')
         {
@@ -927,7 +927,7 @@ void vncHTTPConnectThread::DoHTTP(VSocket* const socket)
             emptyline = FALSE;
         }
     }
-    headers[headerPos] = 0;
+    headers[static_cast<unsigned long long>(headerPos)] = 0;
 
 
     // Is this a WebSocket upgrade request for the RFB tunnel?
@@ -952,7 +952,7 @@ void vncHTTPConnectThread::DoHTTP(VSocket* const socket)
     if (filename[0U] != '/')
     {
         vnclog.Print(LL_CONNERR, VNCLOG("filename didn't begin with '/'\n"));
-        socket->SendExactHTTP(HTTP_MSG_NOSUCHFILE, (const VCard)std::strlen(HTTP_MSG_NOSUCHFILE));
+        socket->SendExactHTTP(HTTP_MSG_NOSUCHFILE, static_cast<const VCard>(std::strlen(HTTP_MSG_NOSUCHFILE)));
         return;
     }
 
@@ -960,11 +960,11 @@ void vncHTTPConnectThread::DoHTTP(VSocket* const socket)
     if ((std::strcmp(filename.data(), "/") == 0) && !m_server->SockConnected())
     {
         vnclog.Print(LL_CLIENTS, VNCLOG("DoHTTP: sending disabled page (RFB not listening)\n"));
-        if (!socket->SendExactHTTP(HTTP_MSG_OK, (VCard)std::strlen(HTTP_MSG_OK)))
+        if (!socket->SendExactHTTP(HTTP_MSG_OK, static_cast<VCard>(std::strlen(HTTP_MSG_OK))))
         {
             return;
         }
-        socket->SendExactHTTP(HTTP_MSG_NOSOCKCONN, (const VCard)std::strlen(HTTP_MSG_NOSOCKCONN));
+        socket->SendExactHTTP(HTTP_MSG_NOSOCKCONN, static_cast<const VCard>(std::strlen(HTTP_MSG_NOSOCKCONN)));
         return;
     }
 
@@ -992,7 +992,7 @@ void vncHTTPConnectThread::DoHTTP(VSocket* const socket)
                     return;
                 }
 
-                resourcesize = ::SizeofResource(hInstResDLL, resource);
+                resourcesize = static_cast<int>(::SizeofResource(hInstResDLL, resource));
 
                 resourcehan = ::LoadResource(hInstResDLL, resource);
                 if (resourcehan == nullptr)
@@ -1000,7 +1000,7 @@ void vncHTTPConnectThread::DoHTTP(VSocket* const socket)
                     return;
                 }
 
-                resourceptr = (char*)::LockResource(resourcehan);
+                resourceptr = reinterpret_cast<char*>(::LockResource(resourcehan));
                 if (resourceptr == nullptr)
                 {
                     return;
@@ -1011,12 +1011,12 @@ void vncHTTPConnectThread::DoHTTP(VSocket* const socket)
                           "Cache-Control: no-cache, no-store, must-revalidate\r\n"
                           "Pragma: no-cache\r\n"
                           "Expires: 0\r\n\r\n", GetResourceMimeType(filemapping[x].type), resourcesize);
-                if (!socket->SendExactHTTP(responseHdr.data(), (VCard)std::strlen(responseHdr.data())))
+                if (!socket->SendExactHTTP(responseHdr.data(), static_cast<VCard>(std::strlen(responseHdr.data()))))
                 {
                     return;
                 }
 
-                if (!socket->SendExactHTTP(resourceptr, resourcesize))
+                if (!socket->SendExactHTTP(resourceptr, static_cast<VCard>(resourcesize)))
                 {
                     return;
                 }
@@ -1046,7 +1046,7 @@ void vncHTTPConnectThread::DoHTTP(VSocket* const socket)
                     return;
                 }
 
-                resourcesize = ::SizeofResource(hInstResDLL, resource);
+                resourcesize = static_cast<int>(::SizeofResource(hInstResDLL, resource));
 
                 resourcehan = ::LoadResource(hInstResDLL, resource);
                 if (resourcehan == nullptr)
@@ -1054,7 +1054,7 @@ void vncHTTPConnectThread::DoHTTP(VSocket* const socket)
                     return;
                 }
 
-                resourceptr = (char*)::LockResource(resourcehan);
+                resourceptr = reinterpret_cast<char*>(::LockResource(resourcehan));
                 if (resourceptr == nullptr)
                 {
                     return;
@@ -1065,12 +1065,12 @@ void vncHTTPConnectThread::DoHTTP(VSocket* const socket)
                           "Cache-Control: no-cache, no-store, must-revalidate\r\n"
                           "Pragma: no-cache\r\n"
                           "Expires: 0\r\n\r\n", GetResourceMimeType(filemapping[x].type), resourcesize);
-                if (!socket->SendExactHTTP(responseHdr.data(), (VCard)std::strlen(responseHdr.data())))
+                if (!socket->SendExactHTTP(responseHdr.data(), static_cast<VCard>(std::strlen(responseHdr.data()))))
                 {
                     return;
                 }
 
-                if (!socket->SendExactHTTP(resourceptr, resourcesize))
+                if (!socket->SendExactHTTP(resourceptr, static_cast<VCard>(resourcesize)))
                 {
                     return;
                 }
@@ -1082,7 +1082,7 @@ void vncHTTPConnectThread::DoHTTP(VSocket* const socket)
 
     // Send the NoSuchFile notification message to the client
     vnclog.Print(LL_CONNERR, VNCLOG("DoHTTP: sending 404 for %s\n"), filename.data());
-    if (!socket->SendExactHTTP(HTTP_MSG_NOSUCHFILE, (VCard)std::strlen(HTTP_MSG_NOSUCHFILE)))
+    if (!socket->SendExactHTTP(HTTP_MSG_NOSUCHFILE, static_cast<VCard>(std::strlen(HTTP_MSG_NOSUCHFILE))))
     {
         return;
     }
@@ -1093,7 +1093,7 @@ char* vncHTTPConnectThread::ReadLine(VSocket* const socket, const char delimiter
 {
     int max{ 1024 };
     // Allocate the maximum required buffer
-    char* buffer = new char[max + 1];
+    char* buffer = new char[static_cast<unsigned long long>(max + 1)];
     int buffpos{ 0 };
 
     // Read in data until a delimiter is read
@@ -1137,7 +1137,7 @@ vncHTTPConnect::~vncHTTPConnect()
     {
         // *** This is a hack to force the listen thread out of the accept call,
         // because Winsock accept semantics are broken.
-        ((vncHTTPConnectThread*)m_thread)->m_shutdown = TRUE;
+        (reinterpret_cast<vncHTTPConnectThread*>(m_thread))->m_shutdown = TRUE;
 
         VSocket socket;
         if (settings->getIPV6())
@@ -1199,7 +1199,7 @@ BOOL vncHTTPConnect::Init(vncServer* const server, UINT port)
     }
 
     // And start it running
-    return ((vncHTTPConnectThread*)m_thread)->Init(&m_socket, server);
+    return (reinterpret_cast<vncHTTPConnectThread*>(m_thread))->Init(&m_socket, server);
 }
 
 BOOL vncHTTPConnect::InitTLS(vncServer* const server, UINT port, const char* certThumbprint)
@@ -1233,7 +1233,7 @@ BOOL vncHTTPConnect::InitTLS(vncServer* const server, UINT port, const char* cer
         return FALSE;
     }
 
-    vncHTTPConnectThread* t = (vncHTTPConnectThread*)m_thread;
+    vncHTTPConnectThread* t = reinterpret_cast<vncHTTPConnectThread*>(m_thread);
     t->m_tlsEnabled = true;
     if (certThumbprint && certThumbprint[0U])
     {

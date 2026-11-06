@@ -14,7 +14,7 @@
 
 #include "../../setpasswd/setpasswd/inifile.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <tchar.h>
 
@@ -173,9 +173,9 @@ void deskey(unsigned char* const key, const int edf) /* Thanks to James Gillogly
 
     for (j = 0; j < 56; ++j)
     {
-        l = pc1[j];
+        l = pc1[static_cast<unsigned long long>(j)];
         m = l & 07;
-        pc1m[j] = (key[l >> 3] & bytebit[m]) ? 1 : 0;
+        pc1m[static_cast<unsigned long long>(j)] = (key[l >> 3] & bytebit[static_cast<unsigned long long>(m)]) ? 1 : 0;
     }
     for (i = 0; i < 16; ++i)
     {
@@ -188,40 +188,40 @@ void deskey(unsigned char* const key, const int edf) /* Thanks to James Gillogly
             m = i << 1;
         }
         n = m + 1;
-        kn[m] = kn[n] = 0L;
+        kn[static_cast<unsigned long long>(m)] = kn[static_cast<unsigned long long>(n)] = 0L;
         for (j = 0; j < 28; ++j)
         {
-            l = j + totrot[i];
+            l = j + totrot[static_cast<unsigned long long>(i)];
             if (l < 28)
             {
-                pcr[j] = pc1m[l];
+                pcr[static_cast<unsigned long long>(j)] = pc1m[static_cast<unsigned long long>(l)];
             }
             else
             {
-                pcr[j] = pc1m[l - 28];
+                pcr[static_cast<unsigned long long>(j)] = pc1m[static_cast<unsigned long long>(l - 28)];
             }
         }
         for (j = 28; j < 56; ++j)
         {
-            l = j + totrot[i];
+            l = j + totrot[static_cast<unsigned long long>(i)];
             if (l < 56)
             {
-                pcr[j] = pc1m[l];
+                pcr[static_cast<unsigned long long>(j)] = pc1m[static_cast<unsigned long long>(l)];
             }
             else
             {
-                pcr[j] = pc1m[l - 28];
+                pcr[static_cast<unsigned long long>(j)] = pc1m[static_cast<unsigned long long>(l - 28)];
             }
         }
         for (j = 0; j < 24; ++j)
         {
-            if (pcr[pc2[j]])
+            if (pcr[pc2[static_cast<unsigned long long>(j)]])
             {
-                kn[m] |= bigbyte[j];
+                kn[static_cast<unsigned long long>(m)] |= bigbyte[static_cast<unsigned long long>(j)];
             }
-            if (pcr[pc2[j + 24]])
+            if (pcr[pc2[static_cast<unsigned long long>(j + 24)]])
             {
-                kn[n] |= bigbyte[j];
+                kn[static_cast<unsigned long long>(n)] |= bigbyte[static_cast<unsigned long long>(j)];
             }
         }
     }
@@ -231,13 +231,13 @@ void deskey(unsigned char* const key, const int edf) /* Thanks to James Gillogly
 
 static void scrunch(register unsigned char* outof, register unsigned long* into)
 {
-    *into = (*outof++ & 0xffL) << 24;
-    *into |= (*outof++ & 0xffL) << 16;
-    *into |= (*outof++ & 0xffL) << 8;
+    *into = static_cast<unsigned long>((*outof++ & 0xffL) << 24);
+    *into |= static_cast<unsigned long>((*outof++ & 0xffL) << 16);
+    *into |= static_cast<unsigned long>((*outof++ & 0xffL) << 8);
     *into++ |= (*outof++ & 0xffL);
-    *into = (*outof++ & 0xffL) << 24;
-    *into |= (*outof++ & 0xffL) << 16;
-    *into |= (*outof++ & 0xffL) << 8;
+    *into = static_cast<unsigned long>((*outof++ & 0xffL) << 24);
+    *into |= static_cast<unsigned long>((*outof++ & 0xffL) << 16);
+    *into |= static_cast<unsigned long>((*outof++ & 0xffL) << 8);
     *into |= (*outof & 0xffL);
     return;
 }
@@ -381,7 +381,7 @@ int vncEncryptPasswd(char* const passwd, char* const encryptedPasswd, const int 
     {
         deskey(fixedkey.data(), EN0);
     }
-    des((unsigned char*)encryptedPasswd, (unsigned char*)encryptedPasswd);
+    des(reinterpret_cast<unsigned char*>(encryptedPasswd), reinterpret_cast<unsigned char*>(encryptedPasswd));
 
     return 8;
 }
@@ -409,7 +409,7 @@ unsigned short getCpuHash()
     std::array<int, 4U> cpuinfo{ 0, 0, 0, 0 };
     __cpuid(cpuinfo.data(), 0);
     u16 hash = 0;
-    u16* ptr = (u16*)(&cpuinfo[0U]);
+    u16* ptr = reinterpret_cast<u16*>((&cpuinfo[0U]));
     for (u32 i = 0; i < 8; ++i)
     {
         hash += ptr[i];
@@ -466,7 +466,7 @@ int main(const int argc, char* argv[])
             return 0;
         }
         vncEncryptPasswd(passwd, epasswd.data(), true);
-        myIniFile.WriteInt((char*)"admin", (char*)"Secure", 1);
+        myIniFile.WriteInt(const_cast<char*>(reinterpret_cast<const char *>("admin")), const_cast<char*>(reinterpret_cast<const char *>("Secure")), 1);
         myIniFile.WritePassword(epasswd.data());
     }
     else

@@ -187,13 +187,13 @@ bool Region::get_rects(std::vector<Rect>& rects, const bool left2right, const bo
     unsigned char* buffer = new unsigned char[buffsize];
     std::memset(buffer, 0, buffsize);
 
-    if (::GetRegionData(rgn, buffsize, (LPRGNDATA)buffer) != buffsize)
+    if (::GetRegionData(rgn, buffsize, reinterpret_cast<LPRGNDATA>(buffer)) != buffsize)
     {
         delete[] buffer;
         return false;
     }
 
-    LPRGNDATA region_data = (LPRGNDATA)buffer;
+    LPRGNDATA region_data = reinterpret_cast<LPRGNDATA>(buffer);
     DWORD nRects = region_data->rdh.nCount;
 
     if (nRects == 0)
@@ -208,7 +208,7 @@ bool Region::get_rects(std::vector<Rect>& rects, const bool left2right, const bo
 
     int xInc = left2right ? 1 : -1;
     int yInc = topdown ? 1 : -1;
-    int i = topdown ? 0 : nRects - 1;
+    int i = topdown ? 0 : static_cast<int>(nRects - 1);
 #if defined(_DEBUG)
     //vnclog.Print(LL_INTWARN, VNCLOG("Region %s %p contains rects:\n"), m_name, rgn);
 #endif
@@ -263,16 +263,16 @@ int Region::Numrects()
     DWORD dwCount(0U);
     int nRects(0);
 
-    dwCount = ::GetRegionData(rgn, 0, 0);
+    dwCount = ::GetRegionData(rgn, 0, nullptr);
     pRgnData = new char[dwCount];
-    if (pRgnData == 0)
+    if (pRgnData == nullptr)
     {
         return 0;
     }
 
     if (::GetRegionData(rgn, dwCount, reinterpret_cast<LPRGNDATA>(pRgnData)) == dwCount)
     {
-        nRects = reinterpret_cast<LPRGNDATA>(pRgnData)->rdh.nCount;
+        nRects = static_cast<int>(reinterpret_cast<LPRGNDATA>(pRgnData)->rdh.nCount);
     }
 
     delete[] pRgnData;

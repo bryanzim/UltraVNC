@@ -31,7 +31,7 @@ extern HINSTANCE hInst;
 LONG vncSetAuth::LoadInt_(const LPCSTR valname, const LONG defval)
 {
     {
-        return myIniFile.ReadInt("admin_auth", (char*)valname, defval);
+        return myIniFile.ReadInt("admin_auth", const_cast<char*>(reinterpret_cast<const char *>(valname)), defval);
     }
 }
 
@@ -39,22 +39,22 @@ TCHAR* vncSetAuth::LoadString_(const LPCSTR keyname)
 {
     {
         TCHAR* authhosts = new char[150U];
-        myIniFile.ReadString("admin_auth", (char*)keyname, authhosts, 150);
-        return (TCHAR*)authhosts;
+        myIniFile.ReadString("admin_auth", const_cast<char*>(reinterpret_cast<const char *>(keyname)), authhosts, 150);
+        return reinterpret_cast<TCHAR*>(authhosts);
     }
 }
 
 void vncSetAuth::SaveInt_(const LPCSTR valname, const LONG val)
 {
     {
-        myIniFile.WriteInt("admin_auth", (char*)valname, val);
+        myIniFile.WriteInt("admin_auth", const_cast<char*>(reinterpret_cast<const char *>(valname)), val);
     }
 }
 
 void vncSetAuth::SaveString_(const LPCSTR valname, TCHAR* const buffer)
 {
     {
-        myIniFile.WriteString("admin_auth", (char*)valname, buffer);
+        myIniFile.WriteString("admin_auth", const_cast<char*>(reinterpret_cast<const char *>(valname)), buffer);
     }
 }
 
@@ -253,7 +253,7 @@ void vncSetAuth::Show(const BOOL show)
         {
             // [v1.0.2-jp1 fix] Load resouce from dll
             //DialogBoxParam(hAppInstance,
-            ::DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_MSLOGON), nullptr, (DLGPROC)DialogProc, (LPARAM)this);
+            ::DialogBoxParam(hInst, MAKEINTRESOURCE(IDD_MSLOGON), nullptr, reinterpret_cast<DLGPROC>(DialogProc), reinterpret_cast<LPARAM>(this));
         }
     }
 }
@@ -265,7 +265,7 @@ BOOL CALLBACK vncSetAuth::DialogProc(const HWND hwnd, const UINT uMsg, const WPA
 #ifndef _X64
     vncSetAuth* _this = (vncSetAuth*)::GetWindowLong(hwnd, GWL_USERDATA);
 #else
-    vncSetAuth* _this = (vncSetAuth*)::GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    vncSetAuth* _this = reinterpret_cast<vncSetAuth*>(::GetWindowLongPtr(hwnd, GWLP_USERDATA));
 #endif
 
     switch (uMsg)
@@ -280,7 +280,7 @@ BOOL CALLBACK vncSetAuth::DialogProc(const HWND hwnd, const UINT uMsg, const WPA
         ::SetWindowLongPtr(hwnd, GWLP_USERDATA, lParam);
 #endif
 
-        _this = (vncSetAuth*)lParam;
+        _this = reinterpret_cast<vncSetAuth*>(lParam);
         ::SetDlgItemText(hwnd, IDC_GROUP1, _this->pszgroup1.data());
         ::SetDlgItemText(hwnd, IDC_GROUP2, _this->pszgroup2.data());
         ::SetDlgItemText(hwnd, IDC_GROUP3, _this->pszgroup3.data());
@@ -392,9 +392,9 @@ BOOL CALLBACK vncSetAuth::DialogProc(const HWND hwnd, const UINT uMsg, const WPA
                 _this->locdom3 = _this->locdom3 + 2;
             }
 
-            ::GetDlgItemText(hwnd, IDC_GROUP1, (LPSTR)_this->pszgroup1.data(), 240);
-            ::GetDlgItemText(hwnd, IDC_GROUP2, (LPSTR)_this->pszgroup2.data(), 240);
-            ::GetDlgItemText(hwnd, IDC_GROUP3, (LPSTR)_this->pszgroup3.data(), 240);
+            ::GetDlgItemText(hwnd, IDC_GROUP1, reinterpret_cast<LPSTR>(_this->pszgroup1.data()), 240);
+            ::GetDlgItemText(hwnd, IDC_GROUP2, reinterpret_cast<LPSTR>(_this->pszgroup2.data()), 240);
+            ::GetDlgItemText(hwnd, IDC_GROUP3, reinterpret_cast<LPSTR>(_this->pszgroup3.data()), 240);
 
             _this->savegroup1(_this->pszgroup1.data());
             _this->savegroup2(_this->pszgroup2.data());

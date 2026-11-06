@@ -87,9 +87,9 @@ char* vncServer::generateCode()
 {
     PIP_ADAPTER_INFO AdapterInfo{};
     DWORD dwBufLen = sizeof(IP_ADAPTER_INFO);
-    char* mac_addr = (char*)std::malloc(18);
+    char* mac_addr = reinterpret_cast<char*>(std::malloc(18));
 
-    AdapterInfo = (IP_ADAPTER_INFO*)std::malloc(sizeof(IP_ADAPTER_INFO));
+    AdapterInfo = reinterpret_cast<IP_ADAPTER_INFO*>(std::malloc(sizeof(IP_ADAPTER_INFO)));
     if (AdapterInfo == nullptr)
     {
         std::free(mac_addr);
@@ -100,7 +100,7 @@ char* vncServer::generateCode()
     if (::GetAdaptersInfo(AdapterInfo, &dwBufLen) == ERROR_BUFFER_OVERFLOW)
     {
         std::free(AdapterInfo);
-        AdapterInfo = (IP_ADAPTER_INFO*)std::malloc(dwBufLen);
+        AdapterInfo = reinterpret_cast<IP_ADAPTER_INFO*>(std::malloc(dwBufLen));
         if (AdapterInfo == nullptr)
         {
             std::free(mac_addr);
@@ -151,7 +151,7 @@ vncServer::vncServer()
     m_name = nullptr;
     m_port = DISPLAY_TO_PORT(0);
     m_port_http = DISPLAY_TO_HPORT(0); // TightVNC 1.2.7
-    m_blacklist = 0;
+    m_blacklist = nullptr;
     {
         vncPasswd::FromClear clearPWD(settings->getSecure());
         std::memcpy(settings->getPasswd(), clearPWD, MAXPWLEN);
@@ -364,7 +364,7 @@ vncClientId vncServer::AddClient(VSocket* const socket, const BOOL auth, const B
     {
         client->SetHost(szHost);
     }
-    client->SetHostPort(port);
+    client->SetHostPort(static_cast<int>(port));
 
     // Start the client
     if (!client->Init(this, socket, auth, shared, clientid))
@@ -778,11 +778,11 @@ void vncServer::ListAuthClients(const HWND hListBox)
             ::_snprintf_s(szDescription.data(), szDescription.size(), 255, "%s - %s", client->GetRepeaterID(), client->GetClientNameName());
             szDescription[255U] = '\0';
 
-            ::SendMessage(hListBox, LB_ADDSTRING, 0, (LPARAM)szDescription.data());
+            ::SendMessage(hListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(szDescription.data()));
         }
         else
         {
-            ::SendMessage(hListBox, LB_ADDSTRING, 0, (LPARAM)client->GetClientNameName());
+            ::SendMessage(hListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(client->GetClientNameName()));
         }
     }
 }
@@ -804,11 +804,11 @@ void vncServer::ListUnauthClients(const HWND hListBox)
             ::_snprintf_s(szDescription.data(), szDescription.size(), 255, "%s - %s", client->GetRepeaterID(), client->GetClientNameName());
             szDescription[255U] = '\0';
 
-            ::SendMessage(hListBox, LB_ADDSTRING, 0, (LPARAM)szDescription.data());
+            ::SendMessage(hListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(szDescription.data()));
         }
         else
         {
-            ::SendMessage(hListBox, LB_ADDSTRING, 0, (LPARAM)client->GetClientNameName());
+            ::SendMessage(hListBox, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(client->GetClientNameName()));
         }
     }
 }
@@ -827,7 +827,7 @@ bool vncServer::IsThereASlowClient()
     {
         if (GetClient(*i)->IsSlowEncoding())
         {
-            if (GetTimeFunction() - GetClient(*i)->GetConnectTime() > 10000)
+            if (GetTimeFunction() - static_cast<DWORD>(GetClient(*i)->GetConnectTime()) > 10000)
             {
                 fFound = true;
                 break;
@@ -1105,7 +1105,7 @@ void vncServer::RemoveClient(vncClientId clientid)
             {
                 std::array<char, UNLEN + 1> username;
 
-                processHelper::CurrentUser((char*)username.data(), sizeof(username));
+                processHelper::CurrentUser(reinterpret_cast<char*>(username.data()), sizeof(username));
                 if (std::strcmp(username.data(), "") != 0)
                 {
                     // Yes - force a user logoff on disconnect!
@@ -1400,8 +1400,8 @@ BOOL vncServer::EnableConnections(const BOOL On)
                 // Yes, so cycle through the ports, looking for a free one!
                 for (int i{ 0 }; i < 99; ++i)
                 {
-                    m_port = DISPLAY_TO_PORT(i);
-                    m_port_http = DISPLAY_TO_HPORT(i);
+                    m_port = static_cast<UINT>(DISPLAY_TO_PORT(i));
+                    m_port_http = static_cast<UINT>(DISPLAY_TO_HPORT(i));
 
                     vnclog.Print(LL_CLIENTS, VNCLOG("trying port number %d\n"), m_port);
 
@@ -1624,7 +1624,7 @@ void vncServer::GetScreenInfo(int& width, int& height, int& depth)
                         }
                         else
                         {
-                            scrinfo.format.bitsPerPixel = (CARD8)(m_bminfo.bmi.bmiHeader.biBitCount);
+                            scrinfo.format.bitsPerPixel = static_cast<CARD8>((m_bminfo.bmi.bmiHeader.biBitCount));
                             if (scrinfo.format.bitsPerPixel == 24)
                             {
                                 scrinfo.format.bitsPerPixel = 32;
@@ -1662,7 +1662,7 @@ void vncServer::SetAuthHosts(const char* const hostlist)
 {
     omni_mutex_lock l(m_clientsLock, 57);
 
-    if (hostlist == 0)
+    if (hostlist == nullptr)
     {
         vnclog.Print(LL_INTINFO, VNCLOG("authhosts cleared\n"));
         settings->setAuthhosts("");
@@ -1708,7 +1708,7 @@ vncServer::AcceptQueryReject vncServer::VerifyHost(const char* const hostname)
 
     // -=- Is the specified host blacklisted?
     vncServer::BlacklistEntry* current = m_blacklist;
-    vncServer::BlacklistEntry* previous = 0;
+    vncServer::BlacklistEntry* previous = nullptr;
     SYSTEMTIME systime;
     FILETIME ftime;
     LARGE_INTEGER now;
@@ -1717,7 +1717,7 @@ vncServer::AcceptQueryReject vncServer::VerifyHost(const char* const hostname)
     ::GetSystemTime(&systime);
     ::SystemTimeToFileTime(&systime, &ftime);
     now.LowPart = ftime.dwLowDateTime;
-    now.HighPart = ftime.dwHighDateTime;
+    now.HighPart = static_cast<LONG>(ftime.dwHighDateTime);
     now.QuadPart /= 10000000; // Convert it into seconds
 
     while (current)
@@ -1765,7 +1765,7 @@ vncServer::AcceptQueryReject vncServer::VerifyHost(const char* const hostname)
     }
 
     // Has a hostname been specified?
-    if (hostname == 0)
+    if (hostname == nullptr)
     {
         vnclog.Print(LL_INTWARN, VNCLOG("verify failed - null hostname\n"));
         return vncServer::aqrReject;
@@ -1882,7 +1882,7 @@ vncServer::AcceptQueryReject vncServer::VerifyHost(const char* const hostname)
             verifiedHost = autoAccept ? vncServer::aqrAccept : vncServer::aqrQuery;
         }
         break;
-    };
+    }
     return verifiedHost;
 }
 
@@ -1898,7 +1898,7 @@ void vncServer::AddAuthHostsBlacklist(const char* const machine)
     ::GetSystemTime(&systime);
     ::SystemTimeToFileTime(&systime, &ftime);
     now.LowPart = ftime.dwLowDateTime;
-    now.HighPart = ftime.dwHighDateTime;
+    now.HighPart = static_cast<LONG>(ftime.dwHighDateTime);
     now.QuadPart /= 10000000; // Convert it into seconds
 
     while (current)
@@ -1940,7 +1940,7 @@ void vncServer::RemAuthHostsBlacklist(const char* const machine)
     omni_mutex_lock l(m_clientsLockBlackList, 61);
     // -=- Is the specified host blacklisted?
     vncServer::BlacklistEntry* current = m_blacklist;
-    vncServer::BlacklistEntry* previous = 0;
+    vncServer::BlacklistEntry* previous = nullptr;
     while (current)
     {
         // Is this the entry we're interested in?
@@ -2080,7 +2080,7 @@ BOOL vncServer::SetDSMPlugin(const BOOL bForceReload)
         // Does the plugin need the VNC password to do its job ?
         if (!::_stricmp(m_pDSMPlugin->GetPluginParams(), "VNCPasswordNeeded"))
         {
-            ::strcpy_s(szParams.data(), szParams.size(), vncDecryptPasswd((char*)settings->getPasswd(), settings->getSecure()));
+            ::strcpy_s(szParams.data(), szParams.size(), vncDecryptPasswd(reinterpret_cast<char*>(settings->getPasswd()), settings->getSecure()));
         }
         else
         {
@@ -2252,7 +2252,7 @@ bool vncServer::IsClient(vncClient* const pClient)
 
 DWORD WINAPI retryThread(const LPVOID lpParam)
 {
-    vncServer* pIface = (vncServer*)lpParam;
+    vncServer* pIface = reinterpret_cast<vncServer*>(lpParam);
     pIface->actualRetryThread();
     return true;
 }

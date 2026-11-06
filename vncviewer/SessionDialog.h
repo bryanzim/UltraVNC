@@ -127,7 +127,7 @@ public:
     bool setdefaults;
     bool connect(HWND hwnd);
     map<pair<int, int>, int> resolutionMap;
-    ;
+    
 
     void HandleQuickOption(int quickoption);
     void InitDlgProcEncoders();

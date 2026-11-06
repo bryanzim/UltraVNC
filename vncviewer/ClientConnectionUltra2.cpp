@@ -83,8 +83,8 @@ void ClientConnection::DecompressJpegRect(BYTE* src, const int srclen, BYTE* con
     struct jpeg_error_mgr jerr;
     jpeg_source_mgr sourceManager{};
     bool jpegError{ false };
-    JOCTET* jpegBufferPtr = (JOCTET*)src;
-    std::size_t jpegBufferLen = srclen;
+    JOCTET* jpegBufferPtr = reinterpret_cast<JOCTET*>(src);
+    std::size_t jpegBufferLen = static_cast<std::size_t>(srclen);
     cinfo.client_data = &jpegError;
     int pixelsize;
     BYTE* dstBuf{ nullptr };
@@ -99,7 +99,7 @@ void ClientConnection::DecompressJpegRect(BYTE* src, const int srclen, BYTE* con
         jpeg_create_decompress(&cinfo);
         //JpegSetSrcManager(&cinfo, (char*)src, srclen);
 
-        jpegBufferPtr = (JOCTET*)src;
+        jpegBufferPtr = reinterpret_cast<JOCTET*>(src);
         jpegBufferLen = static_cast<std::size_t>(srclen);
 
         sourceManager.init_source = JpegInitSource;
@@ -172,15 +172,15 @@ void ClientConnection::DecompressJpegRect(BYTE* src, const int srclen, BYTE* con
         {
             throw ErrorException(L"JPEG temporary buffer exceeds size limit.");
         }
-        temporary.resize(static_cast<std::size_t>(w) * h * pixelsize);
+        temporary.resize(static_cast<std::size_t>(w) * static_cast<std::size_t>(h) * static_cast<std::size_t>(pixelsize));
         dstBuf = temporary.data();
         dstBufIsTemp = true;
     }
 
-    std::vector<JSAMPROW> rowPointer(h);
+    std::vector<JSAMPROW> rowPointer(static_cast<unsigned long long>(h));
     for (int dy{ 0 }; dy < h; ++dy)
     {
-        rowPointer[dy] = (JSAMPROW)(&dstBuf[dy * w * pixelsize]);
+        rowPointer[static_cast<unsigned long long>(dy)] = static_cast<JSAMPROW>((&dstBuf[dy * w * pixelsize]));
     }
 
     jpeg_start_decompress(&cinfo);
@@ -212,12 +212,12 @@ void ClientConnection::DecompressJpegRect(BYTE* src, const int srclen, BYTE* con
         {
             throw ErrorException(L"Invalid JPEG pixel format.");
         }
-        for (std::size_t i{ 0U }; i < static_cast<std::size_t>(w) * h; ++i)
+        for (std::size_t i{ 0U }; i < static_cast<std::size_t>(w) * static_cast<std::size_t>(h); ++i)
         {
             CARD32 pixel = ((static_cast<CARD32>(dstBuf[i * 3]) * m_remoteformat.redMax / 255) << m_remoteformat.redShift) |
                            ((static_cast<CARD32>(dstBuf[i * 3 + 1]) * m_remoteformat.greenMax / 255) << m_remoteformat.greenShift) |
                            ((static_cast<CARD32>(dstBuf[i * 3 + 2]) * m_remoteformat.blueMax / 255) << m_remoteformat.blueShift);
-            std::memcpy(dst + i * bytesPerPixel, &pixel, bytesPerPixel);
+            std::memcpy(dst + i * static_cast<std::size_t>(bytesPerPixel), &pixel, static_cast<size_t>(bytesPerPixel));
         }
     }
     return;
@@ -233,16 +233,16 @@ void ClientConnection::ReadUltra2Rect(rfbFramebufferUpdateRectHeader* const pfbu
     rfbZlibHeader hdr;
     // Read in the rfbZlibHeader
     omni_mutex_lock l(m_bitmapdcMutex);
-    ReadExact((char*)&hdr, sz_rfbZlibHeader);
+    ReadExact(reinterpret_cast<char*>(&hdr), sz_rfbZlibHeader);
     numCompBytes = Swap32IfLE(hdr.nBytes);
 
 
     // Read in the compressed data
     CheckBufferSize(numCompBytes);
-    ReadExact(m_netbuf, numCompBytes);
-    CheckZlibBufferSize(numRawBytes);
+    ReadExact(m_netbuf, static_cast<int>(numCompBytes));
+    CheckZlibBufferSize(static_cast<int>(numRawBytes));
 
-    DecompressJpegRect((BYTE*)m_netbuf, numCompBytes, (BYTE*)m_zlibbuf, numRawBytes, pfburh->r.w, pfburh->r.h, m_myFormat);
+    DecompressJpegRect(reinterpret_cast<BYTE*>(m_netbuf), static_cast<int>(numCompBytes), reinterpret_cast<BYTE*>(m_zlibbuf), static_cast<int>(numRawBytes), pfburh->r.w, pfburh->r.h, m_myFormat);
 
     SoftCursorLockArea(pfburh->r.x, pfburh->r.y, pfburh->r.w, pfburh->r.h);
     if (!Check_Rectangle_borders(pfburh->r.x, pfburh->r.y, pfburh->r.w, pfburh->r.h))
@@ -251,7 +251,7 @@ void ClientConnection::ReadUltra2Rect(rfbFramebufferUpdateRectHeader* const pfbu
     }
     if (m_DIBbits)
     {
-        ConvertAll_secure(pfburh->r.w, pfburh->r.h, pfburh->r.x, pfburh->r.y, m_myFormat.bitsPerPixel / 8, (BYTE*)m_zlibbuf,
-                          (BYTE*)m_DIBbits, m_si.framebufferWidth, numRawBytes, m_si.framebufferHeight);
+        ConvertAll_secure(pfburh->r.w, pfburh->r.h, pfburh->r.x, pfburh->r.y, m_myFormat.bitsPerPixel / 8, reinterpret_cast<BYTE*>(m_zlibbuf),
+                          reinterpret_cast<BYTE*>(m_DIBbits), m_si.framebufferWidth, static_cast<int>(numRawBytes), m_si.framebufferHeight);
     }
 }

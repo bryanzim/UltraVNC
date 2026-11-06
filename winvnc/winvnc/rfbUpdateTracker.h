@@ -10,8 +10,8 @@
 //
 
 
-#ifndef __RFB_UPDATETRACKER_INCLUDED__
-#define __RFB_UPDATETRACKER_INCLUDED__
+#ifndef RFB_UPDATETRACKER_INCLUDED
+#define RFB_UPDATETRACKER_INCLUDED
 
 #include "rfbRect.h"
 #include "rfbRegion.h"
@@ -30,8 +30,8 @@ namespace rfb
     class UpdateTracker
     {
     public:
-        explicit UpdateTracker() {};
-        virtual ~UpdateTracker() {};
+        explicit UpdateTracker() {}
+        virtual ~UpdateTracker() {}
 
         virtual void add_changed(const Region2D& region) = 0;
         virtual void add_cached(const Region2D& region) = 0;
@@ -41,11 +41,11 @@ namespace rfb
     class ClippedUpdateTracker : public UpdateTracker
     {
     public:
-        explicit ClippedUpdateTracker(UpdateTracker& child_) : child(child_) {};
-        ClippedUpdateTracker(UpdateTracker& child_, const Region2D& cliprgn_) : child(child_), cliprgn(cliprgn_) {};
-        virtual ~ClippedUpdateTracker() {};
+        explicit ClippedUpdateTracker(UpdateTracker& child_) : child(child_) {}
+        ClippedUpdateTracker(UpdateTracker& child_, const Region2D& cliprgn_) : child(child_), cliprgn(cliprgn_) {}
+        virtual ~ClippedUpdateTracker() {}
 
-        virtual void set_clip_region(const Region2D cliprgn_) { cliprgn = cliprgn_; };
+        virtual void set_clip_region(const Region2D cliprgn_) { cliprgn = cliprgn_; }
 
         virtual void add_changed(const Region2D& region);
         virtual void add_cached(const Region2D& region);
@@ -62,7 +62,7 @@ namespace rfb
         explicit SimpleUpdateTracker(bool use_copyrect = false);
         virtual ~SimpleUpdateTracker();
 
-        virtual void enable_copyrect(const bool enable) { copy_enabled = enable; };
+        virtual void enable_copyrect(const bool enable) { copy_enabled = enable; }
 
         virtual void add_changed(const Region2D& region);
         virtual void add_cached(const Region2D& region);
@@ -79,19 +79,19 @@ namespace rfb
         virtual void get_update(UpdateTracker& to) const;
 
         // Get the changed/copied regions
-        virtual const Region2D& get_changed_region() const { return changed; };
-        virtual const Region2D& get_cached_region() const { return cached; };
-        virtual const Region2D& get_copied_region() const { return copied; };
+        virtual const Region2D& get_changed_region() const { return changed; }
+        virtual const Region2D& get_cached_region() const { return cached; }
+        virtual const Region2D& get_copied_region() const { return copied; }
 
 
-        virtual bool is_empty() const { return changed.is_empty() && copied.is_empty() && cached.is_empty(); };
+        virtual bool is_empty() const { return changed.is_empty() && copied.is_empty() && cached.is_empty(); }
 
         virtual void clear()
         {
             changed.clear();
             copied.clear();
             cached.clear();
-        };
+        }
 
     protected:
         Region2D changed;
@@ -103,4 +103,4 @@ namespace rfb
 
 };
 
-#endif /* __RFB_UPDATETRACKER_INCLUDED__ */
+#endif /* RFB_UPDATETRACKER_INCLUDED */

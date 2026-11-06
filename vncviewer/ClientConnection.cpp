@@ -59,16 +59,16 @@ extern "C" {
 #include <rfb/dh.h>
 #include <sodium.h> // For X25519 key exchange (MS-Logon III)
 
-#include <commctrl.h>
+#include <CommCtrl.h>
 
 #ifndef WM_MOUSEHWHEEL
 #define WM_MOUSEHWHEEL 0x020E
 #endif
 #include "common/win32_helpers.h"
 
-#include <lmaccess.h>
-#include <lmalert.h>
-#include <lmat.h>
+#include <LMaccess.h>
+#include <LMalert.h>
+#include <LMat.h>
 #include <shellapi.h>
 
 using namespace helper;
@@ -264,12 +264,12 @@ BOOL CALLBACK DialogProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam);
 
 // adzm - 2010-07 - Extended clipboard
 ClientConnection::ClientConnection(VNCviewerApp* pAppLocal)
-    : fis{ 0 }, zis{ 0 }, zstdis{ 0 }, m_clipboard(ClipboardSettings::defaultViewerCaps)
+    : fis{ nullptr }, zis{ nullptr }, zstdis{ nullptr }, m_clipboard(ClipboardSettings::defaultViewerCaps)
 { Init(pAppLocal); }
 
 // adzm - 2010-07 - Extended clipboard
 ClientConnection::ClientConnection(VNCviewerApp* pAppLocal, SOCKET sock)
-    : fis{ 0 }, zis{ 0 }, zstdis{ 0 }, m_clipboard(ClipboardSettings::defaultViewerCaps)
+    : fis{ nullptr }, zis{ nullptr }, zstdis{ nullptr }, m_clipboard(ClipboardSettings::defaultViewerCaps)
 {
     Init(pAppLocal);
     if (m_opts->autoDetect)
@@ -286,11 +286,11 @@ ClientConnection::ClientConnection(VNCviewerApp* pAppLocal, SOCKET sock)
         struct sockaddr_storage svraddr;
         int sasize = sizeof(svraddr);
         std::memset(&svraddr, 0, sizeof(svraddr));
-        if (getpeername(sock, (struct sockaddr*)&svraddr, &sasize) != SOCKET_ERROR)
+        if (getpeername(sock, reinterpret_cast<struct sockaddr*>(&svraddr), &sasize) != SOCKET_ERROR)
         {
             if (svraddr.ss_family == AF_INET)
             {
-                struct sockaddr_in* s = (struct sockaddr_in*)&svraddr;
+                struct sockaddr_in* s = reinterpret_cast<struct sockaddr_in*>(&svraddr);
                 m_port = ntohs(s->sin_port);
                 ::_sntprintf_s(m_host.data(), m_host.size(), _TRUNCATE, _T("%u.%u.%u.%u"),
                              static_cast<unsigned int>(s->sin_addr.S_un.S_un_b.s_b1),
@@ -301,7 +301,7 @@ ClientConnection::ClientConnection(VNCviewerApp* pAppLocal, SOCKET sock)
             else
             {
 #undef Byte
-                struct sockaddr_in6* s = (struct sockaddr_in6*)&svraddr;
+                struct sockaddr_in6* s = reinterpret_cast<struct sockaddr_in6*>(&svraddr);
                 m_port = ntohs(s->sin6_port);
                 ::_sntprintf_s(m_host.data(), m_host.size(), _TRUNCATE,
                              _T("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x"), s->sin6_addr.u.Byte[0U],
@@ -315,13 +315,13 @@ ClientConnection::ClientConnection(VNCviewerApp* pAppLocal, SOCKET sock)
         {
             ::_tcscpy_s(m_host.data(), m_host.size(), sz_L1.data());
             m_port = 0;
-        };
+        }
     }
     else
     {
         struct sockaddr_in svraddr;
         int sasize = sizeof(svraddr);
-        if (getpeername(sock, (struct sockaddr*)&svraddr, &sasize) != SOCKET_ERROR)
+        if (getpeername(sock, reinterpret_cast<struct sockaddr*>(&svraddr), &sasize) != SOCKET_ERROR)
         {
             ::_sntprintf_s(m_host.data(), m_host.size(), _TRUNCATE, _T("%u.%u.%u.%u"),
                          static_cast<unsigned int>(svraddr.sin_addr.S_un.S_un_b.s_b1),
@@ -334,13 +334,13 @@ ClientConnection::ClientConnection(VNCviewerApp* pAppLocal, SOCKET sock)
         {
             ::_tcscpy_s(m_host.data(), m_host.size(), sz_L1.data());
             m_port = 0;
-        };
+        }
     }
 }
 
 // adzm - 2010-07 - Extended clipboard
 ClientConnection::ClientConnection(VNCviewerApp* pAppLocal, LPTSTR host, int port)
-    : fis{ 0 }, zis{ 0 }, zstdis{ 0 }, m_clipboard(ClipboardSettings::defaultViewerCaps)
+    : fis{ nullptr }, zis{ nullptr }, zstdis{ nullptr }, m_clipboard(ClipboardSettings::defaultViewerCaps)
 {
     Init(pAppLocal);
     if (m_opts->autoDetect)
@@ -363,7 +363,7 @@ bool GetRealOSVersion(OSVERSIONINFOW& osInfo)
         return false;
     }
 
-    RtlGetVersionPtr fxPtr = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
+    RtlGetVersionPtr fxPtr = reinterpret_cast<RtlGetVersionPtr>(::GetProcAddress(hMod, "RtlGetVersion"));
     if (!fxPtr)
     {
         return false;
@@ -381,7 +381,7 @@ void ClientConnection::Init(VNCviewerApp* pAppLocal)
     m_supportsUnicodeTextChat = false;
     Pressed_Cancel = false;
     saved_set = false;
-    m_hwndcn = 0;
+    m_hwndcn = nullptr;
     m_desktopName = nullptr;
     m_desktopName_viewonly = nullptr;
     m_serverName[0U] = '\0';
@@ -396,7 +396,7 @@ void ClientConnection::Init(VNCviewerApp* pAppLocal)
     m_zlibbuf = nullptr;
     m_zlibbufsize = 0;
     // adzm - 2010-07 - Fix clipboard hangs
-    m_hwndNextViewer = (HWND)INVALID_HANDLE_VALUE;
+    m_hwndNextViewer = reinterpret_cast<HWND>(INVALID_HANDLE_VALUE);
     m_pApp = pAppLocal;
     m_dormant = 0;
     m_hBitmapDC = nullptr;
@@ -489,7 +489,7 @@ void ClientConnection::Init(VNCviewerApp* pAppLocal)
     kbitsPerSecond = 0;
     avg_kbitsPerSecond = 0;
     m_lLastChangeTimeTimeout = 0;
-    m_lLastChangeTime = timeGetTime();
+    m_lLastChangeTime = static_cast<int>(timeGetTime());
     // timeGetTime Fisr time switch is unstable... wait 30 seconds
     // 0 because we want the first encoding switching to occur quickly
     // (in Auto mode, ZRLE is used: pointless over a LAN)
@@ -595,12 +595,12 @@ void ClientConnection::Init(VNCviewerApp* pAppLocal)
     m_bClosedByUser = false;
     m_bReachedAuth = false;
     m_server_wants_keepalives = false;
-    hbmToolbig = (HBITMAP)::LoadImage(m_hInstResDLL, _T("tlbarbig.bmp"), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_LOADMAP3DCOLORS);
+    hbmToolbig = reinterpret_cast<HBITMAP>(::LoadImage(m_hInstResDLL, _T("tlbarbig.bmp"), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_LOADMAP3DCOLORS));
     hbmToolsmall =
-        (HBITMAP)::LoadImage(m_hInstResDLL, _T("tlbarsmall.bmp"), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_LOADMAP3DCOLORS);
-    hbmToolbigX = (HBITMAP)::LoadImage(m_hInstResDLL, _T("tlbarbigx.bmp"), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_LOADMAP3DCOLORS);
+        reinterpret_cast<HBITMAP>(::LoadImage(m_hInstResDLL, _T("tlbarsmall.bmp"), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_LOADMAP3DCOLORS));
+    hbmToolbigX = reinterpret_cast<HBITMAP>(::LoadImage(m_hInstResDLL, _T("tlbarbigx.bmp"), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_LOADMAP3DCOLORS));
     hbmToolsmallX =
-        (HBITMAP)::LoadImage(m_hInstResDLL, _T("tlbarsmallx.bmp"), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_LOADMAP3DCOLORS);
+        reinterpret_cast<HBITMAP>(::LoadImage(m_hInstResDLL, _T("tlbarsmallx.bmp"), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_LOADMAP3DCOLORS));
     rcth = nullptr;
 
     // adzm - 2010-07 - Extended clipboard
@@ -625,7 +625,7 @@ void ClientConnection::Init(VNCviewerApp* pAppLocal)
     m_fPluginStreamingOut = false;
 
     //adzm 2010-10
-    m_PendingMouseMove.dwMinimumMouseMoveInterval = m_opts->m_throttleMouse;
+    m_PendingMouseMove.dwMinimumMouseMoveInterval = static_cast<DWORD>(m_opts->m_throttleMouse);
     directx_used = false;
     directx_output = new ViewerDirectxClass;
 #ifdef _Gii
@@ -656,7 +656,7 @@ void ClientConnection::Init(VNCviewerApp* pAppLocal)
         if (hShcore)
         {
             // GetDpiForMonitor, Windows 8.1 [desktop apps only]
-            getDpiForMonitor = (PFN_GetDpiForMonitor)::GetProcAddress(hShcore, "GetDpiForMonitor");
+            getDpiForMonitor = reinterpret_cast<PFN_GetDpiForMonitor>(::GetProcAddress(hShcore, "GetDpiForMonitor"));
         }
     }
 
@@ -683,7 +683,7 @@ void ClientConnection::Init(VNCviewerApp* pAppLocal)
     }
     else
     {
-        m_Dpi = ::GetDeviceCaps(::GetDC(m_hwndMain), LOGPIXELSX);
+        m_Dpi = static_cast<UINT>(::GetDeviceCaps(::GetDC(m_hwndMain), LOGPIXELSX));
     }
     if (hShcore)
     {
@@ -700,7 +700,7 @@ void ClientConnection::Init(VNCviewerApp* pAppLocal)
     adjustWindowRectExForDpi = nullptr;
     if (hUser32In)
     {
-        adjustWindowRectExForDpi = (PFN_AdjustWindowRectExForDpi)::GetProcAddress(hUser32In, "AdjustWindowRectExForDpi");
+        adjustWindowRectExForDpi = reinterpret_cast<PFN_AdjustWindowRectExForDpi>(::GetProcAddress(hUser32In, "AdjustWindowRectExForDpi"));
     }
 }
 
@@ -708,7 +708,7 @@ void ClientConnection::Init(VNCviewerApp* pAppLocal)
 bool ClientConnection::SetSendTimeout(const int msecs)
 {
     int timeout = msecs < 0 ? m_opts->m_FTTimeout * 1000 : msecs;
-    if (setsockopt(m_sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout)) == SOCKET_ERROR)
+    if (setsockopt(m_sock, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<char*>(&timeout), sizeof(timeout)) == SOCKET_ERROR)
     {
         return false;
     }
@@ -718,7 +718,7 @@ bool ClientConnection::SetSendTimeout(const int msecs)
 bool ClientConnection::SetRecvTimeout(const int msecs)
 {
     int timeout = msecs < 0 ? m_opts->m_FTTimeout * 1000 : msecs;
-    if (setsockopt(m_sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout)) == SOCKET_ERROR)
+    if (setsockopt(m_sock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&timeout), sizeof(timeout)) == SOCKET_ERROR)
     {
         return false;
     }
@@ -808,7 +808,7 @@ void ClientConnection::Run()
                 ::SetDlgItemTextW(m_hwndStatus, IDC_STATUS, szText.data());
                 ::UpdateWindow(m_hwndStatus);
             }
-            ::Sleep(m_autoReconnect * 1000);
+            ::Sleep(static_cast<DWORD>(m_autoReconnect * 1000));
             if (Pressed_Cancel || forcedexit)
             {
                 throw;
@@ -926,13 +926,13 @@ void ClientConnection::DoConnection(const bool reconnect)
     reconnectcounter = m_reconnectcounter;
 
     havetobekilled = false;
-    ;
+    
 }
 
 DWORD WINAPI ReconnectThreadProc(const LPVOID lpParameter)
 {
-    ClientConnection* cc = (ClientConnection*)lpParameter;
-    ::Sleep(cc->m_autoReconnect * 1000);
+    ClientConnection* cc = reinterpret_cast<ClientConnection*>(lpParameter);
+    ::Sleep(static_cast<DWORD>(cc->m_autoReconnect * 1000));
     try
     {
         cc->DoConnection(true);
@@ -959,14 +959,14 @@ DWORD WINAPI ReconnectThreadProc(const LPVOID lpParameter)
             cc->reconnectcounter = 0;
         }
         //Seems is needed, countdown stop
-        ::PostMessage(cc->m_hwndMain, WM_CLOSE, cc->reconnectcounter, 1);
+        ::PostMessage(cc->m_hwndMain, WM_CLOSE, static_cast<WPARAM>(cc->reconnectcounter), 1);
     }
     return 0;
 }
 
 void ClientConnection::Reconnect()
 {
-    ::Sleep(m_autoReconnect * 1000);
+    ::Sleep(static_cast<DWORD>(m_autoReconnect * 1000));
     try
     {
         DoConnection();
@@ -992,7 +992,7 @@ void ClientConnection::Reconnect()
         {
             reconnectcounter = 0;
         }
-        ::PostMessage(m_hwndMain, WM_CLOSE, reconnectcounter, 1);
+        ::PostMessage(m_hwndMain, WM_CLOSE, static_cast<WPARAM>(reconnectcounter), 1);
     }
 }
 
@@ -1005,7 +1005,7 @@ HWND ClientConnection::GTGBS_ShowConnectWindow()
     }
     m_statusThread = nullptr;
     m_statusThread =
-        ::CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)ClientConnection::GTGBS_ShowStatusWindow, (LPVOID)this, 0, &threadID);
+        ::CreateThread(nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(ClientConnection::GTGBS_ShowStatusWindow), reinterpret_cast<LPVOID>(this), 0, &threadID);
     if (m_statusThread)
     {
         ::ResumeThread(m_statusThread);
@@ -1014,7 +1014,7 @@ HWND ClientConnection::GTGBS_ShowConnectWindow()
     {
         ::Sleep(100);
     }
-    return (HWND)0;
+    return static_cast<HWND>(nullptr);
 }
 
 ////////////////////////////////////////////////////////
@@ -1069,7 +1069,7 @@ void ClientConnection::CreateButtons(const BOOL mini, const BOOL ultra)
                     m_hwndTB = ::CreateToolbarEx(m_hwndTBwin,
                                                WS_CHILD | TBSTYLE_WRAPABLE | WS_VISIBLE | TBSTYLE_TOOLTIPS | CCS_NORESIZE |
                                                    TBSTYLE_FLAT | TBSTYLE_TRANSPARENT,
-                                               IDR_TOOLBAR, nr_buttons, nullptr, (UINT_PTR)hbmToolsmallX, (LPCTBBUTTON)&tbButtons,
+                                               IDR_TOOLBAR, nr_buttons, nullptr, reinterpret_cast<UINT_PTR>(hbmToolsmallX), reinterpret_cast<LPCTBBUTTON>(&tbButtons),
                                                nr_buttons, 10, 10, 10, 10, sizeof(TBBUTTON));
                 }
                 else
@@ -1077,7 +1077,7 @@ void ClientConnection::CreateButtons(const BOOL mini, const BOOL ultra)
                     m_hwndTB = ::CreateToolbarEx(m_hwndTBwin,
                                                WS_CHILD | TBSTYLE_WRAPABLE | WS_VISIBLE | TBSTYLE_TOOLTIPS | CCS_NORESIZE |
                                                    TBSTYLE_FLAT | TBSTYLE_TRANSPARENT,
-                                               IDR_TOOLBAR, nr_buttons, nullptr, (UINT_PTR)hbmToolbigX, (LPCTBBUTTON)&tbButtons,
+                                               IDR_TOOLBAR, nr_buttons, nullptr, reinterpret_cast<UINT_PTR>(hbmToolbigX), reinterpret_cast<LPCTBBUTTON>(&tbButtons),
                                                nr_buttons, 20, 20, 20, 20, sizeof(TBBUTTON));
                 }
             }
@@ -1088,7 +1088,7 @@ void ClientConnection::CreateButtons(const BOOL mini, const BOOL ultra)
                     m_hwndTB = ::CreateToolbarEx(m_hwndTBwin,
                                                WS_CHILD | TBSTYLE_WRAPABLE | WS_VISIBLE | TBSTYLE_TOOLTIPS | CCS_NORESIZE |
                                                    TBSTYLE_FLAT | TBSTYLE_TRANSPARENT,
-                                               IDR_TOOLBAR, nr_buttons, nullptr, (UINT_PTR)hbmToolsmall, (LPCTBBUTTON)&tbButtons,
+                                               IDR_TOOLBAR, nr_buttons, nullptr, reinterpret_cast<UINT_PTR>(hbmToolsmall), reinterpret_cast<LPCTBBUTTON>(&tbButtons),
                                                nr_buttons, 10, 10, 10, 10, sizeof(TBBUTTON));
                 }
                 else
@@ -1096,7 +1096,7 @@ void ClientConnection::CreateButtons(const BOOL mini, const BOOL ultra)
                     m_hwndTB = ::CreateToolbarEx(m_hwndTBwin,
                                                WS_CHILD | TBSTYLE_WRAPABLE | WS_VISIBLE | TBSTYLE_TOOLTIPS | CCS_NORESIZE |
                                                    TBSTYLE_FLAT | TBSTYLE_TRANSPARENT,
-                                               IDR_TOOLBAR, nr_buttons, nullptr, (UINT_PTR)hbmToolbig, (LPCTBBUTTON)&tbButtons,
+                                               IDR_TOOLBAR, nr_buttons, nullptr, reinterpret_cast<UINT_PTR>(hbmToolbig), reinterpret_cast<LPCTBBUTTON>(&tbButtons),
                                                nr_buttons, 20, 20, 20, 20, sizeof(TBBUTTON));
                 }
             }
@@ -1131,8 +1131,8 @@ void ClientConnection::CreateButtons(const BOOL mini, const BOOL ultra)
                                            ,
                                            WS_CHILD | TBSTYLE_WRAPABLE | WS_VISIBLE | TBSTYLE_TOOLTIPS | CCS_NORESIZE |
                                                TBSTYLE_FLAT | TBSTYLE_TRANSPARENT,
-                                           IDR_TOOLBAR, nr_buttons, (HINSTANCE)m_hInstResDLL, minibuttonmap,
-                                           (LPCTBBUTTON)&tbButtons, nr_buttons, 10, 10, 10, 10, sizeof(TBBUTTON));
+                                           IDR_TOOLBAR, nr_buttons, reinterpret_cast<HINSTANCE>(m_hInstResDLL), minibuttonmap,
+                                           reinterpret_cast<LPCTBBUTTON>(&tbButtons), nr_buttons, 10, 10, 10, 10, sizeof(TBBUTTON));
             }
             else
             {
@@ -1141,29 +1141,29 @@ void ClientConnection::CreateButtons(const BOOL mini, const BOOL ultra)
                                            ,
                                            WS_CHILD | TBSTYLE_WRAPABLE | WS_VISIBLE | TBSTYLE_TOOLTIPS | CCS_NORESIZE |
                                                TBSTYLE_FLAT | TBSTYLE_TRANSPARENT,
-                                           IDR_TOOLBAR, nr_buttons, (HINSTANCE)m_hInstResDLL, buttonmap, (LPCTBBUTTON)&tbButtons,
+                                           IDR_TOOLBAR, nr_buttons, reinterpret_cast<HINSTANCE>(m_hInstResDLL), buttonmap, reinterpret_cast<LPCTBBUTTON>(&tbButtons),
                                            nr_buttons, 20, 20, 20, 20, sizeof(TBBUTTON));
             }
         }
 
         tbab.hInst = m_hInstResDLL;
         tbab.nID = IDB_BITMAPl;
-        stdidx = static_cast<int>(::SendMessage(m_hwndTB, TB_ADDBITMAP, 6, (LPARAM)&tbab));
+        stdidx = static_cast<int>(::SendMessage(m_hwndTB, TB_ADDBITMAP, 6, reinterpret_cast<LPARAM>(&tbab)));
         RECT tbrect;
         RECT wrect;
         RECT trect;
-        ::SendMessage(m_hwndTB, TB_SETROWS, (WPARAM)MAKEWPARAM(2, true), (LPARAM)(LPRECT)(&trect));
+        ::SendMessage(m_hwndTB, TB_SETROWS, static_cast<WPARAM>(MAKEWPARAM(2, true)), reinterpret_cast<LPARAM>(static_cast<LPRECT>(&trect)));
 
         ::GetClientRect(m_hwndTB, &tbrect);
         ::GetClientRect(m_hwndTBwin, &wrect);
 
         m_hwndTT = ::CreateWindowW(TOOLTIPS_CLASSW, nullptr, TTS_ALWAYSTIP, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-                                 CW_USEDEFAULT, nullptr, (HMENU) nullptr, (HINSTANCE)m_hInstResDLL, nullptr);
+                                 CW_USEDEFAULT, nullptr, static_cast<HMENU>(nullptr), reinterpret_cast<HINSTANCE>(m_hInstResDLL), nullptr);
 
         // 6 May 2008 jdp make topmost so they display in fullscreen mode
         ::SetWindowPos(m_hwndTT, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-        DWORD buttonWidth = LOWORD(::SendMessage(m_hwndTB, TB_GETBUTTONSIZE, (WPARAM)0, (LPARAM)0));
-        DWORD buttonHeight = HIWORD(::SendMessage(m_hwndTB, TB_GETBUTTONSIZE, (WPARAM)0, (LPARAM)0));
+        DWORD buttonWidth = LOWORD(::SendMessage(m_hwndTB, TB_GETBUTTONSIZE, static_cast<WPARAM>(0), static_cast<LPARAM>(0)));
+        DWORD buttonHeight = HIWORD(::SendMessage(m_hwndTB, TB_GETBUTTONSIZE, static_cast<WPARAM>(0), static_cast<LPARAM>(0)));
 
         for (row = 0; row < 1; ++row)
             for (col = 0; col < nr_buttons; ++col)
@@ -1173,19 +1173,19 @@ void ClientConnection::CreateButtons(const BOOL mini, const BOOL ultra)
                 ti.hwnd = m_hwndTB;
                 ti.hinst = m_hInstResDLL;
                 ti.uId = static_cast<UINT>(id);
-                ti.lpszText = (LPTSTR)szTips[id++];
-                ti.rect.left = col * buttonWidth;
-                ti.rect.top = row * buttonHeight;
-                ti.rect.right = ti.rect.left + buttonWidth;
-                ti.rect.bottom = ti.rect.top + buttonHeight;
+                ti.lpszText = reinterpret_cast<LPTSTR>(szTips[id++]);
+                ti.rect.left = static_cast<LONG>(col * buttonWidth);
+                ti.rect.top = static_cast<LONG>(row * buttonHeight);
+                ti.rect.right = static_cast<LONG>(ti.rect.left + buttonWidth);
+                ti.rect.bottom = static_cast<LONG>(ti.rect.top + buttonHeight);
 
-                ::SendMessage(m_hwndTT, TTM_ADDTOOL, 0, (LPARAM)(LPTOOLINFO)&ti);
+                ::SendMessage(m_hwndTT, TTM_ADDTOOL, 0, reinterpret_cast<LPARAM>(reinterpret_cast<LPTOOLINFO>(&ti)));
             }
-        ::SendMessage(m_hwndTB, TB_SETTOOLTIPS, (WPARAM)(HWND)m_hwndTT, (LPARAM)0);
-        ::SendMessage(m_hwndTT, TTM_SETTIPBKCOLOR, (WPARAM)(COLORREF)0x00404040, (LPARAM)0);
-        ::SendMessage(m_hwndTT, TTM_SETTIPTEXTCOLOR, (WPARAM)(COLORREF)0x00F5B28D, (LPARAM)0);
-        ::SendMessage(m_hwndTT, TTM_SETDELAYTIME, (WPARAM) static_cast<DWORD>(TTDT_INITIAL),
-                    (LPARAM) static_cast<INT>(MAKELONG(200, 0)));
+        ::SendMessage(m_hwndTB, TB_SETTOOLTIPS, reinterpret_cast<WPARAM>(m_hwndTT), static_cast<LPARAM>(0));
+        ::SendMessage(m_hwndTT, TTM_SETTIPBKCOLOR, static_cast<WPARAM>(static_cast<COLORREF>(0x00404040)), static_cast<LPARAM>(0));
+        ::SendMessage(m_hwndTT, TTM_SETTIPTEXTCOLOR, static_cast<WPARAM>(static_cast<COLORREF>(0x00F5B28D)), static_cast<LPARAM>(0));
+        ::SendMessage(m_hwndTT, TTM_SETDELAYTIME, static_cast<WPARAM>(static_cast<DWORD>(TTDT_INITIAL)),
+                    static_cast<LPARAM>(static_cast<INT>(MAKELONG(200, 0))));
 
         ::ShowWindow(m_hwndTB, SW_SHOW);
         ::ShowWindow(m_hwndTBwin, SW_SHOW);
@@ -1229,7 +1229,7 @@ void ClientConnection::CreateButtons(const BOOL mini, const BOOL ultra)
                                        ,
                                        WS_CHILD | TBSTYLE_WRAPABLE | WS_VISIBLE | TBSTYLE_TOOLTIPS | CCS_NORESIZE | TBSTYLE_FLAT |
                                            TBSTYLE_TRANSPARENT,
-                                       IDR_TOOLBAR, nr_bitmaps, (HINSTANCE)m_hInstResDLL, IDB_BITMAPs, (LPCTBBUTTON)&tbButtons,
+                                       IDR_TOOLBAR, nr_bitmaps, reinterpret_cast<HINSTANCE>(m_hInstResDLL), IDB_BITMAPs, reinterpret_cast<LPCTBBUTTON>(&tbButtons),
                                        nr_buttons, 12, 8, 12, 8, sizeof(TBBUTTON));
         }
         else
@@ -1239,29 +1239,29 @@ void ClientConnection::CreateButtons(const BOOL mini, const BOOL ultra)
                                        ,
                                        WS_CHILD | TBSTYLE_WRAPABLE | WS_VISIBLE | TBSTYLE_TOOLTIPS | CCS_NORESIZE | TBSTYLE_FLAT |
                                            TBSTYLE_TRANSPARENT,
-                                       IDR_TOOLBAR, nr_bitmaps, (HINSTANCE)m_hInstResDLL, IDB_BITMAPl, (LPCTBBUTTON)&tbButtons,
+                                       IDR_TOOLBAR, nr_bitmaps, reinterpret_cast<HINSTANCE>(m_hInstResDLL), IDB_BITMAPl, reinterpret_cast<LPCTBBUTTON>(&tbButtons),
                                        nr_buttons, 20, 20, 20, 20, sizeof(TBBUTTON));
         }
 
         tbab.hInst = m_hInstResDLL;
         tbab.nID = IDB_BITMAPl;
-        stdidx = static_cast<int>(::SendMessage(m_hwndTB, TB_ADDBITMAP, 6, (LPARAM)&tbab));
+        stdidx = static_cast<int>(::SendMessage(m_hwndTB, TB_ADDBITMAP, 6, reinterpret_cast<LPARAM>(&tbab)));
         RECT tbrect;
         RECT wrect;
         RECT trect;
-        ::SendMessage(m_hwndTB, TB_SETROWS, (WPARAM)MAKEWPARAM(2, true), (LPARAM)(LPRECT)(&trect));
+        ::SendMessage(m_hwndTB, TB_SETROWS, static_cast<WPARAM>(MAKEWPARAM(2, true)), reinterpret_cast<LPARAM>(static_cast<LPRECT>(&trect)));
 
         ::GetClientRect(m_hwndTB, &tbrect);
         ::GetClientRect(m_hwndTBwin, &wrect);
 
         m_hwndTT = ::CreateWindowW(TOOLTIPS_CLASSW, nullptr, TTS_ALWAYSTIP, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-                                 CW_USEDEFAULT, nullptr, (HMENU) nullptr, (HINSTANCE)m_hInstResDLL, nullptr);
+                                 CW_USEDEFAULT, nullptr, static_cast<HMENU>(nullptr), reinterpret_cast<HINSTANCE>(m_hInstResDLL), nullptr);
 
         // 6 May 2008 jdp make topmost so they display in fullscreen mode
         ::SetWindowPos(m_hwndTT, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 
-        DWORD buttonWidth = LOWORD(::SendMessage(m_hwndTB, TB_GETBUTTONSIZE, (WPARAM)0, (LPARAM)0));
-        DWORD buttonHeight = HIWORD(::SendMessage(m_hwndTB, TB_GETBUTTONSIZE, (WPARAM)0, (LPARAM)0));
+        DWORD buttonWidth = LOWORD(::SendMessage(m_hwndTB, TB_GETBUTTONSIZE, static_cast<WPARAM>(0), static_cast<LPARAM>(0)));
+        DWORD buttonHeight = HIWORD(::SendMessage(m_hwndTB, TB_GETBUTTONSIZE, static_cast<WPARAM>(0), static_cast<LPARAM>(0)));
 
         for (row = 0; row < 1; ++row)
             for (col = 0; col < nr_buttons; ++col)
@@ -1271,19 +1271,19 @@ void ClientConnection::CreateButtons(const BOOL mini, const BOOL ultra)
                 ti.hwnd = m_hwndTB;
                 ti.hinst = m_hInstResDLL;
                 ti.uId = static_cast<UINT>(id);
-                ti.lpszText = (LPTSTR)szTips[id++];
-                ti.rect.left = col * buttonWidth;
-                ti.rect.top = row * buttonHeight;
-                ti.rect.right = ti.rect.left + buttonWidth;
-                ti.rect.bottom = ti.rect.top + buttonHeight;
+                ti.lpszText = reinterpret_cast<LPTSTR>(szTips[id++]);
+                ti.rect.left = static_cast<LONG>(col * buttonWidth);
+                ti.rect.top = static_cast<LONG>(row * buttonHeight);
+                ti.rect.right = static_cast<LONG>(ti.rect.left + buttonWidth);
+                ti.rect.bottom = static_cast<LONG>(ti.rect.top + buttonHeight);
 
-                ::SendMessage(m_hwndTT, TTM_ADDTOOL, 0, (LPARAM)(LPTOOLINFO)&ti);
+                ::SendMessage(m_hwndTT, TTM_ADDTOOL, 0, reinterpret_cast<LPARAM>(reinterpret_cast<LPTOOLINFO>(&ti)));
             }
-        ::SendMessage(m_hwndTB, TB_SETTOOLTIPS, (WPARAM)(HWND)m_hwndTT, (LPARAM)0);
-        ::SendMessage(m_hwndTT, TTM_SETTIPBKCOLOR, (WPARAM)(COLORREF)0x0000ff00, (LPARAM)0);
-        ::SendMessage(m_hwndTT, TTM_SETTIPTEXTCOLOR, (WPARAM)(COLORREF)0x00000000, (LPARAM)0);
-        ::SendMessage(m_hwndTT, TTM_SETDELAYTIME, (WPARAM) static_cast<DWORD>(TTDT_INITIAL),
-                    (LPARAM) static_cast<INT>(MAKELONG(200, 0)));
+        ::SendMessage(m_hwndTB, TB_SETTOOLTIPS, reinterpret_cast<WPARAM>(m_hwndTT), static_cast<LPARAM>(0));
+        ::SendMessage(m_hwndTT, TTM_SETTIPBKCOLOR, static_cast<WPARAM>(static_cast<COLORREF>(0x0000ff00)), static_cast<LPARAM>(0));
+        ::SendMessage(m_hwndTT, TTM_SETTIPTEXTCOLOR, static_cast<WPARAM>(static_cast<COLORREF>(0x00000000)), static_cast<LPARAM>(0));
+        ::SendMessage(m_hwndTT, TTM_SETDELAYTIME, static_cast<WPARAM>(static_cast<DWORD>(TTDT_INITIAL)),
+                    static_cast<LPARAM>(static_cast<INT>(MAKELONG(200, 0))));
 
         ::ShowWindow(m_hwndTB, SW_SHOW);
         ::ShowWindow(m_hwndTBwin, SW_SHOW);
@@ -1339,8 +1339,8 @@ void ClientConnection::GTGBS_CreateToolbar()
         wndclass.hCursor = ::LoadCursor(hInstance, MAKEINTRESOURCE(IDC_DOTCURSOR));
     }
     //wndclass.hbrBackground	= (HBRUSH) GetStockObject(BLACK_BRUSH);
-    wndclass.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
-    wndclass.lpszMenuName = (const TCHAR*)nullptr;
+    wndclass.hbrBackground = reinterpret_cast<HBRUSH>((COLOR_BTNFACE + 1));
+    wndclass.lpszMenuName = static_cast<const TCHAR*>(nullptr);
     wndclass.lpszClassName = VWR_WND_CLASS_NAME;
 
     ::RegisterClass(&wndclass);
@@ -1355,7 +1355,7 @@ void ClientConnection::GTGBS_CreateToolbar()
         m_hwndMain,
         nullptr, // Menu handle
         m_hInstResDLL, nullptr);
-    helper::SafeSetWindowUserData(m_hwndTBwin, (LONG_PTR)this);
+    helper::SafeSetWindowUserData(m_hwndTBwin, reinterpret_cast<LONG_PTR>(this));
     ::ShowWindow(m_hwndTBwin, SW_HIDE);
     //////////////////////////////////////////////////
     if ((clr.right - clr.left) > 140 + 85 + 14 * 24)
@@ -1403,9 +1403,9 @@ void ClientConnection::GTGBS_CreateToolbar()
     ///////////////////////////////////////////////////
     m_logo_wnd =
         ::CreateWindow(_T("combobox"), _T(""), WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_SIMPLE | CBS_AUTOHSCROLL | WS_VSCROLL,
-                     clr.right - clr.left - 45 - 70, 4, 70, 28, m_hwndTBwin, (HMENU)9999, m_hInstResDLL, nullptr);
+                     clr.right - clr.left - 45 - 70, 4, 70, 28, m_hwndTBwin, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(9999)), m_hInstResDLL, nullptr);
     m_button_wnd = ::CreateWindow(_T("button"), _T(""), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | WS_TABSTOP,
-                                clr.right - clr.left - 45 - 70 - 200, 4, 20, 20, m_hwndTBwin, (HMENU)9998, m_hInstResDLL, nullptr);
+                                clr.right - clr.left - 45 - 70 - 200, 4, 20, 20, m_hwndTBwin, reinterpret_cast<HMENU>(static_cast<UINT_PTR>(9998)), m_hInstResDLL, nullptr);
     std::array<TCHAR, 256U> valname;
     MRU* m_pMRU;
     m_pMRU = new MRU(SESSION_MRU_KEY_NAME, 98);
@@ -1415,12 +1415,12 @@ void ClientConnection::GTGBS_CreateToolbar()
         std::array<TCHAR, MAX_HOST_NAME_LEN> proxyname;
         ::_sntprintf_s(proxyname.data(), proxyname.size(), _TRUNCATE, _T("%s:%li (%s:%li)"), m_host.data(), m_port, m_proxyhost.data(),
                      m_proxyport);
-        ::SendMessageW(m_logo_wnd, CB_ADDSTRING, 0, (LPARAM)proxyname.data());
+        ::SendMessageW(m_logo_wnd, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(proxyname.data()));
     }
     for (int i{ 0 }; i < m_pMRU->NumItems(); ++i)
     {
         m_pMRU->GetItem(i, valname.data(), 255);
-        [[maybe_unused]] const int pos = static_cast<int>(::SendMessageW(m_logo_wnd, CB_ADDSTRING, 0, (LPARAM)valname.data()));
+        [[maybe_unused]] const int pos = static_cast<int>(::SendMessageW(m_logo_wnd, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(valname.data())));
     }
     ::SendMessage(m_logo_wnd, CB_SETCURSEL, 0, 0);
     if (m_pMRU)
@@ -1463,7 +1463,7 @@ void ClientConnection::CreateDisplay()
     }
     //wndclass.hbrBackground	= (HBRUSH) GetStockObject(BLACK_BRUSH);
     wndclass.hbrBackground = nullptr; //(HBRUSH)(COLOR_WINDOW+1);
-    wndclass.lpszMenuName = (const TCHAR*)nullptr;
+    wndclass.lpszMenuName = static_cast<const TCHAR*>(nullptr);
     wndclass.lpszClassName = VWR_WND_CLASS_NAME_VIEWER;
 
     ::RegisterClass(&wndclass);
@@ -1474,14 +1474,14 @@ void ClientConnection::CreateDisplay()
                                            //NULL,                // Parent handle
                             m_hwndMain,
                             nullptr, // Menu handle
-                            m_hInstResDLL, (LPVOID)this);
+                            m_hInstResDLL, reinterpret_cast<LPVOID>(this));
 
     //ShowWindow(m_hwnd, SW_HIDE);
     //ShowWindow(m_hwndcn, SW_SHOW);
     //adzm 2009-06-21 - let's not show until connected.
     ::SetTimer(m_hwndcn, m_fullupdate_timer, 30000, nullptr);
     // record which client created this window
-    helper::SafeSetWindowUserData(m_hwndcn, (LONG_PTR)this);
+    helper::SafeSetWindowUserData(m_hwndcn, reinterpret_cast<LONG_PTR>(this));
 
     //	SendMessage(m_hwnd,WM_CREATE,0,0);
 
@@ -1495,7 +1495,7 @@ void ClientConnection::CreateDisplay()
         vnclog.Print(3, _T("Palette-based display - %d entries, %d reserved\n"), ::GetDeviceCaps(m_hBitmapDC, SIZEPALETTE),
                      ::GetDeviceCaps(m_hBitmapDC, NUMRESERVED));
         std::array<BYTE, sizeof(LOGPALETTE) + 216 * sizeof(PALETTEENTRY)> buf;
-        LOGPALETTE* plp = (LOGPALETTE*)buf.data();
+        LOGPALETTE* plp = reinterpret_cast<LOGPALETTE*>(buf.data());
         int pepos{ 0 };
         for (int r{ 5 }; r >= 0; --r)
         {
@@ -1553,13 +1553,13 @@ void ClientConnection::CreateDisplay()
                 ::AppendMenu(m_hPopupMenuClipboardFormats, MF_STRING, ID_CLIPBOARD_HTML, _T("HTML"));
                 ::AppendMenu(m_hPopupMenuClipboardFormats, MF_STRING, ID_CLIPBOARD_DIB, _T("Image (Send or Request only)"));
             }
-            ::AppendMenu(m_hPopupMenuClipboard, MF_POPUP, (UINT_PTR)m_hPopupMenuClipboardFormats,
+            ::AppendMenu(m_hPopupMenuClipboard, MF_POPUP, reinterpret_cast<UINT_PTR>(m_hPopupMenuClipboardFormats),
                        _T("Automatically Synchronized Formats"));
             ::AppendMenu(m_hPopupMenuClipboard, MF_SEPARATOR, 0, nullptr);
             ::AppendMenu(m_hPopupMenuClipboard, MF_STRING, ID_CLIPBOARD_SEND, _T("Send All Formats Now..."));
             ::AppendMenu(m_hPopupMenuClipboard, MF_STRING, ID_CLIPBOARD_RECV, _T("Request All Formats Now..."));
         }
-        ::AppendMenu(hsysmenu, MF_POPUP, (UINT_PTR)m_hPopupMenuClipboard, _T("Clipboard"));
+        ::AppendMenu(hsysmenu, MF_POPUP, reinterpret_cast<UINT_PTR>(m_hPopupMenuClipboard), _T("Clipboard"));
 
         ::AppendMenu(hsysmenu, MF_SEPARATOR, 0, nullptr);
         m_hPopupMenuDisplay = ::CreatePopupMenu();
@@ -1575,7 +1575,7 @@ void ClientConnection::CreateDisplay()
             ::AppendMenu(m_hPopupMenuDisplay, MF_STRING, ID_MAXCOLORS, _T("Max Colors"));
             ::AppendMenu(m_hPopupMenuDisplay, MF_STRING, ID_256COLORS, _T("256 Colors"));
         }
-        ::AppendMenu(hsysmenu, MF_POPUP, (UINT_PTR)m_hPopupMenuDisplay, _T("Display"));
+        ::AppendMenu(hsysmenu, MF_POPUP, reinterpret_cast<UINT_PTR>(m_hPopupMenuDisplay), _T("Display"));
 
         ::AppendMenu(hsysmenu, MF_SEPARATOR, 0, nullptr);
         m_hPopupMenuKeyboard = ::CreatePopupMenu();
@@ -1587,7 +1587,7 @@ void ClientConnection::CreateDisplay()
             ::AppendMenu(m_hPopupMenuKeyboard, MF_STRING, ID_CONN_ALTDOWN, _T("Alt+Down"));
             ::AppendMenu(m_hPopupMenuKeyboard, MF_STRING, ID_CONN_ALTUP, _T("Alt+Up"));
         }
-        ::AppendMenu(hsysmenu, MF_POPUP, (UINT_PTR)m_hPopupMenuKeyboard, _T("Keyboard"));
+        ::AppendMenu(hsysmenu, MF_POPUP, reinterpret_cast<UINT_PTR>(m_hPopupMenuKeyboard), _T("Keyboard"));
         // Top level of the window menu, so the Ctrl+Alt+Shift+V accelerator
         // arrives as WM_SYSCOMMAND like the other window-menu commands.
         ::AppendMenu(hsysmenu, MF_STRING, ID_CONN_TYPECLIPBOARD, _T("Type Clipboard as Keystrokes	Ctrl+Alt+Shift+V"));
@@ -1599,7 +1599,7 @@ void ClientConnection::CreateDisplay()
             ::AppendMenu(m_hPopupMenuXvp, MF_STRING, ID_XVP_REBOOT, _T("Reboot VM"));
             ::AppendMenu(m_hPopupMenuXvp, MF_STRING, ID_XVP_RESET, _T("Reset VM"));
         }
-        ::AppendMenu(hsysmenu, MF_POPUP, (UINT_PTR)m_hPopupMenuXvp, _T("VM Power (xvp)"));
+        ::AppendMenu(hsysmenu, MF_POPUP, reinterpret_cast<UINT_PTR>(m_hPopupMenuXvp), _T("VM Power (xvp)"));
 
         // group connection options together
         ::AppendMenu(hsysmenu, MF_SEPARATOR, 0, nullptr);
@@ -1619,7 +1619,7 @@ void ClientConnection::CreateDisplay()
         ::AppendMenu(hsysmenu, MF_STRING, ID_CLOSEDAEMON, _T("Close Daemon"));
     }
     ::DrawMenuBar(m_hwndMain);
-    TheAccelKeys.SetWindowHandle(m_opts->m_NoHotKeys ? 0 : m_hwndMain);
+    TheAccelKeys.SetWindowHandle(m_opts->m_NoHotKeys ? nullptr : m_hwndMain);
 
     // adzm - 2010-07 - Extended clipboard
     UpdateMenuItems();
@@ -1665,7 +1665,7 @@ void ClientConnection::UpdateMenuItems()
 
     if (m_hwndTB)
     {
-        ::SendMessage(m_hwndTB, TB_ENABLEBUTTON, (WPARAM)ID_BUTTON_TYPECLIP, MAKELONG(!m_opts->m_ViewOnly, 0));
+        ::SendMessage(m_hwndTB, TB_ENABLEBUTTON, static_cast<WPARAM>(ID_BUTTON_TYPECLIP), MAKELONG(!m_opts->m_ViewOnly, 0));
     }
 
     // display menu
@@ -1992,7 +1992,7 @@ void ClientConnection::GetConnectDetails()
 DWORD WINAPI SocketTimeout(const LPVOID lpParam)
 {
     SOCKET* sock;
-    sock = (SOCKET*)lpParam;
+    sock = reinterpret_cast<SOCKET*>(lpParam);
 
     while (havetobekilled && !forcedexit)
     {
@@ -2068,19 +2068,19 @@ void ClientConnection::Connect()
                     {
                     case AF_INET:
                         IsIpv4 = true;
-                        pIpv4Addr = (struct sockaddr_in*)p->ai_addr;
+                        pIpv4Addr = reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
                         std::memcpy(&Ipv4Addr, pIpv4Addr, sizeof(Ipv4Addr));
                         Ipv4Addr.sin_family = AF_INET;
                         Ipv4Addr.sin_port = htons(static_cast<u_short>(m_port));
                         break;
                     case AF_INET6:
                         IsIpv6 = true;
-                        pIpv6Addr = (struct sockaddr_in6*)p->ai_addr;
+                        pIpv6Addr = reinterpret_cast<struct sockaddr_in6*>(p->ai_addr);
                         std::memcpy(&Ipv6Addr, pIpv6Addr, sizeof(Ipv6Addr));
                         Ipv6Addr.sin6_family = AF_INET6;
                         Ipv6Addr.sin6_port = htons(static_cast<u_short>(m_port));
 
-                        sockaddr_ip = (LPSOCKADDR)p->ai_addr;
+                        sockaddr_ip = reinterpret_cast<LPSOCKADDR>(p->ai_addr);
                         ipbufferlength = 46;
                         std::memset(ipstringbuffer.data(), 0, 46);
                         ::WSAAddressToStringA(sockaddr_ip, static_cast<DWORD>(p->ai_addrlen), nullptr, ipstringbuffer.data(),
@@ -2198,7 +2198,7 @@ void ClientConnection::Connect()
                 }
                 if (m_hwndStatus)
                 {
-                    ::SetDlgItemInt(m_hwndStatus, IDC_PORT, m_port, FALSE);
+                    ::SetDlgItemInt(m_hwndStatus, IDC_PORT, static_cast<UINT>(m_port), FALSE);
                 }
 
                 DWORD threadID;
@@ -2209,8 +2209,8 @@ void ClientConnection::Connect()
                     ::CloseHandle(ThreadSocketTimeout);
                     ThreadSocketTimeout = nullptr;
                 }
-                ThreadSocketTimeout = ::CreateThread(nullptr, 0, SocketTimeout, (LPVOID)&m_sock, 0, &threadID);
-                res = connect(m_sock, (LPSOCKADDR)&Ipv6Addr, sizeof(Ipv6Addr));
+                ThreadSocketTimeout = ::CreateThread(nullptr, 0, SocketTimeout, reinterpret_cast<LPVOID>(&m_sock), 0, &threadID);
+                res = connect(m_sock, reinterpret_cast<LPSOCKADDR>(&Ipv6Addr), sizeof(Ipv6Addr));
                 if ((res == SOCKET_ERROR) && !IsIpv4)
                 {
                     int a = ::WSAGetLastError();
@@ -2300,8 +2300,8 @@ void ClientConnection::Connect()
                 ::CloseHandle(ThreadSocketTimeout);
                 ThreadSocketTimeout = nullptr;
             }
-            ThreadSocketTimeout = ::CreateThread(nullptr, 0, SocketTimeout, (LPVOID)&m_sock, 0, &threadID);
-            res = connect(m_sock, (LPSOCKADDR)&Ipv4Addr, sizeof(Ipv4Addr));
+            ThreadSocketTimeout = ::CreateThread(nullptr, 0, SocketTimeout, reinterpret_cast<LPVOID>(&m_sock), 0, &threadID);
+            res = connect(m_sock, reinterpret_cast<LPSOCKADDR>(&Ipv4Addr), sizeof(Ipv4Addr));
 
             if (res == SOCKET_ERROR)
             {
@@ -2398,9 +2398,9 @@ void ClientConnection::Connect()
                     ::SetDlgItemTextW(m_hwndStatus, IDC_STATUS, sz_L46.data());
                 }
                 throw WarningException(sz_L46.data());
-            };
-            thataddr.sin_addr.s_addr = ((LPIN_ADDR)lphost->h_addr)->s_addr;
-        };
+            }
+            thataddr.sin_addr.s_addr = (reinterpret_cast<LPIN_ADDR>(lphost->h_addr))->s_addr;
+        }
 
         if (m_hwndStatus)
         {
@@ -2416,7 +2416,7 @@ void ClientConnection::Connect()
         }
         if (m_hwndStatus)
         {
-            ::SetDlgItemInt(m_hwndStatus, IDC_PORT, m_port, FALSE);
+            ::SetDlgItemInt(m_hwndStatus, IDC_PORT, static_cast<UINT>(m_port), FALSE);
         }
         thataddr.sin_family = AF_INET;
         thataddr.sin_port = htons(static_cast<u_short>(m_port));
@@ -2429,9 +2429,9 @@ void ClientConnection::Connect()
             ::CloseHandle(ThreadSocketTimeout);
             ThreadSocketTimeout = nullptr;
         }
-        ThreadSocketTimeout = ::CreateThread(nullptr, 0, SocketTimeout, (LPVOID)&m_sock, 0, &threadID);
+        ThreadSocketTimeout = ::CreateThread(nullptr, 0, SocketTimeout, reinterpret_cast<LPVOID>(&m_sock), 0, &threadID);
 
-        res = connect(m_sock, (LPSOCKADDR)&thataddr, sizeof(thataddr));
+        res = connect(m_sock, reinterpret_cast<LPSOCKADDR>(&thataddr), sizeof(thataddr));
         if (res == SOCKET_ERROR)
         {
             if (m_hwndStatus)
@@ -2471,7 +2471,7 @@ void ClientConnection::ConnectProxy()
         std::memset(&Ipv6Addr, 0, sizeof(Ipv6Addr));
         std::memset(&Ipv4Addr, 0, sizeof(Ipv4Addr));
         struct addrinfo hint;
-        [[maybe_unused]] struct addrinfo* info = 0;
+        [[maybe_unused]] struct addrinfo* info = nullptr;
         std::memset(&hint, 0, sizeof(hint));
 
         LPSOCKADDR sockaddr_ip;
@@ -2524,19 +2524,19 @@ void ClientConnection::ConnectProxy()
                     {
                     case AF_INET:
                         IsIpv4 = true;
-                        pIpv4Addr = (struct sockaddr_in*)p->ai_addr;
+                        pIpv4Addr = reinterpret_cast<struct sockaddr_in*>(p->ai_addr);
                         std::memcpy(&Ipv4Addr, pIpv4Addr, sizeof(Ipv4Addr));
                         Ipv4Addr.sin_family = AF_INET;
                         Ipv4Addr.sin_port = htons(static_cast<u_short>(m_proxyport));
                         break;
                     case AF_INET6:
                         IsIpv6 = true;
-                        pIpv6Addr = (struct sockaddr_in6*)p->ai_addr;
+                        pIpv6Addr = reinterpret_cast<struct sockaddr_in6*>(p->ai_addr);
                         std::memcpy(&Ipv6Addr, pIpv6Addr, sizeof(Ipv6Addr));
                         Ipv6Addr.sin6_family = AF_INET6;
                         Ipv6Addr.sin6_port = htons(static_cast<u_short>(m_proxyport));
 
-                        sockaddr_ip = (LPSOCKADDR)p->ai_addr;
+                        sockaddr_ip = reinterpret_cast<LPSOCKADDR>(p->ai_addr);
                         ipbufferlength = 46;
                         std::memset(ipstringbuffer.data(), 0, 46);
                         ::WSAAddressToStringA(sockaddr_ip, static_cast<DWORD>(p->ai_addrlen), nullptr, ipstringbuffer.data(),
@@ -2654,7 +2654,7 @@ void ClientConnection::ConnectProxy()
                 }
                 if (m_hwndStatus)
                 {
-                    ::SetDlgItemInt(m_hwndStatus, IDC_PORT, m_proxyport, FALSE);
+                    ::SetDlgItemInt(m_hwndStatus, IDC_PORT, static_cast<UINT>(m_proxyport), FALSE);
                 }
 
                 DWORD threadID;
@@ -2665,8 +2665,8 @@ void ClientConnection::ConnectProxy()
                     ::CloseHandle(ThreadSocketTimeout);
                     ThreadSocketTimeout = nullptr;
                 }
-                ThreadSocketTimeout = ::CreateThread(nullptr, 0, SocketTimeout, (LPVOID)&m_sock, 0, &threadID);
-                res = connect(m_sock, (LPSOCKADDR)&Ipv6Addr, sizeof(Ipv6Addr));
+                ThreadSocketTimeout = ::CreateThread(nullptr, 0, SocketTimeout, reinterpret_cast<LPVOID>(&m_sock), 0, &threadID);
+                res = connect(m_sock, reinterpret_cast<LPSOCKADDR>(&Ipv6Addr), sizeof(Ipv6Addr));
                 if ((res == SOCKET_ERROR) && !IsIpv4)
                 {
                     if (m_hwndStatus)
@@ -2736,7 +2736,7 @@ void ClientConnection::ConnectProxy()
             }
             if (m_hwndStatus)
             {
-                ::SetDlgItemInt(m_hwndStatus, IDC_PORT, m_proxyport, FALSE);
+                ::SetDlgItemInt(m_hwndStatus, IDC_PORT, static_cast<UINT>(m_proxyport), FALSE);
             }
 
             DWORD threadID;
@@ -2747,8 +2747,8 @@ void ClientConnection::ConnectProxy()
                 ::CloseHandle(ThreadSocketTimeout);
                 ThreadSocketTimeout = nullptr;
             }
-            ThreadSocketTimeout = ::CreateThread(nullptr, 0, SocketTimeout, (LPVOID)&m_sock, 0, &threadID);
-            res = connect(m_sock, (LPSOCKADDR)&Ipv4Addr, sizeof(Ipv4Addr));
+            ThreadSocketTimeout = ::CreateThread(nullptr, 0, SocketTimeout, reinterpret_cast<LPVOID>(&m_sock), 0, &threadID);
+            res = connect(m_sock, reinterpret_cast<LPSOCKADDR>(&Ipv4Addr), sizeof(Ipv4Addr));
 
             if (res == SOCKET_ERROR)
             {
@@ -2832,9 +2832,9 @@ void ClientConnection::ConnectProxy()
                     ::SetDlgItemTextW(m_hwndStatus, IDC_STATUS, sz_L46.data());
                 }
                 throw WarningException(sz_L46.data());
-            };
-            thataddr.sin_addr.s_addr = ((LPIN_ADDR)lphost->h_addr)->s_addr;
-        };
+            }
+            thataddr.sin_addr.s_addr = (reinterpret_cast<LPIN_ADDR>(lphost->h_addr))->s_addr;
+        }
 
         if (m_hwndStatus)
         {
@@ -2850,7 +2850,7 @@ void ClientConnection::ConnectProxy()
         }
         if (m_hwndStatus)
         {
-            ::SetDlgItemInt(m_hwndStatus, IDC_PORT, m_proxyport, FALSE);
+            ::SetDlgItemInt(m_hwndStatus, IDC_PORT, static_cast<UINT>(m_proxyport), FALSE);
         }
         thataddr.sin_family = AF_INET;
         thataddr.sin_port = htons(static_cast<u_short>(m_proxyport));
@@ -2863,9 +2863,9 @@ void ClientConnection::ConnectProxy()
             ::CloseHandle(ThreadSocketTimeout);
             ThreadSocketTimeout = nullptr;
         }
-        ThreadSocketTimeout = ::CreateThread(nullptr, 0, SocketTimeout, (LPVOID)&m_sock, 0, &threadID);
+        ThreadSocketTimeout = ::CreateThread(nullptr, 0, SocketTimeout, reinterpret_cast<LPVOID>(&m_sock), 0, &threadID);
 
-        res = connect(m_sock, (LPSOCKADDR)&thataddr, sizeof(thataddr));
+        res = connect(m_sock, reinterpret_cast<LPSOCKADDR>(&thataddr), sizeof(thataddr));
         if (res == SOCKET_ERROR)
         {
             if (m_hwndStatus)
@@ -2898,7 +2898,7 @@ void ClientConnection::SetSocketOptions()
 {
     // Disable Nagle's algorithm
     BOOL nodelayval = TRUE;
-    if (setsockopt(m_sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&nodelayval, sizeof(BOOL)))
+    if (setsockopt(m_sock, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&nodelayval), sizeof(BOOL)))
     {
         throw WarningException(sz_L50.data());
     }
@@ -3157,7 +3157,7 @@ void ClientConnection::NegotiateProtocolVersion()
     if ((m_minorVersion == 14) || (m_minorVersion == 16) || (m_minorVersion == 18)) // adzm 2010-09
     {
         int size;
-        ReadExact((char*)&size, sizeof(int));
+        ReadExact(reinterpret_cast<char*>(&size), sizeof(int));
         std::array<char, 1025U> mytext; //10k
         //block
         if ((size < 0) || (size > 1024))
@@ -3166,7 +3166,7 @@ void ClientConnection::NegotiateProtocolVersion()
         }
 
         ReadExact(mytext.data(), size);
-        mytext[size] = 0;
+        mytext[static_cast<unsigned long long>(size)] = 0;
 
         //adzm 2009-06-21 - auto-accept if specified
         if (!m_opts->m_fAutoAcceptIncoming)
@@ -3180,20 +3180,20 @@ void ClientConnection::NegotiateProtocolVersion()
                 if (!yes)
                 {
                     int nummer{ 0 };
-                    WriteExact((char*)&nummer, sizeof(int));
+                    WriteExact(reinterpret_cast<char*>(&nummer), sizeof(int));
                     throw WarningException(L"You refused the connection");
                 }
                 else
                 {
                     int nummer{ 1 };
-                    WriteExact((char*)&nummer, sizeof(int));
+                    WriteExact(reinterpret_cast<char*>(&nummer), sizeof(int));
                 }
             }
         }
         else
         {
             int nummer{ 1 };
-            WriteExact((char*)&nummer, sizeof(int));
+            WriteExact(reinterpret_cast<char*>(&nummer), sizeof(int));
         }
 
         m_minorVersion -= 10;
@@ -3326,7 +3326,7 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
     // adzm 2010-09
     if (m_minorVersion < 7)
     {
-        ReadExact((char*)&authScheme, sizeof(authScheme));
+        ReadExact(reinterpret_cast<char*>(&authScheme), sizeof(authScheme));
         authScheme = Swap32IfLE(authScheme);
 
         // adzm 2010-10 - TRanslate legacy constants into new 3.8-era constants
@@ -3343,7 +3343,7 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
     else
     {
         CARD8 authAllowedLength = 0;
-        ReadExact((char*)&authAllowedLength, sizeof(authAllowedLength));
+        ReadExact(reinterpret_cast<char*>(&authAllowedLength), sizeof(authAllowedLength));
         if (authAllowedLength == 0)
         {
             authScheme = rfbConnFailed;
@@ -3351,18 +3351,18 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
         else
         {
             std::array<CARD8, 256U> authAllowed;
-            ReadExact((char*)authAllowed.data(), authAllowedLength);
+            ReadExact(reinterpret_cast<char*>(authAllowed.data()), authAllowedLength);
 
             std::vector<CARD8> auth_supported;
             for (int i{ 0 }; i < authAllowedLength; ++i)
             {
-                if (std::find(current_auth.begin(), current_auth.end(), (CARD32)authAllowed[i]) != current_auth.end())
+                if (std::find(current_auth.begin(), current_auth.end(), static_cast<CARD32>(authAllowed[i])) != current_auth.end())
                 {
                     // only once max per scheme
                     continue;
                 }
 
-                switch (authAllowed[i])
+                switch (authAllowed[static_cast<unsigned long long>(i)])
                 {
                 case rfbClientInitExtraMsgSupportNew:
                     brfbClientInitExtraMsgSupportNew = true;
@@ -3385,7 +3385,7 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
                 case rfbXvpAuth:
                 case rfbVncAuth:
                 case rfbNoAuth:
-                    auth_supported.push_back(authAllowed[i]);
+                    auth_supported.push_back(authAllowed[static_cast<unsigned long long>(i)]);
                     break;
                 }
             }
@@ -3423,7 +3423,7 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
                 for (std::vector<CARD8>::iterator best_auth_it = auth_priority.begin(); best_auth_it != auth_priority.end();
                      ++best_auth_it)
                 {
-                    if (std::find(auth_supported.begin(), auth_supported.end(), (CARD32)(*best_auth_it)) != auth_supported.end())
+                    if (std::find(auth_supported.begin(), auth_supported.end(), static_cast<CARD32>((*best_auth_it))) != auth_supported.end())
                     {
                         authScheme = *best_auth_it;
                         break;
@@ -3435,22 +3435,22 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
             {
                 throw WarningException(L"No supported authentication methods!");
             }
-            CARD8 authSchemeMsg = (CARD8)authScheme;
-            WriteExact((char*)&authSchemeMsg, sizeof(authSchemeMsg));
+            CARD8 authSchemeMsg = static_cast<CARD8>(authScheme);
+            WriteExact(reinterpret_cast<char*>(&authSchemeMsg), sizeof(authSchemeMsg));
             if (authScheme == rfbClientInitExtraMsgSupport)
             {
                 rfbClientInitExtraMsg msg;
                 std::size_t wlen = std::wcslen(m_opts->m_InfoMsg.data());
                 if ((wlen > 0) && (wlen <= 127))
                 { // Max 127 wchars = 254 bytes (textLength is CARD8)
-                    msg.textLength = (CARD8)(wlen * sizeof(wchar_t));
-                    WriteExact((char*)&msg, sz_rfbClientInitExtraMsg);
-                    WriteExact((char*)m_opts->m_InfoMsg.data(), msg.textLength);
+                    msg.textLength = static_cast<CARD8>((wlen * sizeof(wchar_t)));
+                    WriteExact(reinterpret_cast<char*>(&msg), sz_rfbClientInitExtraMsg);
+                    WriteExact(reinterpret_cast<char*>(m_opts->m_InfoMsg.data()), msg.textLength);
                 }
                 else
                 {
                     msg.textLength = 0;
-                    WriteExact((char*)&msg, sz_rfbClientInitExtraMsg);
+                    WriteExact(reinterpret_cast<char*>(&msg), sz_rfbClientInitExtraMsg);
                 }
             }
         }
@@ -3513,7 +3513,7 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
     switch (authScheme)
     {
     case rfbConnFailed:
-        ReadExact((char*)&reasonLen, 4);
+        ReadExact(reinterpret_cast<char*>(&reasonLen), 4);
         reasonLen = Swap32IfLE(reasonLen);
         /* Security fix: validate reasonLen before addition to prevent UINT overflow */
         if (reasonLen > 4095)
@@ -3654,7 +3654,7 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
     }
 
     // Read the authentication response
-    ReadExact((char*)&authResult, sizeof(authResult));
+    ReadExact(reinterpret_cast<char*>(&authResult), sizeof(authResult));
     authResult = Swap32IfLE(authResult);
 
     if (m_pIntegratedPluginInterface && (authScheme == rfbUltraVNC_SecureVNCPluginAuth))
@@ -3688,7 +3688,7 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
         if ((authScheme == rfbVeNCypt) && ((m_lastVeNCryptSubType & 0xFFFF) == secTypeTokenTLS))
         {
             std::array<std::uint8_t, 3U> response{};
-            ReadExact((char*)response.data(), sizeof(response));
+            ReadExact(reinterpret_cast<char*>(response.data()), sizeof(response));
             std::uint16_t tokenLen = (static_cast<std::uint16_t>(response[1U]) << 8) | response[2U];
             if ((response[0U] & uvncTokenResponseSession) && (tokenLen > 0) && (tokenLen <= 64))
             {
@@ -3713,7 +3713,7 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
         // If a cached session token was rejected, clear it so the next reconnect
         // prompts for a fresh primary token.
         if ((authScheme == rfbVeNCypt) && ((m_lastVeNCryptSubType & 0xFFFF) == secTypeTokenTLS) &&
-            ((m_lastVeNCryptSubType & 0x80000000) != 0))
+            ((static_cast<unsigned int>(m_lastVeNCryptSubType) & 0x80000000) != 0))
         {
             m_opts->m_sessionToken[0U] = '\0';
             vnclog.Print(0, _T("VeNCrypt: session token rejected, cleared for next reconnect\n"));
@@ -3739,7 +3739,7 @@ void ClientConnection::Authenticate(std::vector<CARD32>& current_auth)
         {
             vnclog.Print(0, _T("VNC authentication failed! Extended information available."));
             //adzm 2010-05-11 - Send an explanatory message for the failure (if any)
-            ReadExact((char*)&reasonLen, 4);
+            ReadExact(reinterpret_cast<char*>(&reasonLen), 4);
             reasonLen = Swap32IfLE(reasonLen);
 
             /* Security fix: validate reasonLen before addition to prevent UINT overflow */
@@ -3827,7 +3827,7 @@ void ClientConnection::AuthSecureVNCPlugin()
     {
         ::strcpy_s(passwd.data(), 256, m_clearPasswd.data());
     }
-    else if (std::strlen((const char*)m_encPasswd.data()) > 0)
+    else if (std::strlen(reinterpret_cast<const char*>(m_encPasswd.data())) > 0)
     {
         char* pw = vncDecryptPasswd(m_encPasswd.data());
         ::strcpy_s(passwd.data(), passwd.size(), pw);
@@ -3845,11 +3845,11 @@ void ClientConnection::AuthSecureVNCPlugin()
     {
         WORD wChallengeLength{ 0U };
 
-        ReadExact((char*)&wChallengeLength, sizeof(wChallengeLength));
+        ReadExact(reinterpret_cast<char*>(&wChallengeLength), sizeof(wChallengeLength));
 
         BYTE* pChallengeData = new BYTE[wChallengeLength];
 
-        ReadExact((char*)pChallengeData, wChallengeLength);
+        ReadExact(reinterpret_cast<char*>(pChallengeData), wChallengeLength);
         ReadExact(&passphraseused, 1);
 
         bool bPasswordOK{ false };
@@ -3864,7 +3864,7 @@ void ClientConnection::AuthSecureVNCPlugin()
             {
                 if (!bTriedNoPassword && (std::strlen(passwd.data()) > 0))
                 {
-                    m_pIntegratedPluginInterface->SetPasswordData((const BYTE*)passwd.data(), static_cast<int>(std::strlen(passwd.data())));
+                    m_pIntegratedPluginInterface->SetPasswordData(reinterpret_cast<const BYTE*>(passwd.data()), static_cast<int>(std::strlen(passwd.data())));
                     bTriedNoPassword = true;
                 }
             }
@@ -3886,9 +3886,9 @@ void ClientConnection::AuthSecureVNCPlugin()
 
             WORD wResponseLength = static_cast<WORD>(nResponseLength);
 
-            WriteExact((char*)&wResponseLength, sizeof(wResponseLength));
+            WriteExact(reinterpret_cast<char*>(&wResponseLength), sizeof(wResponseLength));
 
-            WriteExact((char*)pResponseData, nResponseLength);
+            WriteExact(reinterpret_cast<char*>(pResponseData), nResponseLength);
 
             if (m_pIntegratedPluginInterface)
             {
@@ -3936,8 +3936,8 @@ void ClientConnection::AuthSecureVNCPlugin()
                 }
 
 
-                WriteExact((char*)&lengt, sizeof(lengt));
-                WriteExact((char*)passwd.data(), lengt);
+                WriteExact(reinterpret_cast<char*>(&lengt), sizeof(lengt));
+                WriteExact(reinterpret_cast<char*>(passwd.data()), lengt);
                 vncEncryptPasswd(m_encPasswd.data(), passwd.data());
             }
 
@@ -3992,7 +3992,7 @@ void ClientConnection::AuthSecureVNCPlugin_old()
     {
         ::strcpy_s(passwd.data(), 256, m_clearPasswd.data());
     }
-    else if (std::strlen((const char*)m_encPasswd.data()) > 0)
+    else if (std::strlen(reinterpret_cast<const char*>(m_encPasswd.data())) > 0)
     {
         char* pw = vncDecryptPasswd(m_encPasswd.data());
         ::strcpy_s(passwd.data(), passwd.size(), pw);
@@ -4009,11 +4009,11 @@ void ClientConnection::AuthSecureVNCPlugin_old()
     {
         WORD wChallengeLength{ 0U };
 
-        ReadExact((char*)&wChallengeLength, sizeof(wChallengeLength));
+        ReadExact(reinterpret_cast<char*>(&wChallengeLength), sizeof(wChallengeLength));
 
         BYTE* pChallengeData = new BYTE[wChallengeLength];
 
-        ReadExact((char*)pChallengeData, wChallengeLength);
+        ReadExact(reinterpret_cast<char*>(pChallengeData), wChallengeLength);
 
         bool bPasswordOK{ false };
         bool bPassphraseRequired{ false };
@@ -4026,7 +4026,7 @@ void ClientConnection::AuthSecureVNCPlugin_old()
             {
                 if (!bTriedNoPassword && (std::strlen(passwd.data()) > 0))
                 {
-                    m_pIntegratedPluginInterface->SetPasswordData((const BYTE*)passwd.data(), static_cast<int>(std::strlen(passwd.data())));
+                    m_pIntegratedPluginInterface->SetPasswordData(reinterpret_cast<const BYTE*>(passwd.data()), static_cast<int>(std::strlen(passwd.data())));
                     bTriedNoPassword = true;
                 }
                 else
@@ -4058,7 +4058,7 @@ void ClientConnection::AuthSecureVNCPlugin_old()
                             passwd[8U] = '\0';
                         }
 
-                        m_pIntegratedPluginInterface->SetPasswordData((const BYTE*)passwd.data(), static_cast<int>(std::strlen(passwd.data())));
+                        m_pIntegratedPluginInterface->SetPasswordData(reinterpret_cast<const BYTE*>(passwd.data()), static_cast<int>(std::strlen(passwd.data())));
                     }
                     else
                     {
@@ -4079,9 +4079,9 @@ void ClientConnection::AuthSecureVNCPlugin_old()
 
             WORD wResponseLength = static_cast<WORD>(nResponseLength);
 
-            WriteExact((char*)&wResponseLength, sizeof(wResponseLength));
+            WriteExact(reinterpret_cast<char*>(&wResponseLength), sizeof(wResponseLength));
 
-            WriteExact((char*)pResponseData, nResponseLength);
+            WriteExact(reinterpret_cast<char*>(pResponseData), nResponseLength);
 
             if (m_pIntegratedPluginInterface)
             {
@@ -4150,9 +4150,9 @@ void ClientConnection::AuthMsLogonII()
 
     WriteExact(pub.data(), sizeof(pub));
 
-    int64ToBytes(dh.createEncryptionKey(bytesToInt64(resp.data())), (char*)key.data());
+    int64ToBytes(dh.createEncryptionKey(bytesToInt64(resp.data())), reinterpret_cast<char*>(key.data()));
     vnclog.Print(100, _T("After DH: g=%I64u, m=%I64u, i=%I64u, key=%I64u\n"), bytesToInt64(gen.data()), bytesToInt64(mod.data()),
-                 bytesToInt64(pub.data()), bytesToInt64((char*)key.data()));
+                 bytesToInt64(pub.data()), bytesToInt64(reinterpret_cast<char*>(key.data())));
     // get username and passwd
     // m_clearPasswd is not from commandline only, but also filled by dsm
     // Need to be both &&
@@ -4167,7 +4167,7 @@ void ClientConnection::AuthMsLogonII()
         vncEncryptPasswdMs(m_encPasswdMs.data(), passwd.data());
         ::strcpy_s(m_ms_user.data(), m_ms_user.size(), user.data());
     }
-    else if (std::strlen((const char*)m_encPasswdMs.data()) > 0)
+    else if (std::strlen(reinterpret_cast<const char*>(m_encPasswdMs.data())) > 0)
     {
         char* pw = vncDecryptPasswdMs(m_encPasswdMs.data());
         ::strcpy_s(passwd.data(), passwd.size(), pw);
@@ -4212,8 +4212,8 @@ void ClientConnection::AuthMsLogonII()
         }
         //user = domain + "\\" + user;
     }
-    vncEncryptBytes2((unsigned char*)user.data(), sizeof(user), key.data());
-    vncEncryptBytes2((unsigned char*)passwd.data(), sizeof(passwd), key.data());
+    vncEncryptBytes2(reinterpret_cast<unsigned char*>(user.data()), sizeof(user), key.data());
+    vncEncryptBytes2(reinterpret_cast<unsigned char*>(passwd.data()), sizeof(passwd), key.data());
 
     WriteExactQueue(user.data(), sizeof(user));
     WriteExact(passwd.data(), sizeof(passwd));
@@ -4274,13 +4274,13 @@ void ClientConnection::AuthMsLogonI()
             ::strcpy_s(user.data(), 256, m_cmdlnUser.data());
         }
     }
-    else if (std::strlen((const char*)m_encPasswd.data()) > 0)
+    else if (std::strlen(reinterpret_cast<const char*>(m_encPasswd.data())) > 0)
     {
         char* pw = vncDecryptPasswd(m_encPasswd.data());
         ::strcpy_s(passwd.data(), passwd.size(), pw);
         std::free(pw);
     }
-    else if (std::strlen((const char*)m_encPasswdMs.data()) > 0)
+    else if (std::strlen(reinterpret_cast<const char*>(m_encPasswdMs.data())) > 0)
     {
         char* pw = vncDecryptPasswdMs(m_encPasswdMs.data());
         ::strcpy_s(passwd.data(), passwd.size(), pw);
@@ -4349,9 +4349,9 @@ void ClientConnection::AuthMsLogonI()
     // m_ms_logon = false;
     if (m_ms_logon_I_legacy)
     {
-        ReadExact((char*)challengems.data(), static_cast<int>(challengems.size()));
+        ReadExact(reinterpret_cast<char*>(challengems.data()), static_cast<int>(challengems.size()));
     }
-    ReadExact((char*)challenge.data(), static_cast<int>(challenge.size()));
+    ReadExact(reinterpret_cast<char*>(challenge.data()), static_cast<int>(challenge.size()));
 
     // MS-Logon
     if (m_ms_logon_I_legacy)
@@ -4359,21 +4359,21 @@ void ClientConnection::AuthMsLogonI()
         int i{ 0 };
         for (i = 0; i < 32; ++i)
         {
-            challengems[i] = m_encPasswdMs[i] ^ challengems[i];
+            challengems[static_cast<unsigned long long>(i)] = m_encPasswdMs[static_cast<unsigned long long>(i)] ^ challengems[static_cast<unsigned long long>(i)];
         }
-        WriteExact((char*)user.data(), sizeof(char) * 256);
-        WriteExact((char*)domain.data(), sizeof(char) * 256);
-        WriteExact((char*)challengems.data(), static_cast<int>(challengems.size()));
+        WriteExact(reinterpret_cast<char*>(user.data()), sizeof(char) * 256);
+        WriteExact(reinterpret_cast<char*>(domain.data()), sizeof(char) * 256);
+        WriteExact(reinterpret_cast<char*>(challengems.data()), static_cast<int>(challengems.size()));
         vncEncryptBytes(challenge.data(), passwd.data());
 
         /* Lose the plain-text password from memory */
         const int nLen = static_cast<int>(std::strlen(passwd.data()));
         for (i = 0; i < nLen; ++i)
         {
-            passwd[i] = '\0';
+            passwd[static_cast<unsigned long long>(i)] = '\0';
         }
 
-        WriteExact((char*)challenge.data(), static_cast<int>(challenge.size()));
+        WriteExact(reinterpret_cast<char*>(challenge.data()), static_cast<int>(challenge.size()));
     }
 }
 
@@ -4399,7 +4399,7 @@ void ClientConnection::AuthMsLogonIII()
     }
 
     // Read server public key
-    ReadExact((char*)server_pk.data(), sizeof(server_pk));
+    ReadExact(reinterpret_cast<char*>(server_pk.data()), sizeof(server_pk));
 
     // Compute shared secret
     if (crypto_scalarmult(shared_secret.data(), client_sk.data(), server_pk.data()) != 0)
@@ -4408,7 +4408,7 @@ void ClientConnection::AuthMsLogonIII()
     }
 
     // Send client public key
-    WriteExact((char*)client_pk.data(), sizeof(client_pk));
+    WriteExact(reinterpret_cast<char*>(client_pk.data()), sizeof(client_pk));
 
     // Derive credential key material from the shared secret using SHA-256
     std::array<unsigned char, 32U> aes_key;
@@ -4429,7 +4429,7 @@ void ClientConnection::AuthMsLogonIII()
         vncEncryptPasswdMs(m_encPasswdMs.data(), passwd.data());
         ::strcpy_s(m_ms_user.data(), m_ms_user.size(), user.data());
     }
-    else if (std::strlen((const char*)m_encPasswdMs.data()) > 0)
+    else if (std::strlen(reinterpret_cast<const char*>(m_encPasswdMs.data())) > 0)
     {
         char* pw = vncDecryptPasswdMs(m_encPasswdMs.data());
         ::strcpy_s(passwd.data(), passwd.size(), pw);
@@ -4477,8 +4477,8 @@ void ClientConnection::AuthMsLogonIII()
     // MS-Logon IV replaces this with XChaCha20-Poly1305 AEAD.
     std::array<unsigned char, 8U> key;
     std::memcpy(key.data(), aes_key.data(), 8); // Use first 8 bytes for compatibility with existing encryption
-    vncEncryptBytes2((unsigned char*)user.data(), sizeof(user), key.data());
-    vncEncryptBytes2((unsigned char*)passwd.data(), sizeof(passwd), key.data());
+    vncEncryptBytes2(reinterpret_cast<unsigned char*>(user.data()), sizeof(user), key.data());
+    vncEncryptBytes2(reinterpret_cast<unsigned char*>(passwd.data()), sizeof(passwd), key.data());
 
     WriteExactQueue(user.data(), sizeof(user));
     WriteExact(passwd.data(), sizeof(passwd));
@@ -4511,7 +4511,7 @@ void ClientConnection::AuthMsLogonIV()
     }
 
     // Read server public key
-    ReadExact((char*)server_pk.data(), sizeof(server_pk));
+    ReadExact(reinterpret_cast<char*>(server_pk.data()), sizeof(server_pk));
 
     // Compute shared secret
     if (crypto_scalarmult(shared_secret.data(), client_sk.data(), server_pk.data()) != 0)
@@ -4520,17 +4520,17 @@ void ClientConnection::AuthMsLogonIV()
     }
 
     // Send client public key
-    WriteExact((char*)client_pk.data(), sizeof(client_pk));
+    WriteExact(reinterpret_cast<char*>(client_pk.data()), sizeof(client_pk));
 
     // Derive AEAD key and per-message nonces from the shared secret
     std::array<unsigned char, crypto_aead_xchacha20poly1305_ietf_KEYBYTES> enc_key;
     std::array<unsigned char, crypto_aead_xchacha20poly1305_ietf_NPUBBYTES> nonce_user;
     std::array<unsigned char, crypto_aead_xchacha20poly1305_ietf_NPUBBYTES> nonce_pass;
-    crypto_generichash(enc_key.data(), sizeof(enc_key), (const unsigned char*)"uvnc-mslogon4-key", 17, shared_secret.data(),
+    crypto_generichash(enc_key.data(), sizeof(enc_key), reinterpret_cast<const unsigned char*>("uvnc-mslogon4-key"), 17, shared_secret.data(),
                        sizeof(shared_secret));
-    crypto_generichash(nonce_user.data(), sizeof(nonce_user), (const unsigned char*)"uvnc-mslogon4-user", 18, shared_secret.data(),
+    crypto_generichash(nonce_user.data(), sizeof(nonce_user), reinterpret_cast<const unsigned char*>("uvnc-mslogon4-user"), 18, shared_secret.data(),
                        sizeof(shared_secret));
-    crypto_generichash(nonce_pass.data(), sizeof(nonce_pass), (const unsigned char*)"uvnc-mslogon4-passwd", 20, shared_secret.data(),
+    crypto_generichash(nonce_pass.data(), sizeof(nonce_pass), reinterpret_cast<const unsigned char*>("uvnc-mslogon4-passwd"), 20, shared_secret.data(),
                        sizeof(shared_secret));
 
     // Zero out shared secret
@@ -4548,7 +4548,7 @@ void ClientConnection::AuthMsLogonIV()
         vncEncryptPasswdMs(m_encPasswdMs.data(), passwd.data());
         ::strcpy_s(m_ms_user.data(), m_ms_user.size(), user.data());
     }
-    else if (std::strlen((const char*)m_encPasswdMs.data()) > 0)
+    else if (std::strlen(reinterpret_cast<const char*>(m_encPasswdMs.data())) > 0)
     {
         char* pw = vncDecryptPasswdMs(m_encPasswdMs.data());
         ::strcpy_s(passwd.data(), passwd.size(), pw);
@@ -4595,13 +4595,13 @@ void ClientConnection::AuthMsLogonIV()
     // Encrypt credentials with XChaCha20-Poly1305 AEAD (ciphertext + 16-byte tag)
     std::array<unsigned char, 256 + crypto_aead_xchacha20poly1305_ietf_ABYTES> user_ct;
     std::array<unsigned char, 64 + crypto_aead_xchacha20poly1305_ietf_ABYTES> passwd_ct;
-    crypto_aead_xchacha20poly1305_ietf_encrypt(user_ct.data(), nullptr, (const unsigned char*)user.data(), sizeof(user), nullptr, 0,
+    crypto_aead_xchacha20poly1305_ietf_encrypt(user_ct.data(), nullptr, reinterpret_cast<const unsigned char*>(user.data()), sizeof(user), nullptr, 0,
                                                nullptr, nonce_user.data(), enc_key.data());
-    crypto_aead_xchacha20poly1305_ietf_encrypt(passwd_ct.data(), nullptr, (const unsigned char*)passwd.data(), sizeof(passwd), nullptr, 0,
+    crypto_aead_xchacha20poly1305_ietf_encrypt(passwd_ct.data(), nullptr, reinterpret_cast<const unsigned char*>(passwd.data()), sizeof(passwd), nullptr, 0,
                                                nullptr, nonce_pass.data(), enc_key.data());
 
-    WriteExactQueue((char*)user_ct.data(), sizeof(user_ct));
-    WriteExact((char*)passwd_ct.data(), sizeof(passwd_ct));
+    WriteExactQueue(reinterpret_cast<char*>(user_ct.data()), sizeof(user_ct));
+    WriteExact(reinterpret_cast<char*>(passwd_ct.data()), sizeof(passwd_ct));
 
     // Clean up
     sodium_memzero(enc_key.data(), sizeof(enc_key));
@@ -4629,7 +4629,7 @@ void ClientConnection::AuthVnc()
     {
         ::strcpy_s(passwd.data(), 256, m_clearPasswd.data());
     }
-    else if (std::strlen((const char*)m_encPasswd.data()) > 0)
+    else if (std::strlen(reinterpret_cast<const char*>(m_encPasswd.data())) > 0)
     {
         char* pw = vncDecryptPasswd(m_encPasswd.data());
         ::strcpy_s(passwd.data(), passwd.size(), pw);
@@ -4678,15 +4678,15 @@ void ClientConnection::AuthVnc()
             }
         }
     }
-    ReadExact((char*)challenge.data(), static_cast<int>(challenge.size()));
+    ReadExact(reinterpret_cast<char*>(challenge.data()), static_cast<int>(challenge.size()));
     vncEncryptBytes(challenge.data(), passwd.data());
     /* Lose the plain-text password from memory */
     const int nLen = static_cast<int>(std::strlen(passwd.data()));
     for (int i{ 0 }; i < nLen; ++i)
     {
-        passwd[i] = '\0';
+        passwd[static_cast<unsigned long long>(i)] = '\0';
     }
-    WriteExact((char*)challenge.data(), static_cast<int>(challenge.size()));
+    WriteExact(reinterpret_cast<char*>(challenge.data()), static_cast<int>(challenge.size()));
 }
 
 void ClientConnection::AuthXvp()
@@ -4733,9 +4733,9 @@ void ClientConnection::AuthXvp()
     }
 
     std::array<CARD8, 2U> credlen;
-    credlen[0U] = (CARD8)ulen;
-    credlen[1U] = (CARD8)tlen;
-    WriteExact((char*)credlen.data(), sizeof(credlen));
+    credlen[0U] = static_cast<CARD8>(ulen);
+    credlen[1U] = static_cast<CARD8>(tlen);
+    WriteExact(reinterpret_cast<char*>(credlen.data()), sizeof(credlen));
     if (ulen)
     {
         WriteExact(user.data(), ulen);
@@ -4763,7 +4763,7 @@ void ClientConnection::SendXvpMsg(CARD8 code)
     xvp.pad = 0;
     xvp.version = 1;
     xvp.code = code;
-    WriteExactQueue((char*)&xvp, sz_rfbXvpMsg, rfbXvp);
+    WriteExactQueue(reinterpret_cast<char*>(&xvp), sz_rfbXvpMsg, rfbXvp);
     FlushWriteQueue(true, 5);
 }
 
@@ -4776,7 +4776,7 @@ void ClientConnection::AuthSCPrompt()
     }
     /// SHOW Messagebox
     int size;
-    ReadExact((char*)&size, sizeof(int));
+    ReadExact(reinterpret_cast<char*>(&size), sizeof(int));
     std::array<char, 1025U> mytext; //10k
     //block
     if ((size < 0) || (size > 1024))
@@ -4785,7 +4785,7 @@ void ClientConnection::AuthSCPrompt()
     }
 
     ReadExact(mytext.data(), size);
-    mytext[size] = 0;
+    mytext[static_cast<unsigned long long>(size)] = 0;
 
     //adzm 2009-06-21 - auto-accept if specified
     int accepted{ 0 };
@@ -4808,7 +4808,7 @@ void ClientConnection::AuthSCPrompt()
         accepted = 1;
     }
 
-    WriteExact((char*)&accepted, sizeof(accepted));
+    WriteExact(reinterpret_cast<char*>(&accepted), sizeof(accepted));
 }
 
 void ClientConnection::AuthSessionSelect()
@@ -4824,8 +4824,8 @@ void ClientConnection::AuthSessionSelect()
     InitCtrls.dwICC = ICC_LISTVIEW_CLASSES | ICC_INTERNET_CLASSES;
     InitCtrls.dwSize = sizeof(INITCOMMONCONTROLSEX);
     [[maybe_unused]] const BOOL bRet = ::InitCommonControlsEx(&InitCtrls);
-    int tt = static_cast<int>(::DialogBoxParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_SESSIONSELECTOR), nullptr, (DLGPROC)DialogProc, (LONG_PTR)this));
-    WriteExact((char*)&tt, sizeof(int));
+    int tt = static_cast<int>(::DialogBoxParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_SESSIONSELECTOR), nullptr, reinterpret_cast<DLGPROC>(DialogProc), reinterpret_cast<LONG_PTR>(this)));
+    WriteExact(reinterpret_cast<char*>(&tt), sizeof(int));
 }
 
 void ClientConnection::SendClientInit()
@@ -4843,7 +4843,7 @@ void ClientConnection::SendClientInit()
         ci.flags |= clientInitExtraMsgUnicode; // Signal Unicode support
     }
 
-    WriteExact((char*)&ci, sz_rfbClientInitMsg); // sf@2002 - RSM Plugin
+    WriteExact(reinterpret_cast<char*>(&ci), sz_rfbClientInitMsg); // sf@2002 - RSM Plugin
     if (brfbClientInitExtraMsgSupportNew)
     {
         brfbClientInitExtraMsgSupportNew = false;
@@ -4852,21 +4852,21 @@ void ClientConnection::SendClientInit()
         std::size_t wlen = std::wcslen(m_opts->m_InfoMsg.data());
         if ((wlen > 0) && (wlen <= 127))
         { // Max 127 wchars = 254 bytes
-            msg.textLength = (CARD8)(wlen * sizeof(wchar_t));
-            WriteExact((char*)&msg, sz_rfbClientInitExtraMsg);
-            WriteExact((char*)m_opts->m_InfoMsg.data(), msg.textLength);
+            msg.textLength = static_cast<CARD8>((wlen * sizeof(wchar_t)));
+            WriteExact(reinterpret_cast<char*>(&msg), sz_rfbClientInitExtraMsg);
+            WriteExact(reinterpret_cast<char*>(m_opts->m_InfoMsg.data()), msg.textLength);
         }
         else
         {
             msg.textLength = 0;
-            WriteExact((char*)&msg, sz_rfbClientInitExtraMsg);
+            WriteExact(reinterpret_cast<char*>(&msg), sz_rfbClientInitExtraMsg);
         }
     }
 }
 
 void ClientConnection::ReadServerInit([[maybe_unused]] const bool reconnect)
 {
-    ReadExact((char*)&m_si, sz_rfbServerInitMsg);
+    ReadExact(reinterpret_cast<char*>(&m_si), sz_rfbServerInitMsg);
 
     m_si.framebufferWidth = Swap16IfLE(m_si.framebufferWidth);
     m_si.framebufferHeight = Swap16IfLE(m_si.framebufferHeight);
@@ -4894,7 +4894,7 @@ void ClientConnection::ReadServerInit([[maybe_unused]] const bool reconnect)
         bool yes = yesnoUVNCMessageBox(m_hInstResDLL, nullptr, str50289.data(), str50290.data(), str50293.data(), str50294.data(), L"", bCheckboxChecked);
         if (!yes)
         {
-            exit(0);
+            exit(nullptr);
         }
         m_si.nameLength = 2024;
     }
@@ -4979,8 +4979,8 @@ void ClientConnection::SizeWindow(const bool noPosChange, const bool noSizeChang
 
     // Auto sizeMultimon
     const int monact = tdc.getSelectedScreen(m_hwndMain, false);
-    int monactwidth = tdc.monarray[monact].width;
-    const int monactheight = tdc.monarray[monact].height;
+    int monactwidth = tdc.monarray[static_cast<unsigned long long>(monact)].width;
+    const int monactheight = tdc.monarray[static_cast<unsigned long long>(monact)].height;
     int minwidth;
     int minheight;
     if (m_opts->m_scaling && (!m_opts->m_fAutoScaling || m_fScalingDone))
@@ -4997,17 +4997,17 @@ void ClientConnection::SizeWindow(const bool noPosChange, const bool noSizeChang
                         (!m_opts->m_fAutoScaling || m_opts->m_fAutoScalingEven) && !m_opts->m_Directx;
 
     int mon = tdc.getSelectedScreen(m_hwndMain, ((m_opts->m_allowMonitorSpanning || sizeMultimon) && !m_opts->m_showExtend));
-    workrect.left = tdc.monarray[mon].wl;
-    workrect.right = tdc.monarray[mon].wr;
-    workrect.top = tdc.monarray[mon].wt;
-    workrect.bottom = tdc.monarray[mon].wb;
+    workrect.left = tdc.monarray[static_cast<unsigned long long>(mon)].wl;
+    workrect.right = tdc.monarray[static_cast<unsigned long long>(mon)].wr;
+    workrect.top = tdc.monarray[static_cast<unsigned long long>(mon)].wt;
+    workrect.bottom = tdc.monarray[static_cast<unsigned long long>(mon)].wb;
     //SystemParametersInfo(SPI_GETWORKAREA, 0, &workrect, 0);
     int workwidth;
     int workheight;
     if (m_opts->m_FullScreen)
     {
-        workwidth = tdc.monarray[mon].width;
-        workheight = tdc.monarray[mon].height;
+        workwidth = tdc.monarray[static_cast<unsigned long long>(mon)].width;
+        workheight = tdc.monarray[static_cast<unsigned long long>(mon)].height;
     }
     else
     {
@@ -5045,13 +5045,13 @@ void ClientConnection::SizeWindow(const bool noPosChange, const bool noSizeChang
             ::SetRect(&testrect, 0, 0, uni_screenWidth, uni_screenHeight);
             if (adjustWindowRectExForDpi)
             {
-                adjustWindowRectExForDpi(&testrect, ::GetWindowLong(m_hwndMain, GWL_STYLE) & ~WS_VSCROLL & ~WS_HSCROLL, FALSE,
-                                         ::GetWindowLong(m_hwndMain, GWL_EXSTYLE), m_Dpi);
+                adjustWindowRectExForDpi(&testrect, ::GetWindowLong(m_hwndMain, GWL_STYLE) & static_cast<DWORD>(~WS_VSCROLL & ~WS_HSCROLL), FALSE,
+                                         static_cast<DWORD>(::GetWindowLong(m_hwndMain, GWL_EXSTYLE)), m_Dpi);
             }
             else
             {
-                ::AdjustWindowRectEx(&testrect, ::GetWindowLong(m_hwndMain, GWL_STYLE) & ~WS_VSCROLL & ~WS_HSCROLL, FALSE,
-                                   ::GetWindowLong(m_hwndMain, GWL_EXSTYLE));
+                ::AdjustWindowRectEx(&testrect, ::GetWindowLong(m_hwndMain, GWL_STYLE) & static_cast<DWORD>(~WS_VSCROLL & ~WS_HSCROLL), FALSE,
+                                   static_cast<DWORD>(::GetWindowLong(m_hwndMain, GWL_EXSTYLE)));
             }
             const int dx = (testrect.right - testrect.left) - (uni_screenWidth);
             int dy = (testrect.bottom - testrect.top) - (uni_screenHeight);
@@ -5125,13 +5125,13 @@ void ClientConnection::SizeWindow(const bool noPosChange, const bool noSizeChang
 
     if (adjustWindowRectExForDpi)
     {
-        adjustWindowRectExForDpi(&fullwinrect, ::GetWindowLong(m_hwndcn, GWL_STYLE) & ~WS_VSCROLL & ~WS_HSCROLL, FALSE,
-                                 ::GetWindowLong(m_hwndcn, GWL_EXSTYLE), m_Dpi);
+        adjustWindowRectExForDpi(&fullwinrect, ::GetWindowLong(m_hwndcn, GWL_STYLE) & static_cast<DWORD>(~WS_VSCROLL & ~WS_HSCROLL), FALSE,
+                                 static_cast<DWORD>(::GetWindowLong(m_hwndcn, GWL_EXSTYLE)), m_Dpi);
     }
     else
     {
-        ::AdjustWindowRectEx(&fullwinrect, ::GetWindowLong(m_hwndcn, GWL_STYLE) & ~WS_VSCROLL & ~WS_HSCROLL, FALSE,
-                           ::GetWindowLong(m_hwndcn, GWL_EXSTYLE));
+        ::AdjustWindowRectEx(&fullwinrect, ::GetWindowLong(m_hwndcn, GWL_STYLE) & static_cast<DWORD>(~WS_VSCROLL & ~WS_HSCROLL), FALSE,
+                           static_cast<DWORD>(::GetWindowLong(m_hwndcn, GWL_EXSTYLE)));
     }
 
     m_fullwinwidth = fullwinrect.right - fullwinrect.left;
@@ -5154,13 +5154,13 @@ void ClientConnection::SizeWindow(const bool noPosChange, const bool noSizeChang
     // Hauptfenster positionieren
     if (adjustWindowRectExForDpi)
     {
-        adjustWindowRectExForDpi(&fullwinrect, ::GetWindowLong(m_hwndMain, GWL_STYLE) & ~WS_VSCROLL & ~WS_HSCROLL, FALSE,
-                                 ::GetWindowLong(m_hwndMain, GWL_EXSTYLE), m_Dpi);
+        adjustWindowRectExForDpi(&fullwinrect, ::GetWindowLong(m_hwndMain, GWL_STYLE) & static_cast<DWORD>(~WS_VSCROLL & ~WS_HSCROLL), FALSE,
+                                 static_cast<DWORD>(::GetWindowLong(m_hwndMain, GWL_EXSTYLE)), m_Dpi);
     }
     else
     {
-        ::AdjustWindowRectEx(&fullwinrect, ::GetWindowLong(m_hwndMain, GWL_STYLE) & ~WS_VSCROLL & ~WS_HSCROLL, FALSE,
-                           ::GetWindowLong(m_hwndMain, GWL_EXSTYLE));
+        ::AdjustWindowRectEx(&fullwinrect, ::GetWindowLong(m_hwndMain, GWL_STYLE) & static_cast<DWORD>(~WS_VSCROLL & ~WS_HSCROLL), FALSE,
+                           static_cast<DWORD>(::GetWindowLong(m_hwndMain, GWL_EXSTYLE)));
     }
 
     m_fullwinwidth = fullwinrect.right - fullwinrect.left;
@@ -5406,7 +5406,7 @@ void ClientConnection::SetFormatAndEncodings()
     spf.format.greenMax = Swap16IfLE(spf.format.greenMax);
     spf.format.blueMax = Swap16IfLE(spf.format.blueMax);
 
-    WriteExactQueue((char*)&spf, sz_rfbSetPixelFormatMsg, rfbSetPixelFormat);
+    WriteExactQueue(reinterpret_cast<char*>(&spf), sz_rfbSetPixelFormatMsg, rfbSetPixelFormat);
 
     // The number of bytes required to hold at least one pixel.
     m_minPixelBytes = (m_myFormat.bitsPerPixel + 7) >> 3;
@@ -5414,8 +5414,8 @@ void ClientConnection::SetFormatAndEncodings()
     // Set encodings
     char buf[sz_rfbSetEncodingsMsg + MAX_ENCODINGS * 4];
 
-    rfbSetEncodingsMsg* se = (rfbSetEncodingsMsg*)buf;
-    CARD32* encs = (CARD32*)(&buf[sz_rfbSetEncodingsMsg]);
+    rfbSetEncodingsMsg* se = reinterpret_cast<rfbSetEncodingsMsg*>(buf);
+    CARD32* encs = reinterpret_cast<CARD32*>((&buf[sz_rfbSetEncodingsMsg]));
     se->type = rfbSetEncodings;
     se->nEncodings = 0;
 
@@ -5485,7 +5485,7 @@ void ClientConnection::SetFormatAndEncodings()
     // desirable!
     for (i = LASTENCODING; i >= rfbEncodingRaw; --i)
     {
-        if (m_opts->m_UseEnc[i] &&
+        if (m_opts->m_UseEnc[static_cast<unsigned long long>(i)] &&
             (preferred_encodings.end() == std::find(preferred_encodings.begin(), preferred_encodings.end(), i)))
         {
             preferred_encodings.push_back(i);
@@ -5503,13 +5503,13 @@ void ClientConnection::SetFormatAndEncodings()
             useCompressLevel = true;
         }
 
-        encs[se->nEncodings++] = Swap32IfLE(*it);
+        encs[se->nEncodings++] = static_cast<unsigned int>(Swap32IfLE(*it));
     }
 
     // Tight - Request desired compression level if applicable
     if (useCompressLevel && m_opts->m_useCompressLevel && (m_opts->m_compressLevel >= 0) && (m_opts->m_compressLevel <= 9))
     {
-        encs[se->nEncodings++] = Swap32IfLE(rfbEncodingCompressLevel0 + m_opts->m_compressLevel);
+        encs[se->nEncodings++] = Swap32IfLE(rfbEncodingCompressLevel0 + static_cast<unsigned int>(m_opts->m_compressLevel));
     }
 
     // Tight - Request cursor shape updates if enabled by user
@@ -5526,7 +5526,7 @@ void ClientConnection::SetFormatAndEncodings()
     // Tight - Request JPEG quality level if JPEG compression was enabled by user
     if (m_opts->m_enableJpegCompression && (m_opts->m_jpegQualityLevel >= 0) && (m_opts->m_jpegQualityLevel <= 9))
     {
-        encs[se->nEncodings++] = Swap32IfLE(rfbEncodingQualityLevel0 + m_opts->m_jpegQualityLevel);
+        encs[se->nEncodings++] = Swap32IfLE(rfbEncodingQualityLevel0 + static_cast<unsigned int>(m_opts->m_jpegQualityLevel));
     }
 
     // Modif sf@2002
@@ -5580,7 +5580,7 @@ void ClientConnection::SetFormatAndEncodings()
     se->nEncodings = Swap16IfLE(se->nEncodings);
     // WriteExact((char *)buf, len);
 
-    WriteExact((char*)buf, sz_rfbSetEncodingsMsg + sizeof(CARD32) * nEncodings, rfbSetEncodings);
+    WriteExact(reinterpret_cast<char*>(buf), static_cast<int>(sz_rfbSetEncodingsMsg + sizeof(CARD32) * nEncodings), rfbSetEncodings);
 }
 void ClientConnection::Createdib()
 {
@@ -5602,9 +5602,9 @@ void ClientConnection::Createdib()
     bi.bmiHeader.biWidth = m_si.framebufferWidth;
     bi.bmiHeader.biHeight = -m_si.framebufferHeight;
     bi.bmiHeader.biCompression = (m_myFormat.bitsPerPixel > 8) ? BI_BITFIELDS : BI_RGB;
-    bi.mask.red = (CARD32)m_myFormat.redMax << m_myFormat.redShift;
-    bi.mask.green = (CARD32)m_myFormat.greenMax << m_myFormat.greenShift;
-    bi.mask.blue = (CARD32)m_myFormat.blueMax << m_myFormat.blueShift;
+    bi.mask.red = static_cast<CARD32>(m_myFormat.redMax) << m_myFormat.redShift;
+    bi.mask.green = static_cast<CARD32>(m_myFormat.greenMax) << m_myFormat.greenShift;
+    bi.mask.blue = static_cast<CARD32>(m_myFormat.blueMax) << m_myFormat.blueShift;
 
     if (directx_used)
     {
@@ -5623,13 +5623,13 @@ void ClientConnection::Createdib()
         m_membitmap = nullptr;
     }
     m_hmemdc = ::CreateCompatibleDC(m_hBitmapDC);
-    m_membitmap = ::CreateDIBSection(m_hmemdc, (BITMAPINFO*)&bi.bmiHeader, iUsage, &m_DIBbits, nullptr, 0);
+    m_membitmap = ::CreateDIBSection(m_hmemdc, reinterpret_cast<BITMAPINFO*>(&bi.bmiHeader), iUsage, &m_DIBbits, nullptr, 0);
     if (!m_DIBbits)
     {
         vnclog.Print(0, _T("CreateDIBSection failed\n"));
         throw ErrorException(L"CreateDIBSection failed");
     }
-    std::memset((char*)m_DIBbits, 128, bi.bmiHeader.biSizeImage);
+    std::memset(reinterpret_cast<char*>(m_DIBbits), 128, bi.bmiHeader.biSizeImage);
 
     {
         ObjectSelector bb(m_hmemdc, m_membitmap);
@@ -5643,19 +5643,19 @@ void ClientConnection::Createdib()
             std::array<Colour, 256U> rgbQ;
             for (int i{ 0 }; i < (1 << (m_myFormat.depth)); ++i)
             {
-                rgbQ[i].b =
+                rgbQ[static_cast<unsigned long long>(i)].b =
                     ((((i >> m_myFormat.blueShift) & m_myFormat.blueMax) * 65535) + m_myFormat.blueMax / 2) / m_myFormat.blueMax;
-                rgbQ[i].g = ((((i >> m_myFormat.greenShift) & m_myFormat.greenMax) * 65535) + m_myFormat.greenMax / 2) /
+                rgbQ[static_cast<unsigned long long>(i)].g = ((((i >> m_myFormat.greenShift) & m_myFormat.greenMax) * 65535) + m_myFormat.greenMax / 2) /
                             m_myFormat.greenMax;
-                rgbQ[i].r =
+                rgbQ[static_cast<unsigned long long>(i)].r =
                     ((((i >> m_myFormat.redShift) & m_myFormat.redMax) * 65535) + m_myFormat.redMax / 2) / m_myFormat.redMax;
             }
 
             for (int ii{ 0 }; ii < 256; ++ii)
             {
-                bi.color[ii].rgbRed = static_cast<BYTE>(rgbQ[ii].r >> 8);
-                bi.color[ii].rgbGreen = static_cast<BYTE>(rgbQ[ii].g >> 8);
-                bi.color[ii].rgbBlue = static_cast<BYTE>(rgbQ[ii].b >> 8);
+                bi.color[ii].rgbRed = static_cast<BYTE>(rgbQ[static_cast<unsigned long long>(ii)].r >> 8);
+                bi.color[ii].rgbGreen = static_cast<BYTE>(rgbQ[static_cast<unsigned long long>(ii)].g >> 8);
+                bi.color[ii].rgbBlue = static_cast<BYTE>(rgbQ[static_cast<unsigned long long>(ii)].b >> 8);
                 bi.color[ii].rgbReserved = 0;
             }
             ::SetDIBColorTable(m_hmemdc, 0, 256, bi.color);
@@ -5672,7 +5672,7 @@ void ClientConnection::Createdib()
                 Pitch += 4 - Pitch % 4;
             }
 
-            m_DIBbitsCache = new BYTE[Pitch * m_si.framebufferHeight];
+            m_DIBbitsCache = new BYTE[static_cast<unsigned long long>(Pitch * m_si.framebufferHeight)];
             vnclog.Print(0, _T("Cache: Cache buffer bitmap creation\n"));
         }
     }
@@ -5684,9 +5684,9 @@ void ClientConnection::Createdib()
             if (directx_output->m_directxformat.bitsPerPixel == m_myFormat.bitsPerPixel)
             {
                 directx_used = true;
-                m_myFormat.redShift = (CARD8)directx_output->m_directxformat.redShift;
-                m_myFormat.greenShift = (CARD8)directx_output->m_directxformat.greenShift;
-                m_myFormat.blueShift = (CARD8)directx_output->m_directxformat.blueShift;
+                m_myFormat.redShift = static_cast<CARD8>(directx_output->m_directxformat.redShift);
+                m_myFormat.greenShift = static_cast<CARD8>(directx_output->m_directxformat.greenShift);
+                m_myFormat.blueShift = static_cast<CARD8>(directx_output->m_directxformat.blueShift);
 
                 if (m_membitmap != nullptr)
                 {
@@ -5954,7 +5954,7 @@ ClientConnection::~ClientConnection()
     {
         delete[] m_zlibbuf;
     }
-    if (m_hwndTBwin != 0)
+    if (m_hwndTBwin != nullptr)
     {
         ::DestroyWindow(m_hwndTBwin);
     }
@@ -6127,7 +6127,7 @@ inline bool ClientConnection::ProcessPointerEvent(int x, int y, DWORD keyflags, 
             {
                 // Triggered an emulate; remove left and right buttons, put
                 // in middle one.
-                DWORD emulatekeys = keyflags & ~(MK_LBUTTON | MK_RBUTTON);
+                DWORD emulatekeys = keyflags & static_cast<DWORD>(~(MK_LBUTTON | MK_RBUTTON));
                 emulatekeys |= MK_MBUTTON;
                 SubProcessPointerEvent(x, y, emulatekeys);
 
@@ -6158,7 +6158,7 @@ inline bool ClientConnection::ProcessPointerEvent(int x, int y, DWORD keyflags, 
             else
             {
                 // keep emulating.
-                DWORD emulatekeys = keyflags & ~(MK_LBUTTON | MK_RBUTTON);
+                DWORD emulatekeys = keyflags & static_cast<DWORD>(~(MK_LBUTTON | MK_RBUTTON));
                 emulatekeys |= MK_MBUTTON;
                 SubProcessPointerEvent(x, y, emulatekeys);
             }
@@ -6170,7 +6170,7 @@ inline bool ClientConnection::ProcessPointerEvent(int x, int y, DWORD keyflags, 
             if (((msg == WM_LBUTTONDOWN) && !(keyflags & MK_RBUTTON)) || ((msg == WM_RBUTTONDOWN) && !(keyflags & MK_LBUTTON)))
             {
                 // Start timer for emulation.
-                m_emulate3ButtonsTimer = static_cast<UINT>(::SetTimer(m_hwndcn, IDT_EMULATE3BUTTONSTIMER, m_opts->m_Emul3Timeout, nullptr));
+                m_emulate3ButtonsTimer = static_cast<UINT>(::SetTimer(m_hwndcn, IDT_EMULATE3BUTTONSTIMER, static_cast<UINT>(m_opts->m_Emul3Timeout), nullptr));
 
                 if (!m_emulate3ButtonsTimer)
                 {
@@ -6329,7 +6329,7 @@ inline void ClientConnection::SubProcessPointerEvent(const int x, const int y, c
         {
             e.Report();
         }
-        ::PostMessage(m_hwndMain, WM_CLOSE, reconnectcounter, 1);
+        ::PostMessage(m_hwndMain, WM_CLOSE, static_cast<WPARAM>(reconnectcounter), 1);
     }
 }
 
@@ -6387,8 +6387,8 @@ void ClientConnection::SendWheelEvent(const bool precise, const unsigned axis, c
         // A cached position can lie beyond an edge after a framebuffer resize.
         int x = maximum(0, minimum(oldPointerX, static_cast<int>(m_si.framebufferWidth) - 1));
         int y = maximum(0, minimum(oldPointerY, static_cast<int>(m_si.framebufferHeight) - 1));
-        rfbHighResolutionWheelMsg msg = MakeHighResolutionWheel(axis, delta, x, y);
-        WriteExactQueue_timeout((char*)&msg, sz_rfbHighResolutionWheelMsg, rfbHighResolutionWheel, 5);
+        rfbHighResolutionWheelMsg msg = MakeHighResolutionWheel(axis, delta, static_cast<unsigned int>(x), static_cast<unsigned int>(y));
+        WriteExactQueue_timeout(reinterpret_cast<char*>(&msg), sz_rfbHighResolutionWheelMsg, rfbHighResolutionWheel, 5);
     }
     else
     {
@@ -6442,7 +6442,7 @@ inline void ClientConnection::SendPointerEvent(int x, int y, int buttonMask)
     pe.x = Swap16IfLE(x);
     pe.y = Swap16IfLE(y);
     //adzm 2010-09
-    WriteExactQueue_timeout((char*)&pe, sz_rfbPointerEventMsg, rfbPointerEvent, 5); // sf@2002 - For DSM Plugin
+    WriteExactQueue_timeout(reinterpret_cast<char*>(&pe), sz_rfbPointerEventMsg, rfbPointerEvent, 5); // sf@2002 - For DSM Plugin
 }
 
 //
@@ -6500,14 +6500,14 @@ inline void ClientConnection::ProcessKeyEvent(const int virtKey, const DWORD key
             {
                 e.Report();
             }
-            ::PostMessage(m_hwndMain, WM_CLOSE, reconnectcounter, 1);
+            ::PostMessage(m_hwndMain, WM_CLOSE, static_cast<WPARAM>(reconnectcounter), 1);
         }
     }
     else
     {
         try
         {
-            KeyActionSpec kas = m_keymapJap->PCtoX(virtKey, keyData);
+            KeyActionSpec kas = m_keymapJap->PCtoX(static_cast<UINT>(virtKey), keyData);
 
             if (kas.releaseModifiers & KEYMAP_LCONTROL)
             {
@@ -6591,7 +6591,7 @@ inline void ClientConnection::SendKeyEvent(CARD32 key, bool down)
     ke.down = down ? 1 : 0;
     ke.key = Swap32IfLE(key);
     //adzm 2010-09
-    WriteExactQueue_timeout((char*)&ke, sz_rfbKeyEventMsg, rfbKeyEvent, 5);
+    WriteExactQueue_timeout(reinterpret_cast<char*>(&ke), sz_rfbKeyEventMsg, rfbKeyEvent, 5);
 }
 
 //
@@ -6743,7 +6743,7 @@ void ClientConnection::SendClientCutText(char* const str, const int len)
     std::wstring strStrW;
     if (nWideLen > 0)
     {
-        wchar_t* wideStr = new wchar_t[nWideLen];
+        wchar_t* wideStr = new wchar_t[static_cast<unsigned long long>(nWideLen)];
         ::MultiByteToWideChar(CP_ACP, 0, str, -1, wideStr, nWideLen);
         strStrW = wideStr;
         delete[] wideStr;
@@ -6766,9 +6766,9 @@ void ClientConnection::SendClientCutText(char* const str, const int len)
     std::memset(&cct, 0, sizeof(cct));
 
     cct.type = rfbClientCutText;
-    cct.length = Swap32IfLE(len);
+    cct.length = static_cast<unsigned int>(Swap32IfLE(len));
     //adzm 2010-09
-    WriteExactQueue((char*)&cct, sz_rfbClientCutTextMsg, rfbClientCutText);
+    WriteExactQueue(reinterpret_cast<char*>(&cct), sz_rfbClientCutTextMsg, rfbClientCutText);
     WriteExact(str, len);
     vnclog.Print(6, _T("Sent %d bytes of clipboard\n"), len);
 }
@@ -6809,7 +6809,7 @@ inline void ClientConnection::DoBlit()
             */
             // adzm - 2010-07 - Works better this way
             ::FillRect(hdc, &ps.rcPaint, ::GetSysColorBrush(COLOR_DESKTOP));
-            ::Sleep(m_pApp->m_options.m_delay);
+            ::Sleep(static_cast<DWORD>(m_pApp->m_options.m_delay));
         }
 
         if (m_opts->m_scaling || (m_opts->m_Directx && !m_opts->m_showExtend))
@@ -6990,7 +6990,7 @@ void* ClientConnection::run_undetached([[maybe_unused]] void* const arg)
     // Auto-trigger file transfer for headless -uploadlocal/-uploadremote mode
     if ((m_opts->m_szUploadLocal[0U] != L'\0') && (m_opts->m_szUploadRemote[0U] != L'\0') && m_fServerKnowsFileTransfer)
     {
-        ::PostMessage(m_hwndMain, WM_SYSCOMMAND, (WPARAM)ID_FILETRANSFER, 0);
+        ::PostMessage(m_hwndMain, WM_SYSCOMMAND, static_cast<WPARAM>(ID_FILETRANSFER), 0);
     }
 
     // sf@2002 - Attempt to speed up the thing
@@ -7034,7 +7034,7 @@ void* ClientConnection::run_undetached([[maybe_unused]] void* const arg)
                     // Read the additional type char sent by the DSM Plugin (server)
                     // We need it to know the type of rfb message that follows
                     // because we can't see the type inside the transformed rfb message.
-                    ReadExact((char*)&msgType, sizeof(msgType));
+                    ReadExact(reinterpret_cast<char*>(&msgType), sizeof(msgType));
                     // adzm 2010-09
                     if (m_pPluginInterface || m_fPluginStreamingIn)
                     {
@@ -7110,7 +7110,7 @@ void* ClientConnection::run_undetached([[maybe_unused]] void* const arg)
                 // Xen VNC Proxy (xvp) - XVP_INIT / XVP_FAIL
                 case rfbXvp: {
                     rfbXvpMsg xvp;
-                    ReadExact(((char*)&xvp) + m_nTO, sz_rfbXvpMsg - m_nTO);
+                    ReadExact((reinterpret_cast<char*>(&xvp)) + m_nTO, sz_rfbXvpMsg - m_nTO);
                     if (xvp.code == rfbXvpInit)
                     {
                         m_fServerSupportsXvp = TRUE;
@@ -7135,7 +7135,7 @@ void* ClientConnection::run_undetached([[maybe_unused]] void* const arg)
                         omni_mutex_lock l(m_bitmapdcMutex);
                         ClearCache();
                         rfbResizeFrameBufferMsg rsmsg;
-                        ReadExact(((char*)&rsmsg) + m_nTO, sz_rfbResizeFrameBufferMsg - m_nTO);
+                        ReadExact((reinterpret_cast<char*>(&rsmsg)) + m_nTO, sz_rfbResizeFrameBufferMsg - m_nTO);
 
                         m_si.framebufferWidth = Swap16IfLE(rsmsg.framebufferWidth);
                         m_si.framebufferHeight = Swap16IfLE(rsmsg.framebufferHeigth);
@@ -7165,7 +7165,7 @@ void* ClientConnection::run_undetached([[maybe_unused]] void* const arg)
                     if (sz_rfbNotifyPluginStreamingMsg > 1)
                     {
                         rfbNotifyPluginStreamingMsg nspm;
-                        ReadExact(((char*)&nspm) + m_nTO, sz_rfbNotifyPluginStreamingMsg - m_nTO);
+                        ReadExact((reinterpret_cast<char*>(&nspm)) + m_nTO, sz_rfbNotifyPluginStreamingMsg - m_nTO);
                     }
                     m_fPluginStreamingIn = true;
                     ::PostMessage(m_hwndcn, WM_NOTIFYPLUGINSTREAMING, 0, 0);
@@ -7214,7 +7214,7 @@ void* ClientConnection::run_undetached([[maybe_unused]] void* const arg)
                 return this;
             }
             m_bKillThread = true;
-            ::PostMessage(m_hwndMain, WM_CLOSE, reconnectcounter, 1);
+            ::PostMessage(m_hwndMain, WM_CLOSE, static_cast<WPARAM>(reconnectcounter), 1);
         }
         catch (rdr::Exception& e)
         {
@@ -7222,11 +7222,11 @@ void* ClientConnection::run_undetached([[maybe_unused]] void* const arg)
             // the server closed the connection), not an error.
             if (std::strcmp(e.str(), "rdr::EndOfStream: read") == 0)
             {
-                vnclog.Print(3, _T("rdr::Exception (1): %hs\n"), (const char*)e.str());
+                vnclog.Print(3, _T("rdr::Exception (1): %hs\n"), reinterpret_cast<const char*>(e.str()));
             }
             else
             {
-                vnclog.Print(0, _T("rdr::Exception (1): %hs\n"), (const char*)e.str());
+                vnclog.Print(0, _T("rdr::Exception (1): %hs\n"), reinterpret_cast<const char*>(e.str()));
             }
             // m_pFileTransfer->m_fFileTransferRunning = false;
             // m_pTextChat->m_fTextChatRunning = false;
@@ -7262,7 +7262,7 @@ void* ClientConnection::run_undetached([[maybe_unused]] void* const arg)
                 g_ConnectionLossAlreadyReported = true;
             }
             m_bKillThread = true;
-            ::PostMessage(m_hwndMain, WM_CLOSE, reconnectcounter, 1);
+            ::PostMessage(m_hwndMain, WM_CLOSE, static_cast<WPARAM>(reconnectcounter), 1);
         }
 
         if (m_autoReconnect > 0)
@@ -7311,7 +7311,7 @@ void ClientConnection::Internal_SendFramebufferUpdateRequest(int x, int y, int w
     fur.w = Swap16IfLE(w);
     fur.h = Swap16IfLE(h);
     fps.update();
-    WriteExact_timeout((char*)&fur, sz_rfbFramebufferUpdateRequestMsg, rfbFramebufferUpdateRequest, 5);
+    WriteExact_timeout(reinterpret_cast<char*>(&fur), sz_rfbFramebufferUpdateRequestMsg, rfbFramebufferUpdateRequest, 5);
 }
 
 void ClientConnection::HandleFramebufferUpdateRequest(const WPARAM wParam, [[maybe_unused]] const LPARAM lParam)
@@ -7346,11 +7346,11 @@ void ClientConnection::SendFramebufferUpdateRequest(const WPARAM requestType, co
 {
     if (bAsync)
     {
-        ::PostMessage(m_hwndcn, WM_REQUESTUPDATE, (WPARAM)requestType, (LPARAM)0);
+        ::PostMessage(m_hwndcn, WM_REQUESTUPDATE, static_cast<WPARAM>(requestType), static_cast<LPARAM>(0));
     }
     else
     {
-        ::SendMessage(m_hwndcn, WM_REQUESTUPDATE, (WPARAM)requestType, (LPARAM)0);
+        ::SendMessage(m_hwndcn, WM_REQUESTUPDATE, static_cast<WPARAM>(requestType), static_cast<LPARAM>(0));
     }
 }
 
@@ -7405,7 +7405,7 @@ void ClientConnection::Internal_SendAppropriateFramebufferUpdateRequest()
                     Pitch += 4 - Pitch % 4;
                 }
 
-                m_DIBbitsCache = new BYTE[Pitch * m_si.framebufferHeight];
+                m_DIBbitsCache = new BYTE[static_cast<unsigned long long>(Pitch * m_si.framebufferHeight)];
             }
             ClearCache();              // Clear the cache
             m_pendingCacheInit = true; // Order full update to synchronize both sides caches
@@ -7461,7 +7461,7 @@ bool ClientConnection::SendServerScale(const int nScale)
     ssc.type = rfbSetScale;
     ssc.scale = static_cast<CARD8>(/*(unsigned short)*/ nScale);
 
-    WriteExact((char*)&ssc, sz_rfbSetScaleMsg, rfbSetScale);
+    WriteExact(reinterpret_cast<char*>(&ssc), sz_rfbSetScaleMsg, rfbSetScale);
 
     return true;
 }
@@ -7478,7 +7478,7 @@ bool ClientConnection::SendServerInput(const BOOL enabled)
     sim.type = rfbSetServerInput;
     sim.status = static_cast<CARD8>(enabled);
 
-    WriteExact((char*)&sim, sz_rfbSetServerInputMsg, rfbSetServerInput);
+    WriteExact(reinterpret_cast<char*>(&sim), sz_rfbSetServerInputMsg, rfbSetServerInput);
 
     return true;
 }
@@ -7495,7 +7495,7 @@ bool ClientConnection::SendSetMonitor(int nbr)
     mm.nbr = static_cast<CARD8>(nbr);
     if (nbrMonitors != 0)
     { //we need to receiev the number of monitor to be sure the server support the set
-        WriteExact_timeout((char*)&mm, sz_rfbMonitorMsg, rfbSetMonitor, 5);
+        WriteExact_timeout(reinterpret_cast<char*>(&mm), sz_rfbMonitorMsg, rfbSetMonitor, 5);
     }
     return true;
 }
@@ -7521,7 +7521,7 @@ bool ClientConnection::SendSW(int x, int y)
         sw.y = Swap16IfLE(y_scaled);
     }
 
-    WriteExact_timeout((char*)&sw, sz_rfbSetSWMsg, rfbSetSW, 5);
+    WriteExact_timeout(reinterpret_cast<char*>(&sw), sz_rfbSetSWMsg, rfbSetSW, 5);
     m_SWselect = false;
     return true;
 }
@@ -7546,7 +7546,7 @@ inline void ClientConnection::ReadScreenUpdate()
     fis->startTiming();
 
     rfbFramebufferUpdateMsg sut;
-    ReadExact(((char*)&sut) + m_nTO, sz_rfbFramebufferUpdateMsg - m_nTO);
+    ReadExact((reinterpret_cast<char*>(&sut)) + m_nTO, sz_rfbFramebufferUpdateMsg - m_nTO);
     sut.nRects = Swap16IfLE(sut.nRects);
     HRGN UpdateRegion = ::CreateRectRgn(0, 0, 0, 0);
     bool Recover_from_sync{ false };
@@ -7557,7 +7557,7 @@ inline void ClientConnection::ReadScreenUpdate()
     for (UINT iCurrentRect{ 0U }; iCurrentRect < sut.nRects; ++iCurrentRect)
     {
         rfbFramebufferUpdateRectHeader surh;
-        ReadExact((char*)&surh, sz_rfbFramebufferUpdateRectHeader);
+        ReadExact(reinterpret_cast<char*>(&surh), sz_rfbFramebufferUpdateRectHeader);
         surh.r.x = Swap16IfLE(surh.r.x);
         surh.r.y = Swap16IfLE(surh.r.y);
         surh.r.w = Swap16IfLE(surh.r.w);
@@ -7585,7 +7585,7 @@ inline void ClientConnection::ReadScreenUpdate()
         if ((surh.encoding == rfbEncodingZRLE) && bNeedVnc4Fix)
         {
             /* Discard Rect */
-            int length = fis->readU32();
+            int length = static_cast<int>(fis->readU32());
             zis->setUnderlying(fis, length);
             zis->reset();
             continue;
@@ -7622,11 +7622,11 @@ inline void ClientConnection::ReadScreenUpdate()
         {
             ExtDesktop = true;
             rfbExtDesktopSizeMsg edsHdr;
-            ReadExact((char*)&edsHdr, sz_rfbExtDesktopSizeMsg);
+            ReadExact(reinterpret_cast<char*>(&edsHdr), sz_rfbExtDesktopSizeMsg);
             rfbExtDesktopScreen eds;
             for (int i{ 0 }; i < edsHdr.numberOfScreens; ++i)
             {
-                ReadExact((char*)&eds, sz_rfbExtDesktopScreen);
+                ReadExact(reinterpret_cast<char*>(&eds), sz_rfbExtDesktopScreen);
             }
             if ((edsHdr.numberOfScreens == 1) && m_opts->m_GNOME)
             {
@@ -7727,12 +7727,12 @@ inline void ClientConnection::ReadScreenUpdate()
                 case rfbEncodingTight:
                 case rfbEncodingZlibHex: {
                     // Get the size of the rectangle data buffer
-                    ReadExact((char*)&(m_nReadSize), sizeof(CARD32));
-                    m_nReadSize = Swap32IfLE(m_nReadSize);
+                    ReadExact(reinterpret_cast<char*>(&(m_nReadSize)), sizeof(CARD32));
+                    m_nReadSize = static_cast<int>(Swap32IfLE(m_nReadSize));
                     // Read the whole  rect buffer and put the result in m_netbuf
                     CheckNetRectBufferSize(static_cast<int>((m_nReadSize)));
                     CheckBufferSize(static_cast<int>((m_nReadSize))); // sf@2003
-                    ReadExact((char*)(m_pNetRectBuf), static_cast<int>((m_nReadSize)));
+                    ReadExact(reinterpret_cast<char*>((m_pNetRectBuf)), static_cast<int>((m_nReadSize)));
                     // Tell the following ReadExact() function calls to Read Data from memory
                     m_nNetRectBufOffset = 0;
                     m_fReadFromNetRectBuf = true;
@@ -7754,8 +7754,8 @@ inline void ClientConnection::ReadScreenUpdate()
                     if ((m_minorVersion == 6) || (m_minorVersion == 4) || (m_minorVersion == 16) || (m_minorVersion == 14) ||
                         m_opts->m_oldplugin)
                     {
-                        ReadExact((char*)&(m_nZRLEReadSize), sizeof(CARD32));
-                        m_nZRLEReadSize = Swap32IfLE(m_nZRLEReadSize);
+                        ReadExact(reinterpret_cast<char*>(&(m_nZRLEReadSize)), sizeof(CARD32));
+                        m_nZRLEReadSize = static_cast<int>(Swap32IfLE(m_nZRLEReadSize));
                         if ((m_nZRLEReadSize < 0) || (m_nZRLEReadSize > 104857596))
                         {
                             throw ErrorException(L"Invalid compressed rectangle size.");
@@ -7763,14 +7763,14 @@ inline void ClientConnection::ReadScreenUpdate()
 
                         CheckZRLENetRectBufferSize(static_cast<int>((m_nZRLEReadSize)));
                         CheckBufferSize(static_cast<int>((m_nZRLEReadSize))); // sf@2003
-                        ReadExact((char*)(m_pZRLENetRectBuf), static_cast<int>((m_nZRLEReadSize)));
-                        fis->SetReadFromMemoryBuffer(m_nZRLEReadSize, (char*)(m_pZRLENetRectBuf));
+                        ReadExact(reinterpret_cast<char*>((m_pZRLENetRectBuf)), static_cast<int>((m_nZRLEReadSize)));
+                        fis->SetReadFromMemoryBuffer(m_nZRLEReadSize, reinterpret_cast<char*>((m_pZRLENetRectBuf)));
                     }
                     else
                     {
                         // Get the size of the rectangle data buffer
-                        ReadExact((char*)&(m_nZRLEReadSize), sizeof(CARD32));
-                        m_nZRLEReadSize = Swap32IfLE(m_nZRLEReadSize);
+                        ReadExact(reinterpret_cast<char*>(&(m_nZRLEReadSize)), sizeof(CARD32));
+                        m_nZRLEReadSize = static_cast<int>(Swap32IfLE(m_nZRLEReadSize));
                         if ((m_nZRLEReadSize < 0) || (m_nZRLEReadSize > 104857596))
                         {
                             throw ErrorException(L"Invalid compressed rectangle size.");
@@ -7779,11 +7779,11 @@ inline void ClientConnection::ReadScreenUpdate()
                         // Read the whole  rect buffer and put the result in m_netbuf
                         CheckZRLENetRectBufferSize(static_cast<int>((m_nZRLEReadSize)) + 4);
                         CheckBufferSize(static_cast<int>((m_nZRLEReadSize)) + 4); // sf@2003
-                        ReadExact((char*)(m_pZRLENetRectBuf + 4), static_cast<int>((m_nZRLEReadSize)));
+                        ReadExact(reinterpret_cast<char*>((m_pZRLENetRectBuf + 4)), static_cast<int>((m_nZRLEReadSize)));
                         // Tell the following Read() function calls to Read Data from memory
-                        tempsize = Swap32IfLE(tempsize);
-                        std::memcpy(m_pZRLENetRectBuf, (char*)&tempsize, 4);
-                        fis->SetReadFromMemoryBuffer(m_nZRLEReadSize + 4, (char*)(m_pZRLENetRectBuf));
+                        tempsize = static_cast<int>(Swap32IfLE(tempsize));
+                        std::memcpy(m_pZRLENetRectBuf, reinterpret_cast<char*>(&tempsize), 4);
+                        fis->SetReadFromMemoryBuffer(m_nZRLEReadSize + 4, reinterpret_cast<char*>((m_pZRLENetRectBuf)));
                     }
                 }
             }
@@ -7841,160 +7841,160 @@ inline void ClientConnection::ReadScreenUpdate()
         case rfbEncodingHextile:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             SaveArea(cacherect);
             ReadHextileRect(&surh);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
         case rfbEncodingUltra:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             ReadUltraRect(&surh);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
         case rfbEncodingUltra2:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             ReadUltra2Rect(&surh);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
         case rfbEncodingUltraZip:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             ReadUltraZip(&surh, &UpdateRegion);
             break;
         case rfbEncodingRaw:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             SaveArea(cacherect);
             ReadRawRect(&surh);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
         case rfbEncodingCopyRect:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             ReadCopyRect(&surh);
             break;
         case rfbEncodingCache:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             ReadCacheRect(&surh);
             break;
         case rfbEncodingCacheZip:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             ReadCacheZip(&surh, &UpdateRegion);
             break;
         case rfbEncodingQueueZstd:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             ReadQueueZip(&surh, &UpdateRegion, true);
             break;
         case rfbEncodingQueueZip:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             ReadQueueZip(&surh, &UpdateRegion, false);
             break;
         case rfbEncodingRRE:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             SaveArea(cacherect);
             ReadRRERect(&surh);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
         case rfbEncodingCoRRE:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             SaveArea(cacherect);
             ReadCoRRERect(&surh);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
         case rfbEncodingZstd:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             SaveArea(cacherect);
             ReadZlibRect(&surh, true);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
         case rfbEncodingZlib:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             SaveArea(cacherect);
             ReadZlibRect(&surh, false);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
         case rfbEncodingZstdHex:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             SaveArea(cacherect);
             ReadZlibHexRect(&surh, true);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
         case rfbEncodingZlibHex:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             SaveArea(cacherect);
             ReadZlibHexRect(&surh, false);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
         case rfbEncodingZRLE:
             zywrle = 0;
         case rfbEncodingZYWRLE:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             SaveArea(cacherect);
             zrleDecode(surh.r.x, surh.r.y, surh.r.w, surh.r.h, false);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
         case rfbEncodingZSTDRLE:
             zywrle = 0;
         case rfbEncodingZSTDYWRLE:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             SaveArea(cacherect);
             zrleDecode(surh.r.x, surh.r.y, surh.r.w, surh.r.h, true);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
 #ifdef _XZ
         case rfbEncodingXZ:
             xzyw = 0;
         case rfbEncodingXZYW:
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             {
                 CheckBufferSize(0x20000);
                 const int nAllRects = (surh.r.x << 16) | surh.r.y;
@@ -8010,8 +8010,8 @@ inline void ClientConnection::ReadScreenUpdate()
                     assert(m_nXZReadSize > 0);
                     CheckXZNetRectBufferSize(static_cast<int>(m_nXZReadSize));
                     CheckBufferSize(static_cast<int>(m_nXZReadSize) + 4);
-                    ReadExact((char*)(m_pXZNetRectBuf), static_cast<int>((m_nXZReadSize)));
-                    fis->SetReadFromMemoryBuffer(m_nXZReadSize, (char*)(m_pXZNetRectBuf));
+                    ReadExact(reinterpret_cast<char*>((m_pXZNetRectBuf)), static_cast<int>((m_nXZReadSize)));
+                    fis->SetReadFromMemoryBuffer(m_nXZReadSize, reinterpret_cast<char*>((m_pXZNetRectBuf)));
                 }
 
                 xzis->setUnderlying(fis, nDataLength);
@@ -8059,20 +8059,20 @@ inline void ClientConnection::ReadScreenUpdate()
         case rfbEncodingTightZstd:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             SaveArea(cacherect);
             ReadTightRect(&surh, true);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
         case rfbEncodingTight:
             if (directx_used)
             {
-                m_DIBbits = directx_output->Preupdate((unsigned char*)m_DIBbits);
+                m_DIBbits = directx_output->Preupdate(reinterpret_cast<unsigned char*>(m_DIBbits));
             }
             SaveArea(cacherect);
             ReadTightRect(&surh, false);
-            EncodingStatusWindow = surh.encoding;
+            EncodingStatusWindow = static_cast<int>(surh.encoding);
             break;
         default:
             // vnclog.Print(0, _T("Unknown encoding %d - not supported!\n"), surh.encoding);
@@ -8085,12 +8085,12 @@ inline void ClientConnection::ReadScreenUpdate()
                 int aantal = fis->Check_if_buffer_has_data();
                 if (aantal > 0)
                 {
-                    buffer = new BYTE[aantal];
+                    buffer = new BYTE[static_cast<unsigned long long>(aantal)];
                 }
                 if (aantal > 0)
                 {
                     ii = 0;
-                    ReadExact(((char*)buffer), aantal);
+                    ReadExact((reinterpret_cast<char*>(buffer)), aantal);
                     delete[] buffer;
                     ::Sleep(5);
                 }
@@ -8186,7 +8186,7 @@ inline void ClientConnection::ReadScreenUpdate()
     // We only change the preferred encoding if File Transfer is not running and if
     // the last encoding change occured more than 30s ago
     if ((avg_kbitsPerSecond != 0) && m_opts->autoDetect && !m_pFileTransfer->m_fFileTransferRunning &&
-        (static_cast<int>((timeGetTime() - m_lLastChangeTime)) > m_lLastChangeTimeTimeout))
+        (static_cast<int>((timeGetTime() - static_cast<DWORD>(m_lLastChangeTime))) > m_lLastChangeTimeTimeout))
     {
         //Beep(1000,1000);
         m_lLastChangeTimeTimeout = 60000; // set to 1 minutes
@@ -8216,7 +8216,7 @@ inline void ClientConnection::ReadScreenUpdate()
             }
 
             m_opts->m_fEnableCache = false;
-            m_lLastChangeTime = timeGetTime();
+            m_lLastChangeTime = static_cast<int>(timeGetTime());
         }
         else if ((avg_kbitsPerSecond < 10000) && (avg_kbitsPerSecond > 256) && (m_nConfig != 2))
         {
@@ -8228,7 +8228,7 @@ inline void ClientConnection::ReadScreenUpdate()
             //m_opts->m_Use8Bit = rfbPFFullColors; // Max colors
             m_opts->m_fEnableCache = false;
             m_pendingFormatChange = true;
-            m_lLastChangeTime = timeGetTime();
+            m_lLastChangeTime = static_cast<int>(timeGetTime());
         }
         // Medium connection speed
         else if ((avg_kbitsPerSecond < 256) && (avg_kbitsPerSecond > 128) && (m_nConfig != 2))
@@ -8239,7 +8239,7 @@ inline void ClientConnection::ReadScreenUpdate()
             //m_opts->m_Use8Bit = rfbPF256Colors;
             m_opts->m_fEnableCache = false;
             m_pendingFormatChange = true;
-            m_lLastChangeTime = timeGetTime();
+            m_lLastChangeTime = static_cast<int>(timeGetTime());
         }
         // Modem (including cable modem) connection speed
         else if ((avg_kbitsPerSecond < 128) && (avg_kbitsPerSecond > 19) && (m_nConfig != 3))
@@ -8250,7 +8250,7 @@ inline void ClientConnection::ReadScreenUpdate()
             //m_opts->m_Use8Bit = rfbPF64Colors;
             m_opts->m_fEnableCache = false;
             m_pendingFormatChange = true;
-            m_lLastChangeTime = timeGetTime();
+            m_lLastChangeTime = static_cast<int>(timeGetTime());
         }
 
         // Slow Modem connection speed
@@ -8325,8 +8325,8 @@ void ClientConnection::ReadServerCutText()
 
     rfbServerCutTextMsg sctm;
     vnclog.Print(6, _T("Read remote clipboard change\n"));
-    ReadExact(((char*)&sctm) + m_nTO, sz_rfbServerCutTextMsg - m_nTO);
-    int len = Swap32IfLE(sctm.length);
+    ReadExact((reinterpret_cast<char*>(&sctm)) + m_nTO, sz_rfbServerCutTextMsg - m_nTO);
+    int len = static_cast<int>(Swap32IfLE(sctm.length));
     if (len > 104857600)
     {
         // Restore encoder buffer state before early return
@@ -8361,13 +8361,13 @@ void ClientConnection::ReadServerCutText()
 
         extendedClipboardDataMessage.EnsureBufferLength(len, false);
 
-        ReadExact((char*)extendedClipboardDataMessage.GetBuffer(), len);
+        ReadExact(reinterpret_cast<char*>(extendedClipboardDataMessage.GetBuffer()), len);
         if (!extendedClipboardDataMessage.SetReceivedLength(len))
         {
             throw WarningException(L"Invalid Extended Clipboard message");
         }
 
-        DWORD action = extendedClipboardDataMessage.GetFlags() & clipActionMask;
+        DWORD action = extendedClipboardDataMessage.GetFlags() & static_cast<CARD32>(clipActionMask);
 
         // clipCaps may be combined with other actions
         if (action & clipCaps)
@@ -8450,14 +8450,14 @@ void ClientConnection::ReadServerCutText()
             m_nReadSize = saved_nReadSize;
             return;
         }
-        CheckBufferSize(len + 1);
+        CheckBufferSize(static_cast<UINT>(len + 1));
         if (len == 0)
         {
             m_netbuf[0U] = '\0';
         }
         else
         {
-            ReadString(m_netbuf, len);
+            ReadString(m_netbuf, static_cast<unsigned int>(len));
         }
         UpdateLocalClipboard(m_netbuf, len);
     }
@@ -8471,7 +8471,7 @@ void ClientConnection::ReadServerCutText()
 void ClientConnection::ReadBell()
 {
     rfbBellMsg bm;
-    ReadExact(((char*)&bm) + m_nTO, sz_rfbBellMsg - m_nTO);
+    ReadExact((reinterpret_cast<char*>(&bm)) + m_nTO, sz_rfbBellMsg - m_nTO);
     if (!::PlaySoundA("VNCViewerBell", nullptr, SND_APPLICATION | SND_ALIAS | SND_NODEFAULT | SND_ASYNC))
     {
         ::Beep(440, 125);
@@ -8491,7 +8491,7 @@ void ClientConnection::ReadMonitorInfo()
 {
     rfbMonitorMsg mi;
     std::memset(&mi, 0, sizeof mi);
-    ReadExact(((char*)&mi) + m_nTO, sz_rfbMonitorMsg - m_nTO);
+    ReadExact((reinterpret_cast<char*>(&mi)) + m_nTO, sz_rfbMonitorMsg - m_nTO);
     nbrMonitors = mi.nbr;
 }
 
@@ -8502,7 +8502,7 @@ void ClientConnection::ReadServerState(const ULONG_PTR wheelGeneration)
 
     vnclog.Print(1, _T("ServerState- reading %u bytes\n"), sz_rfbServerStateMsg - m_nTO);
 
-    ReadExact(((char*)&ss) + m_nTO, sz_rfbServerStateMsg - m_nTO);
+    ReadExact((reinterpret_cast<char*>(&ss)) + m_nTO, sz_rfbServerStateMsg - m_nTO);
     CARD32 state = Swap32IfLE(ss.state);
     CARD32 value = Swap32IfLE(ss.value);
 
@@ -8515,7 +8515,7 @@ void ClientConnection::ReadServerState(const ULONG_PTR wheelGeneration)
         break;
 
     case rfbKeepAliveInterval:
-        m_opts->m_keepAliveInterval = value;
+        m_opts->m_keepAliveInterval = static_cast<int>(value);
         if (m_opts->m_keepAliveInterval >= (m_opts->m_FTTimeout - KEEPALIVE_HEADROOM))
         {
             m_opts->m_keepAliveInterval = (m_opts->m_FTTimeout - KEEPALIVE_HEADROOM);
@@ -8525,7 +8525,7 @@ void ClientConnection::ReadServerState(const ULONG_PTR wheelGeneration)
         ::KillTimer(m_hwndcn, m_keepalive_timer);
         if (m_opts->m_keepAliveInterval > 0)
         {
-            ::SetTimer(m_hwndcn, m_keepalive_timer, m_opts->m_keepAliveInterval * 1000, nullptr);
+            ::SetTimer(m_hwndcn, m_keepalive_timer, static_cast<UINT>(m_opts->m_keepAliveInterval * 1000), nullptr);
         }
         else
         {
@@ -8534,7 +8534,7 @@ void ClientConnection::ReadServerState(const ULONG_PTR wheelGeneration)
         break;
 
     case rfbIdleInputTimeout:
-        m_opts->m_IdleInterval = value;
+        m_opts->m_IdleInterval = static_cast<int>(value);
         vnclog.Print(1, _T("New IdleTiler interval %u"), m_opts->m_IdleInterval);
         m_idle_timer = 1012;
         m_idle_time = value * 1000;
@@ -8600,7 +8600,7 @@ void ClientConnection::ReadExact(char* const inbuf, const int wanted)
                     {
                         throw ErrorException(L"Buffered rectangle read exceeds payload.");
                     }
-                    std::memcpy(inbuf, m_pNetRectBuf + m_nNetRectBufOffset, wanted);
+                    std::memcpy(inbuf, m_pNetRectBuf + m_nNetRectBufOffset, static_cast<size_t>(wanted));
                     m_nNetRectBufOffset += wanted;
                     if (m_nNetRectBufOffset == m_nReadSize)
                     {
@@ -8633,7 +8633,7 @@ void ClientConnection::ReadExact(char* const inbuf, const int wanted)
 
                         // Ask plugin to restore data from its local rest. buffer into inbuf
                         int nRestDataLen{ 0 };
-                        RestoreBufferStep2((BYTE*)inbuf, nTransDataLen, &nRestDataLen);
+                        RestoreBufferStep2(reinterpret_cast<BYTE*>(inbuf), nTransDataLen, &nRestDataLen);
 
                         if (nRestDataLen >= 0)
                         {
@@ -8713,7 +8713,7 @@ void ClientConnection::ReadExactProtocolVersion(char* const inbuf, const int wan
                     {
                         throw ErrorException(L"Buffered rectangle read exceeds payload.");
                     }
-                    std::memcpy(inbuf, m_pNetRectBuf + m_nNetRectBufOffset, wanted);
+                    std::memcpy(inbuf, m_pNetRectBuf + m_nNetRectBufOffset, static_cast<size_t>(wanted));
                     m_nNetRectBufOffset += wanted;
                     if (m_nNetRectBufOffset == m_nReadSize)
                     {
@@ -8776,7 +8776,7 @@ void ClientConnection::ReadExactProtocolVersion(char* const inbuf, const int wan
 
                         // Ask plugin to restore data from its local rest. buffer into inbuf
                         int nRestDataLen{ 0 };
-                        RestoreBufferStep2((BYTE*)inbuf, nTransDataLen, &nRestDataLen);
+                        RestoreBufferStep2(reinterpret_cast<BYTE*>(inbuf), nTransDataLen, &nRestDataLen);
 
                         if (nRestDataLen >= 0)
                         {
@@ -8876,7 +8876,7 @@ void ClientConnection::ReadExactProxy(char* const inbuf, const int wanted)
     }
     if (length > 0)
     {
-        ReadExact(buf, length);
+        ReadExact(buf, static_cast<int>(length));
     }
     /* WARNING: This writes at buf[length]. Caller must ensure buffer
      * is at least length+1 bytes. FINDING-011: Buffer overflow if misused. */
@@ -8911,7 +8911,7 @@ int ClientConnection::Send(const char* const buff, const unsigned int bufflen, c
 
     if (FD_ISSET(static_cast<unsigned int>(m_sock), &write_fds))
     {
-        aa = send(m_sock, buff, bufflen, 0);
+        aa = send(m_sock, buff, static_cast<int>(bufflen), 0);
     }
     return aa;
 }
@@ -8931,7 +8931,7 @@ void ClientConnection::WriteTransformed(char* const buf, const int bytes, CARD8 
     {
         // Send the transformed message type first
         //adzm 2010-09
-        WriteTransformed((char*)&msgType, sizeof(msgType), bQueue);
+        WriteTransformed(reinterpret_cast<char*>(&msgType), sizeof(msgType), bQueue);
         // Then send the transformed rfb message content
         //adzm 2010-09
         WriteTransformed(buf, bytes, bQueue);
@@ -8964,7 +8964,7 @@ void ClientConnection::WriteTransformed_timeout(char* const buf, const int bytes
     else if (m_pDSMPlugin->IsEnabled())
     {
         // Send the transformed message type first
-        WriteTransformed_timeout((char*)&msgType, sizeof(msgType), timeout, bQueue);
+        WriteTransformed_timeout(reinterpret_cast<char*>(&msgType), sizeof(msgType), timeout, bQueue);
         // Then send the transformed rfb message content
         WriteTransformed_timeout(buf, bytes, timeout, bQueue);
     }
@@ -8993,8 +8993,8 @@ bool ClientConnection::Write(char* buf, int bytes, const bool bQueue, const bool
     // append buf to any remaining data in the queue, since we know that m_nQueueBufferLength + bytes < G_SENDBUFFER
     if (bytes > 0)
     {
-        std::memcpy(m_QueueBuffer.data() + m_nQueueBufferLength, buf, bytes);
-        m_nQueueBufferLength += bytes;
+        std::memcpy(m_QueueBuffer.data() + m_nQueueBufferLength, buf, static_cast<size_t>(bytes));
+        m_nQueueBufferLength += static_cast<DWORD>(bytes);
     }
 
     if (!bQueue)
@@ -9011,22 +9011,22 @@ bool ClientConnection::Write(char* buf, int bytes, const bool bQueue, const bool
             }
             else
             {
-                j = send(m_sock, m_QueueBuffer.data() + i, m_nQueueBufferLength - i, 0);
+                j = send(m_sock, m_QueueBuffer.data() + i, static_cast<int>(m_nQueueBufferLength - i), 0);
             }
             if ((j == SOCKET_ERROR) || (j == 0))
             {
                 LPVOID lpMsgBuf;
-                int err = ::GetLastError();
+                int err = static_cast<int>(::GetLastError());
                 ::FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
-                              err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
-                              (LPTSTR)&lpMsgBuf, 0, nullptr);                 // Process any inserts in lpMsgBuf.
+                              static_cast<DWORD>(err), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+                              reinterpret_cast<LPTSTR>(&lpMsgBuf), 0, nullptr);                 // Process any inserts in lpMsgBuf.
                 vnclog.Print(1, _T("Socket error %d: %s\n"), err, lpMsgBuf);
                 ::LocalFree(lpMsgBuf);
                 m_running = false;
                 return false;
                 //throw WarningException(sz_L69);
             }
-            i += j;
+            i += static_cast<UINT>(j);
             m_BytesSend += j;
         }
 
@@ -9040,17 +9040,17 @@ bool ClientConnection::FlushOutstandingWriteQueue(char*& buf2, int& bytes2, cons
 {
     omni_mutex_lock l(m_writeMutex);
 
-    DWORD nNewSize = m_nQueueBufferLength + bytes2;
+    DWORD nNewSize = m_nQueueBufferLength + static_cast<DWORD>(bytes2);
 
     while (nNewSize >= G_SENDBUFFER)
     {
         //adzm 2010-08-01
         m_LastSentTick = ::GetTickCount();
 
-        int bufferFill = G_SENDBUFFER - m_nQueueBufferLength;
+        int bufferFill = static_cast<int>(G_SENDBUFFER - m_nQueueBufferLength);
 
         // add anything from buf2 to the queued packet
-        std::memcpy(m_QueueBuffer.data() + m_nQueueBufferLength, buf2, bufferFill);
+        std::memcpy(m_QueueBuffer.data() + m_nQueueBufferLength, buf2, static_cast<size_t>(bufferFill));
 
         // adjust buf2
         buf2 += bufferFill;
@@ -9070,10 +9070,10 @@ bool ClientConnection::FlushOutstandingWriteQueue(char*& buf2, int& bytes2, cons
         if ((sent == SOCKET_ERROR) || (sent == 0))
         {
             LPVOID lpMsgBuf;
-            int err = ::GetLastError();
-            ::FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, err,
+            int err = static_cast<int>(::GetLastError());
+            ::FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, static_cast<DWORD>(err),
                           MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
-                          (LPTSTR)&lpMsgBuf, 0, nullptr);            // Process any inserts in lpMsgBuf.
+                          reinterpret_cast<LPTSTR>(&lpMsgBuf), 0, nullptr);            // Process any inserts in lpMsgBuf.
             vnclog.Print(1, _T("Socket error %d: %s\n"), err, lpMsgBuf);
             ::LocalFree(lpMsgBuf);
             m_running = false;
@@ -9085,12 +9085,12 @@ bool ClientConnection::FlushOutstandingWriteQueue(char*& buf2, int& bytes2, cons
         m_BytesSend += sent;
 
         // adjust the current queue
-        nNewSize -= sent;
-        m_nQueueBufferLength -= sent;
+        nNewSize -= static_cast<DWORD>(sent);
+        m_nQueueBufferLength -= static_cast<DWORD>(sent);
         // if not everything, move to the beginning of the queue
         if ((G_SENDBUFFER - sent) != 0)
         {
-            std::memcpy(m_QueueBuffer.data(), m_QueueBuffer.data() + sent, G_SENDBUFFER - sent);
+            std::memcpy(m_QueueBuffer.data(), m_QueueBuffer.data() + sent, static_cast<size_t>(G_SENDBUFFER - sent));
         }
     }
     return true;
@@ -9117,7 +9117,7 @@ bool ClientConnection::WriteTransformed(char* const buf, int bytes, const bool b
         if (m_pPluginInterface || m_pDSMPlugin->IsEnabled())
         {
             int nTransDataLen{ 0 };
-            pBuffer = (char*)TransformBuffer((BYTE*)buf, bytes, &nTransDataLen);
+            pBuffer = reinterpret_cast<char*>(TransformBuffer(reinterpret_cast<BYTE*>(buf), bytes, &nTransDataLen));
             if ((pBuffer == nullptr) || ((bytes > 0) && (nTransDataLen == 0)))
             {
                 throw WarningException(sz_L68.data());
@@ -9167,7 +9167,7 @@ void ClientConnection::WriteTransformed_timeout(char* const buf, int bytes, cons
         if (m_pPluginInterface || m_pDSMPlugin->IsEnabled())
         {
             int nTransDataLen{ 0 };
-            pBuffer = (char*)TransformBuffer((BYTE*)buf, bytes, &nTransDataLen);
+            pBuffer = reinterpret_cast<char*>(TransformBuffer(reinterpret_cast<BYTE*>(buf), bytes, &nTransDataLen));
             if ((pBuffer == nullptr) || ((bytes > 0) && (nTransDataLen == 0)))
             {
                 throw WarningException(sz_L68.data());
@@ -9248,7 +9248,7 @@ void ClientConnection::CheckZipBufferSize(int bufsize)
 
     omni_mutex_lock l(m_ZipBufferMutex);
 
-    newbuf = (unsigned char*)new char[bufsize + 256];
+    newbuf = reinterpret_cast<unsigned char*>(new char[static_cast<unsigned long long>(bufsize + 256)]);
     if (newbuf == nullptr)
     {
         throw ErrorException(sz_L71.data());
@@ -9282,7 +9282,7 @@ void ClientConnection::CheckFileZipBufferSize(int bufsize)
 
     omni_mutex_lock l(m_FileZipBufferMutex);
 
-    newbuf = (unsigned char*)new char[bufsize + 256];
+    newbuf = reinterpret_cast<unsigned char*>(new char[static_cast<unsigned long long>(bufsize + 256)]);
     if (newbuf == nullptr)
     {
         throw ErrorException(sz_L71.data());
@@ -9316,7 +9316,7 @@ void ClientConnection::CheckFileChunkBufferSize(UINT bufsize)
 
     omni_mutex_lock l(m_FileChunkBufferMutex);
 
-    newbuf = (unsigned char*)new char[bufsize + 256];
+    newbuf = reinterpret_cast<unsigned char*>(new char[bufsize + 256]);
     if (newbuf == nullptr)
     {
         throw ErrorException(sz_L71.data());
@@ -9397,17 +9397,17 @@ void ClientConnection::SendMonitorSizes()
             sdmz.height = static_cast<CARD16>(tdc.monarray[0U].height);
             sdmz.width = static_cast<CARD16>(tdc.monarray[0U].width);
             sdmz.type = rfbSetDesktopSize;
-            WriteExact((char*)&sdmz, sz_rfbSetDesktopSizeMsg);
+            WriteExact(reinterpret_cast<char*>(&sdmz), sz_rfbSetDesktopSizeMsg);
             for (int i{ 1 }; i < tdc.nr_monitors + 1; ++i)
             {
                 rfbExtDesktopScreen eds;
                 eds.id = Swap32IfLE(1);
-                eds.x = Swap16IfLE(tdc.monarray[i].offsetx);
-                eds.y = Swap16IfLE(tdc.monarray[i].offsety);
-                eds.width = Swap16IfLE(tdc.monarray[i].width);
-                eds.height = Swap16IfLE(tdc.monarray[i].height);
-                eds.flags = Swap32IfLE(flag);
-                WriteExact((char*)&eds, sz_rfbExtDesktopScreen);
+                eds.x = Swap16IfLE(tdc.monarray[static_cast<unsigned long long>(i)].offsetx);
+                eds.y = Swap16IfLE(tdc.monarray[static_cast<unsigned long long>(i)].offsety);
+                eds.width = Swap16IfLE(tdc.monarray[static_cast<unsigned long long>(i)].width);
+                eds.height = Swap16IfLE(tdc.monarray[static_cast<unsigned long long>(i)].height);
+                eds.flags = static_cast<unsigned int>(Swap32IfLE(flag));
+                WriteExact(reinterpret_cast<char*>(&eds), sz_rfbExtDesktopScreen);
             }
         }
         else
@@ -9416,15 +9416,15 @@ void ClientConnection::SendMonitorSizes()
             sdmz.height = static_cast<CARD16>(tdc.monarray[0U].height);
             sdmz.width = static_cast<CARD16>(tdc.monarray[0U].width);
             sdmz.type = rfbSetDesktopSize;
-            WriteExact((char*)&sdmz, sz_rfbSetDesktopSizeMsg);
+            WriteExact(reinterpret_cast<char*>(&sdmz), sz_rfbSetDesktopSizeMsg);
             rfbExtDesktopScreen eds;
             eds.id = Swap32IfLE(1);
             eds.x = Swap16IfLE(0);
             eds.y = Swap16IfLE(0);
             eds.width = Swap16IfLE(m_opts->m_requestedWidth == 0 ? tdc.monarray[1U].width : m_opts->m_requestedWidth);
             eds.height = Swap16IfLE(m_opts->m_requestedHeight == 0 ? tdc.monarray[1U].height : m_opts->m_requestedHeight);
-            eds.flags = Swap32IfLE(flag);
-            WriteExact((char*)&eds, sz_rfbExtDesktopScreen);
+            eds.flags = static_cast<unsigned int>(Swap32IfLE(flag));
+            WriteExact(reinterpret_cast<char*>(&eds), sz_rfbExtDesktopScreen);
         }
     }
 }
@@ -9495,7 +9495,7 @@ inline void ClientConnection::CheckNetRectBufferSize(const int nBufSize)
 
     omni_mutex_lock l(m_NetRectBufferMutex);
 
-    BYTE* newbuf = new BYTE[nBufSize + 256];
+    BYTE* newbuf = new BYTE[static_cast<unsigned long long>(nBufSize + 256)];
     if (newbuf == nullptr)
     {
         // Error
@@ -9525,7 +9525,7 @@ inline void ClientConnection::CheckZRLENetRectBufferSize(const int nBufSize)
 
     omni_mutex_lock l(m_ZRLENetRectBufferMutex);
 
-    BYTE* newbuf = new BYTE[nBufSize + 256];
+    BYTE* newbuf = new BYTE[static_cast<unsigned long long>(nBufSize + 256)];
     if (newbuf == nullptr)
     {
         // Error
@@ -9553,7 +9553,7 @@ inline void ClientConnection::CheckXZNetRectBufferSize(const int nBufSize)
 
     omni_mutex_lock l(m_XZNetRectBufferMutex);
 
-    BYTE* newbuf = new BYTE[nBufSize + 256];
+    BYTE* newbuf = new BYTE[static_cast<unsigned long long>(nBufSize + 256)];
     if (newbuf == nullptr)
     {
         // Error
@@ -9579,18 +9579,18 @@ void ClientConnection::GetFriendlySizeString(__int64 Size, char* const szText)
         __int64 lRest = (Size % (1024 * 1024 * 1024));
         Size /= (1024 * 1024 * 1024);
         ::_snprintf_s(szText, 256, 256, "%u.%4.4lu Gb", static_cast<unsigned long>(Size),
-                    static_cast<unsigned long>(((__int64)(lRest) * 10000 / 1024 / 1024 / 1024)));
+                    static_cast<unsigned long>((static_cast<__int64>((lRest)) * 10000 / 1024 / 1024 / 1024)));
     }
     else if (Size > (1024 * 1024))
     {
-        unsigned long lRest = (Size % (1024 * 1024));
+        unsigned long lRest = (static_cast<unsigned long>(Size % (1024 * 1024)));
         Size /= (1024 * 1024);
         ::_snprintf_s(szText, 256, 256, "%u.%3.3lu Mb", static_cast<unsigned long>(Size),
-                    static_cast<unsigned long>(((__int64)(lRest) * 1000 / 1024 / 1024)));
+                    static_cast<unsigned long>((static_cast<__int64>((lRest)) * 1000 / 1024 / 1024)));
     }
     else if (Size > 1024)
     {
-        unsigned long lRest = Size % (1024);
+        unsigned long lRest = static_cast<unsigned long>(Size % (1024));
         Size /= 1024;
         ::_snprintf_s(szText, 256, 256, "%u.%2.2lu Kb", static_cast<unsigned long>(Size), lRest * 100 / 1024);
     }
@@ -9792,8 +9792,8 @@ void ClientConnection::GTGBS_CreateDisplay()
     default:
         wndclass.hCursor = ::LoadCursor(hInstance, MAKEINTRESOURCE(IDC_DOTCURSOR));
     }
-    wndclass.hbrBackground = (HBRUSH)::GetStockObject(BLACK_BRUSH);
-    wndclass.lpszMenuName = (const TCHAR*)nullptr;
+    wndclass.hbrBackground = reinterpret_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH));
+    wndclass.lpszMenuName = static_cast<const TCHAR*>(nullptr);
     wndclass.lpszClassName = ClassName.data();
     ::RegisterClassW(&wndclass);
     const DWORD winstyle =
@@ -9802,8 +9802,8 @@ void ClientConnection::GTGBS_CreateDisplay()
                                //320,200,
                                nullptr, // Parent handle
                                nullptr, // Menu handle
-                               m_hInstResDLL, (LPVOID)this);
-    helper::SafeSetWindowUserData(m_hwndMain, (LONG_PTR)this);
+                               m_hInstResDLL, reinterpret_cast<LPVOID>(this));
+    helper::SafeSetWindowUserData(m_hwndMain, reinterpret_cast<LONG_PTR>(this));
     ::ImmAssociateContext(m_hwndMain, nullptr);
 }
 
@@ -9813,11 +9813,11 @@ void ClientConnection::GTGBS_CreateDisplay()
 LRESULT CALLBACK ClientConnection::GTGBS_ShowStatusWindow(const LPVOID lpParameter)
 {
     extern HINSTANCE m_hInstResDLL;
-    ClientConnection* _this = (ClientConnection*)lpParameter;
+    ClientConnection* _this = reinterpret_cast<ClientConnection*>(lpParameter);
 
     _this->m_fStatusOpen = true;
-    ::DialogBoxParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_STATUS), nullptr, (DLGPROC)ClientConnection::GTGBS_StatusProc,
-                   (LONG_PTR)_this);
+    ::DialogBoxParam(m_hInstResDLL, MAKEINTRESOURCE(IDD_STATUS), nullptr, reinterpret_cast<DLGPROC>(ClientConnection::GTGBS_StatusProc),
+                   reinterpret_cast<LONG_PTR>(_this));
     // _this->m_fStatusOpen = false;
     return 0;
 }
@@ -9838,7 +9838,7 @@ LRESULT CALLBACK ClientConnection::GTGBS_StatusProc(const HWND hwnd, const UINT 
         ::SetWindowPos(hwnd, HWND_TOPMOST, Rect.left, Rect.top, Rect.right - Rect.left, Rect.bottom - Rect.top, SWP_SHOWWINDOW);
 
         std::array<char, MAX_PATH> wt{};
-        ClientConnection* _thisInner = (ClientConnection*)lParam;
+        ClientConnection* _thisInner = reinterpret_cast<ClientConnection*>(lParam);
         helper::SafeSetWindowUserData(hwnd, lParam);
 
         std::array<char, 50U> version{};
@@ -9853,8 +9853,8 @@ LRESULT CALLBACK ClientConnection::GTGBS_StatusProc(const HWND hwnd, const UINT 
         if (_thisInner->m_host.data() != nullptr)
         {
             ::SetDlgItemTextW(hwnd, IDC_VNCSERVER, _thisInner->m_host.data());
-            ::_snwprintf_s((wchar_t*)wt.data(), wt.size(), _TRUNCATE, L"%s %s", sz_L72.data(), _thisInner->m_host.data());
-            ::SetWindowTextW(hwnd, (LPCWSTR)wt.data());
+            ::_snwprintf_s(reinterpret_cast<wchar_t*>(wt.data()), wt.size(), _TRUNCATE, L"%s %s", sz_L72.data(), _thisInner->m_host.data());
+            ::SetWindowTextW(hwnd, reinterpret_cast<LPCWSTR>(wt.data()));
         }
         else
         {
@@ -9864,7 +9864,7 @@ LRESULT CALLBACK ClientConnection::GTGBS_StatusProc(const HWND hwnd, const UINT 
 
         if (_thisInner->m_port != 0)
         {
-            ::SetDlgItemInt(hwnd, IDC_PORT, _thisInner->m_port, FALSE);
+            ::SetDlgItemInt(hwnd, IDC_PORT, static_cast<UINT>(_thisInner->m_port), FALSE);
         }
         else
         {
@@ -9971,8 +9971,8 @@ LRESULT CALLBACK ClientConnection::GTGBS_StatusProc(const HWND hwnd, const UINT 
             ::EnableMenuItem(hMenu, SC_CLOSE, MF_BYCOMMAND | MF_GRAYED);
         }
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         return TRUE;
     }
     case WM_CLOSE: {
@@ -10011,7 +10011,7 @@ LRESULT CALLBACK ClientConnection::GTGBS_StatusProc(const HWND hwnd, const UINT 
         // sf@2002 - Destroy the status timer... TODO: improve this
         if (_this->m_nStatusTimer != 0)
         {
-            ::KillTimer(hwnd, _this->m_nStatusTimer);
+            ::KillTimer(hwnd, static_cast<UINT_PTR>(_this->m_nStatusTimer));
             _this->m_nStatusTimer = 0;
         }
         _this->OldEncodingStatusWindow = -1;
@@ -10038,8 +10038,8 @@ LRESULT CALLBACK ClientConnection::GTGBS_SendCustomKey_proc(const HWND Dlg, cons
         ::GetWindowRect(Dlg, &Rect);
         ::SetWindowPos(Dlg, HWND_TOPMOST, Rect.left, Rect.top, Rect.right - Rect.left, Rect.bottom - Rect.top, SWP_SHOWWINDOW);
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(Dlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(Dlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(Dlg, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(Dlg, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         return TRUE;
     }
     case WM_CLOSE: {
@@ -10108,11 +10108,11 @@ LRESULT CALLBACK ClientConnection::GTGBS_SendCustomKey_proc(const HWND Dlg, cons
 //
 LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, const WPARAM wParam, LPARAM lParam)
 {
-    ClientConnection* _this = (ClientConnection*)helper::SafeGetWindowUserData<ClientConnection>(hwnd);
+    ClientConnection* _this = reinterpret_cast<ClientConnection*>(helper::SafeGetWindowUserData<ClientConnection>(hwnd));
     if (iMsg == WM_CREATE)
     {
-        _this = (ClientConnection*)((CREATESTRUCT*)lParam)->lpCreateParams;
-        helper::SafeSetWindowUserData(hwnd, (LONG_PTR)_this);
+        _this = reinterpret_cast<ClientConnection*>((reinterpret_cast<CREATESTRUCT*>(lParam))->lpCreateParams);
+        helper::SafeSetWindowUserData(hwnd, reinterpret_cast<LONG_PTR>(_this));
     }
 
     if (_this == nullptr)
@@ -10124,7 +10124,7 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
     {
     case WM_COPYDATA:
         PCOPYDATASTRUCT pMyCDS;
-        pMyCDS = (PCOPYDATASTRUCT)lParam;
+        pMyCDS = reinterpret_cast<PCOPYDATASTRUCT>(lParam);
         switch (pMyCDS->dwData)
         {
         case 0: //aspect ratio
@@ -10133,8 +10133,8 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
             int aspect = _this->m_si.framebufferWidth * 100 / _this->m_si.framebufferHeight;
             cdsResponse.cbData = 5;
             cdsResponse.dwData = 0;
-            cdsResponse.lpData = (PVOID)&aspect;
-            ::SendMessage((HWND)wParam, WM_COPYDATA, (WPARAM)hwnd, (LPARAM)&cdsResponse);
+            cdsResponse.lpData = reinterpret_cast<PVOID>(&aspect);
+            ::SendMessage(reinterpret_cast<HWND>(wParam), WM_COPYDATA, reinterpret_cast<WPARAM>(hwnd), reinterpret_cast<LPARAM>(&cdsResponse));
             break;
         }
         case 1: //get nt monitors
@@ -10143,13 +10143,13 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
             int nbrMonitors = _this->nbrMonitors;
             cdsResponse.cbData = 5;
             cdsResponse.dwData = 1;
-            cdsResponse.lpData = (PVOID)&nbrMonitors;
-            ::SendMessage((HWND)wParam, WM_COPYDATA, (WPARAM)hwnd, (LPARAM)&cdsResponse);
+            cdsResponse.lpData = reinterpret_cast<PVOID>(&nbrMonitors);
+            ::SendMessage(reinterpret_cast<HWND>(wParam), WM_COPYDATA, reinterpret_cast<WPARAM>(hwnd), reinterpret_cast<LPARAM>(&cdsResponse));
             break;
         }
         case 2: //set monitor x
         {
-            int monitor = *(int*)pMyCDS->lpData;
+            int monitor = *reinterpret_cast<int*>(pMyCDS->lpData);
             _this->SendSetMonitor(monitor);
             break;
         }
@@ -10206,7 +10206,7 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
             {
                 // 24 March 2008 jdp
                 _this->RebuildToolbar(hwnd);
-                ::SendMessage(hwnd, WM_SIZE, (WPARAM)ID_DINPUT, (LPARAM)0);
+                ::SendMessage(hwnd, WM_SIZE, static_cast<WPARAM>(ID_DINPUT), static_cast<LPARAM>(0));
             }
             if (_this->m_opts->m_ViewOnly)
             {
@@ -10221,7 +10221,7 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
             {
                 // 24 March 2008 jdp
                 _this->RebuildToolbar(hwnd);
-                ::SendMessage(hwnd, WM_SIZE, (WPARAM)ID_DINPUT, (LPARAM)0);
+                ::SendMessage(hwnd, WM_SIZE, static_cast<WPARAM>(ID_DINPUT), static_cast<LPARAM>(0));
             }
             if (_this->m_opts->m_ViewOnly)
             {
@@ -10348,7 +10348,7 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
                 }
 
                 // adzm 2010-10
-                _this->m_PendingMouseMove.dwMinimumMouseMoveInterval = _this->m_opts->m_throttleMouse;
+                _this->m_PendingMouseMove.dwMinimumMouseMoveInterval = static_cast<DWORD>(_this->m_opts->m_throttleMouse);
             }
 
             // adzm - 2010-07 - Extended clipboard
@@ -10570,9 +10570,9 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
             if (::MessageBoxW(hwnd, msg.data(), _T("UltraVNC Viewer - VM Power"), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) ==
                 IDYES)
             {
-                _this->SendXvpMsg((CARD8)((LOWORD(wParam) == ID_XVP_SHUTDOWN) ? rfbXvpShutdown
+                _this->SendXvpMsg(static_cast<CARD8>(((LOWORD(wParam) == ID_XVP_SHUTDOWN) ? rfbXvpShutdown
                                           : (LOWORD(wParam) == ID_XVP_REBOOT) ? rfbXvpReboot
-                                                                              : rfbXvpReset));
+                                                                              : rfbXvpReset)));
             }
             return 0;
         }
@@ -10669,7 +10669,7 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
             if (_this->InFullScreenMode()) //PGM
 
             {                                                                        //PGM
-                ::SendMessage(hwnd, WM_SYSCOMMAND, (WPARAM)ID_AUTOSCALING, (LPARAM)0); //PGM
+                ::SendMessage(hwnd, WM_SYSCOMMAND, static_cast<WPARAM>(ID_AUTOSCALING), static_cast<LPARAM>(0)); //PGM
 
                 return 0; //PGM
             } //PGM
@@ -10841,7 +10841,7 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
             ::SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 100, 100, SWP_NOMOVE | SWP_NOSIZE);
         }
 
-        TheAccelKeys.SetWindowHandle(_this->m_opts->m_NoHotKeys ? 0 : hwnd);
+        TheAccelKeys.SetWindowHandle(_this->m_opts->m_NoHotKeys ? nullptr : hwnd);
         _this->m_keymap->Reset();
         return 0;
 
@@ -11021,7 +11021,7 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
 
     case WM_DESTROY: {
         // Remove us from the clipboard viewer chain
-        if ((hwnd == _this->m_hwndcn) && (_this->m_hwndNextViewer != (HWND)INVALID_HANDLE_VALUE))
+        if ((hwnd == _this->m_hwndcn) && (_this->m_hwndNextViewer != reinterpret_cast<HWND>(INVALID_HANDLE_VALUE)))
         {
             BOOL res = ::ChangeClipboardChain(_this->m_hwndcn, _this->m_hwndNextViewer);
             _this->m_hwndNextViewer = nullptr;
@@ -11274,7 +11274,7 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
     case tbWM_MINIMIZE:
         _this->SetDormant(true);
         _this->tbWM_Set = true;
-        ;
+        
         ::GetWindowRect(_this->m_hwndMain, &_this->tbWM_rect);
         ::ShowWindow(_this->m_hwndMain, SW_MINIMIZE);
         return 0;
@@ -11299,7 +11299,7 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
         return 0;
 
     case tbWM_SWITCHMONITOR:
-        ::SendMessage(hwnd, WM_SYSCOMMAND, (WPARAM)ID_DESKTOP, (LPARAM)0);
+        ::SendMessage(hwnd, WM_SYSCOMMAND, static_cast<WPARAM>(ID_DESKTOP), static_cast<LPARAM>(0));
         return 0;
 
     case tbWM_CHAT:
@@ -11309,7 +11309,7 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
         }
         else
         {
-            ::SendMessage(hwnd, WM_SYSCOMMAND, (WPARAM)ID_TEXTCHAT, (LPARAM)0);
+            ::SendMessage(hwnd, WM_SYSCOMMAND, static_cast<WPARAM>(ID_TEXTCHAT), static_cast<LPARAM>(0));
         }
         return 0;
 
@@ -11320,7 +11320,7 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
         }
         else
         {
-            ::SendMessage(hwnd, WM_SYSCOMMAND, (WPARAM)ID_FILETRANSFER, (LPARAM)0);
+            ::SendMessage(hwnd, WM_SYSCOMMAND, static_cast<WPARAM>(ID_FILETRANSFER), static_cast<LPARAM>(0));
         }
         return 0;
 
@@ -11356,7 +11356,7 @@ LRESULT CALLBACK ClientConnection::WndProc(const HWND hwnd, const UINT iMsg, con
         if (_this->m_opts->m_ShowToolbar)
         {
             _this->RebuildToolbar(hwnd);
-            ::SendMessage(hwnd, WM_SIZE, (WPARAM)ID_DINPUT, (LPARAM)0);
+            ::SendMessage(hwnd, WM_SIZE, static_cast<WPARAM>(ID_DINPUT), static_cast<LPARAM>(0));
         }
     }
     return ::DefWindowProc(hwnd, iMsg, wParam, lParam);
@@ -11421,7 +11421,7 @@ LRESULT CALLBACK ClientConnection::WndProcTBwin(const HWND hwnd, const UINT iMsg
                     }
                     _this->m_statusThread = nullptr;
                     _this->m_statusThread = ::CreateThread(
-                        nullptr, 0, (LPTHREAD_START_ROUTINE)ClientConnection::GTGBS_ShowStatusWindow, (LPVOID)_this, 0, &threadID);
+                        nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(ClientConnection::GTGBS_ShowStatusWindow), reinterpret_cast<LPVOID>(_this), 0, &threadID);
                 }
                 return 0;
             }
@@ -11454,7 +11454,7 @@ LRESULT CALLBACK ClientConnection::WndProcTBwin(const HWND hwnd, const UINT iMsg
                 //_this->SendKeyEvent(XK_Execute,     true);
                 //_this->SendKeyEvent(XK_Execute,     false);
                 Key = static_cast<UINT>(::DialogBox(m_hInstResDLL, MAKEINTRESOURCE(IDD_CUSTUM_KEY), nullptr,
-                                (DLGPROC)ClientConnection::GTGBS_SendCustomKey_proc));
+                                reinterpret_cast<DLGPROC>(ClientConnection::GTGBS_SendCustomKey_proc)));
                 if (Key > 0)
                 {
                     vnclog.Print(0, _T("START Send Custom Key %d\n"), Key);
@@ -11499,25 +11499,25 @@ LRESULT CALLBACK ClientConnection::WndProcTBwin(const HWND hwnd, const UINT iMsg
 
             if (LOWORD(wParam) == ID_BUTTON_END)
             {
-                ::SendMessage(parent, WM_CLOSE, (WPARAM)0, (LPARAM)0);
+                ::SendMessage(parent, WM_CLOSE, static_cast<WPARAM>(0), static_cast<LPARAM>(0));
                 return 0;
             }
 
             if (LOWORD(wParam) == ID_BUTTON_TYPECLIP)
             {
-                ::SendMessage(parent, WM_SYSCOMMAND, (WPARAM)ID_CONN_TYPECLIPBOARD, (LPARAM)0);
+                ::SendMessage(parent, WM_SYSCOMMAND, static_cast<WPARAM>(ID_CONN_TYPECLIPBOARD), static_cast<LPARAM>(0));
                 return 0;
             }
 
             if (LOWORD(wParam) == ID_BUTTON_CAD)
             {
-                ::SendMessage(parent, WM_SYSCOMMAND, (WPARAM)ID_CONN_CTLALTDEL, (LPARAM)0);
+                ::SendMessage(parent, WM_SYSCOMMAND, static_cast<WPARAM>(ID_CONN_CTLALTDEL), static_cast<LPARAM>(0));
                 return 0;
             }
 
             if (LOWORD(wParam) == ID_BUTTON_FULLSCREEN)
             {
-                ::SendMessage(parent, WM_SYSCOMMAND, (WPARAM)ID_FULLSCREEN, (LPARAM)0);
+                ::SendMessage(parent, WM_SYSCOMMAND, static_cast<WPARAM>(ID_FULLSCREEN), static_cast<LPARAM>(0));
                 return 0;
             }
 
@@ -11529,26 +11529,26 @@ LRESULT CALLBACK ClientConnection::WndProcTBwin(const HWND hwnd, const UINT iMsg
                 }
                 else
                 {
-                    ::SendMessage(parent, WM_SYSCOMMAND, (WPARAM)ID_FILETRANSFER, (LPARAM)0);
+                    ::SendMessage(parent, WM_SYSCOMMAND, static_cast<WPARAM>(ID_FILETRANSFER), static_cast<LPARAM>(0));
                 }
                 return 0;
             }
 
             if (LOWORD(wParam) == ID_BUTTON_DBUTTON)
             {
-                ::SendMessage(parent, WM_SYSCOMMAND, (WPARAM)ID_DBUTTON, (LPARAM)0);
+                ::SendMessage(parent, WM_SYSCOMMAND, static_cast<WPARAM>(ID_DBUTTON), static_cast<LPARAM>(0));
                 return 0;
             }
 
             if (LOWORD(wParam) == ID_BUTTON_SW)
             {
-                ::SendMessage(parent, WM_SYSCOMMAND, (WPARAM)ID_SW, (LPARAM)0);
+                ::SendMessage(parent, WM_SYSCOMMAND, static_cast<WPARAM>(ID_SW), static_cast<LPARAM>(0));
                 return 0;
             }
 
             if (LOWORD(wParam) == ID_BUTTON_DESKTOP)
             {
-                ::SendMessage(parent, WM_SYSCOMMAND, (WPARAM)ID_DESKTOP, (LPARAM)0);
+                ::SendMessage(parent, WM_SYSCOMMAND, static_cast<WPARAM>(ID_DESKTOP), static_cast<LPARAM>(0));
                 return 0;
             }
 
@@ -11560,7 +11560,7 @@ LRESULT CALLBACK ClientConnection::WndProcTBwin(const HWND hwnd, const UINT iMsg
                 }
                 else
                 {
-                    ::SendMessage(parent, WM_SYSCOMMAND, (WPARAM)ID_TEXTCHAT, (LPARAM)0);
+                    ::SendMessage(parent, WM_SYSCOMMAND, static_cast<WPARAM>(ID_TEXTCHAT), static_cast<LPARAM>(0));
                 }
                 return 0;
             }
@@ -11570,33 +11570,33 @@ LRESULT CALLBACK ClientConnection::WndProcTBwin(const HWND hwnd, const UINT iMsg
                 if (_this->m_remote_mouse_disable)
                 {
                     _this->m_remote_mouse_disable = false;
-                    ::SendMessage(parent, WM_SYSCOMMAND, (WPARAM)ID_INPUT, (LPARAM)0);
-                    ::SendMessage(parent, WM_SIZE, (WPARAM)ID_DINPUT, (LPARAM)0);
+                    ::SendMessage(parent, WM_SYSCOMMAND, static_cast<WPARAM>(ID_INPUT), static_cast<LPARAM>(0));
+                    ::SendMessage(parent, WM_SIZE, static_cast<WPARAM>(ID_DINPUT), static_cast<LPARAM>(0));
                 }
                 else
                 {
                     _this->m_remote_mouse_disable = true;
-                    ::SendMessage(parent, WM_SYSCOMMAND, (WPARAM)ID_DINPUT, (LPARAM)0);
-                    ::SendMessage(parent, WM_SIZE, (WPARAM)ID_DINPUT, (LPARAM)0);
+                    ::SendMessage(parent, WM_SYSCOMMAND, static_cast<WPARAM>(ID_DINPUT), static_cast<LPARAM>(0));
+                    ::SendMessage(parent, WM_SIZE, static_cast<WPARAM>(ID_DINPUT), static_cast<LPARAM>(0));
                 }
                 return 0;
             }
 
             if (LOWORD(wParam) == ID_BUTTON_PROPERTIES)
             {
-                ::SendMessage(parent, WM_SYSCOMMAND, (WPARAM)IDC_OPTIONBUTTON, (LPARAM)0);
+                ::SendMessage(parent, WM_SYSCOMMAND, static_cast<WPARAM>(IDC_OPTIONBUTTON), static_cast<LPARAM>(0));
                 return 0;
             }
 
             if (LOWORD(wParam) == ID_BUTTON_REFRESH)
             {
-                ::SendMessage(parent, WM_SYSCOMMAND, (WPARAM)ID_REQUEST_REFRESH, (LPARAM)0);
+                ::SendMessage(parent, WM_SYSCOMMAND, static_cast<WPARAM>(ID_REQUEST_REFRESH), static_cast<LPARAM>(0));
                 return 0;
             }
 
             if (LOWORD(wParam) == ID_BUTTON_STRG_ESC)
             {
-                ::SendMessage(parent, WM_SYSCOMMAND, (WPARAM)ID_CONN_CTLESC, (LPARAM)0);
+                ::SendMessage(parent, WM_SYSCOMMAND, static_cast<WPARAM>(ID_CONN_CTLESC), static_cast<LPARAM>(0));
                 return 0;
             }
         }
@@ -11622,7 +11622,7 @@ LRESULT CALLBACK ClientConnection::WndProchwnd(const HWND hwnd, UINT iMsg, WPARA
     switch (iMsg)
     {
     case WM_CREATE:
-        _this = (ClientConnection*)((CREATESTRUCT*)lParam)->lpCreateParams;
+        _this = reinterpret_cast<ClientConnection*>((reinterpret_cast<CREATESTRUCT*>(lParam))->lpCreateParams);
         if (_this == nullptr)
         {
             return 0;
@@ -11978,7 +11978,7 @@ LRESULT CALLBACK ClientConnection::WndProchwnd(const HWND hwnd, UINT iMsg, WPARA
     case WM_PALETTECHANGED:
         // If this application did not change the palette, select
         // and realize this application's palette
-        if ((HWND)wParam != hwnd)
+        if (reinterpret_cast<HWND>(wParam) != hwnd)
         {
             // Need the window's DC for SelectPalette/RealizePalette
             TempDC hDC(hwnd);
@@ -12031,8 +12031,8 @@ LRESULT CALLBACK ClientConnection::WndProchwnd(const HWND hwnd, UINT iMsg, WPARA
 
     case WM_CHANGECBCHAIN: {
         // The clipboard chain is changing
-        HWND hWndRemove = (HWND)wParam; // handle of window being removed
-        HWND hWndNext = (HWND)lParam;   // handle of next window in chain
+        HWND hWndRemove = reinterpret_cast<HWND>(wParam); // handle of window being removed
+        HWND hWndNext = reinterpret_cast<HWND>(lParam);   // handle of next window in chain
         vnclog.Print(6, _T("WM_CHANGECBCHAIN remove 0x%08x, next 0x%08x (current m_hwndcn 0x%08x / hwnd 0x%08x, next 0x%08x)\n"),
                      hWndRemove, hWndNext, _this->m_hwndcn, hwnd, _this->m_hwndNextViewer);
         // If next window is closing, update our pointer.
@@ -12046,7 +12046,7 @@ LRESULT CALLBACK ClientConnection::WndProchwnd(const HWND hwnd, UINT iMsg, WPARA
             // adzm - 2010-07 - Fix clipboard hangs
             // use SendNotifyMessage instead of SendMessage so misbehaving or hung applications
             // (like ourself before this) won't cause our thread to hang.
-            ::SendNotifyMessage(_this->m_hwndNextViewer, WM_CHANGECBCHAIN, (WPARAM)hWndRemove, (LPARAM)hWndNext);
+            ::SendNotifyMessage(_this->m_hwndNextViewer, WM_CHANGECBCHAIN, reinterpret_cast<WPARAM>(hWndRemove), reinterpret_cast<LPARAM>(hWndNext));
         }
 
         return 0;
@@ -12057,7 +12057,7 @@ LRESULT CALLBACK ClientConnection::WndProchwnd(const HWND hwnd, UINT iMsg, WPARA
     case WM_GETSCALING: {
         WPARAM wPar;
         wPar = MAKEWPARAM(_this->m_hScrollMax, _this->m_vScrollMax);
-        ::SendMessage((HWND)wParam, WM_GETSCALING, wPar, lParam);
+        ::SendMessage(reinterpret_cast<HWND>(wParam), WM_GETSCALING, wPar, lParam);
         return TRUE;
     }
 
@@ -12126,15 +12126,15 @@ void ClientConnection::ConvertAll(const CARD16 width, const CARD16 height, const
     }
 
     BYTE *sourcepos, *destpos;
-    destpos = (BYTE*)dest + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
-    sourcepos = (BYTE*)source;
+    destpos = reinterpret_cast<BYTE*>(dest) + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
+    sourcepos = reinterpret_cast<BYTE*>(source);
 
     int y;
     for (y = 0; y < height; ++y)
     {
-        std::memcpy(destpos, sourcepos, bytesPerInputRow);
-        sourcepos = (BYTE*)sourcepos + bytesPerInputRow;
-        destpos = (BYTE*)destpos + bytesPerOutputRow;
+        std::memcpy(destpos, sourcepos, static_cast<size_t>(bytesPerInputRow));
+        sourcepos = reinterpret_cast<BYTE*>(sourcepos) + bytesPerInputRow;
+        destpos = reinterpret_cast<BYTE*>(destpos) + bytesPerOutputRow;
     }
     return;
 error:
@@ -12165,15 +12165,15 @@ void ClientConnection::ConvertAll_secure(const CARD16 width, const CARD16 height
 
 
     BYTE *sourcepos, *destpos;
-    destpos = (BYTE*)dest + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
-    sourcepos = (BYTE*)source;
+    destpos = reinterpret_cast<BYTE*>(dest) + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
+    sourcepos = reinterpret_cast<BYTE*>(source);
 
     int y;
     for (y = 0; y < height; ++y)
     {
-        std::memcpy(destpos, sourcepos, bytesPerInputRow);
-        sourcepos = (BYTE*)sourcepos + bytesPerInputRow;
-        destpos = (BYTE*)destpos + bytesPerOutputRow;
+        std::memcpy(destpos, sourcepos, static_cast<size_t>(bytesPerInputRow));
+        sourcepos = reinterpret_cast<BYTE*>(sourcepos) + bytesPerInputRow;
+        destpos = reinterpret_cast<BYTE*>(destpos) + bytesPerOutputRow;
     }
     return;
 error:
@@ -12196,16 +12196,16 @@ void ClientConnection::Copybuffer(int width, const int height, const int xx, con
         bytesPerOutputRow += 4 - bytesPerOutputRow % 4;
     }
     BYTE *sourcepos, *destpos;
-    destpos = (BYTE*)dest + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
-    sourcepos = (BYTE*)source + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
+    destpos = reinterpret_cast<BYTE*>(dest) + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
+    sourcepos = reinterpret_cast<BYTE*>(source) + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
 
     int y;
     width *= bytes_per_pixel;
     for (y = 0; y < height; ++y)
     {
-        std::memcpy(destpos, sourcepos, width);
-        sourcepos = (BYTE*)sourcepos + bytesPerOutputRow;
-        destpos = (BYTE*)destpos + bytesPerOutputRow;
+        std::memcpy(destpos, sourcepos, static_cast<size_t>(width));
+        sourcepos = reinterpret_cast<BYTE*>(sourcepos) + bytesPerOutputRow;
+        destpos = reinterpret_cast<BYTE*>(destpos) + bytesPerOutputRow;
     }
     return;
 error:
@@ -12228,15 +12228,15 @@ void ClientConnection::Copyto0buffer(int width, const int height, const int xx, 
         bytesPerOutputRow += 4 - bytesPerOutputRow % 4;
     }
     BYTE *sourcepos, *destpos;
-    destpos = (BYTE*)dest;
-    sourcepos = (BYTE*)source + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
+    destpos = reinterpret_cast<BYTE*>(dest);
+    sourcepos = reinterpret_cast<BYTE*>(source) + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
     int y;
     width *= bytes_per_pixel;
     for (y = 0; y < height; ++y)
     {
-        std::memcpy(destpos, sourcepos, width);
-        sourcepos = (BYTE*)sourcepos + bytesPerOutputRow;
-        destpos = (BYTE*)destpos + width;
+        std::memcpy(destpos, sourcepos, static_cast<size_t>(width));
+        sourcepos = reinterpret_cast<BYTE*>(sourcepos) + bytesPerOutputRow;
+        destpos = reinterpret_cast<BYTE*>(destpos) + width;
     }
     return;
 error:
@@ -12260,16 +12260,16 @@ void ClientConnection::Copyfrom0buffer(int width, const int height, const int xx
         bytesPerOutputRow += 4 - bytesPerOutputRow % 4;
     }
     BYTE *sourcepos, *destpos;
-    destpos = (BYTE*)dest + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
-    sourcepos = (BYTE*)source;
+    destpos = reinterpret_cast<BYTE*>(dest) + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
+    sourcepos = reinterpret_cast<BYTE*>(source);
 
     int y;
     width *= bytes_per_pixel;
     for (y = 0; y < height; ++y)
     {
-        std::memcpy(destpos, sourcepos, width);
-        sourcepos = (BYTE*)sourcepos + width;
-        destpos = (BYTE*)destpos + bytesPerOutputRow;
+        std::memcpy(destpos, sourcepos, static_cast<size_t>(width));
+        sourcepos = reinterpret_cast<BYTE*>(sourcepos) + width;
+        destpos = reinterpret_cast<BYTE*>(destpos) + bytesPerOutputRow;
     }
     return;
 error:
@@ -12286,18 +12286,18 @@ void ClientConnection::Switchbuffer(int width, const int height, const int xx, c
         bytesPerOutputRow += 4 - bytesPerOutputRow % 4;
     }
     BYTE *sourcepos, *destpos, *tempbuffer;
-    destpos = (BYTE*)dest + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
-    sourcepos = (BYTE*)source + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
+    destpos = reinterpret_cast<BYTE*>(dest) + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
+    sourcepos = reinterpret_cast<BYTE*>(source) + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
     int y;
     width *= bytes_per_pixel;
-    tempbuffer = new BYTE[width];
+    tempbuffer = new BYTE[static_cast<unsigned long long>(width)];
     for (y = 0; y < height; ++y)
     {
-        std::memcpy(tempbuffer, destpos, width);
-        std::memcpy(destpos, sourcepos, width);
-        std::memcpy(sourcepos, tempbuffer, width);
-        sourcepos = (BYTE*)sourcepos + bytesPerOutputRow;
-        destpos = (BYTE*)destpos + bytesPerOutputRow;
+        std::memcpy(tempbuffer, destpos, static_cast<size_t>(width));
+        std::memcpy(destpos, sourcepos, static_cast<size_t>(width));
+        std::memcpy(sourcepos, tempbuffer, static_cast<size_t>(width));
+        sourcepos = reinterpret_cast<BYTE*>(sourcepos) + bytesPerOutputRow;
+        destpos = reinterpret_cast<BYTE*>(destpos) + bytesPerOutputRow;
     }
     delete[] tempbuffer;
 }
@@ -12313,9 +12313,9 @@ void ClientConnection::ConvertPixel(const int xx, const int yy, const int bytes_
         bytesPerOutputRow += 4 - bytesPerOutputRow % 4;
     }
     BYTE *sourcepos, *destpos;
-    destpos = (BYTE*)dest + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
-    sourcepos = (BYTE*)source;
-    std::memcpy(destpos, sourcepos, bytes_per_pixel);
+    destpos = reinterpret_cast<BYTE*>(dest) + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
+    sourcepos = reinterpret_cast<BYTE*>(source);
+    std::memcpy(destpos, sourcepos, static_cast<size_t>(bytes_per_pixel));
 }
 
 void ClientConnection::ConvertPixel_to_bpp_from_32(const int xx, const int yy, const int bytes_per_pixel, BYTE* const source,
@@ -12329,11 +12329,11 @@ void ClientConnection::ConvertPixel_to_bpp_from_32(const int xx, const int yy, c
         bytesPerOutputRow += 4 - bytesPerOutputRow % 4;
     }
     BYTE* destpos;
-    destpos = (BYTE*)dest + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
+    destpos = reinterpret_cast<BYTE*>(dest) + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
     BYTE r = source[0U];
     BYTE g = source[1U];
     BYTE b = source[2U];
-    SETUP_COLOR_SHORTCUTS;
+    SETUP_COLOR_SHORTCUTS
     switch (bytes_per_pixel)
     {
     case 1: {
@@ -12341,13 +12341,13 @@ void ClientConnection::ConvertPixel_to_bpp_from_32(const int xx, const int yy, c
     }
     break;
     case 2: {
-        CARD16* p = (CARD16*)destpos;
-        *p = ((((CARD16)b * (bm + 1)) >> 8) << bs) | ((((CARD16)g * (gm + 1)) >> 8) << gs) | ((((CARD16)r * (rm + 1)) >> 8) << rs);
+        CARD16* p = reinterpret_cast<CARD16*>(destpos);
+        *p = (((static_cast<CARD16>(b) * (bm + 1)) >> 8) << bs) | (((static_cast<CARD16>(g) * (gm + 1)) >> 8) << gs) | (((static_cast<CARD16>(r) * (rm + 1)) >> 8) << rs);
     }
     break;
     case 4: {
-        CARD32* p = (CARD32*)destpos;
-        *p = ((((CARD32)b * (bm + 1)) >> 8) << bs) | ((((CARD32)g * (gm + 1)) >> 8) << gs) | ((((CARD32)r * (rm + 1)) >> 8) << rs);
+        CARD32* p = reinterpret_cast<CARD32*>(destpos);
+        *p = (((static_cast<CARD32>(b) * (bm + 1)) >> 8) << bs) | (((static_cast<CARD32>(g) * (gm + 1)) >> 8) << gs) | (((static_cast<CARD32>(r) * (rm + 1)) >> 8) << rs);
     }
     break;
     }
@@ -12376,8 +12376,8 @@ void ClientConnection::ConvertPixels_to_bpp_from_32_batch(const int x, const int
         bytesPerOutputRow += 4 - bytesPerOutputRow % 4;
     }
 
-    SETUP_COLOR_SHORTCUTS;
-    CARD32* p = (CARD32*)source;
+    SETUP_COLOR_SHORTCUTS
+    CARD32* p = reinterpret_cast<CARD32*>(source);
 
     switch (bytes_per_pixel)
     {
@@ -12387,9 +12387,9 @@ void ClientConnection::ConvertPixels_to_bpp_from_32_batch(const int x, const int
             BYTE* destRow = dest + (bytesPerOutputRow * row) + (x * bytes_per_pixel);
             for (int col{ 0 }; col < w; ++col)
             {
-                BYTE r = ((BYTE*)p)[0U];
-                BYTE g = ((BYTE*)p)[1U];
-                BYTE b = ((BYTE*)p)[2U];
+                BYTE r = (reinterpret_cast<BYTE*>(p))[0U];
+                BYTE g = (reinterpret_cast<BYTE*>(p))[1U];
+                BYTE b = (reinterpret_cast<BYTE*>(p))[2U];
                 *destRow = (((b * (bm + 1)) >> 8) << bs) | (((g * (gm + 1)) >> 8) << gs) | (((r * (rm + 1)) >> 8) << rs);
                 ++destRow;
                 ++p;
@@ -12399,14 +12399,14 @@ void ClientConnection::ConvertPixels_to_bpp_from_32_batch(const int x, const int
     case 2:
         for (int row = y; row < y + h; ++row)
         {
-            CARD16* destRow = (CARD16*)(dest + (bytesPerOutputRow * row) + (x * bytes_per_pixel));
+            CARD16* destRow = reinterpret_cast<CARD16*>((dest + (bytesPerOutputRow * row) + (x * bytes_per_pixel)));
             for (int col{ 0 }; col < w; ++col)
             {
-                BYTE r = ((BYTE*)p)[0U];
-                BYTE g = ((BYTE*)p)[1U];
-                BYTE b = ((BYTE*)p)[2U];
-                *destRow = ((((CARD16)b * (bm + 1)) >> 8) << bs) | ((((CARD16)g * (gm + 1)) >> 8) << gs) |
-                           ((((CARD16)r * (rm + 1)) >> 8) << rs);
+                BYTE r = (reinterpret_cast<BYTE*>(p))[0U];
+                BYTE g = (reinterpret_cast<BYTE*>(p))[1U];
+                BYTE b = (reinterpret_cast<BYTE*>(p))[2U];
+                *destRow = (((static_cast<CARD16>(b) * (bm + 1)) >> 8) << bs) | (((static_cast<CARD16>(g) * (gm + 1)) >> 8) << gs) |
+                           (((static_cast<CARD16>(r) * (rm + 1)) >> 8) << rs);
                 ++destRow;
                 ++p;
             }
@@ -12415,14 +12415,14 @@ void ClientConnection::ConvertPixels_to_bpp_from_32_batch(const int x, const int
     case 4:
         for (int row = y; row < y + h; ++row)
         {
-            CARD32* destRow = (CARD32*)(dest + (bytesPerOutputRow * row) + (x * bytes_per_pixel));
+            CARD32* destRow = reinterpret_cast<CARD32*>((dest + (bytesPerOutputRow * row) + (x * bytes_per_pixel)));
             for (int col{ 0 }; col < w; ++col)
             {
-                BYTE r = ((BYTE*)p)[0U];
-                BYTE g = ((BYTE*)p)[1U];
-                BYTE b = ((BYTE*)p)[2U];
-                *destRow = ((((CARD32)b * (bm + 1)) >> 8) << bs) | ((((CARD32)g * (gm + 1)) >> 8) << gs) |
-                           ((((CARD32)r * (rm + 1)) >> 8) << rs);
+                BYTE r = (reinterpret_cast<BYTE*>(p))[0U];
+                BYTE g = (reinterpret_cast<BYTE*>(p))[1U];
+                BYTE b = (reinterpret_cast<BYTE*>(p))[2U];
+                *destRow = (((static_cast<CARD32>(b) * (bm + 1)) >> 8) << bs) | (((static_cast<CARD32>(g) * (gm + 1)) >> 8) << gs) |
+                           (((static_cast<CARD32>(r) * (rm + 1)) >> 8) << rs);
                 ++destRow;
                 ++p;
             }
@@ -12445,7 +12445,7 @@ void ClientConnection::SolidColor(const int width, const int height, const int x
         bytesPerOutputRow += 4 - bytesPerOutputRow % 4;
     }
     BYTE* destpos;
-    destpos = (BYTE*)dest + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
+    destpos = reinterpret_cast<BYTE*>(dest) + (bytesPerOutputRow * yy) + (xx * bytes_per_pixel);
 
     // Optimized: fill first row, then copy entire rows
     int rowBytes = width * bytes_per_pixel;
@@ -12454,7 +12454,7 @@ void ClientConnection::SolidColor(const int width, const int height, const int x
     BYTE* rowPtr = destpos;
     for (int x{ 0 }; x < width; ++x)
     {
-        std::memcpy(rowPtr, source, bytes_per_pixel);
+        std::memcpy(rowPtr, source, static_cast<size_t>(bytes_per_pixel));
         rowPtr += bytes_per_pixel;
     }
 
@@ -12463,7 +12463,7 @@ void ClientConnection::SolidColor(const int width, const int height, const int x
     destpos += bytesPerOutputRow;
     for (int y{ 1 }; y < height; ++y)
     {
-        std::memcpy(destpos, firstRow, rowBytes);
+        std::memcpy(destpos, firstRow, static_cast<size_t>(rowBytes));
         destpos += bytesPerOutputRow;
     }
 }
@@ -12478,11 +12478,11 @@ void ClientConnection::SendKeepAlive(const bool bForce, const bool bAsync)
     {
         if (bAsync)
         {
-            ::PostMessage(m_hwndcn, WM_SENDKEEPALIVE, (WPARAM)(bForce ? 1 : 0), (LPARAM)0);
+            ::PostMessage(m_hwndcn, WM_SENDKEEPALIVE, static_cast<WPARAM>((bForce ? 1 : 0)), static_cast<LPARAM>(0));
         }
         else
         {
-            ::SendMessage(m_hwndcn, WM_SENDKEEPALIVE, (WPARAM)(bForce ? 1 : 0), (LPARAM)0);
+            ::SendMessage(m_hwndcn, WM_SENDKEEPALIVE, static_cast<WPARAM>((bForce ? 1 : 0)), static_cast<LPARAM>(0));
         }
     }
 }
@@ -12525,11 +12525,11 @@ void ClientConnection::Internal_SendKeepAlive(const bool bForce)
         rfbKeepAliveMsg kp;
         std::memset(&kp, 0, sizeof kp);
         kp.type = rfbKeepAlive;
-        WriteExact_timeout((char*)&kp, sz_rfbKeepAliveMsg, rfbKeepAlive, 5);
+        WriteExact_timeout(reinterpret_cast<char*>(&kp), sz_rfbKeepAliveMsg, rfbKeepAlive, 5);
 
         if ((m_keepalive_timer != 0) && (m_opts->m_keepAliveInterval > 0))
         {
-            ::SetTimer(m_hwndcn, m_keepalive_timer, m_opts->m_keepAliveInterval * 1000, nullptr);
+            ::SetTimer(m_hwndcn, m_keepalive_timer, static_cast<UINT>(m_opts->m_keepAliveInterval * 1000), nullptr);
         }
     }
 }
@@ -12549,7 +12549,7 @@ void ClientConnection::NotifyPluginStreamingSupport()
     msg.type = rfbNotifyPluginStreaming;
 
     //adzm 2010-09 - minimize packets. SendExact flushes the queue.
-    WriteExact((char*)&msg, sz_rfbNotifyPluginStreamingMsg, rfbNotifyPluginStreaming);
+    WriteExact(reinterpret_cast<char*>(&msg), sz_rfbNotifyPluginStreamingMsg, rfbNotifyPluginStreaming);
     m_fPluginStreamingOut = true;
 }
 
@@ -12574,7 +12574,7 @@ BOOL CALLBACK DialogProc(const HWND hWnd, const UINT Message, const WPARAM wPara
         switch (LOWORD(wParam))
         {
         case IDC_LIST1:
-            if (((LPNMHDR)lParam)->code == NM_DBLCLK)
+            if ((reinterpret_cast<LPNMHDR>(lParam))->code == NM_DBLCLK)
             {
                 int iSlected{ 0 };
 
@@ -12594,10 +12594,10 @@ BOOL CALLBACK DialogProc(const HWND hWnd, const UINT Message, const WPARAM wPara
                 LvItemW.pszText = Text.data();
                 LvItemW.cchTextMax = 256;
                 LvItemW.iItem = iSlected;
-                ::SendMessageW(hList, LVM_GETITEMTEXTW, iSlected, (LPARAM)&LvItemW);
+                ::SendMessageW(hList, LVM_GETITEMTEXTW, static_cast<WPARAM>(iSlected), reinterpret_cast<LPARAM>(&LvItemW));
                 ::EndDialog(hWnd, iSlected + 1);
             }
-            if (((LPNMHDR)lParam)->code == NM_CLICK)
+            if ((reinterpret_cast<LPNMHDR>(lParam))->code == NM_CLICK)
             {
                 iSelect = static_cast<int>(::SendMessage(hList, LVM_GETNEXTITEM, static_cast<WPARAM>(-1), LVNI_FOCUSED));
 
@@ -12609,12 +12609,12 @@ BOOL CALLBACK DialogProc(const HWND hWnd, const UINT Message, const WPARAM wPara
                 flag = 1;
             }
 
-            if (((LPNMHDR)lParam)->code == LVN_BEGINLABELEDIT)
+            if ((reinterpret_cast<LPNMHDR>(lParam))->code == LVN_BEGINLABELEDIT)
             {
                 hEdit = ListView_GetEditControl(hList);
             }
 
-            if (((LPNMHDR)lParam)->code == LVN_ENDLABELEDIT)
+            if ((reinterpret_cast<LPNMHDR>(lParam))->code == LVN_ENDLABELEDIT)
             {
                 int iIndex;
                 std::array<wchar_t, 255U> text{};
@@ -12624,7 +12624,7 @@ BOOL CALLBACK DialogProc(const HWND hWnd, const UINT Message, const WPARAM wPara
                 LvItemW2.iSubItem = 0;
                 LvItemW2.pszText = text.data();
                 ::GetWindowTextW(hEdit, text.data(), 255);
-                ::SendMessageW(hList, LVM_SETITEMTEXTW, (WPARAM)iIndex, (LPARAM)&LvItemW2);
+                ::SendMessageW(hList, LVM_SETITEMTEXTW, static_cast<WPARAM>(iIndex), reinterpret_cast<LPARAM>(&LvItemW2));
             }
             break;
         }
@@ -12641,10 +12641,10 @@ BOOL CALLBACK DialogProc(const HWND hWnd, const UINT Message, const WPARAM wPara
     //================================================//
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hWnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hWnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         //CentreWindow(hWnd);
-        ClientConnection* cc = (ClientConnection*)lParam;
+        ClientConnection* cc = reinterpret_cast<ClientConnection*>(lParam);
 
         ::SetFocus(hWnd);
         hList = ::GetDlgItem(hWnd, IDC_LIST1);                                       // get the ID of the ListView
@@ -12659,7 +12659,7 @@ BOOL CALLBACK DialogProc(const HWND hWnd, const UINT Message, const WPARAM wPara
                                                                   // 				LvCol.cx=0x60;
 
         // Inserting Couloms as much as we want
-        ::SendMessageW(hList, LVM_INSERTCOLUMNW, 0, (LPARAM)&LvCol); // Insert/Show the coloum
+        ::SendMessageW(hList, LVM_INSERTCOLUMNW, 0, reinterpret_cast<LPARAM>(&LvCol)); // Insert/Show the coloum
         std::memset(&LvItem, 0, sizeof(LvItem));                   // Reset Item Struct
 
         //  Setting properties Of Items:
@@ -12673,19 +12673,19 @@ BOOL CALLBACK DialogProc(const HWND hWnd, const UINT Message, const WPARAM wPara
 
         int iItem{ 0 };
         CARD8 nr_lines;
-        cc->ReadExact((char*)&nr_lines, sizeof(nr_lines));
+        cc->ReadExact(reinterpret_cast<char*>(&nr_lines), sizeof(nr_lines));
         std::array<char, 128U> line;
         for (int a{ 0 }; a < nr_lines; ++a)
         {
             std::memset(line.data(), 0, 128);
-            cc->ReadExact((char*)line.data(), 128);
+            cc->ReadExact(reinterpret_cast<char*>(line.data()), 128);
             iItem = static_cast<int>(::SendMessageW(hList, LVM_GETITEMCOUNT, 0, 0));
             LvItem.iItem = iItem; // choose item
             LvItem.iSubItem = 0;  // Put in first coluom
             std::array<wchar_t, 128U> _lw;
             ::MultiByteToWideChar(CP_UTF8, 0, line.data(), -1, _lw.data(), 128);
             LvItem.pszText = _lw.data();
-            ::SendMessageW(hList, LVM_INSERTITEMW, 0, (LPARAM)&LvItem);
+            ::SendMessageW(hList, LVM_INSERTITEMW, 0, reinterpret_cast<LPARAM>(&LvItem));
             ++iItem;
         }
         return TRUE; // Always True
@@ -12772,7 +12772,7 @@ inline void ClientConnection::UpdateScrollbars()
     scri.fMask = SIF_ALL;
     scri.nMin = 0;
     scri.nMax = m_hScrollMax;
-    scri.nPage = m_cliwidth;
+    scri.nPage = static_cast<UINT>(m_cliwidth);
     scri.nPos = m_hScrollPos;
 
     if (setInfo)
@@ -12785,7 +12785,7 @@ inline void ClientConnection::UpdateScrollbars()
     scri.nMin = 0;
 
     scri.nMax = m_vScrollMax;
-    scri.nPage = m_cliheight;
+    scri.nPage = static_cast<UINT>(m_cliheight);
     scri.nPos = m_vScrollPos;
 
     if (setInfo)
@@ -12852,7 +12852,7 @@ void ClientConnection::Scollbar_wm_sizing(const WPARAM wParam, const LPARAM lPar
     int hScrollSize = SB_HORZ_BOOL ? GetSystemMetrics(SM_CYHSCROLL) : 0;
     int vSchrollSize = SB_VERT_BOOL ? GetSystemMetrics(SM_CXVSCROLL) : 0;
     // Don't allow sizing larger than framebuffer
-    RECT* lprc = (LPRECT)lParam;
+    RECT* lprc = reinterpret_cast<LPRECT>(lParam);
     switch (wParam)
     {
     case WMSZ_RIGHT:
@@ -12944,7 +12944,7 @@ void ClientConnection::checkParemeters()
         bool yes = yesnoUVNCMessageBox(m_hInstResDLL, nullptr, str50297.data(), str50290.data(), str50293.data(), str50294.data(), L"", somebool);
         if (!yes)
         {
-            exit(0);
+            exit(nullptr);
         }
         m_si.framebufferWidth = 1024;
         m_si.framebufferHeight = 800;

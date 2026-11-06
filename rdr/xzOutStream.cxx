@@ -20,11 +20,11 @@ using namespace rdr;
 enum { DEFAULT_BUF_SIZE = 0x10000 };
 
 xzOutStream::xzOutStream(OutStream* os, int bufSize_)
-  : underlying(os), bufSize(bufSize_ ? bufSize_ : DEFAULT_BUF_SIZE), offset(0), ls(NULL)
+  : underlying(os), bufSize(bufSize_ ? bufSize_ : DEFAULT_BUF_SIZE), offset(0), ls(nullptr)
 {
 	SetCompressLevel(6);
 
-	ptr = start = new U8[bufSize];
+	ptr = start = new U8[static_cast<unsigned long long>(bufSize)];
 	end = start + bufSize;
 }
 
@@ -55,7 +55,7 @@ void xzOutStream::SetCompressLevel(int compression)
 	*/
 
 	memset(&ls_options, 0, sizeof(ls_options));
-	ls_options.preset_dict = NULL;
+	ls_options.preset_dict = nullptr;
 	ls_options.preset_dict_size = 0;
 	
 	// default
@@ -110,12 +110,12 @@ void xzOutStream::ensure_stream_codec()
 	lzma_filter filters[2] = 
 	{
 		{LZMA_FILTER_LZMA2, &ls_options},
-		{LZMA_VLI_UNKNOWN, NULL} //LZMA_VLI_UNKNOWN Lables End Of Filter List;
+		{LZMA_VLI_UNKNOWN, nullptr} //LZMA_VLI_UNKNOWN Lables End Of Filter List;
 	};
 
 	rc = lzma_stream_encoder(ls, filters, LZMA_CHECK_NONE);
 	if (rc != LZMA_OK) {
-		fprintf (stderr, "lzma_stream_encoder error: %d\n", (int) rc);
+		fprintf (stderr, "lzma_stream_encoder error: %d\n", static_cast<int>(rc));
 		throw Exception("xzOutStream: lzma_stream_encoder failed");
 		return;
 	}
@@ -128,7 +128,7 @@ void xzOutStream::setUnderlying(OutStream* os)
 
 int xzOutStream::length()
 {
-  return (int)(offset + ptr - start);
+  return static_cast<int>((offset + ptr - start));
 }
 
 void xzOutStream::flush()
@@ -136,7 +136,7 @@ void xzOutStream::flush()
 	ensure_stream_codec();
 	
 	ls->next_in = start;
-	ls->avail_in = ptr - start;
+	ls->avail_in = static_cast<size_t>(ptr - start);
 
 	//    fprintf(stderr,"zos flush: avail_in %d\n",zs->avail_in);
 
@@ -145,13 +145,13 @@ void xzOutStream::flush()
 		do {
 			underlying->check(1);
 			ls->next_out = underlying->getptr();
-			ls->avail_out = underlying->getend() - underlying->getptr();
+			ls->avail_out = static_cast<size_t>(underlying->getend() - underlying->getptr());
 
 			//        fprintf(stderr,"zos flush: calling deflate, avail_in %d, avail_out %d\n",
 			//                zs->avail_in,zs->avail_out);
 			lzma_ret rc = lzma_code(ls, LZMA_SYNC_FLUSH);
 			if ((rc != LZMA_OK) && (rc != LZMA_STREAM_END)) {
-				fprintf (stderr, "lzma_code flush error: %d\n", (int) rc);
+				fprintf (stderr, "lzma_code flush error: %d\n", static_cast<int>(rc));
 				throw Exception("xzOutStream: compress flush failed");
 			}
 
@@ -162,7 +162,7 @@ void xzOutStream::flush()
 		} while (ls->avail_out == 0);
 	}
 	
-	offset += (int)(ptr - start);
+	offset += static_cast<int>((ptr - start));
 	ptr = start;
 }
 
@@ -178,19 +178,19 @@ int xzOutStream::overrun(int itemSize, int nItems)
 	
 	while (end - ptr < itemSize) {
 		ls->next_in = start;
-		ls->avail_in = ptr - start;
+		ls->avail_in = static_cast<size_t>(ptr - start);
 
 		do {
 			underlying->check(1);
 			ls->next_out = underlying->getptr();
-			ls->avail_out = underlying->getend() - underlying->getptr();
+			ls->avail_out = static_cast<size_t>(underlying->getend() - underlying->getptr());
 
 			//        fprintf(stderr,"zos overrun: calling deflate, avail_in %d, avail_out %d\n",
 			//                zs->avail_in,zs->avail_out);
 
 			lzma_ret rc = lzma_code(ls, LZMA_RUN);
 			if ((rc != LZMA_OK) && (rc != LZMA_STREAM_END)) {
-				fprintf (stderr, "lzma_code error: %d\n", (int) rc);
+				fprintf (stderr, "lzma_code error: %d\n", static_cast<int>(rc));
 				throw Exception("xzOutStream: compress failed");
 			}
 
@@ -203,20 +203,20 @@ int xzOutStream::overrun(int itemSize, int nItems)
 		// output buffer not full
 
 		if (ls->avail_in == 0) {
-			offset += (int)(ptr - start);
+			offset += static_cast<int>((ptr - start));
 			ptr = start;
 		} else {
 			// but didn't consume all the data?  try shifting what's left to the
 			// start of the buffer.
 			fprintf(stderr,"lzma out buf not full, but in data not consumed\n");
-			memmove(start, ls->next_in, ptr - ls->next_in);
-			offset += (int)(ls->next_in - start);
+			memmove(start, ls->next_in, static_cast<size_t>(ptr - ls->next_in));
+			offset += static_cast<int>((ls->next_in - start));
 			ptr -= ls->next_in - start;
 		}
 	}
 	
 	if (itemSize * nItems > end - ptr)
-		nItems = (int)((end - ptr) / itemSize);
+		nItems = static_cast<int>(((end - ptr) / itemSize));
 
 	return nItems;
 }

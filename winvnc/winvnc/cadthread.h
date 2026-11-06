@@ -9,14 +9,14 @@
 //
 
 
-#if (!defined(_WINVNC_VNCCAD))
-#define _WINVNC_VNCCAD
+#if (!defined(WINVNC_VNCCAD))
+#define WINVNC_VNCCAD
 
 #include "stdhdrs.h"
 
-#include <winsock2.h>
+#include <WinSock2.h>
 
-#include <windows.h>
+#include <Windows.h>
 
 class vncCad
 {

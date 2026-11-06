@@ -23,9 +23,9 @@
 #if defined(UNICODE) || defined(_UNICODE)
 #error Sorry -- please compile as an ANSI program.
 #endif
-#include <windows.h>
+#include <Windows.h>
 
-#include <lm.h>
+#include <LM.h>
 #include <lmcons.h>
 #include <tchar.h>
 

@@ -55,7 +55,7 @@ rfb::Rect vncDesktop::GetSize()
         }
         else
         {
-            return rfb::Rect(0, 0, mymonitor[m_current_monitor].Width, mymonitor[m_current_monitor].Height);
+            return rfb::Rect(0, 0, mymonitor[static_cast<unsigned long long>(m_current_monitor)].Width, mymonitor[static_cast<unsigned long long>(m_current_monitor)].Height);
         }
     }
 }
@@ -90,17 +90,17 @@ void vncDesktop::SetBitmapRectOffsetAndClipRect(const int offesetx, const int of
     m_Cliprect.br.y = m_bmrect.br.y;
     if (m_screenCapture && (m_current_monitor != MULTI_MON_ALL))
     {
-        m_SWOffsetx = mymonitor[m_current_monitor].offsetx - mymonitor[MULTI_MON_ALL].offsetx;
-        m_SWOffsety = mymonitor[m_current_monitor].offsety - mymonitor[MULTI_MON_ALL].offsety;
+        m_SWOffsetx = mymonitor[static_cast<unsigned long long>(m_current_monitor)].offsetx - mymonitor[MULTI_MON_ALL].offsetx;
+        m_SWOffsety = mymonitor[static_cast<unsigned long long>(m_current_monitor)].offsety - mymonitor[MULTI_MON_ALL].offsety;
 
-        m_ScreenOffsetx = mymonitor[m_current_monitor].offsetx;
-        m_ScreenOffsety = mymonitor[m_current_monitor].offsety;
+        m_ScreenOffsetx = mymonitor[static_cast<unsigned long long>(m_current_monitor)].offsetx;
+        m_ScreenOffsety = mymonitor[static_cast<unsigned long long>(m_current_monitor)].offsety;
 
-        m_Cliprect.tl.x = mymonitor[m_current_monitor].offsetx - mymonitor[MULTI_MON_ALL].offsetx;
-        m_Cliprect.tl.y = mymonitor[m_current_monitor].offsety - mymonitor[MULTI_MON_ALL].offsety;
+        m_Cliprect.tl.x = mymonitor[static_cast<unsigned long long>(m_current_monitor)].offsetx - mymonitor[MULTI_MON_ALL].offsetx;
+        m_Cliprect.tl.y = mymonitor[static_cast<unsigned long long>(m_current_monitor)].offsety - mymonitor[MULTI_MON_ALL].offsety;
         m_Cliprect.br.x =
-            mymonitor[m_current_monitor].offsetx + mymonitor[m_current_monitor].Width - mymonitor[MULTI_MON_ALL].offsetx;
+            mymonitor[static_cast<unsigned long long>(m_current_monitor)].offsetx + mymonitor[static_cast<unsigned long long>(m_current_monitor)].Width - mymonitor[MULTI_MON_ALL].offsetx;
         m_Cliprect.br.y =
-            mymonitor[m_current_monitor].offsety + mymonitor[m_current_monitor].Height - mymonitor[MULTI_MON_ALL].offsety;
+            mymonitor[static_cast<unsigned long long>(m_current_monitor)].offsety + mymonitor[static_cast<unsigned long long>(m_current_monitor)].Height - mymonitor[MULTI_MON_ALL].offsety;
     }
 }

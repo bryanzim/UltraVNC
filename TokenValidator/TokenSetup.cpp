@@ -24,7 +24,7 @@
 #include "../common/ScramSha256.h"
 #include "TokenCore.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <conio.h>
 

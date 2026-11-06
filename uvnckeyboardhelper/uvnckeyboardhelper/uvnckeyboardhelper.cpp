@@ -71,7 +71,7 @@ void comm_serv::create_sec_attribute()
     secAttr.bInheritHandle = FALSE;
     secAttr.lpSecurityDescriptor = &secDesc;
     ::InitializeSecurityDescriptor(secAttr.lpSecurityDescriptor, SECURITY_DESCRIPTOR_REVISION);
-    ::SetSecurityDescriptorDacl(secAttr.lpSecurityDescriptor, TRUE, 0, FALSE);
+    ::SetSecurityDescriptorDacl(secAttr.lpSecurityDescriptor, TRUE, nullptr, FALSE);
     [[maybe_unused]] TCHAR* szSD = TEXT("D:")         // Discretionary ACL
                                      //TEXT("(D;OICI;GA;;;BG)")     // Deny access to built-in guests
                                      //TEXT("(D;OICI;GA;;;AN)")     // Deny access to anonymous logon
@@ -105,7 +105,7 @@ bool comm_serv::Init(char* const name, const int IN_datasize_IN, const int IN_da
     secAttr.bInheritHandle = FALSE;
     secAttr.lpSecurityDescriptor = &secDesc;
     ::InitializeSecurityDescriptor(secAttr.lpSecurityDescriptor, SECURITY_DESCRIPTOR_REVISION);
-    ::SetSecurityDescriptorDacl(secAttr.lpSecurityDescriptor, TRUE, 0, FALSE);
+    ::SetSecurityDescriptorDacl(secAttr.lpSecurityDescriptor, TRUE, nullptr, FALSE);
     [[maybe_unused]] TCHAR* szSD = TEXT("D:")         // Discretionary ACL
                                      //TEXT("(D;OICI;GA;;;BG)")     // Deny access to built-in guests
                                      //TEXT("(D;OICI;GA;;;AN)")     // Deny access to anonymous logon
@@ -181,12 +181,12 @@ bool comm_serv::Init(char* const name, const int IN_datasize_IN, const int IN_da
         {
             if (datasize_IN != 0)
             {
-                hMapFile_IN = ::CreateFileMapping(INVALID_HANDLE_VALUE, &secAttr, PAGE_READWRITE, 0, datasize_IN, filemapping_IN.data());
+                hMapFile_IN = ::CreateFileMapping(INVALID_HANDLE_VALUE, &secAttr, PAGE_READWRITE, 0, static_cast<DWORD>(datasize_IN), filemapping_IN.data());
                 if (hMapFile_IN == nullptr)
                 {
                     return false;
                 }
-                data_IN = (char*)::MapViewOfFile(hMapFile_IN, FILE_MAP_ALL_ACCESS, 0, 0, datasize_IN);
+                data_IN = reinterpret_cast<char*>(::MapViewOfFile(hMapFile_IN, FILE_MAP_ALL_ACCESS, 0, 0, datasize_IN));
                 if (data_IN == nullptr)
                 {
                     return false;
@@ -205,12 +205,12 @@ bool comm_serv::Init(char* const name, const int IN_datasize_IN, const int IN_da
 
             if (datasize_OUT != 0)
             {
-                hMapFile_OUT = ::CreateFileMapping(INVALID_HANDLE_VALUE, &secAttr, PAGE_READWRITE, 0, datasize_OUT, filemapping_OUT.data());
+                hMapFile_OUT = ::CreateFileMapping(INVALID_HANDLE_VALUE, &secAttr, PAGE_READWRITE, 0, static_cast<DWORD>(datasize_OUT), filemapping_OUT.data());
                 if (hMapFile_OUT == nullptr)
                 {
                     return false;
                 }
-                data_OUT = (char*)::MapViewOfFile(hMapFile_OUT, FILE_MAP_ALL_ACCESS, 0, 0, datasize_OUT);
+                data_OUT = reinterpret_cast<char*>(::MapViewOfFile(hMapFile_OUT, FILE_MAP_ALL_ACCESS, 0, 0, datasize_OUT));
                 if (data_OUT == nullptr)
                 {
                     return false;
@@ -231,12 +231,12 @@ bool comm_serv::Init(char* const name, const int IN_datasize_IN, const int IN_da
         {
             if (datasize_IN != 0)
             {
-                hMapFile_IN = ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, datasize_IN, filemapping_IN.data());
+                hMapFile_IN = ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, static_cast<DWORD>(datasize_IN), filemapping_IN.data());
                 if (hMapFile_IN == nullptr)
                 {
                     return false;
                 }
-                data_IN = (char*)::MapViewOfFile(hMapFile_IN, FILE_MAP_ALL_ACCESS, 0, 0, datasize_IN);
+                data_IN = reinterpret_cast<char*>(::MapViewOfFile(hMapFile_IN, FILE_MAP_ALL_ACCESS, 0, 0, datasize_IN));
                 if (data_IN == nullptr)
                 {
                     return false;
@@ -255,12 +255,12 @@ bool comm_serv::Init(char* const name, const int IN_datasize_IN, const int IN_da
 
             if (datasize_OUT != 0)
             {
-                hMapFile_OUT = ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, datasize_OUT, filemapping_OUT.data());
+                hMapFile_OUT = ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, static_cast<DWORD>(datasize_OUT), filemapping_OUT.data());
                 if (hMapFile_OUT == nullptr)
                 {
                     return false;
                 }
-                data_OUT = (char*)::MapViewOfFile(hMapFile_OUT, FILE_MAP_ALL_ACCESS, 0, 0, datasize_OUT);
+                data_OUT = reinterpret_cast<char*>(::MapViewOfFile(hMapFile_OUT, FILE_MAP_ALL_ACCESS, 0, 0, datasize_OUT));
                 if (data_OUT == nullptr)
                 {
                     return false;
@@ -290,7 +290,7 @@ bool comm_serv::Init(char* const name, const int IN_datasize_IN, const int IN_da
                 {
                     return false;
                 }
-                data_IN = (char*)::MapViewOfFile(hMapFile_IN, FILE_MAP_ALL_ACCESS, 0, 0, datasize_IN);
+                data_IN = reinterpret_cast<char*>(::MapViewOfFile(hMapFile_IN, FILE_MAP_ALL_ACCESS, 0, 0, datasize_IN));
                 if (data_IN == nullptr)
                 {
                     return false;
@@ -315,7 +315,7 @@ bool comm_serv::Init(char* const name, const int IN_datasize_IN, const int IN_da
                 {
                     return false;
                 }
-                data_OUT = (char*)::MapViewOfFile(hMapFile_OUT, FILE_MAP_ALL_ACCESS, 0, 0, datasize_OUT);
+                data_OUT = reinterpret_cast<char*>(::MapViewOfFile(hMapFile_OUT, FILE_MAP_ALL_ACCESS, 0, 0, datasize_OUT));
                 if (data_OUT == nullptr)
                 {
                     return false;
@@ -343,7 +343,7 @@ bool comm_serv::Init(char* const name, const int IN_datasize_IN, const int IN_da
                 {
                     return false;
                 }
-                data_IN = (char*)::MapViewOfFile(hMapFile_IN, FILE_MAP_ALL_ACCESS, 0, 0, datasize_IN);
+                data_IN = reinterpret_cast<char*>(::MapViewOfFile(hMapFile_IN, FILE_MAP_ALL_ACCESS, 0, 0, datasize_IN));
                 if (data_IN == nullptr)
                 {
                     return false;
@@ -369,7 +369,7 @@ bool comm_serv::Init(char* const name, const int IN_datasize_IN, const int IN_da
                 {
                     return false;
                 }
-                data_OUT = (char*)::MapViewOfFile(hMapFile_OUT, FILE_MAP_ALL_ACCESS, 0, 0, datasize_OUT);
+                data_OUT = reinterpret_cast<char*>(::MapViewOfFile(hMapFile_OUT, FILE_MAP_ALL_ACCESS, 0, 0, datasize_OUT));
                 if (data_OUT == nullptr)
                 {
                     return false;
@@ -452,7 +452,7 @@ HANDLE comm_serv::InitFileHandle(char* const name, const int IN_datasize_IN, con
         {
             if (datasize_IN != 0)
             {
-                hMapFile_IN = ::CreateFileMapping(INVALID_HANDLE_VALUE, &secAttr, PAGE_READWRITE, 0, datasize_IN, filemapping_IN.data());
+                hMapFile_IN = ::CreateFileMapping(INVALID_HANDLE_VALUE, &secAttr, PAGE_READWRITE, 0, static_cast<DWORD>(datasize_IN), filemapping_IN.data());
                 if (hMapFile_IN == nullptr)
                 {
                     return nullptr;
@@ -463,7 +463,7 @@ HANDLE comm_serv::InitFileHandle(char* const name, const int IN_datasize_IN, con
         {
             if (datasize_IN != 0)
             {
-                hMapFile_IN = ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, datasize_IN, filemapping_IN.data());
+                hMapFile_IN = ::CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, static_cast<DWORD>(datasize_IN), filemapping_IN.data());
                 if (hMapFile_IN == nullptr)
                 {
                     return nullptr;
@@ -507,7 +507,7 @@ void comm_serv::Call_Fnction(char* const databuffer_IN, char* const databuffer_O
         return;
     }
     ::EnterCriticalSection(&CriticalSection_IN);
-    std::memcpy(data_IN, databuffer_IN, datasize_IN);
+    std::memcpy(data_IN, databuffer_IN, static_cast<size_t>(datasize_IN));
     //ResetEvent(event_E_IN_DONE);
     ::ResetEvent(event_E_OUT);
     ::ResetEvent(event_E_OUT_DONE);
@@ -533,7 +533,7 @@ void comm_serv::Call_Fnction(char* const databuffer_IN, char* const databuffer_O
         goto error;
     }
     r = ::WaitForSingleObject(event_E_OUT, 1000);
-    std::memcpy(databuffer_OUT, data_OUT, datasize_OUT);
+    std::memcpy(databuffer_OUT, data_OUT, static_cast<size_t>(datasize_OUT));
 error:
     ::SetEvent(event_E_OUT_DONE);
     ::LeaveCriticalSection(&CriticalSection_IN);
@@ -544,7 +544,7 @@ void comm_serv::Call_Fnction_no_feedback() { ::SetEvent(event_E_IN); }
 void comm_serv::Call_Fnction_no_feedback_data(char* const databuffer_IN, [[maybe_unused]] char* const databuffer_OUT)
 {
     ::EnterCriticalSection(&CriticalSection_IN);
-    std::memcpy(data_IN, databuffer_IN, datasize_IN);
+    std::memcpy(data_IN, databuffer_IN, static_cast<size_t>(datasize_IN));
     ::SetEvent(event_E_IN);
     ::LeaveCriticalSection(&CriticalSection_IN);
 }
@@ -553,7 +553,7 @@ void comm_serv::Call_Fnction_no_feedback_data(char* const databuffer_IN, [[maybe
 void comm_serv::Call_Fnction_Long(char* const databuffer_IN, char* const databuffer_OUT)
 {
     ::EnterCriticalSection(&CriticalSection_IN);
-    std::memcpy(data_IN, databuffer_IN, datasize_IN);
+    std::memcpy(data_IN, databuffer_IN, static_cast<size_t>(datasize_IN));
     ::SetEvent(event_E_IN);
     DWORD r = ::WaitForSingleObject(event_E_IN_DONE, 10000);
     if (r == WAIT_TIMEOUT)
@@ -570,7 +570,7 @@ void comm_serv::Call_Fnction_Long(char* const databuffer_IN, char* const databuf
         r = 1;
     }
 
-    std::memcpy(databuffer_OUT, data_OUT, datasize_OUT);
+    std::memcpy(databuffer_OUT, data_OUT, static_cast<size_t>(datasize_OUT));
     ::SetEvent(event_E_OUT_DONE);
     ::LeaveCriticalSection(&CriticalSection_OUT);
 }
@@ -580,27 +580,27 @@ void comm_serv::Call_Fnction_Long_Timeout(char* const databuffer_IN, char* const
 {
     timeout = (timeout + 1) * 1000;
     ::EnterCriticalSection(&CriticalSection_IN);
-    std::memcpy(data_IN, databuffer_IN, datasize_IN);
+    std::memcpy(data_IN, databuffer_IN, static_cast<size_t>(datasize_IN));
     ::ResetEvent(event_E_IN_DONE);
     ::ResetEvent(event_E_OUT);
     ::SetEvent(event_E_IN);
-    DWORD r = ::WaitForSingleObject(event_E_IN_DONE, timeout);
+    DWORD r = ::WaitForSingleObject(event_E_IN_DONE, static_cast<DWORD>(timeout));
     ::LeaveCriticalSection(&CriticalSection_IN);
     if (r == WAIT_TIMEOUT)
     {
         unsigned char value{ 99U };
-        std::memcpy(databuffer_OUT, &value, datasize_OUT);
+        std::memcpy(databuffer_OUT, &value, static_cast<size_t>(datasize_OUT));
         return;
     }
 
     ::EnterCriticalSection(&CriticalSection_OUT);
-    r = ::WaitForSingleObject(event_E_OUT, timeout);
-    std::memcpy(databuffer_OUT, data_OUT, datasize_OUT);
+    r = ::WaitForSingleObject(event_E_OUT, static_cast<DWORD>(timeout));
+    std::memcpy(databuffer_OUT, data_OUT, static_cast<size_t>(datasize_OUT));
     ::SetEvent(event_E_OUT_DONE);
     if (r == WAIT_TIMEOUT)
     {
         unsigned char value{ 99U };
-        std::memcpy(databuffer_OUT, &value, datasize_OUT);
+        std::memcpy(databuffer_OUT, &value, static_cast<size_t>(datasize_OUT));
         return;
     }
     ::LeaveCriticalSection(&CriticalSection_OUT);
@@ -612,7 +612,7 @@ char* comm_serv::Getsharedmem() { return data_IN; }
 
 void comm_serv::ReadData(char* const databuffer)
 {
-    std::memcpy(databuffer, data_IN, datasize_IN);
+    std::memcpy(databuffer, data_IN, static_cast<size_t>(datasize_IN));
     ::SetEvent(event_E_IN_DONE);
 }
 
@@ -622,7 +622,7 @@ void comm_serv::SetData(char* const databuffer)
     {
         return;
     }
-    std::memcpy(data_OUT, databuffer, datasize_OUT);
+    std::memcpy(data_OUT, databuffer, static_cast<size_t>(datasize_OUT));
     ::SetEvent(event_E_OUT);
     [[maybe_unused]] const DWORD r = ::WaitForSingleObject(event_E_OUT_DONE, 2000);
 }
@@ -732,8 +732,8 @@ DWORD WINAPI Cadthread([[maybe_unused]] const LPVOID lpParam)
     {
     case WAIT_OBJECT_0 + 0:
         unsigned char in;
-        StarteventFn.ReadData((char*)&in);
-        StarteventFn.SetData((char*)&in);
+        StarteventFn.ReadData(reinterpret_cast<char*>(&in));
+        StarteventFn.SetData(reinterpret_cast<char*>(&in));
         break;
     case WAIT_TIMEOUT:
         goto error;
@@ -752,7 +752,7 @@ DWORD WINAPI Cadthread([[maybe_unused]] const LPVOID lpParam)
         {
         case WAIT_OBJECT_0 + 0:
             keyEventdata ked;
-            keyEventFn.ReadData((char*)&ked);
+            keyEventFn.ReadData(reinterpret_cast<char*>(&ked));
             keybd_event(ked.bVk, ked.bScan, ked.dwflags, 0);
             keyEventFn.SetData(nullptr);
             break;
@@ -761,8 +761,8 @@ DWORD WINAPI Cadthread([[maybe_unused]] const LPVOID lpParam)
             break;
         case WAIT_OBJECT_0 + 2:
             unsigned char in;
-            StarteventFn.ReadData((char*)&in);
-            StarteventFn.SetData((char*)&in);
+            StarteventFn.ReadData(reinterpret_cast<char*>(&in));
+            StarteventFn.SetData(reinterpret_cast<char*>(&in));
             InputDesktopSelected();
             counter = 0;
             break;

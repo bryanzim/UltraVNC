@@ -33,8 +33,8 @@
  *
  */
 
-#ifndef _WEBSYS_H_
-#define _WEBSYS_H_ 1
+#ifndef WEBSYS_H
+#define WEBSYS_H 1
 
 /* This file contains definitions intended for modification during porting */
 
@@ -125,4 +125,4 @@ void panic(char* msg);
 
 extern u_long wi_totalblocks;
 
-#endif /* _WEBSYS_H_ */
+#endif /* WEBSYS_H */

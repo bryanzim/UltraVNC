@@ -13,7 +13,7 @@
 
 #include "vncOSVersion.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <array>
 #include <cstring>
@@ -79,7 +79,7 @@ BOOL GetDllProductVersion(char* const dllName, char* vBuffer, const int size)
 
     if (resultValue)
     {
-        std::strncpy(vBuffer, (char*)lpBuffer, size);
+        std::strncpy(vBuffer, reinterpret_cast<char*>(lpBuffer), static_cast<size_t>(size));
         delete versionInfo;
         return (TRUE);
     }
@@ -107,7 +107,7 @@ bool CheckVideoDriver(const bool Box)
     [[maybe_unused]] const BOOL change = ::EnumDisplaySettings(nullptr, ENUM_CURRENT_SETTINGS, &devmode);
     devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
     HMODULE hUser32 = ::LoadLibrary("USER32");
-    pd = (pEnumDisplayDevices)::GetProcAddress(hUser32, "EnumDisplayDevicesA");
+    pd = reinterpret_cast<pEnumDisplayDevices>(::GetProcAddress(hUser32, "EnumDisplayDevicesA"));
     if (pd)
     {
         LPSTR deviceName = nullptr;
@@ -118,9 +118,9 @@ bool CheckVideoDriver(const bool Box)
         INT devNum{ 0 };
         BOOL result;
         DriverFound = false;
-        while (result = (*pd)(nullptr, devNum, &dd, 0))
+        while (result = (*pd)(nullptr, static_cast<DWORD>(devNum), &dd, 0))
         {
-            if (std::strcmp((const char*)&dd.DeviceString[0U], driverName) == 0)
+            if (std::strcmp(reinterpret_cast<const char*>(&dd.DeviceString[0U]), driverName) == 0)
             {
                 DriverFound = true;
                 break;
@@ -156,7 +156,7 @@ bool CheckVideoDriver(const bool Box)
                 {
                     std::strcat(buf2.data(), " driver Active");
                     HDC testdc = nullptr;
-                    deviceName = (LPSTR)&dd.DeviceName[0U];
+                    deviceName = reinterpret_cast<LPSTR>(&dd.DeviceName[0U]);
                     testdc = ::CreateDC("DISPLAY", deviceName, nullptr, nullptr);
                     if (testdc)
                     {

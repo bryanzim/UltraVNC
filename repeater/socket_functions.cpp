@@ -20,7 +20,7 @@ BOOL ParseDisplay(const LPTSTR display, const int size, const LPTSTR phost, cons
 {
     int tmp_port;
     TCHAR* colonpos = ::_tcschr(display, L':');
-    if (hostlen < (int)::_tcslen(display))
+    if (hostlen < static_cast<int>(::_tcslen(display)))
     {
         return FALSE;
     }
@@ -28,11 +28,11 @@ BOOL ParseDisplay(const LPTSTR display, const int size, const LPTSTR phost, cons
     {
         // No colon -- use default port number
         tmp_port = RFB_PORT_OFFSET;
-        ::_tcsncpy_s(phost, size, display, MAX_HOST_NAME_LEN);
+        ::_tcsncpy_s(phost, static_cast<size_t>(size), display, MAX_HOST_NAME_LEN);
     }
     else
     {
-        ::_tcsncpy_s(phost, size, display, colonpos - display);
+        ::_tcsncpy_s(phost, static_cast<size_t>(size), display, static_cast<size_t>(colonpos - display));
         phost[colonpos - display] = L'\0';
         if (colonpos[1U] == L':')
         {
@@ -106,7 +106,7 @@ int WriteExact(const int sock, char* buf, int len)
 
     while (len > 0)
     {
-        n = send(sock, buf, len, 0);
+        n = send(static_cast<SOCKET>(sock), buf, len, 0);
 
         if (n > 0)
         {
@@ -130,7 +130,7 @@ int ReadExact(const int sock, char* buf, int len)
     int n;
     while (len > 0)
     {
-        n = recv(sock, buf, len, 0);
+        n = recv(static_cast<SOCKET>(sock), buf, len, 0);
         if (n > 0)
         {
             buf += n;
@@ -166,7 +166,7 @@ DWORD WINAPI do_repeater_wait(const LPVOID lpParam)
     [[maybe_unused]] const long sendbytes{ 0 };
     BOOL server;
     int nummer;
-    pmystruct inout = (pmystruct)lpParam;
+    pmystruct inout = static_cast<pmystruct>(lpParam);
     remote = inout->remote;
     code = inout->code;
     server = inout->server;
@@ -176,14 +176,14 @@ DWORD WINAPI do_repeater_wait(const LPVOID lpParam)
     {
         rbuf = Servers[nummer].preloadbuffer;
         Servers[nummer].waitingThread = 1;
-        LogStats_server(code, nummer);
+        LogStats_server(static_cast<int>(code), nummer);
         sendkepalive = true;
     }
     else
     {
         rbuf = Viewers[nummer].preloadbuffer;
         Viewers[nummer].waitingThread = 1;
-        LogStats_viewer(code, nummer);
+        LogStats_viewer(static_cast<int>(code), nummer);
     }
 
 
@@ -386,7 +386,7 @@ DWORD WINAPI do_repeater(const LPVOID lpParam)
     int nummer;
     int viewer_nummer;
     int server_nummer;
-    pmystruct inout = (pmystruct)lpParam;
+    pmystruct inout = static_cast<pmystruct>(lpParam);
     local_in = inout->local_in;
     local_out = inout->local_out;
     remote = inout->remote;
@@ -421,17 +421,17 @@ DWORD WINAPI do_repeater(const LPVOID lpParam)
     Viewers[viewer_nummer].sendbytes = 0;
     if (inout->server)
     {
-        std::memcpy(lbuf.data(), Viewers[viewer_nummer].preloadbuffer, Viewers[viewer_nummer].size_buffer);
+        std::memcpy(lbuf.data(), Viewers[viewer_nummer].preloadbuffer, static_cast<size_t>(Viewers[viewer_nummer].size_buffer));
         lbuf_len = Viewers[viewer_nummer].size_buffer;
         Viewers[viewer_nummer].size_buffer = 0;
-        LogStats_server(code, viewer_nummer);
+        LogStats_server(static_cast<int>(code), viewer_nummer);
     }
     else
     {
-        std::memcpy(lbuf.data(), Servers[server_nummer].preloadbuffer, Servers[server_nummer].size_buffer);
+        std::memcpy(lbuf.data(), Servers[server_nummer].preloadbuffer, static_cast<size_t>(Servers[server_nummer].size_buffer));
         lbuf_len = Servers[server_nummer].size_buffer;
         Servers[server_nummer].size_buffer = 0;
-        LogStats_viewer(code, server_nummer);
+        LogStats_viewer(static_cast<int>(code), server_nummer);
     }
     if (0 < lbuf_len)
     {
@@ -459,7 +459,7 @@ DWORD WINAPI do_repeater(const LPVOID lpParam)
             lbuf_len -= len;
             if (0 < lbuf_len)
             {
-                std::memcpy(lbuf.data(), lbuf.data() + len, lbuf_len);
+                std::memcpy(lbuf.data(), lbuf.data() + len, static_cast<size_t>(lbuf_len));
             }
             assert(0 <= lbuf_len);
         }
@@ -513,7 +513,7 @@ DWORD WINAPI do_repeater(const LPVOID lpParam)
         /* remote => local */
         if (FD_ISSET(remote, ifds) && (rbuf_len < sizeof(rbuf)))
         {
-            len = recv(remote, rbuf.data() + rbuf_len, sizeof(rbuf) - rbuf_len, 0);
+            len = recv(remote, rbuf.data() + rbuf_len, static_cast<int>(sizeof(rbuf) - rbuf_len), 0);
             if (len == 0)
             {
                 debug("connection closed by peer\n");
@@ -549,7 +549,7 @@ DWORD WINAPI do_repeater(const LPVOID lpParam)
         if (FD_ISSET(local_in, ifds) && (lbuf_len < sizeof(lbuf)))
         {
 
-            len = recv(local_in, lbuf.data() + lbuf_len, sizeof(lbuf) - lbuf_len, 0);
+            len = recv(local_in, lbuf.data() + lbuf_len, static_cast<int>(sizeof(lbuf) - lbuf_len), 0);
 
             if (len == 0)
             {
@@ -589,7 +589,7 @@ DWORD WINAPI do_repeater(const LPVOID lpParam)
                 lbuf_len -= len;
                 if (0 < lbuf_len)
                 {
-                    std::memcpy(lbuf.data(), lbuf.data() + len, lbuf_len);
+                    std::memcpy(lbuf.data(), lbuf.data() + len, static_cast<size_t>(lbuf_len));
                 }
                 assert(0 <= lbuf_len);
             }
@@ -610,7 +610,7 @@ DWORD WINAPI do_repeater(const LPVOID lpParam)
                 rbuf_len -= len;
                 if (len < rbuf_len)
                 {
-                    std::memcpy(rbuf.data(), rbuf.data() + len, rbuf_len);
+                    std::memcpy(rbuf.data(), rbuf.data() + len, static_cast<size_t>(rbuf_len));
                 }
                 assert(0 <= rbuf_len);
             }
@@ -621,7 +621,7 @@ DWORD WINAPI do_repeater(const LPVOID lpParam)
             measure_counter = 0;
             if ((stop - start) > 0)
             {
-                Viewers[nummer].average = temp_bytes * 1000 / (stop - start) / 1000;
+                Viewers[nummer].average = static_cast<DWORD>(temp_bytes * 1000) / (stop - start) / 1000;
             }
             temp_bytes = 0;
         }
@@ -646,7 +646,7 @@ error:
     ::_itoa_s(st.wSecond, buf.data(), buf.size(), 10);
     ::strcat_s(stop_msg.data(), stop_msg.size(), buf.data());
     ::strcat_s(stop_msg.data(), stop_msg.size(), " ");
-    LogStats_access(start_msg.data(), stop_msg.data(), code, viewer_nummer, server_nummer,
+    LogStats_access(start_msg.data(), stop_msg.data(), static_cast<int>(code), viewer_nummer, server_nummer,
                     Viewers[viewer_nummer].sendbytes + Viewers[viewer_nummer].recvbytes);
     //LogStats(code,recvbytes,sendbytes);
     f_remote = 0; /* no more read from socket */

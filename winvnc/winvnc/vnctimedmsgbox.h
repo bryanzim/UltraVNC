@@ -17,8 +17,8 @@
 
 class vncTimedMsgBox;
 
-#if (!defined(_WINVNC_VNCTIMEDMSGBOX))
-#define _WINVNC_VNCTIMEDMSGBOX
+#if (!defined(WINVNC_VNCTIMEDMSGBOX))
+#define WINVNC_VNCTIMEDMSGBOX
 
 class vncTimedMsgBox
 {

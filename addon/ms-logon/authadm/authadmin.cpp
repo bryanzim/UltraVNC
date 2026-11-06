@@ -14,7 +14,7 @@
 
 #include "authadmin.h"
 
-#include <lm.h>
+#include <LM.h>
 
 #include <array>
 #include <cstddef>
@@ -66,10 +66,10 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
     dwLogonType = LOGON32_LOGON_INTERACTIVE;
     dwLogonProvider = LOGON32_PROVIDER_DEFAULT;
 
-    byte* buf = 0;
-    byte* buf2 = 0;
+    byte* buf = nullptr;
+    byte* buf2 = nullptr;
     std::array<char, MAXLEN * sizeof(wchar_t)> domain;
-    DWORD rcdomain = ::NetGetDCName(0, 0, &buf);
+    DWORD rcdomain = ::NetGetDCName(nullptr, nullptr, &buf);
     NetApiBufferFree(buf);
     std::printf("Logonuser: % s %s \n", userin, ".");
     if (::LogonUser(userin, ".", password, dwLogonType, dwLogonProvider, &hToken))
@@ -85,11 +85,11 @@ BOOL CUGP(char* const userin, char* const password, [[maybe_unused]] char* const
     }
     if (!rcdomain)
     {
-        DWORD result = ::NetWkstaGetInfo(0, 100, &buf2);
+        DWORD result = ::NetWkstaGetInfo(nullptr, 100, &buf2);
         if (!result)
         {
             std::size_t pnconv;
-            ::wcstombs_s(&pnconv, domain.data(), MAXLEN, ((WKSTA_INFO_100_NT*)buf2)->wki100_langroup, MAXLEN);
+            ::wcstombs_s(&pnconv, domain.data(), MAXLEN, (reinterpret_cast<WKSTA_INFO_100_NT*>(buf2))->wki100_langroup, MAXLEN);
             NetApiBufferFree(buf2);
             std::printf("Logonuser: % s %s \n", userin, domain.data());
             if (::LogonUser(userin, domain.data(), password, dwLogonType, dwLogonProvider, &hToken))

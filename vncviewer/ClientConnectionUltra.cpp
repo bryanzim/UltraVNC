@@ -33,17 +33,17 @@ void ClientConnection::ReadUltraRect(rfbFramebufferUpdateRectHeader* const pfbur
 
     // Read in the rfbZlibHeader
     omni_mutex_lock l(m_bitmapdcMutex);
-    ReadExact((char*)&hdr, sz_rfbZlibHeader);
+    ReadExact(reinterpret_cast<char*>(&hdr), sz_rfbZlibHeader);
 
     numCompBytes = Swap32IfLE(hdr.nBytes);
 
     // Read in the compressed data
     CheckBufferSize(numCompBytes);
-    ReadExact(m_netbuf, numCompBytes);
-    CheckZlibBufferSize(numRawBytes + 500);
+    ReadExact(m_netbuf, static_cast<int>(numCompBytes));
+    CheckZlibBufferSize(static_cast<int>(numRawBytes + 500));
     new_len = numRawBytes + 500;
     //m_zlibbuf is bad after !LZO_E_OK
-    if (lzo1x_decompress_safe((BYTE*)m_netbuf, numCompBytes, (BYTE*)m_zlibbuf, &new_len, nullptr) != LZO_E_OK)
+    if (lzo1x_decompress_safe(reinterpret_cast<BYTE*>(m_netbuf), numCompBytes, reinterpret_cast<BYTE*>(m_zlibbuf), &new_len, nullptr) != LZO_E_OK)
     {
         return;
     }
@@ -54,8 +54,8 @@ void ClientConnection::ReadUltraRect(rfbFramebufferUpdateRectHeader* const pfbur
     }
     if (m_DIBbits)
     {
-        ConvertAll_secure(pfburh->r.w, pfburh->r.h, pfburh->r.x, pfburh->r.y, m_myFormat.bitsPerPixel / 8, (BYTE*)m_zlibbuf,
-                          (BYTE*)m_DIBbits, m_si.framebufferWidth, static_cast<int>(new_len), m_si.framebufferHeight);
+        ConvertAll_secure(pfburh->r.w, pfburh->r.h, pfburh->r.x, pfburh->r.y, m_myFormat.bitsPerPixel / 8, reinterpret_cast<BYTE*>(m_zlibbuf),
+                          reinterpret_cast<BYTE*>(m_DIBbits), m_si.framebufferWidth, static_cast<int>(new_len), m_si.framebufferHeight);
     }
 }
 
@@ -75,7 +75,7 @@ void ClientConnection::ReadUltraZip(rfbFramebufferUpdateRectHeader* const pfburh
     rfbZlibHeader hdr;
     // Read in the rfbZlibHeader
     omni_mutex_lock l(m_bitmapdcMutex);
-    ReadExact((char*)&hdr, sz_rfbZlibHeader);
+    ReadExact(reinterpret_cast<char*>(&hdr), sz_rfbZlibHeader);
     numCompBytes = Swap32IfLE(hdr.nBytes);
     // Security Check
     if (numCompBytes > numRawBytes)
@@ -85,13 +85,13 @@ void ClientConnection::ReadUltraZip(rfbFramebufferUpdateRectHeader* const pfburh
     }
     CheckBufferSize(numCompBytes);
     // Read the compressed data
-    ReadExact((char*)m_netbuf, numCompBytes);
+    ReadExact(reinterpret_cast<char*>(m_netbuf), static_cast<int>(numCompBytes));
 
     // Verify buffer space for cache rects list
-    CheckZlibBufferSize(numRawBytes + 500);
+    CheckZlibBufferSize(static_cast<int>(numRawBytes + 500));
     new_len = numRawBytes + 500;
     //m_zlibbuf is bad after !LZO_E_OK
-    if (lzo1x_decompress_safe((BYTE*)m_netbuf, numCompBytes, (BYTE*)m_zlibbuf, &new_len, nullptr) != LZO_E_OK)
+    if (lzo1x_decompress_safe(reinterpret_cast<BYTE*>(m_netbuf), numCompBytes, reinterpret_cast<BYTE*>(m_zlibbuf), &new_len, nullptr) != LZO_E_OK)
     {
         return;
     }
@@ -107,7 +107,7 @@ void ClientConnection::ReadUltraZip(rfbFramebufferUpdateRectHeader* const pfburh
             assert(true);
             return;
         }
-        std::memcpy((char*)&surh, pzipbuf, sz_rfbFramebufferUpdateRectHeader);
+        std::memcpy(reinterpret_cast<char*>(&surh), pzipbuf, sz_rfbFramebufferUpdateRectHeader);
         surh.r.x = Swap16IfLE(surh.r.x);
         surh.r.y = Swap16IfLE(surh.r.y);
         surh.r.w = Swap16IfLE(surh.r.w);
@@ -140,7 +140,7 @@ void ClientConnection::ReadUltraZip(rfbFramebufferUpdateRectHeader* const pfburh
             }
             if (m_DIBbits)
             {
-                ConvertAll(surh.r.w, surh.r.h, surh.r.x, surh.r.y, m_myFormat.bitsPerPixel / 8, (BYTE*)pzipbuf, (BYTE*)m_DIBbits,
+                ConvertAll(surh.r.w, surh.r.h, surh.r.x, surh.r.y, m_myFormat.bitsPerPixel / 8, reinterpret_cast<BYTE*>(pzipbuf), reinterpret_cast<BYTE*>(m_DIBbits),
                            m_si.framebufferWidth, m_si.framebufferHeight);
             }
             pzipbuf += numpixels * m_myFormat.bitsPerPixel / 8;

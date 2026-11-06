@@ -17,7 +17,7 @@
 #include "vnclog.h"
 #include "winvnc.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <objbase.h>
 
@@ -40,7 +40,7 @@ int CheckUserGroupPasswordUni2(char* userin, char* password, const char* machine
 BOOL IsNewMSLogon();
 //char *AddToModuleDir(char *filename, int length);
 typedef int (*CheckUserPasswordSDUniFn)(const char* userin, const char* password, const char* machine, TCHAR* szMslogonLog);
-CheckUserPasswordSDUniFn CheckUserPasswordSDUni = 0;
+CheckUserPasswordSDUniFn CheckUserPasswordSDUni = nullptr;
 
 #define MAXSTRING 254
 
@@ -109,7 +109,7 @@ int CheckUserGroupPasswordUni(char* const userin, char* const password, const ch
         hModuleAuthSSP = ::LoadLibrary(szCurrentDir.data());
         if (hModuleAuthSSP)
         {
-            CheckUserPasswordSDUni = (CheckUserPasswordSDUniFn)::GetProcAddress(hModuleAuthSSP, "CUPSDV2");
+            CheckUserPasswordSDUni = reinterpret_cast<CheckUserPasswordSDUniFn>(::GetProcAddress(hModuleAuthSSP, "CUPSDV2"));
             vnclog.Print(LL_INTINFO, VNCLOG("GetProcAddress"));
             ::CoInitialize(nullptr);
             result = ::CheckUserPasswordSDUni(userin, password, machine, settings->getLogFile());
@@ -177,7 +177,7 @@ int CheckUserGroupPasswordUni2(char* const userin, char* const password, const c
     hModuleAdmin = ::LoadLibrary(szCurrentDir.data());
     if (hModuleAdmin)
     {
-        CheckUserGroupPasswordAdmin = (CheckUserGroupPasswordFn)::GetProcAddress(hModuleAdmin, "CUGP");
+        CheckUserGroupPasswordAdmin = reinterpret_cast<CheckUserGroupPasswordFn>(::GetProcAddress(hModuleAdmin, "CUGP"));
     }
 
     ::strcpy_s(szCurrentDir.data(), szCurrentDir.size(), winvncFolder.data());
@@ -186,7 +186,7 @@ int CheckUserGroupPasswordUni2(char* const userin, char* const password, const c
     hModuleWorkgroup = ::LoadLibrary(szCurrentDir.data());
     if (hModuleWorkgroup)
     {
-        CheckUserGroupPasswordWorkgroup = (CheckUserGroupPasswordFn)::GetProcAddress(hModuleWorkgroup, "CUGP");
+        CheckUserGroupPasswordWorkgroup = reinterpret_cast<CheckUserGroupPasswordFn>(::GetProcAddress(hModuleWorkgroup, "CUGP"));
     }
     ::strcpy_s(szCurrentDir.data(), szCurrentDir.size(), winvncFolder.data());
     ::strcat_s(szCurrentDir.data(), szCurrentDir.size(), "\\ldapauth.dll");
@@ -194,7 +194,7 @@ int CheckUserGroupPasswordUni2(char* const userin, char* const password, const c
     hModuleLdapAuth = ::LoadLibrary(szCurrentDir.data());
     if (hModuleLdapAuth)
     {
-        CheckUserGroupPasswordLdapAuth = (CheckUserGroupPasswordFn)::GetProcAddress(hModuleLdapAuth, "CUGP");
+        CheckUserGroupPasswordLdapAuth = reinterpret_cast<CheckUserGroupPasswordFn>(::GetProcAddress(hModuleLdapAuth, "CUGP"));
     }
     ::strcpy_s(szCurrentDir.data(), szCurrentDir.size(), winvncFolder.data());
     ::strcat_s(szCurrentDir.data(), szCurrentDir.size(), "\\ldapauthnt4.dll");
@@ -202,7 +202,7 @@ int CheckUserGroupPasswordUni2(char* const userin, char* const password, const c
     hModuleLdapAuthNT4 = ::LoadLibrary(szCurrentDir.data());
     if (hModuleLdapAuthNT4)
     {
-        CheckUserGroupPasswordLdapAuthNT4 = (CheckUserGroupPasswordFn)::GetProcAddress(hModuleLdapAuthNT4, "CUGP");
+        CheckUserGroupPasswordLdapAuthNT4 = reinterpret_cast<CheckUserGroupPasswordFn>(::GetProcAddress(hModuleLdapAuthNT4, "CUGP"));
     }
     ::strcpy_s(szCurrentDir.data(), szCurrentDir.size(), winvncFolder.data());
     ::strcat_s(szCurrentDir.data(), szCurrentDir.size(), "\\ldapauth9x.dll");
@@ -210,7 +210,7 @@ int CheckUserGroupPasswordUni2(char* const userin, char* const password, const c
     hModuleLdapAuth9x = ::LoadLibrary(szCurrentDir.data());
     if (hModuleLdapAuth9x)
     {
-        CheckUserGroupPasswordLdapAuth9x = (CheckUserGroupPasswordFn)::GetProcAddress(hModuleLdapAuth9x, "CUGP");
+        CheckUserGroupPasswordLdapAuth9x = reinterpret_cast<CheckUserGroupPasswordFn>(::GetProcAddress(hModuleLdapAuth9x, "CUGP"));
     }
     //////////////////////////////////////////////////
     // Load reg settings
@@ -551,7 +551,7 @@ int CheckUserGroupPasswordUni2(char* const userin, char* const password, const c
     /////////////////////////////////////////////////
     {
         typedef BOOL (*LogeventFn)(char* machine, char* user, char* szMslogonLog);
-        LogeventFn Logevent = 0;
+        LogeventFn Logevent = nullptr;
         std::array<char, MAX_PATH> szCurrentDirInner;
         ::strcpy_s(szCurrentDirInner.data(), szCurrentDirInner.size(), winvncFolder.data());
         ::strcat_s(szCurrentDirInner.data(), szCurrentDirInner.size(), "\\logging.dll");
@@ -559,8 +559,8 @@ int CheckUserGroupPasswordUni2(char* const userin, char* const password, const c
         HMODULE hModule = ::LoadLibrary(szCurrentDirInner.data());
         if (hModule)
         {
-            Logevent = (LogeventFn)::GetProcAddress(hModule, "LOGFAILEDUSERV2");
-            Logevent((char*)clientname.data(), userin, settings->getLogFile());
+            Logevent = reinterpret_cast<LogeventFn>(::GetProcAddress(hModule, "LOGFAILEDUSERV2"));
+            Logevent(reinterpret_cast<char*>(clientname.data()), userin, settings->getLogFile());
             ::FreeLibrary(hModule);
         }
         if (hModuleAdmin)
@@ -594,7 +594,7 @@ int CheckUserGroupPasswordUni2(char* const userin, char* const password, const c
 accessOK: //full access
 {
     typedef BOOL (*LogeventFn)(char* machine, char* user, char* szMslogonLog);
-    LogeventFn Logevent = 0;
+    LogeventFn Logevent = nullptr;
     std::array<char, MAX_PATH> szCurrentDirInner;
     ::strcpy_s(szCurrentDirInner.data(), szCurrentDirInner.size(), winvncFolder.data());
     ::strcat_s(szCurrentDirInner.data(), szCurrentDirInner.size(), "\\logging.dll");
@@ -602,8 +602,8 @@ accessOK: //full access
     HMODULE hModule = ::LoadLibrary(szCurrentDirInner.data());
     if (hModule)
     {
-        Logevent = (LogeventFn)::GetProcAddress(hModule, "LOGLOGONUSERV2");
-        Logevent((char*)clientname.data(), userin, settings->getLogFile());
+        Logevent = reinterpret_cast<LogeventFn>(::GetProcAddress(hModule, "LOGLOGONUSERV2"));
+        Logevent(reinterpret_cast<char*>(clientname.data()), userin, settings->getLogFile());
         ::FreeLibrary(hModule);
     }
 
@@ -640,7 +640,7 @@ accessOK: //full access
 accessOK2: //readonly
 {
     typedef BOOL (*LogeventFn)(char* machine, char* user, char* szMslogonLog);
-    LogeventFn Logevent = 0;
+    LogeventFn Logevent = nullptr;
     std::array<char, MAX_PATH> szCurrentDirInner;
     ::strcpy_s(szCurrentDirInner.data(), szCurrentDirInner.size(), winvncFolder.data());
     ::strcat_s(szCurrentDirInner.data(), szCurrentDirInner.size(), "\\logging.dll");
@@ -648,8 +648,8 @@ accessOK2: //readonly
     HMODULE hModule = ::LoadLibrary(szCurrentDirInner.data());
     if (hModule)
     {
-        Logevent = (LogeventFn)::GetProcAddress(hModule, "LOGLOGONUSERV2");
-        Logevent((char*)clientname.data(), userin, settings->getLogFile());
+        Logevent = reinterpret_cast<LogeventFn>(::GetProcAddress(hModule, "LOGLOGONUSERV2"));
+        Logevent(reinterpret_cast<char*>(clientname.data()), userin, settings->getLogFile());
         ::FreeLibrary(hModule);
     }
     if (hModuleAdmin)

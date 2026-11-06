@@ -7,8 +7,8 @@
 // SPDX-FileCopyrightText: Copyright (C) 2002-2026 UltraVNC Team Members. All Rights Reserved.
 //
 
-#ifndef VIEWERJPEGSOURCE_H__
-#define VIEWERJPEGSOURCE_H__
+#ifndef VIEWERJPEGSOURCE_H
+#define VIEWERJPEGSOURCE_H
 
 extern "C" {
 #ifdef _VCPKG

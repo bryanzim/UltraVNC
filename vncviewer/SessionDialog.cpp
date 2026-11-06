@@ -23,7 +23,7 @@
 #include "vncviewer.h"
 
 #include <direct.h>
-#include <shlobj.h>
+#include <ShlObj.h>
 #include <sys/stat.h>
 
 #include <array>
@@ -72,7 +72,7 @@ SessionDialog::SessionDialog(VNCOptions* pOpt, ClientConnection* pCC, CDSMPlugin
 
     for (int i = rfbEncodingRaw; i <= LASTENCODING; ++i)
     {
-        UseEnc[i] = m_pOpt->m_UseEnc[i];
+        UseEnc[static_cast<unsigned long long>(i)] = m_pOpt->m_UseEnc[static_cast<unsigned long long>(i)];
     }
 
     PreferredEncodings.clear();
@@ -157,8 +157,8 @@ SessionDialog::SessionDialog(VNCOptions* pOpt, ClientConnection* pCC, CDSMPlugin
     setdefaults = false;
     /////////////////////////////////////////////////
     extern HINSTANCE hInstance;
-    hBmpExpand = (HBITMAP)::LoadImage(hInstance, MAKEINTRESOURCE(IDB_EXPAND), IMAGE_BITMAP, 0, 0, LR_LOADTRANSPARENT);
-    hBmpCollaps = (HBITMAP)::LoadImage(hInstance, MAKEINTRESOURCE(IDB_COLLAPS), IMAGE_BITMAP, 0, 0, LR_LOADTRANSPARENT);
+    hBmpExpand = reinterpret_cast<HBITMAP>(::LoadImage(hInstance, MAKEINTRESOURCE(IDB_EXPAND), IMAGE_BITMAP, 0, 0, LR_LOADTRANSPARENT));
+    hBmpCollaps = reinterpret_cast<HBITMAP>(::LoadImage(hInstance, MAKEINTRESOURCE(IDB_COLLAPS), IMAGE_BITMAP, 0, 0, LR_LOADTRANSPARENT));
     hTabEncoders = nullptr;
     hTabKeyboardMouse = nullptr;
     hTabDisplay = nullptr;
@@ -214,7 +214,7 @@ BOOL CALLBACK SessDlgProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 int SessionDialog::DoDialog()
 {
     // Use m_hInstResDLL for dialog resources (contains translated dialogs)
-    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_SESSION_DLG), nullptr, (DLGPROC)SessDlgProc, (LONG_PTR)this));
+    return static_cast<int>(::DialogBoxParam(m_hInstResDLL, DIALOG_MAKEINTRESOURCE(IDD_SESSION_DLG), nullptr, reinterpret_cast<DLGPROC>(SessDlgProc), reinterpret_cast<LONG_PTR>(this)));
 }
 
 BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam, const LPARAM lParam)
@@ -223,9 +223,9 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
     if (uMsg == WM_INITDIALOG)
     {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-        _this = (SessionDialog*)lParam;
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
+        _this = reinterpret_cast<SessionDialog*>(lParam);
         helper::SafeSetWindowUserData(hwnd, lParam);
         std::array<char, 50U> cver{};
         std::array<wchar_t, 256U> title{};
@@ -237,16 +237,16 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
     }
     else
     {
-        _this = (SessionDialog*)helper::SafeGetWindowUserData<SessionDialog>(hwnd);
+        _this = reinterpret_cast<SessionDialog*>(helper::SafeGetWindowUserData<SessionDialog>(hwnd));
     }
     switch (uMsg)
     {
     case WM_INITDIALOG: {
         HICON hIcon = ::LoadIcon(::GetModuleHandle(nullptr), MAKEINTRESOURCE(IDR_TRAY));
-        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        ::SendMessage(hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(hIcon));
+        ::SendMessage(hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(hIcon));
         helper::SafeSetWindowUserData(hwnd, lParam);
-        SessionDialog* l_this = (SessionDialog*)lParam;
+        SessionDialog* l_this = reinterpret_cast<SessionDialog*>(lParam);
         ::SetForegroundWindow(hwnd);
         l_this->m_fFromOptions = false;
         l_this->m_fFromFile = false;
@@ -258,7 +258,7 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
         ::SendMessage(hExitCheck, BM_SETCHECK, l_this->fExitCheck, 0); //PGM @ Advantig
 
         _this->ExpandBox(hwnd, !_this->m_bExpanded);
-        ::SendMessage(::GetDlgItem(hwnd, IDC_BUTTON_EXPAND), BM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)_this->hBmpExpand);
+        ::SendMessage(::GetDlgItem(hwnd, IDC_BUTTON_EXPAND), BM_SETIMAGE, static_cast<WPARAM>(IMAGE_BITMAP), reinterpret_cast<LPARAM>(_this->hBmpExpand));
         //SetWindowText(GetDlgItem(hwnd, IDC_BUTTON_EXPAND), "Show Options");
         return TRUE;
     }
@@ -281,8 +281,8 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
             if (HIWORD(wParam) == CBN_SELCHANGE)
             {
                 std::array<TCHAR, 256U> hostname;
-                int ItemIndex = static_cast<int>(::SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0));
-                ::SendMessage((HWND)lParam, static_cast<UINT>(CB_GETLBTEXT), (WPARAM)ItemIndex, (LPARAM)hostname.data());
+                int ItemIndex = static_cast<int>(::SendMessage(reinterpret_cast<HWND>(lParam), CB_GETCURSEL, 0, 0));
+                ::SendMessage(reinterpret_cast<HWND>(lParam), static_cast<UINT>(CB_GETLBTEXT), static_cast<WPARAM>(ItemIndex), reinterpret_cast<LPARAM>(hostname.data()));
                 _this->m_pMRU->RemoveItem(hostname.data());
                 _this->m_pMRU->AddItem(hostname.data());
                 _this->IfHostExistLoadSettings(hostname.data());
@@ -291,8 +291,8 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
             if (HIWORD(wParam) == CBN_SELENDOK)
             {
                 std::array<TCHAR, 256U> hostname;
-                int ItemIndex = static_cast<int>(::SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0));
-                ::SendMessage((HWND)lParam, static_cast<UINT>(CB_SETCURSEL), (WPARAM)ItemIndex, (LPARAM)hostname.data());
+                int ItemIndex = static_cast<int>(::SendMessage(reinterpret_cast<HWND>(lParam), CB_GETCURSEL, 0, 0));
+                ::SendMessage(reinterpret_cast<HWND>(lParam), static_cast<UINT>(CB_SETCURSEL), static_cast<WPARAM>(ItemIndex), reinterpret_cast<LPARAM>(hostname.data()));
             }
             ::SetTimer(hwnd, 100, 3000, nullptr);
             break;
@@ -386,11 +386,11 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
                 HWND hPlugins = ::GetDlgItem(hwnd, IDC_PLUGINS_COMBO);
                 if ((::_tcscmp(_this->szDSMPluginFilename.data(), _T("")) != 0) && _this->fUseDSMPlugin)
                 {
-                    int pos = static_cast<int>(::SendMessage(hPlugins, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), (LPARAM) & (_this->szDSMPluginFilename[0U])));
+                    int pos = static_cast<int>(::SendMessage(hPlugins, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(& (_this->szDSMPluginFilename[0U]))));
 
                     if (pos != CB_ERR)
                     {
-                        ::SendMessage(hPlugins, CB_SETCURSEL, pos, 0);
+                        ::SendMessage(hPlugins, CB_SETCURSEL, static_cast<WPARAM>(pos), 0);
                         HWND hUsePlugin = ::GetDlgItem(hwnd, IDC_PLUGIN_CHECK);
                         ::SendMessage(hUsePlugin, BM_SETCHECK, TRUE, 0);
                     }
@@ -411,7 +411,7 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
             int sel = static_cast<int>(::SendMessage(hcombo, CB_GETCURSEL, 0, 0));
             if (sel != CB_ERR)
             {
-                ::SendMessage(hcombo, CB_DELETESTRING, sel, 0);
+                ::SendMessage(hcombo, CB_DELETESTRING, static_cast<WPARAM>(sel), 0);
                 _this->m_pMRU->RemoveItem(sel);
                 std::array<wchar_t, _MAX_PATH> fname;
                 int disp = PORT_TO_DISPLAY(_this->m_port);
@@ -435,7 +435,7 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
                 int selIdx = static_cast<int>(::SendMessage(hLangCombo, CB_GETCURSEL, 0, 0));
                 if (selIdx != CB_ERR)
                 {
-                    wchar_t* langCode = (wchar_t*)::SendMessage(hLangCombo, CB_GETITEMDATA, selIdx, 0);
+                    wchar_t* langCode = reinterpret_cast<wchar_t*>(::SendMessage(hLangCombo, CB_GETITEMDATA, selIdx, 0));
                     if (langCode)
                     {
                         _this->SwitchLanguage(langCode);
@@ -461,7 +461,7 @@ BOOL CALLBACK SessDlgProc(const HWND hwnd, const UINT uMsg, const WPARAM wParam,
             const int langCount = static_cast<int>(::SendMessage(hLangCombo, CB_GETCOUNT, 0, 0));
             for (int i{ 0 }; i < langCount; ++i)
             {
-                wchar_t* langCode = (wchar_t*)::SendMessage(hLangCombo, CB_GETITEMDATA, i, 0);
+                wchar_t* langCode = reinterpret_cast<wchar_t*>(::SendMessage(hLangCombo, CB_GETITEMDATA, i, 0));
                 if (langCode)
                 {
                     std::free(langCode);
@@ -518,12 +518,12 @@ void SessionDialog::ExpandBox(const HWND hDlg, const BOOL fExpand)
     // Change button image and text label
     if (!fExpand)
     {
-        ::SendMessage(::GetDlgItem(hDlg, IDC_BUTTON_EXPAND), BM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)hBmpExpand);
+        ::SendMessage(::GetDlgItem(hDlg, IDC_BUTTON_EXPAND), BM_SETIMAGE, static_cast<WPARAM>(IMAGE_BITMAP), reinterpret_cast<LPARAM>(hBmpExpand));
         ::SetWindowText(pCtrl, sz_ShowOptions.data());
     }
     else
     {
-        ::SendMessage(::GetDlgItem(hDlg, IDC_BUTTON_EXPAND), BM_SETIMAGE, (WPARAM)IMAGE_BITMAP, (LPARAM)hBmpCollaps);
+        ::SendMessage(::GetDlgItem(hDlg, IDC_BUTTON_EXPAND), BM_SETIMAGE, static_cast<WPARAM>(IMAGE_BITMAP), reinterpret_cast<LPARAM>(hBmpCollaps));
         ::SetWindowText(pCtrl, sz_HideOptions.data());
     }
 
@@ -584,7 +584,7 @@ void SessionDialog::InitPlugin(const HWND hwnd)
     int nPlugins = m_pDSMPlugin->ListPlugins(hPlugins);
     if (!nPlugins)
     {
-        ::SendMessageW(hPlugins, CB_ADDSTRING, 0, (LPARAM)sz_F11.data());
+        ::SendMessageW(hPlugins, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(sz_F11.data()));
     }
 
     ::SendMessage(hPlugins, CB_SETCURSEL, 0, 0);
@@ -595,11 +595,11 @@ void SessionDialog::InitPlugin(const HWND hwnd)
     //AaronP
     if ((::_tcscmp(szDSMPluginFilename.data(), _T("")) != 0) && fUseDSMPlugin)
     {
-        int pos = static_cast<int>(::SendMessage(hPlugins, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), (LPARAM) & (szDSMPluginFilename[0U])));
+        int pos = static_cast<int>(::SendMessage(hPlugins, CB_FINDSTRINGEXACT, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(& (szDSMPluginFilename[0U]))));
 
         if (pos != CB_ERR)
         {
-            ::SendMessage(hPlugins, CB_SETCURSEL, pos, 0);
+            ::SendMessage(hPlugins, CB_SETCURSEL, static_cast<WPARAM>(pos), 0);
             HWND hUsePlugin = ::GetDlgItem(hwnd, IDC_PLUGIN_CHECK);
             ::SendMessage(hUsePlugin, BM_SETCHECK, TRUE, 0);
             ::EnableWindow(::GetDlgItem(hwnd, IDC_PLUGIN_BUTTON), TRUE); // sf@2009 - Enable plugin config button
@@ -679,7 +679,7 @@ void SessionDialog::InitDlgProc(const bool loadhost, const bool initMruNeeded)
                             DEFAULT_PITCH | FF_SWISS, // nPitchAndFamily
                             _T("Arial"));             // lpszFacename
 
-    ::SendMessage(::GetDlgItem(hwnd, IDC_LOGO), WM_SETFONT, (WPARAM)font, TRUE);
+    ::SendMessage(::GetDlgItem(hwnd, IDC_LOGO), WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
 }
 
 void SessionDialog::InitMRU(const HWND hwnd)
@@ -693,7 +693,7 @@ void SessionDialog::InitMRU(const HWND hwnd)
         m_pMRU->GetItem(i, valname.data(), 255);
         if (::_tcslen(valname.data()) != 0)
         {
-            ::SendMessageW(hcombo, CB_ADDSTRING, 0, (LPARAM)valname.data());
+            ::SendMessageW(hcombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(valname.data()));
         }
     }
     ::SendMessage(hcombo, CB_SETCURSEL, 0, 0);
@@ -707,7 +707,7 @@ bool SessionDialog::connect(const HWND hwnd)
     SettingsFromUI();
     for (int i = rfbEncodingRaw; i <= LASTENCODING; ++i)
     {
-        m_pOpt->m_UseEnc[i] = UseEnc[i];
+        m_pOpt->m_UseEnc[static_cast<unsigned long long>(i)] = UseEnc[static_cast<unsigned long long>(i)];
     }
 
     m_pOpt->m_PreferredEncodings.clear();
@@ -830,7 +830,7 @@ bool SessionDialog::connect(const HWND hwnd)
             // But we must first check that the loaded plugin is the same that
             // the one currently selected...
             m_pDSMPlugin->DescribePlugin();
-            if (::_tcsicmp((LPCTSTR)m_pDSMPlugin->GetPluginFileName(), szDSMPluginFilename.data()))
+            if (::_tcsicmp(reinterpret_cast<LPCTSTR>(m_pDSMPlugin->GetPluginFileName()), szDSMPluginFilename.data()))
             {
                 // Unload the previous plugin
                 m_pDSMPlugin->UnloadPlugin();
@@ -937,8 +937,8 @@ void SessionDialog::InitLanguage(const HWND hwnd)
     ::SendMessage(hLanguageCombo, CB_RESETCONTENT, 0, 0);
 
     // Add English (default - no DLL needed)
-    int idx = static_cast<int>(::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, (LPARAM) _T("English")));
-    ::SendMessage(hLanguageCombo, CB_SETITEMDATA, idx, (LPARAM)_wcsdup(L"en"));
+    int idx = static_cast<int>(::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(_T("English"))));
+    ::SendMessage(hLanguageCombo, CB_SETITEMDATA, static_cast<WPARAM>(idx), reinterpret_cast<LPARAM>(_wcsdup(L"en")));
 
     // Get viewer executable path
     std::array<wchar_t, MAX_PATH> exePath;
@@ -984,15 +984,15 @@ void SessionDialog::InitLanguage(const HWND hwnd)
                                 0)
                             {
                                 // Successfully loaded language name from DLL
-                                int idxInner = static_cast<int>(::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, (LPARAM)displayName.data()));
-                                ::SendMessage(hLanguageCombo, CB_SETITEMDATA, idxInner, (LPARAM)_wcsdup(langCode.data()));
+                                int idxInner = static_cast<int>(::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(displayName.data())));
+                                ::SendMessage(hLanguageCombo, CB_SETITEMDATA, static_cast<WPARAM>(idxInner), reinterpret_cast<LPARAM>(_wcsdup(langCode.data())));
                             }
                             else
                             {
                                 // Fallback: use language code if string not found
                                 ::swprintf_s(displayName.data(), displayName.size(), L"Language (%s)", langCode.data());
-                                int idxInner = static_cast<int>(::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, (LPARAM)displayName.data()));
-                                ::SendMessage(hLanguageCombo, CB_SETITEMDATA, idxInner, (LPARAM)_wcsdup(langCode.data()));
+                                int idxInner = static_cast<int>(::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(displayName.data())));
+                                ::SendMessage(hLanguageCombo, CB_SETITEMDATA, static_cast<WPARAM>(idxInner), reinterpret_cast<LPARAM>(_wcsdup(langCode.data())));
                             }
                             ::FreeLibrary(hLangDll);
                         }
@@ -1000,8 +1000,8 @@ void SessionDialog::InitLanguage(const HWND hwnd)
                         {
                             // DLL couldn't be loaded, use code as fallback
                             ::swprintf_s(displayName.data(), displayName.size(), L"Language (%s)", langCode.data());
-                            int idxInner = static_cast<int>(::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, (LPARAM)displayName.data()));
-                            ::SendMessage(hLanguageCombo, CB_SETITEMDATA, idxInner, (LPARAM)_wcsdup(langCode.data()));
+                            int idxInner = static_cast<int>(::SendMessageW(hLanguageCombo, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(displayName.data())));
+                            ::SendMessage(hLanguageCombo, CB_SETITEMDATA, static_cast<WPARAM>(idxInner), reinterpret_cast<LPARAM>(_wcsdup(langCode.data())));
                         }
                     }
                 } while (::FindNextFileW(hFind, &findData));
@@ -1014,10 +1014,10 @@ void SessionDialog::InitLanguage(const HWND hwnd)
     const int count = static_cast<int>(::SendMessage(hLanguageCombo, CB_GETCOUNT, 0, 0));
     for (int i{ 0 }; i < count; ++i)
     {
-        wchar_t* langCode = (wchar_t*)::SendMessage(hLanguageCombo, CB_GETITEMDATA, i, 0);
+        wchar_t* langCode = reinterpret_cast<wchar_t*>(::SendMessage(hLanguageCombo, CB_GETITEMDATA, i, 0));
         if (langCode && (::_wcsicmp(langCode, m_pOpt->m_language.data()) == 0))
         {
-            ::SendMessage(hLanguageCombo, CB_SETCURSEL, i, 0);
+            ::SendMessage(hLanguageCombo, CB_SETCURSEL, static_cast<WPARAM>(i), 0);
             return;
         }
     }

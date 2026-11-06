@@ -22,8 +22,8 @@
 
 class VSocket;
 extern BOOL G_ipv6_allowed;
-#if (!defined(_ATT_VSOCKET_DEFINED))
-#define _ATT_VSOCKET_DEFINED
+#if (!defined(ATT_VSOCKET_DEFINED))
+#define ATT_VSOCKET_DEFINED
 
 #include "vtypes.h"
 
@@ -51,7 +51,7 @@ class VSocketSystem
 public:
     explicit VSocketSystem();
     ~VSocketSystem();
-    VBool Initialised() { return m_status; };
+    VBool Initialised() { return m_status; }
 
 private:
     VBool m_status;
@@ -241,8 +241,8 @@ public:
     // sf@2002 - DSMPlugin
     //adzm 2009-06-20
     void SetDSMPluginPointer(CDSMPlugin* pDSMPlugin);
-    void EnableUsePlugin(const bool fEnable) { m_fUsePlugin = fEnable; };
-    bool IsUsePluginEnabled(void) { return m_fUsePlugin; };
+    void EnableUsePlugin(const bool fEnable) { m_fUsePlugin = fEnable; }
+    bool IsUsePluginEnabled(void) { return m_fUsePlugin; }
     //adzm 2010-05-12 - dsmplugin config
     void SetDSMPluginConfig(char* szDSMPluginConfig);
     // adzm 2010-09
@@ -251,11 +251,11 @@ public:
     bool IsPluginStreamingIn(void) { return m_fPluginStreamingIn; }
     bool IsPluginStreamingOut(void) { return m_fPluginStreamingOut; }
 
-    void SetWriteToNetRectBuffer(const bool fEnable) { m_fWriteToNetRectBuf = fEnable; };
-    bool GetWriteToNetRectBuffer(void) { return m_fWriteToNetRectBuf; };
-    int GetNetRectBufOffset(void) { return m_nNetRectBufOffset; };
-    void SetNetRectBufOffset(const int nValue) { m_nNetRectBufOffset = nValue; };
-    BYTE* GetNetRectBuf(void) { return m_pNetRectBuf; };
+    void SetWriteToNetRectBuffer(const bool fEnable) { m_fWriteToNetRectBuf = fEnable; }
+    bool GetWriteToNetRectBuffer(void) { return m_fWriteToNetRectBuf; }
+    int GetNetRectBufOffset(void) { return m_nNetRectBufOffset; }
+    void SetNetRectBufOffset(const int nValue) { m_nNetRectBufOffset = nValue; }
+    BYTE* GetNetRectBuf(void) { return m_pNetRectBuf; }
     void CheckNetRectBufferSize(int nBufSize);
     VBool SendExactHTTP(const char* buff, const VCard bufflen);
     VBool ReadExactHTTP(char* buff, const VCard bufflen);
@@ -270,10 +270,10 @@ public:
     TLSCallbacks* GetTLSCallbacks() const { return m_tlsCallbacks; }
 
     //adzm 2010-05-10
-    IIntegratedPlugin* GetIntegratedPlugin() { return m_pIntegratedPluginInterface; };
+    IIntegratedPlugin* GetIntegratedPlugin() { return m_pIntegratedPluginInterface; }
 
     //adzm 2010-08-01
-    DWORD GetLastSentTick() { return m_LastSentTick; };
+    DWORD GetLastSentTick() { return m_LastSentTick; }
     IIntegratedPlugin* m_pIntegratedPluginInterface;
     ////////////////////////////
     // Internal structures
@@ -321,4 +321,4 @@ protected:
     TLSCallbacks* m_tlsCallbacks = nullptr;
 };
 
-#endif // _ATT_VSOCKET_DEFINED
+#endif // ATT_VSOCKET_DEFINED

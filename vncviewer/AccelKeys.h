@@ -9,8 +9,8 @@
 //
 
 
-#ifndef ACCELKEYS_H__
-#define ACCELKEYS_H__
+#ifndef ACCELKEYS_H
+#define ACCELKEYS_H
 
 #pragma once
 class AccelKeys
